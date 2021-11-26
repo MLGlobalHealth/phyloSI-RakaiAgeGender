@@ -61,12 +61,16 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   time.first.positive <- time.first.positive[pt_id %in% unique(meta.rccs$pt_id)]
   tmp <- time.first.positive[, list(date_first_visit=min(date_first_visit)), by = 'pt_id']
   time.first.positive <- merge(time.first.positive, tmp, by = c('date_first_visit', 'pt_id'))
+  setnames(time.first.positive, 'age_at_visit', 'age_enrol')
   
   # merge
-  meta.rccs <- merge(meta.rccs, time.first.positive[, .(pt_id, age_first_positive, date_first_positive, date_first_visit)], by = 'pt_id')
+  meta.rccs <- merge(meta.rccs, time.first.positive[, .(pt_id, 
+                                                        age_first_positive, date_first_positive, 
+                                                        age_enrol, date_first_visit)], by = 'pt_id')
   meta.rccs <- unique(meta.rccs)
 
   stopifnot(length(unique(meta.rccs$pt_id)) == nrow(meta.rccs))
+  stopifnot(nrow(meta.rccs[is.na(age_first_positive) & is.na(age_enrol)]) > 0)
   cat('There is ', nrow(meta.rccs), ' individuals included in the RCCS meta-data\n')
   
   
