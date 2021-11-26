@@ -6,11 +6,11 @@ library(coda)
 library(phyloflows)
 
 
-indir <- '/rds/general/user/mm3218/home/git/phyloflows/inst'
+indir <- '/rds/general/user/mm3218/home/git/phyloflows'
 outdir <- '/rds/general/user/mm3218/home/projects/2021/phyloflows'
 
 if(0){
-  indir <- '~/git/phyloflows/inst'
+  indir <- '~/git/phyloflows'
   outdir <- '~/Box\ Sync/2021/phyloflows'
 }
 

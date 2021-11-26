@@ -1,4 +1,6 @@
-plot_age_infection_source_recipient <- function(data, title, lab, outdir){
+plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL){
+  
+  plots = list()
   
   data <- data[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
   data[, `Cohort round recipient` := cohort_round.RECIPIENT]
@@ -16,7 +18,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir){
     scale_x_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT)))+
     scale_y_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) 
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfection_AllPairs_', lab, '.png')), w = 4, h = 4)
+    if(!is.null(outdir))
+      ggsave(p, filename = file.path(outdir, paste0('AgeInfection_AllPairs_', lab, '.png')), w = 4, h = 4)
+  plots = c(plots, list(p))
   
   # by cohort round
   p1 <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
@@ -42,7 +46,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir){
     theme(legend.position = 'bottom')
 
   p <- ggarrange(p1, p2, ncol = 2)
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfection_CohortRound_', lab, '.png')), w = 9, h = 7)
+  if(!is.null(outdir))
+    ggsave(p1, filename = file.path(outdir, paste0('AgeInfection_CohortRound_', lab, '.png')), w = 9, h = 7)
+  plots = c(plots, list(p))
   
   # by age infection round
   p <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
@@ -56,8 +62,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir){
     scale_y_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfection_DateInfectionRecipient_', lab, '.png')), w = 5, h = 5)
-  
+  if(!is.null(outdir))
+    ggsave(p, filename = file.path(outdir, paste0('AgeInfection_DateInfectionRecipient_', lab, '.png')), w = 5, h = 5)
+  plots = c(plots, list(p))
   
   # by community
   p1 <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
@@ -83,11 +90,14 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir){
     theme(legend.position = 'bottom')
   
   p <- ggarrange(p1, p2, ncol = 2)
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfection_CommunityRecipient_', lab, '.png')), w = 9, h = 7)
+  if(!is.null(outdir))
+    ggsave(p, filename = file.path(outdir, paste0('AgeInfection_CommunityRecipient_', lab, '.png')), w = 9, h = 7)
+  plots = c(plots, list(p))
   
+  return(plots)
 }
 
-plot_hist_age_infection <- function(pairs, outdir){
+plot_hist_age_infection <- function(pairs, outdir = NULL){
   
   pairs[, Sex := sex.SOURCE]
   p1 <- ggplot(pairs, aes(x = age_infection.SOURCE)) + 
@@ -107,14 +117,16 @@ plot_hist_age_infection <- function(pairs, outdir){
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
   
-  file = file.path(outdir, paste0('hist_age_infection_', lab, '.png'))
-  cat('saving', file)
-  ggsave(p, file = file, w = 6, h = 6)
+  if(!is.null(outdir)){
+    file = file.path(outdir, paste0('hist_age_infection_', lab, '.png'))
+    cat('saving', file)
+    ggsave(p, file = file, w = 6, h = 6)
+  }
   
   return(p)
 }
 
-plot_hist_time_infection <- function(pairs, outdir){
+plot_hist_time_infection <- function(pairs, date_implementation_UTT, outdir = NULL){
   
   pairs[, `Round source` := cohort_round.SOURCE]
   p1 <- ggplot(pairs, aes(x = date_infection.SOURCE)) + 
@@ -134,9 +146,13 @@ plot_hist_time_infection <- function(pairs, outdir){
 
   p <- ggarrange(p1, p2, ncol = 2)
   
-  file = file.path(outdir, paste0('hist_date_infection_', lab, '.png'))
-  cat('saving', file)
-  ggsave(p, file = file, w = 6, h = 6)
+  if(!is.null(outdir)){
+    file = file.path(outdir, paste0('hist_date_infection_', lab, '.png'))
+    cat('saving', file)
+    ggsave(p, file = file, w = 6, h = 6)
+  }
+
+  return(p)
 }
 
 plot_hist_age_infection_diff_threshold <- function(pairs, outdir){
@@ -185,7 +201,7 @@ plot_hist_age_infection_diff_threshold <- function(pairs, outdir){
   return(p)
 }
 
-plot_CI_age_infection <- function(pairs, outdir){
+plot_CI_age_infection <- function(pairs, outdir = NULL){
   
   tmp <- copy(pairs)
   tmp[, age_infection.SOURCE := floor(age_infection.SOURCE)]
@@ -226,7 +242,10 @@ plot_CI_age_infection <- function(pairs, outdir){
     theme(legend.position = 'bottom') 
 
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionSource_', lab, '.png')), w = 8, h = 5)
   
+  if(!is.null(outdir))
+    ggsave(p, filename = file.path(outdir, paste0('AgeInfectionSource_', lab, '.png')), w = 8, h = 5)
+  
+  return(p)
 }
 

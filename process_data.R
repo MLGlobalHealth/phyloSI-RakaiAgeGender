@@ -9,14 +9,14 @@ library(knitr)
 # change as appropriate
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 {
-  indir.repository <- '~/git/phyloflows/inst'
+  indir.repository <- '~/git/phyloflows'
   indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 }
 if(dir.exists('~/Documents/PANGEA2_RCCS1519_UVRI/'))
 {
-  indir.repository <-'~/git/phyloflows/inst'
+  indir.repository <-'~/git/phyloflows'
   indir.deepsequence_analyses   <- '~/Documents/PANGEA2_RCCS1519_UVRI/'
   indir.deepsequence_analyses_MRC   <- '~/Documents/PANGEA2_MRCUVRI'
   indir.deepsequencedata <- '~/Documents/ratmann_pangea_deepsequencedata/'
@@ -24,9 +24,9 @@ if(dir.exists('~/Documents/PANGEA2_RCCS1519_UVRI/'))
 }
 
 # indicators 
-include.mrc <- F
-include.only.heterosexual.pairs <- T
-threshold.likely.connected.pairs <- 0.6
+include.mrc <- T
+include.only.heterosexual.pairs <- F
+threshold.likely.connected.pairs <- 0.5
 date_implementation_UTT <- as.Date('2016-12-01')
 lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs)
 
@@ -115,13 +115,14 @@ print.statements.about.pairs(copy(pairs.all), outdir.lab)
 
 # keep only pairs with source-recipient with proxy for the time of infection
 pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
+pairs[, date_infection_before_UTT := date_infection <= date_implementation_UTT]
 
 # prepare age map
 get.age.map(pairs)
 
 # make some explanatory plots
 plot_hist_age_infection(copy(pairs), outdir.lab)
-plot_hist_time_infection(copy(pairs), outdir.lab)
+plot_hist_time_infection(copy(pairs), date_implementation_UTT, outdir.lab)
 plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF', outdir.lab)
 plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outdir.lab)
 plot_CI_age_infection(pairs, outdir.lab)

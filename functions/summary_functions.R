@@ -94,7 +94,6 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   # transform variables
   meta[, date_infection := date_first_positive - 365]
   meta[is.na(date_first_positive), date_infection := date_first_visit - 365]
-  meta[, date_infection_before_UTT := date_infection <= date_implementation_UTT]
   
   meta[, age_infection := as.numeric(age_first_positive) - 1]
   meta[is.na(age_first_positive) & !is.na(age_enrol), age_infection := as.numeric(age_enrol) - 1]
@@ -115,7 +114,7 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   # keep only variable of interest
   meta <- meta[, .(pt_id, aid, sex, cohort_round, cohort, comm,
                    age_infection,  age_first_positive, age_enrol,
-                   date_infection, date_infection_before_UTT, date_first_positive, date_first_visit)]
+                   date_infection, date_first_positive, date_first_visit)]
   
   # remove very young patients (bug?)
   cat('\nExcluding very young patients')
