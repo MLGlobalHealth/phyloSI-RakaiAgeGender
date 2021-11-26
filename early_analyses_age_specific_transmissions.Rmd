@@ -1,0 +1,125 @@
+---
+title: "Age- and sex-specific transmissions in Rakai"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r, echo=FALSE}
+library(data.table)
+outdir.full <- '/Users/melodiemonod/Box\ Sync/2021/phyloflows/'
+load(file.path(outdir.full, 'MRC_TRUE_OnlyHTX_FALSE_threshold_0.5', 'stanin_MRC_TRUE_OnlyHTX_FALSE_threshold_0.5.RData'))
+
+```
+
+```{r, echo=FALSE}
+dchain <- as.data.table(dchain)
+chains <- dchain[, .(H1, H2, LINK_12, LINK_21, SCORE_LINKED, SCORE_DIR_12, SCORE_DIR_21)]
+```
+
+## Transmission networks
+
+We use the algorithm proposed by Ratmann et al. (2019), on the sequences from individual enrolled in RCSS round R15-R16 and R17-R18 and in MRC. We obtain structure the groups of patients into pairs. Each pair is associated with a score indicating how likely a transmission occurred between the two individuals.  The total number of pairs is
+```{r, echo=FALSE}
+nrow(chains)
+```
+We can show for example the first 10 pairs,
+```{r, echo=FALSE}
+knitr::kable(chains[1:10])
+```
+
+Interestingly, the same individuals can be included in different pairs. Considering all the pairs together, we can therefore re-constitute transmission networks involving multiple pairs. We find the following number of transmission networks,
+```{r, echo=FALSE}
+length(unique(dchain$IDCLU))
+```
+involving a number of individuals between
+```{r, echo=FALSE}
+range(dchain$CLU_SIZE)
+```
+
+Let us plot a few of them,
+
+PLOT - ANDREA
+
+
+## Focus on likely source-recipient pairs enrolled in RCSS
+
+Let us focus on pairs with a score of at least 0.5, amounting to a total of pairs, 
+```{r, echo=FALSE}
+nrow(pairs.all)
+```
+
+### Source-recipient pairs stratified by program
+
+We see that individuals involved in likely source-recipient pairs are both from the RCSS cohort and MRC programs, 
+```{r, echo=FALSE}
+tab <- pairs.all[, list(count = .N), by = c('cohort.SOURCE', 'cohort.RECIPIENT')]
+knitr::kable(tab)
+```
+
+We restrict our analysis to heterosexual pairs enrolled in RCSS and obtain a total number of pairs,
+```{r, echo=FALSE}
+load(file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'stanin_MRC_FALSE_OnlyHTX_TRUE_threshold_0.5.RData'))
+nrow(pairs)
+```
+
+
+### Source-recipient pairs stratified by sex and cohort round
+
+The number of source-recipient pairs stratified by sex are
+```{r, echo=FALSE}
+tab <- pairs[, list(count = .N), by = c('sex.SOURCE', 'sex.RECIPIENT')]
+knitr::kable(tab)
+```
+
+and by cohort round
+```{r, echo=FALSE}
+tab <- pairs[, list(count = .N), by = c('cohort_round.SOURCE', 'cohort_round.RECIPIENT')]
+knitr::kable(tab)
+```
+
+
+## Time of infection of sources and recipients
+
+We define the time of infection as one year before the time of first positive test.
+
+A key date to investigate age shift over time is December 2016, when UTT was implemented in Rakai. Large declines in incidence among women were found afterwards https://www.croiconference.org/abstract/rapidly-declining-hiv-incidence-among-men-and-women-in-rakai-uganda/. Let us look at the number of pairs where the recipient was infected before and after UTT was implemented,
+
+```{r, echo=FALSE}
+tab <- pairs[, list(count = .N), by = c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT')]
+knitr::kable(tab)
+```
+
+We see that we have very few data of recipient infected after UTT was implemented. 
+
+Next, we plot the time of infection of the source and recipient by cohort round. And here we indicate December 2016 by a dashed vertical line.
+
+```{r, echo=FALSE, out.width="70%", fig.show='hold', fig.align='centre'}
+fig <- file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'hist_date_infection_MRC_FALSE_OnlyHTX_TRUE_threshold_0.5.png')
+knitr::include_graphics(fig)
+```
+
+We confirm that recipients infected after the UTT was implemented were enrolled in rounds R17-R18. 
+
+
+## Age at infection of sources and recipients
+
+Next, we explore the age at infection of the sources and recipients. First, we can look at the marginal of the age at infection of the sources and recipients stratified by sex. 
+
+```{r, echo=FALSE, out.width="70%", fig.show='hold', fig.align='centre'}
+fig <- file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'hist_age_infection_MRC_FALSE_OnlyHTX_TRUE_threshold_0.5.png')
+knitr::include_graphics(fig)
+```
+
+We can also plot the age at infection of the source against the age at infection of the recipient stratified by the direction of transmission. Additionally, we show by color whether the date of infection of the recipient was before or after UTT was implemented.
+
+```{r, echo=FALSE, out.width="50%", fig.show='hold', fig.align='centre'}
+fig <- file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'AgeInfection_DateInfectionRecipient_FM.png')
+knitr::include_graphics(fig)
+```
+
+```{r, echo=FALSE, out.width="50%", fig.show='hold', fig.align='centre'}
+fig <- file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'AgeInfection_DateInfectionRecipient_MF.png')
+knitr::include_graphics(fig)
+```
+
