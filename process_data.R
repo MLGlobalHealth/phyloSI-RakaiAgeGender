@@ -5,6 +5,10 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(knitr)
+# Needed for Network plot:
+library(grid)
+library(ggtree)
+library(ggnet) 
   
 # change as appropriate
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
@@ -14,13 +18,13 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 }
-if(dir.exists('~/Documents/PANGEA2_RCCS1519_UVRI/'))
+if(dir.exists('~/Documents/ratmann_deepseq_analyses'))
 {
   indir.repository <-'~/git/phyloflows'
-  indir.deepsequence_analyses   <- '~/Documents/PANGEA2_RCCS1519_UVRI/'
+  indir.deepsequence_analyses   <- '~/Documents/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
   indir.deepsequence_analyses_MRC   <- '~/Documents/PANGEA2_MRCUVRI'
   indir.deepsequencedata <- '~/Documents/ratmann_pangea_deepsequencedata/'
-  outdir <- '~/Documents/RCCS/outputs'
+  outdir <- '~/Documents/2021/phyloflows'
 }
 
 # indicators 
@@ -70,25 +74,6 @@ community.keys <- as.data.table( read.csv(file.community.keys) )
 time.first.positive <- as.data.table( read.csv(file.time.first.positive))
 time.first.positive <- make.time.first.positive(time.first.positive)
 
-if(0)
-{
-  # Get all Pangea IDs in the 3 studies
-  all_pangea_ids <- unique(meta.rccs.1[, list(ptid=RCCS_studyid, pangea=Pangea.id)])
-  all_pangea_ids[, ptid:=paste0('RK-', ptid)]
-  tmp <- unique(meta.rccs.2[, list(ptid=pt_id, pangea=pangea_id)])
-  tmp <- rbind(all_pangea_ids, tmp)
-  all_pangea_ids <- unique(tmp)
-  tmp <- unique(meta.mrc[, .(ptid=pt_id, pangea_id)])
-  tmp <- rbind(all_pangea_ids, tmp)
-  all_pangea_ids <- unique(tmp)
-  # Look at the ones that are included in our analysis
-  all_pangea_ids[, list(V1 = gsub('-[0-9]*$','',ptid)), ][,table(V1)]
-  mean(all_pangea_ids[, unique(ptid)] %in% anonymisation.keys[, PT_ID]) # THIS IS STRANGE...
-  mean(anonymisation.keys[, PT_ID] %in% all_pangea_ids[, unique(ptid)])
-  # It is clear that 'all_pangea_ids' does not contain ALL PANGEA IDs in anonymisation.keys... 
-}
-
-
 # get meta data
 meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positive, anonymisation.keys, community.keys)
 
@@ -127,6 +112,11 @@ plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == '
 plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outdir.lab)
 plot_CI_age_infection(pairs, outdir.lab)
 
+# Unfortunately have to run 'manually' at the moment. Need to understand what s wrong with this one.
+dchain <- as.data.table(dchain)
+dc <- as.data.table(dc)
+phsc.plot.transmission.network(copy(dchain), copy(dc),outdir=outdir, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
+
 # prepare stan data
 stan_data <- prepare_stan_data(pairs, df_age)
 stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3, n_knots_rows = 15, n_knots_columns = 15, unique(df_age$age_infection.SOURCE))
@@ -135,4 +125,3 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3, n_knots_rows
 tmp <- names(.GlobalEnv)
 tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
 save(list=tmp, file=file.path(outdir.lab, paste0("stanin_",lab,".RData")) )
-
