@@ -9,9 +9,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
   data[, `Community source` := comm.SOURCE]
   
   # all pairs
-  p <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
+  p <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point() + 
-    labs(x = 'Age at infection source', y = 'Age at infection recipient') +
+    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
@@ -23,9 +23,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
   plots = c(plots, list(p))
   
   # by cohort round
-  p1 <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
+  p1 <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col = `Cohort round source`)) + 
-    labs(x = 'Age at infection source', y = 'Age at infection recipient') +
+    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
@@ -34,9 +34,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
 
-  p2 <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
+  p2 <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col = `Cohort round recipient`)) + 
-    labs(x = 'Age at infection source', y = 'Age at infection recipient') +
+    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
@@ -51,9 +51,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
   plots = c(plots, list(p))
   
   # by age infection round
-  p <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
+  p <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col = date_infection_before_UTT.RECIPIENT)) + 
-    labs(x = 'Age at infection source', y = 'Age at infection recipient',
+    labs(y = 'Age at infection source', x = 'Age at infection recipient',
          col = 'Date infection recipient before UTT') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
@@ -67,9 +67,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
   plots = c(plots, list(p))
   
   # by community
-  p1 <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
+  p1 <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col = `Community source`)) + 
-    labs(x = 'Age at infection source', y = 'Age at infection recipient') +
+    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
@@ -78,9 +78,9 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
 
-  p2 <- ggplot(data, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
+  p2 <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col =`Community recipient`)) + 
-    labs(x = 'Age at infection source', y = 'Age at infection recipient') +
+    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
@@ -224,7 +224,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   p1 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Age at infection male recipient', y = 'Age at infection female source', col = 'Date infection of recipient before 2017') +
+    labs(x = 'Age at infection male recipient', y = 'Age at infection female source', col = 'Date infection of recipient before UTT') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -235,7 +235,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   p2 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Age at infection female recipient', y = 'Age at infection male source', col = 'Date infection of recipient before 2017') +
+    labs(x = 'Age at infection female recipient', y = 'Age at infection male source', col = 'Date infection of recipient before UTT') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 

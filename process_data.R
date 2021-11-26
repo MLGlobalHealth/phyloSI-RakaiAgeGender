@@ -25,7 +25,7 @@ if(dir.exists('~/Documents/PANGEA2_RCCS1519_UVRI/'))
 
 # indicators 
 include.mrc <- T
-include.only.heterosexual.pairs <- F
+include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
 date_implementation_UTT <- as.Date('2016-12-01')
 lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs)
@@ -115,7 +115,7 @@ print.statements.about.pairs(copy(pairs.all), outdir.lab)
 
 # keep only pairs with source-recipient with proxy for the time of infection
 pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
-pairs[, date_infection_before_UTT := date_infection <= date_implementation_UTT]
+pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_implementation_UTT]
 
 # prepare age map
 get.age.map(pairs)
