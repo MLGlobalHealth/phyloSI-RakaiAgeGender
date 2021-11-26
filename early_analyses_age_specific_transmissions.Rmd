@@ -7,12 +7,14 @@ output:
 
 ```{r, echo=FALSE}
 library(data.table)
-outdir.full <- '/Users/melodiemonod/Box\ Sync/2021/phyloflows/'
-load(file.path(outdir.full, 'MRC_TRUE_OnlyHTX_FALSE_threshold_0.5', 'stanin_MRC_TRUE_OnlyHTX_FALSE_threshold_0.5.RData'))
+library(ggplot2)
+library(ggpubr)
 
+outdir.full <- '/Users/melodiemonod/Box\ Sync/2021/phyloflows/'
 ```
 
 ```{r, echo=FALSE}
+load(file.path(outdir.full, 'MRC_TRUE_OnlyHTX_TRUE_threshold_0.5', 'stanin_MRC_TRUE_OnlyHTX_TRUE_threshold_0.5.RData'))
 dchain <- as.data.table(dchain)
 chains <- dchain[, .(H1, H2, LINK_12, LINK_21, SCORE_LINKED, SCORE_DIR_12, SCORE_DIR_21)]
 ```
@@ -32,19 +34,33 @@ Interestingly, the same individuals can be included in different pairs. Consider
 ```{r, echo=FALSE}
 length(unique(dchain$IDCLU))
 ```
-involving a number of individuals between
+The number of individuals included in the transmission networks varies from 
 ```{r, echo=FALSE}
 range(dchain$CLU_SIZE)
+```
+as an histogram,
+```{r, echo=FALSE, out.width="50%",  fig.align='centre'}
+tmp <- unique(dchain[, .(IDCLU, CLU_SIZE)])
+ggplot(tmp, aes(x = CLU_SIZE)) + 
+  geom_histogram() + 
+  scale_x_continuous(breaks = min(dchain$CLU_SIZE):max(dchain$CLU_SIZE)) + 
+  labs(x = 'number of individuals in transmission network')
 ```
 
 Let us plot a few of them,
 
-PLOT - ANDREA
+```{r, echo=FALSE, out.width="50%",  fig.align='centre'}
+p <- file.path(outdir.full, 'plot-transmission-networks.png')
+knitr::include_graphics(p)
+
+```
+
+
 
 
 ## Focus on likely source-recipient pairs enrolled in RCSS
 
-Let us focus on pairs with a score of at least 0.5, amounting to a total of pairs, 
+Let us focus on heterosexual pairs with a score of at least 0.5, amounting to a total of pairs, 
 ```{r, echo=FALSE}
 nrow(pairs.all)
 ```
@@ -57,7 +73,7 @@ tab <- pairs.all[, list(count = .N), by = c('cohort.SOURCE', 'cohort.RECIPIENT')
 knitr::kable(tab)
 ```
 
-We restrict our analysis to heterosexual pairs enrolled in RCSS and obtain a total number of pairs,
+We restrict our analysis to pairs enrolled in RCSS for which and obtain a total number of pairs,
 ```{r, echo=FALSE}
 load(file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'stanin_MRC_FALSE_OnlyHTX_TRUE_threshold_0.5.RData'))
 nrow(pairs)
@@ -83,43 +99,84 @@ knitr::kable(tab)
 
 We define the time of infection as one year before the time of first positive test.
 
-A key date to investigate age shift over time is December 2016, when UTT was implemented in Rakai. Large declines in incidence among women were found afterwards https://www.croiconference.org/abstract/rapidly-declining-hiv-incidence-among-men-and-women-in-rakai-uganda/. Let us look at the number of pairs where the recipient was infected before and after UTT was implemented,
+We plot the time of infection of the source and recipient by cohort round. And here we indicate January 2014 by a dashed vertical line.
+
+```{r, echo=FALSE, out.width="70%", fig.show='hold', fig.align='centre'}
+date_implementation_UTT = as.Date('2014-01-01')
+plot_hist_time_infection(copy(pairs), date_implementation_UTT)
+
+```
+
+A key date to investigate age shift over time, when UTT was implemented in Rakai. Large declines in incidence among women were found afterwards https://www.croiconference.org/abstract/rapidly-declining-hiv-incidence-among-men-and-women-in-rakai-uganda/. Let us hypothesised two dates for the shift: January 2014 and January 2015. 
+
+Let us look at the number of pairs stratified by whether the recipient was infected before and after UTT was implemented.
+
+Using January 2014 as UTT implementation date:
 
 ```{r, echo=FALSE}
+date_implementation_UTT = as.Date('2014-01-01')
+pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_implementation_UTT]
 tab <- pairs[, list(count = .N), by = c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT')]
 knitr::kable(tab)
 ```
 
-We see that we have very few data of recipient infected after UTT was implemented. 
+Using January 2015 as UTT implementation date:
 
-Next, we plot the time of infection of the source and recipient by cohort round. And here we indicate December 2016 by a dashed vertical line.
-
-```{r, echo=FALSE, out.width="70%", fig.show='hold', fig.align='centre'}
-fig <- file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'hist_date_infection_MRC_FALSE_OnlyHTX_TRUE_threshold_0.5.png')
-knitr::include_graphics(fig)
+```{r, echo=FALSE}
+date_implementation_UTT = as.Date('2015-01-01')
+pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_implementation_UTT]
+tab <- pairs[, list(count = .N), by = c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT')]
+knitr::kable(tab)
 ```
 
-We confirm that recipients infected after the UTT was implemented were enrolled in rounds R17-R18. 
 
 
 ## Age at infection of sources and recipients
 
-Next, we explore the age at infection of the sources and recipients. First, we can look at the marginal of the age at infection of the sources and recipients stratified by sex. 
+Next, we explore the age at infection of the sources and recipients. We present two plots:
 
-```{r, echo=FALSE, out.width="70%", fig.show='hold', fig.align='centre'}
-fig <- file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'hist_age_infection_MRC_FALSE_OnlyHTX_TRUE_threshold_0.5.png')
-knitr::include_graphics(fig)
-```
+* the age at infection of the recipient against the age at infection of the source for the Male to Female and Female to Male direction.
+* the crude credible interval of the age at infection of the source for each 5 year age bands of the age of the recipient
 
-We can also plot the age at infection of the source against the age at infection of the recipient stratified by the direction of transmission. Additionally, we show by color whether the date of infection of the recipient was before or after UTT was implemented.
+Additionally, we show by color whether the date at infection of the recipient was before or after UTT was implemented.
 
-```{r, echo=FALSE, out.width="50%", fig.show='hold', fig.align='centre'}
-fig <- file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'AgeInfection_DateInfectionRecipient_FM.png')
-knitr::include_graphics(fig)
-```
+Using January 2014 as UTT implementation date:
 
 ```{r, echo=FALSE, out.width="50%", fig.show='hold', fig.align='centre'}
-fig <- file.path(outdir.full, 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5', 'AgeInfection_DateInfectionRecipient_MF.png')
-knitr::include_graphics(fig)
+date_implementation_UTT = as.Date('2014-01-01')
+pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_implementation_UTT]
+p <- plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF')
+p2 <- plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM')
+
+ p2[[3]]; p[[3]];
+
+```
+
+```{r, echo=FALSE, out.width="50%", fig.show='hold', fig.align='centre'}
+p <- plot_CI_age_infection(pairs)
+
+p
+
+```
+
+
+
+Using January 2015 as UTT implementation date:
+
+```{r, echo=FALSE, out.width="50%", fig.show='hold', fig.align='centre'}
+date_implementation_UTT = as.Date('2015-01-01')
+pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_implementation_UTT]
+p <- plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF', outdir.lab)
+p2 <- plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outdir.lab)
+
+p2[[3]]; p[[3]]; 
+
+```
+
+```{r, echo=FALSE, out.width="60%",  fig.align='centre'}
+p <- plot_CI_age_infection(pairs)
+
+p
+
 ```
 
