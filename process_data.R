@@ -57,15 +57,6 @@ meta.rccs.1 <- as.data.table(rccsData)
 meta.rccs.2 <- as.data.table( read.csv(file.path.meta.data.rccs.2))
 meta.mrc <- as.data.table( read.csv(file.path.meta.data.mrc))
 
-# env_rakai1516 <-  new.env(parent = emptyenv())
-# load(file.path.rakai1516, envir=env_rakai1516)
-# rtpdm <- as.data.table(env_rakai1516$rtpdm)
-# env_MRC <-  new.env(parent = emptyenv())
-# load(file.path.chains.data.MRC, envir=env_MRC)
-# dchain.MRC <- as.data.table(env_MRC$dchain)
-# mean(dchain.MRC[, unique(H1, H2)] %in% meta.mrc[, pangea_id])
-# file.path.rakai1516 <- file.path(indir.deepsequencedata, 'RakaiAll_output_190327_w250_s20_p25_d50_stagetwo_rerun23_min30_conf60_phylogeography_data_with_inmigrants.rda')
-# file.path.chains.data.MRC <- file.path( indir.deepsequence_analyses_MRC, 'MRCPopSample_phsc_stage2_output_newali_250_HKC_phsc', 'MRC_phscnetworks.rda')
 
 # load keys
 anonymisation.keys <- as.data.table(read.csv(file.anonymisation.keys))
