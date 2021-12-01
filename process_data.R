@@ -60,6 +60,7 @@ meta.mrc <- as.data.table( read.csv(file.path.meta.data.mrc))
 
 # load keys
 anonymisation.keys <- as.data.table(read.csv(file.anonymisation.keys))
+print.anonkey.statements()
 community.keys <- as.data.table( read.csv(file.community.keys) )
 
 time.first.positive <- as.data.table( read.csv(file.time.first.positive))

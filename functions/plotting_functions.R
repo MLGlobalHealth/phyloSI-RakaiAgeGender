@@ -390,7 +390,6 @@ phsc.plot.transmission.network<- function(dchain, dc, outdir=NULL, point.size=10
   
   if(!is.null(outdir))
     ggsave(p, filename = file.path(outdir, paste0('TransmissionNetworkClusters_', lab, '.png')), w = 10, h = 10)
-  ggsave(paste0(gsub('-', '', Sys.Date()), '_network.png'), p)
 
   return(p)
   
