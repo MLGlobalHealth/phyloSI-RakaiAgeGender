@@ -21,10 +21,12 @@ if(length(args_line) > 0)
   stopifnot(args_line[[3]]=='-outdir')
   stopifnot(args_line[[5]]=='-stan_model')
   stopifnot(args_line[[7]]=='-JOBID')
+  stopifnot(args_line[[9]]=='-lab')
   .indir <- args_line[[2]]
   .outdir <- args_line[[4]]
   stan_model <- args_line[[6]]
   JOBID <- as.numeric(args_line[[8]])
+  lab <- as.numeric(args_line[[10]])
 }
 
 path.to.stan.data <- file.path(.outdir, lab, paste0("stanin_",lab,".RData"))
