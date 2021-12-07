@@ -182,7 +182,7 @@ print.statements.about.pairs <- function(pairs, outdir){
 
 print_table <- function(table) print(knitr::kable(table))
 
-get.age.map <- function(pairs){
+get.age.map <- function(pairs, age_band = 4){
   
   ages <- pairs[, {
     min_age = floor(min(c(age_infection.SOURCE, age_infection.RECIPIENT)))
@@ -191,9 +191,35 @@ get.age.map <- function(pairs){
   age_map <- data.table(expand.grid(age_infection.SOURCE = ages$age, age_infection.RECIPIENT = ages$age))
   df_age <- age_map[order(age_infection.SOURCE, age_infection.RECIPIENT)]
   
-  ages <- sort(unique(df_age$age_infection.SOURCE)); length.age = 4
-  ages <- data.table(age_infection = ages, age_infection_reduced.SOURCE = rep(seq(min(ages), max(ages), length.age), each = length.age )[1:length(ages)])
+  ages <- sort(unique(df_age$age_infection.SOURCE)); 
+  ages <- data.table(age_infection = ages, age_infection_reduced.SOURCE = rep(seq(min(ages), max(ages), age_band), each = age_band )[1:length(ages)])
   df_age <- merge(df_age, ages, by.x = 'age_infection.SOURCE', by.y = 'age_infection')
   setnames(ages, 'age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT')
   df_age <<- merge(df_age, ages, by.x = 'age_infection.RECIPIENT', by.y = 'age_infection')
+  setkey(df_age, age_infection.SOURCE, age_infection.RECIPIENT)
 }
+
+get.time.map <- function(pairs, time_bands = '5 years'){
+  
+  DATES <- as.Date(paste0(format(range(pairs$date_infection.RECIPIENT), '%Y'), '-01-01'), '%Y-%m-%d')
+  DATES_SHORT <- seq.Date(DATES[1], DATES[2], time_bands)
+  
+  df_time <<- data.table(date_infection.RECIPIENT = seq.Date(DATES[1], DATES[2], '1 year'))
+  df_time[, date_infection_reduced.RECIPIENT := max(DATES_SHORT[date_infection.RECIPIENT - DATES_SHORT >= 0]), by = 'date_infection.RECIPIENT' ]
+  df_time[, idx_date_infection_reduced.RECIPIENT := which(DATES_SHORT == date_infection_reduced.RECIPIENT), by = 'date_infection.RECIPIENT']
+  
+}
+
+get.age.time.map <- function(df_age, df_time){
+  
+  df_age_reduced <- unique(df_age[,.(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)])
+  df_age_reduced[, dummy := 1]
+  
+  df_time_reduced <-  unique(df_time[,.(date_infection_reduced.RECIPIENT)])
+  df_time_reduced[, dummy := 1]
+  
+  df_age_time <<- merge(df_age_reduced, df_time_reduced, by = 'dummy', allow.cartesian=TRUE)
+  setkey(df_age_time, date_infection_reduced.RECIPIENT, age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)
+  
+}
+

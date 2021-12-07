@@ -270,7 +270,7 @@ ageanalysis <- function(infile.inference=NULL,infile.prior.samples=NULL,opt=NULL
   return(data.fit)
 }
 
-prepare_stan_data <- function(pairs, age_map){
+prepare_stan_data_old <- function(pairs, age_map){
   stan_data = list()
   
   # number of directions
@@ -304,7 +304,55 @@ prepare_stan_data <- function(pairs, age_map){
   
   # age age entries
   stan_data[['N_per_group']] = nrow(age_map)
+  
+  return(stan_data)
+}
 
+prepare_stan_data <- function(pairs, df_age_time, df_time, df_age){
+  
+  
+  stan_data = list()
+  
+  # number of directions
+  directions = list(c('F', 'M'), c('M', 'F'))
+  stan_data[['N_group']] = length(directions)
+  
+  # save count in each entry
+  y = vector(mode = 'list', length = length(directions))
+  is_mf = vector(mode = 'list', length = length(directions))
+  
+  for(i in 1:length(directions)){
+    tmp <- pairs[sex.SOURCE == directions[[i]][1] & sex.RECIPIENT == directions[[i]][2]]
+    tmp <- tmp[, list(age_infection.SOURCE = floor(age_infection.SOURCE), age_infection.RECIPIENT = floor(age_infection.RECIPIENT), 
+                      date_infection.RECIPIENT = as.Date(paste0(format(date_infection.RECIPIENT, '%Y'), '-01-01'), '%Y-%m-%d'))]
+    
+    # use reduced time
+    tmp <- merge(tmp, df_time, by = 'date_infection.RECIPIENT')
+    tmp <- tmp[, .(age_infection.SOURCE, age_infection.RECIPIENT, date_infection_reduced.RECIPIENT)]
+    
+    # use reduced age 
+    tmp <- merge(tmp, unique(df_age[, .(age_infection.SOURCE, age_infection_reduced.SOURCE)]), by =  c('age_infection.SOURCE'))
+    tmp <- tmp[, .(age_infection_reduced.SOURCE, age_infection.RECIPIENT, date_infection_reduced.RECIPIENT)]
+    tmp <- merge(tmp, unique(df_age[, .(age_infection.RECIPIENT, age_infection_reduced.RECIPIENT)]), by =  c('age_infection.RECIPIENT'))
+    tmp <- tmp[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)]
+    
+    # count number of observation
+    tmp <- tmp[, list(count = .N), by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]
+    tmp <- merge(df_age_time, tmp, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'), all.x = T)
+    tmp[is.na(count), count := 0]
+    setkey(tmp, date_infection_reduced.RECIPIENT, age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)
+    stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == directions[[i]][1] & sex.RECIPIENT == directions[[i]][2]]))
+    
+    y[[i]] = matrix(tmp$count, ncol = 1)
+    is_mf[[i]] = directions[[i]][1] == 'M' & directions[[i]][2] == 'F'
+    
+  }
+  
+  # save stan data
+  stan_data[['N_per_group']] = nrow(df_age_time)
+  stan_data[['y']] = do.call('cbind', y)
+  stan_data[['is_mf']] = unlist(is_mf)
+  
   return(stan_data)
 }
 
@@ -328,6 +376,39 @@ add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows =
   
   stopifnot(all( apply(stan_data$BASIS_ROWS, 1, sum) > 0  ))
   stopifnot(all( apply(stan_data$BASIS_COLUMNS, 1, sum) > 0  ))
+  
+  return(stan_data)
+}
+
+add_3D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_1D = 8, n_knots_2D = 8, n_knots_3D = 8, X, Y, Z)
+{
+  stopifnot(length(X) == length(Y))
+  
+  stopifnot(stan_data$N_per_group == length(X) * length(Y) * length(Z))
+  
+  stan_data$A <- length(X)
+  stan_data$T <- length(Z)
+  
+  knots_1D = X[seq(1, length(X), length.out = n_knots_1D)] 
+  knots_2D = Y[seq(1, length(Y), length.out = n_knots_2D)]
+  knots_3D = Z[seq(1, length(Z), length.out = n_knots_3D)]
+  
+  stan_data$num_basis_1D = length(knots_1D) + spline_degree - 1
+  stan_data$num_basis_2D = length(knots_2D) + spline_degree - 1
+  stan_data$num_basis_3D = length(knots_3D) + spline_degree - 1
+  
+  stan_data$IDX_BASIS_1D = 1:stan_data$num_basis_1D
+  stan_data$IDX_BASIS_2D = 1:stan_data$num_basis_2D
+  stan_data$IDX_BASIS_3D = 1:stan_data$num_basis_3D
+  
+  stan_data$BASIS_1D = bsplines(X, knots_1D, spline_degree)
+  stan_data$BASIS_2D = bsplines(Y, knots_2D, spline_degree)
+  stan_data$BASIS_3D = bsplines(Z, knots_3D, spline_degree)
+  
+  stopifnot(all( apply(stan_data$BASIS_1D, 1, sum) > 0  ))
+  stopifnot(all( apply(stan_data$BASIS_2D, 1, sum) > 0  ))
+  stopifnot(all( apply(stan_data$BASIS_3D, 1, sum) > 0  ))
+
   
   return(stan_data)
 }

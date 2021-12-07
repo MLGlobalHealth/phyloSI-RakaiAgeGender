@@ -203,49 +203,74 @@ plot_hist_age_infection_diff_threshold <- function(pairs, outdir){
 
 plot_CI_age_infection <- function(pairs, outdir = NULL){
   
-  tmp <- copy(pairs)
-  tmp[, age_infection.SOURCE := floor(age_infection.SOURCE)]
-  tmp[, age_infection.RECIPIENT := floor(age_infection.RECIPIENT)]
-  tmp <- merge(tmp, df_age, by = c('age_infection.RECIPIENT', 'age_infection.SOURCE'))
+  data <- copy(pairs)
+  data[, age_infection.SOURCE := floor(age_infection.SOURCE)]
+  data[, age_infection.RECIPIENT := floor(age_infection.RECIPIENT)]
+  data <- merge(data, df_age, by = c('age_infection.RECIPIENT', 'age_infection.SOURCE'))
   
   ps <- c(0.5, 0.2, 0.8)
   p_labs <- c('M','CL','CU')
   
-  quantile(subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M' & age_infection_reduced.RECIPIENT == 46)$age_infection.SOURCE, prob=ps)
-  
-  tmp = tmp[, list(q= quantile(age_infection.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
-            by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT', 'age_infection_reduced.RECIPIENT')]	
+  ## stratified by age of recipient
+  tmp = data[, list(q= quantile(age_infection.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
+             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT', 'age_infection_reduced.RECIPIENT')]	
   tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_UTT.RECIPIENT + age_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
-  
-  subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M' & age_infection_reduced.RECIPIENT == 46)
   
   # FM
   tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
   p1 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Age at infection male recipient', y = 'Age at infection female source', col = 'Date infection of recipient before UTT') +
+    labs(x = 'Age at infection male recipient', y = 'Age at infection female source', col = 'Date infection of recipient before 2017') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
     theme(legend.position = 'bottom') 
-
+  
   # MF
   tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
   p2 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Age at infection female recipient', y = 'Age at infection male source', col = 'Date infection of recipient before UTT') +
+    labs(x = 'Age at infection female recipient', y = 'Age at infection male source', col = 'Date infection of recipient before 2017') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
     theme(legend.position = 'bottom') 
-
+  
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
+  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionSource_', lab, '.png')), w = 8, h = 5)
   
-  if(!is.null(outdir))
-    ggsave(p, filename = file.path(outdir, paste0('AgeInfectionSource_', lab, '.png')), w = 8, h = 5)
   
-  return(p)
+  ## not stratified by age of recipient
+  tmp = data[, list(q= quantile(age_infection.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
+             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT')]	
+  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_UTT.RECIPIENT  ~ q_label, value.var = "q")
+  
+  # FM
+  tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
+  p1 <- ggplot(tmp1, aes(x = date_infection_before_UTT.RECIPIENT)) + 
+    geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Date infection of recipient before 2017', y = 'Age at infection female source', col = 'Date infection of recipient before 2017') +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    # coord_fixed() + 
+    theme(legend.position = 'bottom') 
+  
+  # MF
+  tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
+  p2 <- ggplot(tmp1, aes(x = date_infection_before_UTT.RECIPIENT)) + 
+    geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Date infection of recipient before 2017', y = 'Age at infection male source', col = 'Date infection of recipient before 2017') +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    # coord_fixed() + 
+    theme(legend.position = 'bottom') 
+  
+  p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
+  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionSource_Unstratified_', lab, '.png')), w = 8, h = 5)
+  
 }
 
