@@ -1,3 +1,42 @@
+print.anonkey.statements <- function()
+{
+  # Metadata from RCCS 1 
+  tmp <- unique(meta.rccs.1[, .(studyid, Pangea.id)])
+  tmp <- tmp[! (is.na(studyid) & is.na(Pangea.id))]
+  cat('There were ',tmp[!is.na(studyid), length(unique(studyid))],' distinct study IDs in rccsData \n')
+  cat('There were ',tmp[!is.na(Pangea.id), length(unique(Pangea.id))],' distinct study IDs in rccsData \n')
+  # tmp[,.N,by= Pangea.id][N > 1]
+  cat(tmp[,.N,by= studyid][N > 1, .N],'study ids had more than one associated Pangea ID.\n')
+  tmp[, STUDY_ID := gsub('R[0-9][0-9]$|R[0-9][0-9]S', '', studyid)] # Important to consider those entries that end with an S as well!
+
+  # meta data from RCCS2 (those that are not included in above as here STUDY ID doesn t contain round (so less informative))
+  tmp2 <- unique(meta.rccs.2[, .(pt_id, pangea_id)])
+  tmp2[,.N,by='pt_id'][, table(N)]
+  tmp2[, STUDY_ID := gsub('RK-', '', pt_id)]
+  tmp2[! STUDY_ID %in% tmp$STUDY_ID, list(.N, pangea_id),by = STUDY_ID][N>1, ]
+  tmp2 <- tmp2[! STUDY_ID %in% tmp$STUDY_ID,]
+
+  # compare to anonymisation keys
+  tmp1 <- unique(anonymisation.keys[,.(PT_ID, AID)])
+  tmp1[, lapply( .SD, FUN <- function(x){length(unique(x))}), .SDcols = c('PT_ID','AID')]
+  tmp1[, STUDY_ID := gsub('^RK-', '', PT_ID)]
+
+  if(all(tmp$STUDY_ID %in% tmp1$STUDY_ID))
+  {
+    cat('Every STUDY_ID in the rccsData has a corresponding STUDY_ID in the Anonymised Keys\n')
+  }
+  if(all(tmp2$STUDY_ID %in% tmp1$STUDY_ID))
+  {
+    cat('Every STUDY_ID in the second meta data file has a corresponding STUDY_ID in the Anonymised Keys\n')
+  }
+  cat( round(mean(tmp1$STUDY_ID %in% c(tmp$STUDY_ID, tmp2$STUDY_ID))*100,2),'% of STUDY_IDs in the rccsData or meta data 2 are in the Anonymised Keys\n')
+  tmp1[, table(substr(PT_ID, 1,3))]
+  
+  tmp1 <- tmp1[substr(PT_ID, 1,3) == 'RK-', ]
+  cat( round(mean(tmp1$STUDY_ID %in% c(tmp$STUDY_ID, tmp2$STUDY_ID))*100,2),'% of STUDY_IDs in the rccsData or meta data 2 are in the Anonymised Keys\n')
+
+}
+
 make.cluster.assignments <- function()
 {
   # Get files 
