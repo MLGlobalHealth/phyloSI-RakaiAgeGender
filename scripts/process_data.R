@@ -28,10 +28,10 @@ if(dir.exists('~/Documents/ratmann_deepseq_analyses'))
 }
 
 # indicators 
-include.mrc <- T
+include.mrc <- F
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
-date_implementation_UTT <- as.Date('2016-12-01')
+date_implementation_UTT <- as.Date('2015-01-01')
 lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs)
 
 # file paths
@@ -95,7 +95,13 @@ pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT
 pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_implementation_UTT]
 
 # prepare age map
-get.age.map(pairs)
+get.age.map(pairs, age_band = 2)
+
+# prepare time map
+get.time.map(pairs, time_bands = '2 years')
+
+# prepare age x time map
+get.age.time.map(df_age, df_time)
 
 # make some explanatory plots
 plot_hist_age_infection(copy(pairs), outdir.lab)
@@ -110,10 +116,15 @@ dc <- as.data.table(dc)
 phsc.plot.transmission.network(copy(dchain), copy(dc),outdir=outdir, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
 
 # prepare stan data
-stan_data <- prepare_stan_data(pairs, df_age)
-stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3, n_knots_rows = 15, n_knots_columns = 15, unique(df_age$age_infection.SOURCE))
+stan_data <- prepare_stan_data(pairs, df_age_time, df_time, df_age)
+stan_data <- add_3D_splines_stan_data(stan_data, spline_degree = 3, 
+                                      n_knots_1D = 15, n_knots_2D = 15, n_knots_3D = 2,
+                                      X = unique(df_age$age_infection_reduced.SOURCE), 
+                                      Y = unique(df_age$age_infection_reduced.SOURCE), 
+                                      Z = unique(df_time$idx_date_infection_reduced.RECIPIENT))
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)
 tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
 save(list=tmp, file=file.path(outdir.lab, paste0("stanin_",lab,".RData")) )
+

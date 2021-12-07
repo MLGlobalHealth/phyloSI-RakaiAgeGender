@@ -9,15 +9,31 @@ if(0){
   .outdir <- '~/Box\ Sync/2021/RCCS/outputs'
 }
 
-lab <- "MRC_FALSE_OnlyHTX_TRUE_threshold_0.6"
-stan_model <- 'gp_211117'
+lab <- "MRC_FALSE_OnlyHTX_TRUE_threshold_0.5"
+stan_model <- 'gp_211207'
 DEBUG <- F
 
-path.to.stan.data <- file.path(.outdir, paste0("stanin_",lab,".RData"))
-path.to.stan.model <- file.path(.indir, 'stan_models', paste0(stan_model, '.stan'))
+args_line <-  as.list(commandArgs(trailingOnly=TRUE))
+print(args_line)
+if(length(args_line) > 0)
+{
+  stopifnot(args_line[[1]]=='-indir')
+  stopifnot(args_line[[3]]=='-outdir')
+  stopifnot(args_line[[5]]=='-stan_model')
+  stopifnot(args_line[[7]]=='-JOBID')
+  stopifnot(args_line[[9]]=='-lab')
+  .indir <- args_line[[2]]
+  .outdir <- args_line[[4]]
+  stan_model <- args_line[[6]]
+  JOBID <- as.numeric(args_line[[8]])
+  lab <- as.numeric(args_line[[10]])
+}
 
+path.to.stan.data <- file.path(.outdir, lab, paste0("stanin_",lab,".RData"))
 load(path.to.stan.data)
+
 indir <- .indir; outdir <- .outdir; outdir.lab <- file.path(outdir, lab)
+path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
 # run stan model
 model = rstan::stan_model(path.to.stan.model)
@@ -35,6 +51,6 @@ if(DEBUG){
 sum = summary(fit)
 sum$summary[which(sum$summary[,9] < 100),]
 
-file = file.path(outdir.lab, paste0(stan_model, '_', lab, '.rds'))
+file = file.path(outdir.lab, paste0(stan_model,'-', JOBID, '_', lab, '.rds'))
 saveRDS(fit,file = file)
      
