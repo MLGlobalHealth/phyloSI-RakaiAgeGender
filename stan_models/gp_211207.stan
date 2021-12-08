@@ -49,9 +49,9 @@ functions {
     matrix[N_3D, N_3D] K3;
     matrix[N_3D, N_3D] L_K3;
     
-    K1 = cov_exp_quad(idx_1D, sqrt(alpha_gp), rho_gp1) + diag_matrix(rep_vector(delta0, N_1D));
-    K2 = cov_exp_quad(idx_2D, sqrt(alpha_gp), rho_gp2) + diag_matrix(rep_vector(delta0, N_2D));
-    K3 = cov_exp_quad(idx_3D, sqrt(alpha_gp), rho_gp3) + diag_matrix(rep_vector(delta0, N_3D));
+    K1 = cov_exp_quad(idx_1D, pow(alpha_gp, 1.0/3), rho_gp1) + diag_matrix(rep_vector(delta0, N_1D));
+    K2 = cov_exp_quad(idx_2D, pow(alpha_gp, 1.0/3), rho_gp2) + diag_matrix(rep_vector(delta0, N_2D));
+    K3 = cov_exp_quad(idx_3D, pow(alpha_gp, 1.0/3), rho_gp3) + diag_matrix(rep_vector(delta0, N_3D));
 
     L_K1 = cholesky_decompose(K1);
     L_K2 = cholesky_decompose(K2);
@@ -129,8 +129,8 @@ model {
   rho_gp1 ~ inv_gamma(5, 5);
   rho_gp2 ~ inv_gamma(5, 5);
   rho_gp3 ~ inv_gamma(5, 5);
-  mu ~ normal(0, 10);
-  nu ~ normal(0, 10);
+  mu ~ normal(0, 5);
+  nu ~ normal(0, 5);
   
   for(i in 1:num_basis_1D){
     for(j in 1:num_basis_2D_times_3D){
@@ -144,11 +144,11 @@ model {
 }
 
 generated quantities{
-  int y_predict[N_per_group,N_group];
+  // int y_predict[N_per_group,N_group];
   real log_lik[N_per_group,N_group];
   for(i in 1:N_group){
     for(j in 1:N_per_group){
-      y_predict[j,i] = poisson_log_rng(log_lambda[i][j]);
+      // y_predict[j,i] = poisson_log_rng(log_lambda[i][j]);
       log_lik[j,i] = poisson_log_lpmf(y[j,i]| log_lambda[i][j]);
     }
   }
