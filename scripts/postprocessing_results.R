@@ -1,3 +1,5 @@
+cat("Start of postprocessing_results.R")
+
 library(rstan)
 library(data.table)	
 library(ggplot2)
@@ -41,14 +43,14 @@ if(length(args_line) > 0)
 source(file.path(.indir, 'functions', 'postprocessing_summary_functions.R'))
 source(file.path(.indir, 'functions', 'postprocessing_plot_functions.R'))
 
-# paths
-path.to.stan.data <- file.path(datadir, paste0("stanin_",lab,".RData"))
-path.to.stan.output = file.path(.outdir, paste0(.stan_model,'-', .JOBID), paste0(.stan_model,'-', .JOBID, '_', lab, '.rds'))
-outdir.fig <- file.path(.outdir, 'figures', paste0(.stan_model,'-', .JOBID))
-outdir.table <- file.path(.outdir, 'table', paste0(.stan_model,'-', .JOBID))
-
 # load data
+path.to.stan.data <- file.path(datadir, paste0("stanin_",lab,".RData"))
 load(path.to.stan.data)
+
+# paths
+path.to.stan.output = file.path(datadir, paste0(.stan_model,'-', .JOBID), paste0(.stan_model,'-', .JOBID, '_', lab, '.rds'))
+outdir.fig <- file.path(.outdir, 'figures', paste0(.stan_model,'-', .JOBID))
+outdir.table <- file.path(.outdir, 'tables', paste0(.stan_model,'-', .JOBID))
 
 # table
 df_direction <- data.table(index_direction = 1:2, is_mf = stan_data$is_mf)
@@ -75,5 +77,6 @@ plot_intensity_PP(intensity_PP, count_data, outdir.fig)
 # age_source <- find_age_source(samples, df_direction, df_age)
   
 
+cat("End of postprocessing_results.R")
 
 
