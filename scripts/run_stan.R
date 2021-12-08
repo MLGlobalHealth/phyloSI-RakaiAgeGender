@@ -15,6 +15,7 @@ if(0){
 }
 
 .outdir <- file.path(datadir, lab)
+datadir <- file.path(datadir, lab)
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
 print(args_line)
@@ -52,7 +53,7 @@ stan_init$mu = 0
 
 if(DEBUG){
   fit <- sampling(model, data = stan_data, iter = 10, warmup = 5, chains=1, thin=1, init=rep(list(stan_init),1))
-}else{
+time}else{
   options(mc.cores = parallel::detectCores())
   rstan_options(auto_write = TRUE)
   fit <- sampling(model, data = stan_data,

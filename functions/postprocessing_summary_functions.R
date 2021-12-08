@@ -156,50 +156,30 @@ check_rhat <- function(fit) {
     print('  Rhat above 1.1 indicates that the chains very likely have not mixed')
 }
 
-summarise_var_by_age_direction <- function(samples, var, df_direction, df_age, transform = NULL){
+summarise_var_by_agextime_direction <- function(samples, var, df_direction, df_age_time, transform = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
-  setnames(tmp1, 2:3, c('index_direction','index_age'))
+  setnames(tmp1, 2:3, c('index_direction','index_age_time'))
   
   if(!is.null(transform)){
     tmp1[, value := sapply(value, transform)]
   }
   
   tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), 
-              by=c('index_direction', 'index_age')]	
-  tmp1 = dcast(tmp1, index_direction + index_age ~ q_label, value.var = "q")
+              by=c('index_direction', 'index_age_time')]	
+  tmp1 = dcast(tmp1, index_direction + index_age_time ~ q_label, value.var = "q")
   
   tmp1 <- merge(tmp1, df_direction, by = 'index_direction')
-  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_age_time, by = 'index_age_time')
   
   return(tmp1)
 }
 
-plot_intensity_PP <- function(intensity_PP, count_data, outdir){
-  
-  count_data_reduced <- count_data[count > 0]
-  
-  p <- ggplot(intensity_PP, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
-    geom_raster(aes(fill = M)) + 
-    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
-    geom_point(data = count_data_reduced, aes(size = count), col = 'grey50') +
-    theme_bw() + 
-    coord_fixed() +
-    labs(x = 'Age at infection source', y = 'Age at infection recipient', fill = 'transmission rate') +
-    geom_contour(aes(z = M), col = 'red') + 
-    facet_grid(.~label_direction) + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)),
-          legend.position = 'bottom') +
-    scale_fill_viridis_c() + 
-    scale_x_continuous(expand = c(0,0)) + 
-    scale_y_continuous(expand = c(0,0)) 
-  
-  ggsave(p, file = paste0(outdir, '-intensity_transmission.png'), w = 8, h = 5)
-}
+
+
 
 find_age_source <- function(samples, df_direction, df_age){
   
@@ -222,11 +202,13 @@ find_age_source <- function(samples, df_direction, df_age){
   return(tmp1)
 }
 
-prepare_count_data <- function(stan_data){
+prepare_count_data <- function(stan_data, df_age_time){
   count_data <- data.table(stan_data$y)
   colnames(count_data) <- c(c('Male -> Female', 'Female -> Male')[stan_data$is_mf == 1], c('Female -> Male', 'Male -> Female')[stan_data$is_mf == 1])
-  count_data <- cbind(count_data, df_age[,-3])
-  count_data <- reshape2::melt(count_data, id.vars = c('age_infection.SOURCE', 'age_infection.RECIPIENT'))
+  count_data <- cbind(count_data, df_age_time[,.(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
+  count_data <- reshape2::melt(count_data, id.vars = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
   setnames(count_data, c('value', 'variable'), c('count', 'label_direction'))
-  return(count_data)
+  
+  count_data <- merge(count_data, df_age_time, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
+  return(as.data.table(count_data))
 }
