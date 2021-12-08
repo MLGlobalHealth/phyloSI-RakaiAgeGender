@@ -178,29 +178,64 @@ summarise_var_by_agextime_direction <- function(samples, var, df_direction, df_a
   return(tmp1)
 }
 
-
-
-
-find_age_source <- function(samples, df_direction, df_age){
+find_age_source_by_agextime_direction <- function(samples, df_direction, df_age_time){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
-  tmp1 = as.data.table( reshape2::melt(samples[['y_predict']]) )
-  setnames(tmp1, 2:3, c('index_age', 'index_direction'))
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_direction', 'index_age_time'))
   
-  tmp1 = merge(tmp1, df_age, by = 'index_age')
+  tmp1[, value := exp(value)]
   
-  tmp1 <- tmp1[, list(value = as.numeric(median(rep(age_infection.SOURCE, value)))), by = c('iterations', 'age_infection.RECIPIENT', 'index_direction')]
-  
+  tmp1 <- merge(tmp1, df_age_time, by = 'index_age_time')
+
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_direction', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_direction', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = sum(pi * age_infection_reduced.SOURCE)), by = c('iterations', 'index_direction', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]
+
   tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
-              by=c('index_direction', 'age_infection.RECIPIENT')]	
-  tmp1 = dcast(tmp1, index_direction + age_infection.RECIPIENT ~ q_label, value.var = "q")
+              by=c('index_direction', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]	
+  tmp1 = dcast(tmp1, index_direction + age_infection_reduced.RECIPIENT + date_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
   
   tmp1 <- merge(tmp1, df_direction, by = 'index_direction')
   
+  tmp1 <- merge(tmp1, unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), by = 'date_infection_reduced.RECIPIENT')
+  
+  
   return(tmp1)
 }
+
+find_age_source_by_time_direction <- function(samples, df_direction, df_age_time){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_direction', 'index_age_time'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age_time, by = 'index_age_time')
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_direction', 'date_infection_reduced.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_direction', 'date_infection_reduced.RECIPIENT'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = sum(pi * age_infection_reduced.SOURCE)), by = c('iterations', 'index_direction', 'date_infection_reduced.RECIPIENT')]
+  
+  tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('index_direction', 'date_infection_reduced.RECIPIENT')]	
+  tmp1 = dcast(tmp1, index_direction + date_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_direction, by = 'index_direction')
+  
+  tmp1 <- merge(tmp1, unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), by = 'date_infection_reduced.RECIPIENT')
+  
+  
+  return(tmp1)
+}
+
 
 prepare_count_data <- function(stan_data, df_age_time){
   count_data <- data.table(stan_data$y)

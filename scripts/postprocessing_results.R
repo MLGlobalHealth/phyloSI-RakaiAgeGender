@@ -4,21 +4,23 @@ library(rstan)
 library(data.table)	
 library(ggplot2)
 library(ggpubr)
+library(gridExtra)
 
 lab <- "MRC_FALSE_OnlyHTX_TRUE_threshold_0.5"
 .stan_model <- 'gp_211207'
 DEBUG <- F
-JOBID = 12
+.JOBID = 8586
 
 .indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 datadir <- "/rds/general/user/mm3218/home/projects/2021/phyloflows"
+.outdir <- file.path(datadir, lab, paste0(.stan_model,'-', .JOBID))
 
 if(0){
   .indir <- '~/git/phyloflows'
   datadir <- '~/Box\ Sync/2021/phyloflows/'
+  .outdir <- file.path(datadir, lab)
 }
 
-.outdir <- file.path(datadir, lab)
 datadir <- file.path(datadir, lab)
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
@@ -71,11 +73,17 @@ make_convergence_diagnostics_stats(fit, outdir.table)
 # intensity of the poisson process
 intensity_PP <- summarise_var_by_agextime_direction(samples, 'log_lambda', df_direction, df_age_time, transform = 'exp')
 count_data <- prepare_count_data(stan_data, df_age_time)
-plot_intensity_PP(intensity_PP, count_data, outdir.fig)
-  
+plot_intensity_PP(intensity_PP, count_data, 'Female -> Male', outdir.fig)
+plot_intensity_PP(intensity_PP, count_data, 'Male -> Female', outdir.fig)
+
 # median age of source
-# age_source <- find_age_source(samples, df_direction, df_age)
-  
+age_source <- find_age_source_by_agextime_direction(samples, df_direction, df_age_time)
+plot_mean_age_source(age_source, 'Female -> Male', outdir.fig)
+plot_mean_age_source(age_source, 'Male -> Female', outdir.fig)
+
+age_source_overall <- find_age_source_by_time_direction(samples, df_direction, df_age_time)
+plot_mean_age_source_overall(age_source_overall, 'Female -> Male', outdir.fig)
+plot_mean_age_source_overall(age_source_overall, 'Male -> Female', outdir.fig)
 
 cat("End of postprocessing_results.R")
 
