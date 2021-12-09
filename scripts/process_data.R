@@ -98,7 +98,8 @@ pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_
 get.age.map(pairs, age_band = 2)
 
 # prepare time map
-get.time.map(pairs, time_bands = '2 years')
+get.time.map(pairs, time_bands = '2 years', 
+             time_intervals = c(as.Date('2009-01-01'), as.Date('2011-01-01'), date_implementation_UTT))
 
 # prepare age x time map
 get.age.time.map(df_age, df_time)
@@ -111,17 +112,18 @@ plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == '
 plot_CI_age_infection(pairs, outdir.lab)
 
 # Unfortunately have to run 'manually' at the moment. Need to understand what s wrong with this one.
-dchain <- as.data.table(dchain)
-dc <- as.data.table(dc)
-phsc.plot.transmission.network(copy(dchain), copy(dc),outdir=outdir, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
+# dchain <- as.data.table(dchain)
+# dc <- as.data.table(dc)
+# phsc.plot.transmission.network(copy(dchain), copy(dc),outdir=outdir, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
 
 # prepare stan data
-stan_data <- prepare_stan_data(pairs, df_age_time, df_time, df_age)
+stan_data <- prepare_stan_data(pairs, df_age_time, df_age_time_gathered, df_time, df_age)
 stan_data <- add_3D_splines_stan_data(stan_data, spline_degree = 3, 
-                                      n_knots_1D = 15, n_knots_2D = 15, n_knots_3D = 2,
+                                      n_knots_1D = 15, n_knots_2D = 15, 
+                                      knots_3D = unique(df_time$time_infection_gathered.RECIPIENT),
                                       X = unique(df_age$age_infection_reduced.SOURCE), 
-                                      Y = unique(df_age$age_infection_reduced.SOURCE), 
-                                      Z = unique(df_time$idx_date_infection_reduced.RECIPIENT))
+                                      Y = unique(df_age$age_infection_reduced.RECIPIENT), 
+                                      Z = unique(df_time$time_infection_reduced.RECIPIENT))
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)

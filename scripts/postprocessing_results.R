@@ -58,10 +58,13 @@ outdir.table <- file.path(.outdir, 'tables', paste0(.stan_model,'-', .JOBID))
 df_direction <- data.table(index_direction = 1:2, is_mf = stan_data$is_mf)
 df_direction[, label_direction := ifelse(is_mf == 1, 'Male -> Female', 'Female -> Male')]
 
-df_age_time$index_age_time <- 1:nrow(df_age_time); 
-df_age_time[, year_infection_reduced.RECIPIENT := as.numeric(format(date_infection_reduced.RECIPIENT, '%Y'))]
-time_bands = unique(diff(unique(df_age_time$year_infection_reduced.RECIPIENT)))
-df_age_time[, date_infection_reduced_name.RECIPIENT := paste0('Jan ', year_infection_reduced.RECIPIENT, '-Dec ', year_infection_reduced.RECIPIENT + time_bands - 1)]
+df_age_time[, date_infection_reduced_name.RECIPIENT:= format(date_infection_reduced.RECIPIENT, '%b %Y')]
+df_age_time[, year_infection_gathered.RECIPIENT := as.numeric(format(date_infection_gathered.RECIPIENT, '%Y'))]
+time_bands = diff(c(unique(df_age_time$year_infection_gathered.RECIPIENT), max(as.numeric(format(df_time$date_infection.RECIPIENT, '%Y')))))
+tmp <- data.table(year_infection_gathered.RECIPIENT = unique(df_age_time$year_infection_gathered.RECIPIENT), time_bands = time_bands)
+df_age_time <- merge(df_age_time, tmp, by = 'year_infection_gathered.RECIPIENT')
+df_age_time[, date_infection_gathered_name.RECIPIENT := paste0('Jan ', year_infection_gathered.RECIPIENT, '-Dec ', year_infection_gathered.RECIPIENT + time_bands - 1)]
+df_age_time_gathered <- merge(df_age_time_gathered, unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_gathered_name.RECIPIENT)]), by = 'date_infection_reduced.RECIPIENT')
 
 # samples 
 fit <- readRDS(path.to.stan.output)
@@ -72,19 +75,17 @@ make_convergence_diagnostics_stats(fit, outdir.table)
 
 # intensity of the poisson process
 intensity_PP <- summarise_var_by_agextime_direction(samples, 'log_lambda', df_direction, df_age_time, transform = 'exp')
-count_data <- prepare_count_data(stan_data, df_age_time)
-plot_intensity_PP(intensity_PP, count_data, 'Female -> Male', outdir.fig)
-plot_intensity_PP(intensity_PP, count_data, 'Male -> Female', outdir.fig)
+intensity_PP_evaluated <- intensity_PP[date_infection_reduced.RECIPIENT %in% unique(df_age_time_gathered$date_infection_reduced.RECIPIENT)]
+count_data <- prepare_count_data(stan_data, df_age_time_gathered)
+plot_intensity_PP(intensity_PP_evaluated, count_data,  outdir.fig)
 
 # median age of source
 age_source <- find_age_source_by_agextime_direction(samples, df_direction, df_age_time)
-plot_mean_age_source(age_source, 'Female -> Male', outdir.fig)
-plot_mean_age_source(age_source, 'Male -> Female', outdir.fig)
+plot_mean_age_source(age_source, outdir.fig)
 
 age_source_overall <- find_age_source_by_time_direction(samples, df_direction, df_age_time)
-plot_mean_age_source_overall(age_source_overall, 'Female -> Male', outdir.fig)
-plot_mean_age_source_overall(age_source_overall, 'Male -> Female', outdir.fig)
+plot_mean_age_source_overall(age_source_overall, outdir.fig)
+
 
 cat("End of postprocessing_results.R")
-
 

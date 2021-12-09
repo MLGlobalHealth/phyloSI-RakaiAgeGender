@@ -237,13 +237,13 @@ find_age_source_by_time_direction <- function(samples, df_direction, df_age_time
 }
 
 
-prepare_count_data <- function(stan_data, df_age_time){
+prepare_count_data <- function(stan_data, df_age_time_gathered){
   count_data <- data.table(stan_data$y)
   colnames(count_data) <- c(c('Male -> Female', 'Female -> Male')[stan_data$is_mf == 1], c('Female -> Male', 'Male -> Female')[stan_data$is_mf == 1])
-  count_data <- cbind(count_data, df_age_time[,.(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
-  count_data <- reshape2::melt(count_data, id.vars = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
+  count_data <- cbind(count_data, df_age_time_gathered[,.(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_gathered.RECIPIENT)])
+  count_data <- reshape2::melt(count_data, id.vars = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_gathered.RECIPIENT'))
   setnames(count_data, c('value', 'variable'), c('count', 'label_direction'))
   
-  count_data <- merge(count_data, df_age_time, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
+  count_data <- merge(count_data, df_age_time_gathered, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_gathered.RECIPIENT'))
   return(as.data.table(count_data))
 }

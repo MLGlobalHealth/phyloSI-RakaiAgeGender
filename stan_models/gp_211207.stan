@@ -65,9 +65,11 @@ functions {
 
 data {
   int<lower=1> N_group; // number of directions
-  int<lower=1> N_per_group; // age-age entries
-  int y[N_per_group, N_group]; // count of transmissions for each age-age entry
+  int<lower=1> N_per_group; // age-age-time entries
+  int<lower=1> N_non_missing_per_group; // age-age-time entries with observation
+  int y[N_non_missing_per_group, N_group]; // count of transmissions for each age-age entry
   int<lower=0,upper=1> is_mf[N_group]; // is the direction mf
+	int idx_obs[N_non_missing_per_group, N_group]; // coordinates 
 	
 	int A; // number of ages
 	int T; // number of times
@@ -139,17 +141,17 @@ model {
   } 
       
   for (i in 1:N_group){
-    y[:,i] ~ poisson_log(log_lambda[i]);
+    y[:,i] ~ poisson_log(log_lambda[i][idx_obs[:,i]]);
   }
 }
 
 generated quantities{
   // int y_predict[N_per_group,N_group];
-  real log_lik[N_per_group,N_group];
+  real log_lik[N_non_missing_per_group,N_group];
   for(i in 1:N_group){
-    for(j in 1:N_per_group){
+    for(j in 1:N_non_missing_per_group){
       // y_predict[j,i] = poisson_log_rng(log_lambda[i][j]);
-      log_lik[j,i] = poisson_log_lpmf(y[j,i]| log_lambda[i][j]);
+      log_lik[j,i] = poisson_log_lpmf(y[j,i]| log_lambda[i][idx_obs[j,i]]);
     }
   }
 }
