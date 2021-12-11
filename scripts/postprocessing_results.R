@@ -9,7 +9,7 @@ library(gridExtra)
 lab <- "MRC_FALSE_OnlyHTX_TRUE_threshold_0.5"
 .stan_model <- 'gp_211207'
 DEBUG <- F
-.JOBID = 8586
+.JOBID = 21114
 
 .indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 datadir <- "/rds/general/user/mm3218/home/projects/2021/phyloflows"
@@ -81,9 +81,11 @@ plot_intensity_PP(intensity_PP_evaluated, count_data,  outdir.fig)
 
 # median age of source
 age_source <- find_age_source_by_agextime_direction(samples, df_direction, df_age_time)
+age_source <- age_source[!date_infection_reduced.RECIPIENT %in% range(date_infection_reduced.RECIPIENT)]
 plot_mean_age_source(age_source, outdir.fig)
 
 age_source_overall <- find_age_source_by_time_direction(samples, df_direction, df_age_time)
+age_source_overall <- age_source_overall[!date_infection_reduced.RECIPIENT %in% range(date_infection_reduced.RECIPIENT)]
 plot_mean_age_source_overall(age_source_overall, outdir.fig)
 
 

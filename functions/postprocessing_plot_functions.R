@@ -2,26 +2,69 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
   
   count_data_reduced <- count_data[count > 0]
   
-    p <- ggplot(intensity_PP, aes(y = age_infection_reduced.SOURCE, x = age_infection_reduced.RECIPIENT)) + 
+  fct <- function(intensity_PP, count_data_reduced){
+    ggplot(intensity_PP, aes(y = age_infection_reduced.SOURCE, x = age_infection_reduced.RECIPIENT)) + 
       geom_raster(aes(fill = M)) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
       geom_point(data = count_data_reduced, aes(size = count), col = 'grey50') +
       theme_bw() + 
       coord_fixed() +
       labs(x = 'Age at infection recipient', fill = 'transmission rate', y= 'Age at infection source') +
-      geom_contour(aes(z = M), col = 'red', alpha = 0.8) + 
+      geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
       facet_grid(label_direction~date_infection_gathered_name.RECIPIENT) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom', 
-            axis.title.y = element_blank()) +
+            legend.position = 'bottom') +
       scale_fill_viridis_c(limits = range(intensity_PP$M)) + 
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = c(0,0)) + 
       scale_size_continuous(range = c(1, 3))
+  }
+  
+  p <- fct(intensity_PP, count_data_reduced)
+  ggsave(p, file = paste0(outdir, '-intensity_transmission', '.png'), w = 10, h = 8)
+  
+  p = list(); p1 = list()
+  Dates = unique(intensity_PP$date_infection_gathered_name.RECIPIENT)
+  Directions = unique(intensity_PP$label_direction)
+  for(j in 1:length(Directions)){
+    for(i in 1:length(Dates)){
+      Date = Dates[i]; Direction = Directions[j]
+      tmp <- subset(intensity_PP, date_infection_gathered_name.RECIPIENT == Date & label_direction == Direction)
+      tmp1 <- subset(count_data_reduced, date_infection_gathered_name.RECIPIENT == Date & label_direction == Direction)
+      
+      p[[i]] <- fct(tmp, tmp1) + theme(legend.position='none')
+      
+      if(i != length(Dates)){
+        p[[i]] <- p[[i]] + 
+          theme(strip.text.y = element_blank())
+      }
+      if(i != 1){
+        p[[i]] <- p[[i]] + 
+          theme(axis.title.y = element_blank(),
+                axis.ticks.y = element_blank(),
+                axis.text.y = element_blank())
+      }
+      
+      if(j != 1){
+        p[[i]] <- p[[i]] + 
+          theme(strip.text.x = element_blank())
+      }
+      if(j != length(Directions)){
+        p[[i]] <- p[[i]] + 
+          theme(axis.title.x = element_blank(),
+                axis.ticks.x = element_blank(),
+                axis.text.x = element_blank())
+      }
+      
+    }
+    p1[[j]] <- ggarrange(plotlist = p, nrow = 1, widths = c(1, 0.87, 0.87, 1))
     
-
-  ggsave(p, file = paste0(outdir, '-intensity_transmission', '.png'), w = 8, h = 6)
+  }
+  
+  p <- ggarrange(plotlist = p1, nrow = 2, heights = c(1, 1))
+  ggsave(p, file = paste0(outdir, '-intensity_transmission_idt', '.png'), w = 10, h = 5)
+  
 }
 
 
