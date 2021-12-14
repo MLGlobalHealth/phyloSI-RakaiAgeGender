@@ -119,6 +119,7 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   meta <- meta[, .(pt_id, aid, sex, cohort_round, cohort, comm,
                    age_infection,  age_first_positive, age_enrol,
                    date_infection, date_first_positive, date_first_visit)]
+  meta[, birth_date := date_infection - age_infection*365]
   
   # remove very young patients (bug?)
   cat('\nExcluding very young patients')
@@ -146,6 +147,9 @@ pairs.get.meta.data <- function(dchain, meta){
   names(tmp) = paste0(names(tmp), '.RECIPIENT')
   tmp1 <- merge(tmp1, tmp, by.x = 'RECIPIENT', by.y = 'aid.RECIPIENT')
   
+  # find age transmission source
+  tmp1[, age_transmission.SOURCE := as.numeric(date_infection.RECIPIENT - birth_date.SOURCE)/365]
+  
   # individuals without meta data
   missing_indiv = unique(c(dchain$SOURCE, dchain$RECIPIENT)[!(c(dchain$SOURCE, dchain$RECIPIENT) %in% meta$aid)])
   cat('There are ', length(missing_indiv), 'indivs without meta data:\n' )
@@ -158,8 +162,8 @@ print.statements.about.pairs <- function(pairs, outdir){
   
   cat('\nThere is ', nrow(pairs), ' source-recipient pairs\n\n')
   
-  cat(nrow(pairs[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]), ' pairs have a proxy for the time of infection of the source and recipient\n')
-  cat(nrow(pairs[((sex.SOURCE == 'F' & sex.RECIPIENT == 'M') | (sex.SOURCE == 'M' & sex.RECIPIENT == 'F')) & (!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT))]), ' pairs are heteroxuals have a proxy for the time of infection of the source and recipient\n\n')                
+  cat(nrow(pairs[!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT)]), ' pairs have a proxy for the time of infection of the source and recipient\n')
+  cat(nrow(pairs[((sex.SOURCE == 'F' & sex.RECIPIENT == 'M') | (sex.SOURCE == 'M' & sex.RECIPIENT == 'F')) & (!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT))]), ' pairs are heteroxuals have a proxy for the time of infection of the source and recipient\n\n')                
   
   cat('\nPairs by cohort')
   tab <- pairs[, list(count = .N), by = c('cohort.SOURCE', 'cohort.RECIPIENT')]
@@ -182,66 +186,67 @@ print.statements.about.pairs <- function(pairs, outdir){
 
 print_table <- function(table) print(knitr::kable(table))
 
-get.age.map <- function(pairs, age_band = 4){
+get.age.map <- function(pairs, age_bands = 4){
   
   ages <- pairs[, {
-    min_age = floor(min(c(age_infection.SOURCE, age_infection.RECIPIENT)))
-    max_age = floor(max(c(age_infection.SOURCE, age_infection.RECIPIENT)))
+    min_age = floor(min(c(age_transmission.SOURCE, age_infection.RECIPIENT)))
+    max_age = floor(max(c(age_transmission.SOURCE, age_infection.RECIPIENT)))
     list(age = min_age:max_age)}]
-  age_map <- data.table(expand.grid(age_infection.SOURCE = ages$age, age_infection.RECIPIENT = ages$age))
-  df_age <- age_map[order(age_infection.SOURCE, age_infection.RECIPIENT)]
+  age_map <- data.table(expand.grid(age_transmission.SOURCE = ages$age, age_infection.RECIPIENT = ages$age))
+  df_age <- age_map[order(age_transmission.SOURCE, age_infection.RECIPIENT)]
   
-  ages <- sort(unique(df_age$age_infection.SOURCE)); 
-  ages <- data.table(age_infection = ages, age_infection_reduced.SOURCE = rep(seq(min(ages), max(ages), age_band), each = age_band )[1:length(ages)])
-  df_age <- merge(df_age, ages, by.x = 'age_infection.SOURCE', by.y = 'age_infection')
-  setnames(ages, 'age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT')
-  df_age <<- merge(df_age, ages, by.x = 'age_infection.RECIPIENT', by.y = 'age_infection')
-  setkey(df_age, age_infection.SOURCE, age_infection.RECIPIENT)
+  ages <- sort(unique(df_age$age_transmission.SOURCE)); 
+  ages <- data.table(age_infection = ages, age_infection_evaluated.SOURCE = rep(seq(min(ages), max(ages), age_bands), each = age_bands )[1:length(ages)])
+  df_age <- merge(df_age, ages, by.x = 'age_transmission.SOURCE', by.y = 'age_infection')
+  setnames(ages, 'age_infection_evaluated.SOURCE', 'age_infection_evaluated.RECIPIENT')
+  df_age <- merge(df_age, ages, by.x = 'age_infection.RECIPIENT', by.y = 'age_infection')
+  setkey(df_age, age_transmission.SOURCE, age_infection.RECIPIENT)
+  
+  # by default
+  df_age[, age_infection_reduced.SOURCE := age_infection_evaluated.SOURCE]
+  df_age[, age_infection_reduced.RECIPIENT := age_infection_evaluated.RECIPIENT]
+  
+  return(df_age)
 }
 
-get.time.map <- function(pairs, time_bands = '1 year', time_intervals = c(as.Date('2010-01-01'), as.Date('2011-01-01'), as.Date('2012-01-01'), date_implementation_UTT)){
+get.time.map <- function(pairs, time_bands_evaluated = '1 year', time_intervals_reduced = c(as.Date('2010-01-01'), as.Date('2011-01-01'), as.Date('2012-01-01'), date_implementation_UTT)){
   
   DATES <- as.Date(paste0(format(range(pairs$date_infection.RECIPIENT), '%Y'), '-01-01'), '%Y-%m-%d')
   
-  DATES_EVAL <- seq.Date(DATES[1] - 365, DATES[2] + 365, time_bands)
-  DATES_DATA = c(DATES[1], time_intervals) #don't include last date
+  DATES_EVAL <- seq.Date(DATES[1] - 365, DATES[2] + 365, time_bands_evaluated)
+  DATES_DATA = c(DATES[1], time_intervals_reduced) #don't include last date
   
   df_time <<- data.table(date_infection.RECIPIENT = seq.Date(DATES[1], DATES[2], '1 year'))
-  df_time[, date_infection_reduced.RECIPIENT := max(DATES_EVAL[date_infection.RECIPIENT - DATES_EVAL >= 0]), by = 'date_infection.RECIPIENT' ]
-  df_time[, date_infection_gathered.RECIPIENT := max(DATES_DATA[date_infection.RECIPIENT - DATES_DATA >= 0]), by = 'date_infection.RECIPIENT' ]
+  df_time[, date_infection_evaluated.RECIPIENT := max(DATES_EVAL[date_infection.RECIPIENT - DATES_EVAL >= 0]), by = 'date_infection.RECIPIENT' ]
+  df_time[, date_infection_reduced.RECIPIENT := max(DATES_DATA[date_infection.RECIPIENT - DATES_DATA >= 0]), by = 'date_infection.RECIPIENT' ]
   
   df_time[, time_infection.RECIPIENT := 1:nrow(df_time)]
+  df_time[, time_infection_evaluated.RECIPIENT := (mean(time_infection.RECIPIENT)), by = 'date_infection_evaluated.RECIPIENT']
   df_time[, time_infection_reduced.RECIPIENT := (mean(time_infection.RECIPIENT)), by = 'date_infection_reduced.RECIPIENT']
-  df_time[, time_infection_gathered.RECIPIENT := (mean(time_infection.RECIPIENT)), by = 'date_infection_gathered.RECIPIENT']
   
   df_time[, idx_date_infection.RECIPIENT := 1:nrow(df_time)]
+  tmp <- unique(df_time[, .(time_infection_evaluated.RECIPIENT)]) ; tmp[, idx_date_infection_evaluated.RECIPIENT := 1:nrow(tmp) ]
+  df_time = merge(tmp, df_time, by = 'time_infection_evaluated.RECIPIENT')
   tmp <- unique(df_time[, .(time_infection_reduced.RECIPIENT)]) ; tmp[, idx_date_infection_reduced.RECIPIENT := 1:nrow(tmp) ]
-  df_time = merge(tmp, df_time, by = 'time_infection_reduced.RECIPIENT')
-  tmp <- unique(df_time[, .(time_infection_gathered.RECIPIENT)]) ; tmp[, idx_date_infection_gathered.RECIPIENT := 1:nrow(tmp) ]
-  df_time <<- merge(tmp, df_time, by = 'time_infection_gathered.RECIPIENT')
+  df_time <- merge(tmp, df_time, by = 'time_infection_reduced.RECIPIENT')
   
+  return(df_time)
 }
 
 get.age.time.map <- function(df_age, df_time){
   
-  df_age_reduced <- unique(df_age[,.(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)])
-  df_age_reduced[, dummy := 1]
+  df_age_trunc <- unique(df_age[,.(age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT, age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)])
+  df_age_trunc[, dummy := 1]
   
-  df_time_reduced <-  unique(df_time[,.(date_infection_reduced.RECIPIENT, date_infection_gathered.RECIPIENT)])
-  df_time_reduced[, dummy := 1]
+  df_time_trunc <-  unique(df_time[,.(date_infection_evaluated.RECIPIENT, date_infection_reduced.RECIPIENT)])
+  df_time_trunc[, dummy := 1]
   
-  stopifnot(nrow(df_time_reduced) == length(unique(df_time_reduced$date_infection_reduced.RECIPIENT)))
+  stopifnot(nrow(df_time_trunc) == length(unique(df_time_trunc$date_infection_evaluated.RECIPIENT)))
   
-  df_age_time <<- merge(df_age_reduced, df_time_reduced, by = 'dummy', allow.cartesian=TRUE)
-  setkey(df_age_time, date_infection_reduced.RECIPIENT, age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)
+  df_age_time <- merge(df_age_trunc, df_time_trunc, by = 'dummy', allow.cartesian=TRUE)
+  setkey(df_age_time, date_infection_evaluated.RECIPIENT, age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT)
   df_age_time[, index_age_time := 1:nrow(df_age_time)]
   
-  df_age_time_gathered <- merge(df_age_time, 
-                                unique(df_time[, .(date_infection_reduced.RECIPIENT, date_infection_gathered.RECIPIENT, time_infection_reduced.RECIPIENT, time_infection_gathered.RECIPIENT)]),
-                                by = c('date_infection_reduced.RECIPIENT', 'date_infection_gathered.RECIPIENT'))
-  tmp1 <- df_age_time_gathered[, list(time_infection_reduced.RECIPIENT = time_infection_reduced.RECIPIENT[which.min(abs(time_infection_reduced.RECIPIENT - time_infection_gathered.RECIPIENT))]), 
-                               by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_gathered.RECIPIENT')]
-  df_age_time_gathered <<- merge(tmp1, df_age_time_gathered, by = c('time_infection_reduced.RECIPIENT', 'age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_gathered.RECIPIENT'))
-  
+  return(df_age_time)
 }
 

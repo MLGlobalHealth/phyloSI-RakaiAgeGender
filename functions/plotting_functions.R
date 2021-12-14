@@ -221,7 +221,8 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   p1 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Age at infection male recipient', y = 'Age at transmission female source', col = 'Date infection of recipient before 2017') +
+    labs(x = 'Age at infection male recipient', y = 'Age at transmission female source', 
+         col = paste0('Date infection recipient before ', format(date_implementation_UTT, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -232,7 +233,8 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   p2 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Age at infection female recipient', y = 'Age at transmission male source', col = 'Date infection of recipient before 2017') +
+    labs(x = 'Age at infection female recipient', y = 'Age at transmission male source', 
+         col = paste0('Date infection recipient before ', format(date_implementation_UTT, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -252,7 +254,8 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   p1 <- ggplot(tmp1, aes(x = date_infection_before_UTT.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Date infection of recipient before 2017', y = 'Age at transmission female source', col = 'Date infection of recipient before 2017') +
+    labs(x = paste0('Date infection recipient before ', format(date_implementation_UTT, '%Y')), y = 'Age at transmission female source', 
+         col = paste0('Date infection recipient before ', format(date_implementation_UTT, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -263,7 +266,8 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   p2 <- ggplot(tmp1, aes(x = date_infection_before_UTT.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Date infection of recipient before 2017', y = 'Age at transmission male source', col = 'Date infection of recipient before 2017') +
+    labs(x = paste0('Date infection recipient before ', format(date_implementation_UTT, '%Y')), y = 'Age at transmission male source', 
+         col = paste0('Date infection recipient before ', format(date_implementation_UTT, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 

@@ -2,7 +2,7 @@ library(rstan)
 library(data.table)	
 
 lab <- "MRC_FALSE_OnlyHTX_TRUE_threshold_0.5"
-.stan_model <- 'gp_211207'
+.stan_model <- 'gp_211214'
 DEBUG <- F
 JOBID = 12
 

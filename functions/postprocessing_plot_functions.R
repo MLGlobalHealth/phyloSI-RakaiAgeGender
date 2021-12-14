@@ -1,4 +1,4 @@
-plot_intensity_PP <- function(intensity_PP, count_data, outdir){
+plot_intensity_reduced_PP <- function(intensity_PP, count_data, outdir){
   
   count_data_reduced <- count_data[count > 0]
   
@@ -11,7 +11,7 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
       coord_fixed() +
       labs(x = 'Age at infection recipient', fill = 'transmission rate', y= 'Age at infection source') +
       geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
-      facet_grid(label_direction~date_infection_gathered_name.RECIPIENT) + 
+      facet_grid(label_direction~date_infection_reduced_name.RECIPIENT) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
@@ -25,13 +25,13 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
   ggsave(p, file = paste0(outdir, '-intensity_transmission', '.png'), w = 10, h = 8)
   
   p = list(); p1 = list()
-  Dates = unique(intensity_PP$date_infection_gathered_name.RECIPIENT)
+  Dates = unique(intensity_PP$date_infection_reduced_name.RECIPIENT)
   Directions = unique(intensity_PP$label_direction)
   for(j in 1:length(Directions)){
     for(i in 1:length(Dates)){
       Date = Dates[i]; Direction = Directions[j]
-      tmp <- subset(intensity_PP, date_infection_gathered_name.RECIPIENT == Date & label_direction == Direction)
-      tmp1 <- subset(count_data_reduced, date_infection_gathered_name.RECIPIENT == Date & label_direction == Direction)
+      tmp <- subset(intensity_PP, date_infection_reduced_name.RECIPIENT == Date & label_direction == Direction)
+      tmp1 <- subset(count_data_reduced, date_infection_reduced_name.RECIPIENT == Date & label_direction == Direction)
       
       p[[i]] <- fct(tmp, tmp1) + theme(legend.position='none')
       
@@ -67,6 +67,36 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
   
 }
 
+plot_intensity_PP <- function(intensity_PP, outdir){
+  
+  Directions <- unique(intensity_PP$label_direction)
+  
+  for(i in 1:length(Directions)){
+    Direction <- Directions[i]
+    tmp <- subset(intensity_PP, label_direction == Direction)
+    
+    p <- ggplot(intensity_PP, aes(y = age_infection_evaluated.SOURCE, x = age_infection_evaluated.RECIPIENT)) + 
+      geom_raster(aes(fill = M)) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+      theme_bw() + 
+      coord_fixed() +
+      labs(x = 'Age at infection recipient', fill = 'transmission rate', y= 'Age at infection source') +
+      geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+      facet_wrap(.~date_infection_evaluated_name.RECIPIENT) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      scale_fill_viridis_c(limits = range(intensity_PP$M)) + 
+      scale_x_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0)) + 
+      scale_size_continuous(range = c(1, 3)) + 
+      ggtitle(Direction)
+    
+    ggsave(p, file = paste0(outdir, '-intensity_transmission_all_', gsub(' -> ', '_', Direction), '.png'), w = 10, h = 8)
+  }
+
+  
+}
 
 plot_mean_age_source_old <- function(age_source, direction, outdir){
   

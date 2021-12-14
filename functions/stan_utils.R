@@ -278,26 +278,26 @@ prepare_stan_data_old <- function(pairs, age_map){
   
   # f -> M
   tmp <- pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M']
-  tmp <- tmp[, list(age_infection.SOURCE = floor(age_infection.SOURCE), age_infection.RECIPIENT = floor(age_infection.RECIPIENT))]
-  tmp <- tmp[, list(count = .N), by = c('age_infection.SOURCE', 'age_infection.RECIPIENT')]
-  tmp <- merge(age_map, tmp, by = c('age_infection.SOURCE', 'age_infection.RECIPIENT'), all.x = T)
+  tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), age_infection.RECIPIENT = floor(age_infection.RECIPIENT))]
+  tmp <- tmp[, list(count = .N), by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT')]
+  tmp <- merge(age_map, tmp, by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT'), all.x = T)
   tmp[is.na(count), count := 0]
-  setkey(tmp, age_infection.RECIPIENT, age_infection.SOURCE)
+  setkey(tmp, age_infection.RECIPIENT, age_transmission.SOURCE)
   stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M']))
-  stopifnot(all(tmp$age_infection.SOURCE == age_map$age_infection.SOURCE))
+  stopifnot(all(tmp$age_transmission.SOURCE == age_map$age_transmission.SOURCE))
   stopifnot(all(tmp$age_infection.RECIPIENT == age_map$age_infection.RECIPIENT))
   stan_data[['y']] = matrix(tmp$count, ncol = 1)
   stan_data[['is_mf']] = 0
   
   # M -> F
   tmp <- pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F']
-  tmp <- tmp[, list(age_infection.SOURCE = floor(age_infection.SOURCE), age_infection.RECIPIENT = floor(age_infection.RECIPIENT))]
-  tmp <- tmp[, list(count = .N), by = c('age_infection.SOURCE', 'age_infection.RECIPIENT')]
-  tmp <- merge(age_map, tmp, by = c('age_infection.SOURCE', 'age_infection.RECIPIENT'), all.x = T)
+  tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), age_infection.RECIPIENT = floor(age_infection.RECIPIENT))]
+  tmp <- tmp[, list(count = .N), by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT')]
+  tmp <- merge(age_map, tmp, by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT'), all.x = T)
   tmp[is.na(count), count := 0]
-  setkey(tmp, age_infection.RECIPIENT, age_infection.SOURCE)
+  setkey(tmp, age_infection.RECIPIENT, age_transmission.SOURCE)
   stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F']))
-  stopifnot(all(tmp$age_infection.SOURCE == age_map$age_infection.SOURCE))
+  stopifnot(all(tmp$age_transmission.SOURCE == age_map$age_transmission.SOURCE))
   stopifnot(all(tmp$age_infection.RECIPIENT == age_map$age_infection.RECIPIENT))
   stan_data[['y']] = cbind(stan_data[['y']], matrix(tmp$count, ncol = 1))
   stan_data[['is_mf']] = c(stan_data[['is_mf']], 1)
@@ -308,10 +308,14 @@ prepare_stan_data_old <- function(pairs, age_map){
   return(stan_data)
 }
 
-prepare_stan_data <- function(pairs, df_age_time, df_age_time_gathered, df_time, df_age){
+prepare_stan_data <- function(pairs, df_age_time, df_time, df_age){
   
   
   stan_data = list()
+  
+  # reduced agexagextime 
+  df_age_time_reduced <- unique(df_age_time[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
+  df_age_time_reduced[, idx_reduced := 1:nrow(df_age_time_reduced)]
   
   # number of directions
   directions = list(c('F', 'M'), c('M', 'F'))
@@ -320,33 +324,30 @@ prepare_stan_data <- function(pairs, df_age_time, df_age_time_gathered, df_time,
   # save count in each entry
   y = vector(mode = 'list', length = length(directions))
   is_mf = vector(mode = 'list', length = length(directions))
-  idx_obs = vector(mode = 'list', length = length(directions))
   
   for(i in 1:length(directions)){
     tmp <- pairs[sex.SOURCE == directions[[i]][1] & sex.RECIPIENT == directions[[i]][2]]
-    tmp <- tmp[, list(age_infection.SOURCE = floor(age_infection.SOURCE), age_infection.RECIPIENT = floor(age_infection.RECIPIENT), 
+    tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), 
+                      age_infection.RECIPIENT = floor(age_infection.RECIPIENT), 
                       date_infection.RECIPIENT = as.Date(paste0(format(date_infection.RECIPIENT, '%Y'), '-01-01'), '%Y-%m-%d'))]
     
-    # use gathered time
+    # use reduced time
     tmp <- merge(tmp, df_time, by = 'date_infection.RECIPIENT')
-    tmp <- tmp[, .(age_infection.SOURCE, age_infection.RECIPIENT, date_infection_gathered.RECIPIENT)]
+    tmp <- tmp[, .(age_transmission.SOURCE, age_infection.RECIPIENT, date_infection_reduced.RECIPIENT)]
     
-    # use gathered age (same as reduced)
-    tmp <- merge(tmp, unique(df_age[, .(age_infection.SOURCE, age_infection_reduced.SOURCE)]), by =  c('age_infection.SOURCE'))
-    tmp <- tmp[, .(age_infection_reduced.SOURCE, age_infection.RECIPIENT, date_infection_gathered.RECIPIENT)]
+    # use reduced age 
+    tmp <- merge(tmp, unique(df_age[, .(age_transmission.SOURCE, age_infection_reduced.SOURCE)]), by =  c('age_transmission.SOURCE'))
+    tmp <- tmp[, .(age_infection_reduced.SOURCE, age_infection.RECIPIENT, date_infection_reduced.RECIPIENT)]
     tmp <- merge(tmp, unique(df_age[, .(age_infection.RECIPIENT, age_infection_reduced.RECIPIENT)]), by =  c('age_infection.RECIPIENT'))
-    tmp <- tmp[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_gathered.RECIPIENT)]
-    
-    # set age x age x time observed
-    idx_obs[[i]] = df_age_time_gathered$index_age_time
+    tmp <- tmp[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)]
     
     # count number of observation
-    tmp <- tmp[, list(count = .N), by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_gathered.RECIPIENT')]
-    tmp <- merge(df_age_time_gathered, tmp, 
-                 by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_gathered.RECIPIENT'), all.x = T)
+    tmp <- tmp[, list(count = .N), by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]
+    tmp <- merge(df_age_time_reduced, tmp, 
+                 by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'), all.x = T)
     tmp[is.na(count), count := 0]
     
-    setkey(tmp, date_infection_gathered.RECIPIENT, age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)
+    setkey(tmp, date_infection_reduced.RECIPIENT, age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)
     stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == directions[[i]][1] & sex.RECIPIENT == directions[[i]][2]]))
     
     y[[i]] = matrix(tmp$count, ncol = 1)
@@ -354,12 +355,19 @@ prepare_stan_data <- function(pairs, df_age_time, df_age_time_gathered, df_time,
     
   }
   
+  # set map from evaluated to all
+  tmp <- merge(df_age_time, df_age_time_reduced, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
+  setkey(tmp, date_infection_evaluated.RECIPIENT, age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT)
+  MAP_TO_REDUCED <- as.matrix(reshape2::dcast(tmp, idx_reduced~index_age_time, value.var = 'dummy'))[,-1]
+  MAP_TO_REDUCED[is.na(MAP_TO_REDUCED)] = 0
+  
+
   # save stan data
   stan_data[['N_per_group']] = nrow(df_age_time)
-  stan_data[['N_non_missing_per_group']] = nrow(df_age_time_gathered)
+  stan_data[['N_per_group_reduced']] = nrow(df_age_time_reduced)
   stan_data[['y']] = do.call('cbind', y)
   stan_data[['is_mf']] = unlist(is_mf)
-  stan_data[['idx_obs']] =  do.call('cbind', idx_obs)
+  stan_data[['MAP_TO_REDUCED']] =  MAP_TO_REDUCED
   
   return(stan_data)
 }
