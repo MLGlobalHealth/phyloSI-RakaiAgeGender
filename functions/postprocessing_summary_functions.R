@@ -190,18 +190,18 @@ find_age_source_by_agextime_direction <- function(samples, df_direction, df_age_
   
   tmp1 <- merge(tmp1, df_age_time, by = 'index_age_time')
 
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_direction', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_direction', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_direction', 'age_infection_evaluated.RECIPIENT', 'date_infection_evaluated.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_direction', 'age_infection_evaluated.RECIPIENT', 'date_infection_evaluated.RECIPIENT'))
   tmp1[, pi := value / total_value]
-  tmp1 <- tmp1[, list(value = sum(pi * age_infection_reduced.SOURCE)), by = c('iterations', 'index_direction', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]
+  tmp1 <- tmp1[, list(value = sum(pi * age_infection_evaluated.SOURCE)), by = c('iterations', 'index_direction', 'age_infection_evaluated.RECIPIENT', 'date_infection_evaluated.RECIPIENT')]
 
   tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
-              by=c('index_direction', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]	
-  tmp1 = dcast(tmp1, index_direction + age_infection_reduced.RECIPIENT + date_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
+              by=c('index_direction', 'age_infection_evaluated.RECIPIENT', 'date_infection_evaluated.RECIPIENT')]	
+  tmp1 = dcast(tmp1, index_direction + age_infection_evaluated.RECIPIENT + date_infection_evaluated.RECIPIENT ~ q_label, value.var = "q")
   
   tmp1 <- merge(tmp1, df_direction, by = 'index_direction')
   
-  tmp1 <- merge(tmp1, unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), by = 'date_infection_reduced.RECIPIENT')
+  tmp1 <- merge(tmp1, unique(df_age_time[, .(date_infection_evaluated.RECIPIENT, date_infection_evaluated_name.RECIPIENT)]), by = 'date_infection_evaluated.RECIPIENT')
   
   
   return(tmp1)
@@ -219,18 +219,18 @@ find_age_source_by_time_direction <- function(samples, df_direction, df_age_time
   
   tmp1 <- merge(tmp1, df_age_time, by = 'index_age_time')
   
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_direction', 'date_infection_reduced.RECIPIENT')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_direction', 'date_infection_reduced.RECIPIENT'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_direction', 'date_infection_evaluated.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_direction', 'date_infection_evaluated.RECIPIENT'))
   tmp1[, pi := value / total_value]
-  tmp1 <- tmp1[, list(value = sum(pi * age_infection_reduced.SOURCE)), by = c('iterations', 'index_direction', 'date_infection_reduced.RECIPIENT')]
+  tmp1 <- tmp1[, list(value = sum(pi * age_infection_evaluated.SOURCE)), by = c('iterations', 'index_direction', 'date_infection_evaluated.RECIPIENT')]
   
   tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
-              by=c('index_direction', 'date_infection_reduced.RECIPIENT')]	
-  tmp1 = dcast(tmp1, index_direction + date_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
+              by=c('index_direction', 'date_infection_evaluated.RECIPIENT')]	
+  tmp1 = dcast(tmp1, index_direction + date_infection_evaluated.RECIPIENT ~ q_label, value.var = "q")
   
   tmp1 <- merge(tmp1, df_direction, by = 'index_direction')
   
-  tmp1 <- merge(tmp1, unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), by = 'date_infection_reduced.RECIPIENT')
+  tmp1 <- merge(tmp1, unique(df_age_time[, .(date_infection_evaluated.RECIPIENT, date_infection_evaluated_name.RECIPIENT)]), by = 'date_infection_evaluated.RECIPIENT')
   
   
   return(tmp1)

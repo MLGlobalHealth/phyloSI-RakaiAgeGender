@@ -67,7 +67,9 @@ df_age_time[, date_infection_reduced_name.RECIPIENT := paste0('Jan ', year_infec
 
 df_age_time_reduced <- unique(df_age_time[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
 df_age_time_reduced[, index_age_time := 1:nrow(df_age_time_reduced)]
-df_age_time_reduced <- merge(df_age_time_reduced, unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), by = 'date_infection_reduced.RECIPIENT')
+df_age_time_reduced <- merge(df_age_time_reduced, 
+                             unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), 
+                             by = 'date_infection_reduced.RECIPIENT')
 
 # samples 
 fit <- readRDS(path.to.stan.output)
@@ -87,11 +89,11 @@ plot_intensity_reduced_PP(intensity_PP_reduced, count_data,  outdir.fig)
 
 # median age of source
 age_source <- find_age_source_by_agextime_direction(samples, df_direction, df_age_time)
-age_source <- age_source[!date_infection_reduced.RECIPIENT %in% range(date_infection_reduced.RECIPIENT)]
+age_source <- age_source[!date_infection_evaluated.RECIPIENT %in% range(date_infection_evaluated.RECIPIENT)]
 plot_mean_age_source(age_source, outdir.fig)
 
 age_source_overall <- find_age_source_by_time_direction(samples, df_direction, df_age_time)
-age_source_overall <- age_source_overall[!date_infection_reduced.RECIPIENT %in% range(date_infection_reduced.RECIPIENT)]
+age_source_overall <- age_source_overall[!date_infection_evaluated.RECIPIENT %in% range(date_infection_evaluated.RECIPIENT)]
 plot_mean_age_source_overall(age_source_overall, outdir.fig)
 
 cat("End of postprocessing_results.R")
