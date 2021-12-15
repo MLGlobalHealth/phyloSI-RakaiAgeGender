@@ -55,21 +55,8 @@ outdir.fig <- file.path(.outdir, 'figures', paste0(.stan_model,'-', .JOBID))
 outdir.table <- file.path(.outdir, 'tables', paste0(.stan_model,'-', .JOBID))
 
 # table
-df_direction <- data.table(index_direction = 1:2, is_mf = stan_data$is_mf)
-df_direction[, label_direction := ifelse(is_mf == 1, 'Male -> Female', 'Female -> Male')]
-
-df_age_time[, date_infection_evaluated_name.RECIPIENT:= format(date_infection_evaluated.RECIPIENT, '%Y')]
-df_age_time[, year_infection_reduced.RECIPIENT := as.numeric(format(date_infection_reduced.RECIPIENT, '%Y'))]
-time_bands = diff(c(unique(df_age_time$year_infection_reduced.RECIPIENT), max(as.numeric(format(df_time$date_infection.RECIPIENT, '%Y')))))
-tmp <- data.table(year_infection_reduced.RECIPIENT = unique(df_age_time$year_infection_reduced.RECIPIENT), time_bands = time_bands)
-df_age_time <- merge(df_age_time, tmp, by = 'year_infection_reduced.RECIPIENT')
-df_age_time[, date_infection_reduced_name.RECIPIENT := paste0('Jan ', year_infection_reduced.RECIPIENT, '-Dec ', year_infection_reduced.RECIPIENT + time_bands - 1)]
-
-df_age_time_reduced <- unique(df_age_time[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
-df_age_time_reduced[, index_age_time := 1:nrow(df_age_time_reduced)]
-df_age_time_reduced <- merge(df_age_time_reduced, 
-                             unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), 
-                             by = 'date_infection_reduced.RECIPIENT')
+create.table.reference(stan_data, df_age_time)
+range_age_observed <- find_range_age_observed(copy(pairs.all), df_direction)
 
 # samples 
 fit <- readRDS(path.to.stan.output)
@@ -85,13 +72,16 @@ plot_intensity_PP(intensity_PP, outdir.fig)
 # intensity of the poisson process reduced
 intensity_PP_reduced <- summarise_var_by_agextime_direction(samples, 'log_lambda_reduced', df_direction, df_age_time_reduced, transform = 'exp')
 count_data <- prepare_count_data(stan_data, df_age_time_reduced)
-plot_intensity_reduced_PP(intensity_PP_reduced, count_data,  outdir.fig)
+plot_intensity_reduced_PP(intensity_PP_reduced, count_data, outdir.fig)
 
 # median age of source
 age_source <- find_age_source_by_agextime_direction(samples, df_direction, df_age_time)
 age_source <- age_source[!date_infection_evaluated.RECIPIENT %in% range(date_infection_evaluated.RECIPIENT)]
-plot_mean_age_source(age_source, outdir.fig)
+plot_mean_age_source(age_source, range_age_observed, outdir.fig)
 
+
+
+range(pairs.all$age_infection.RECIPIENT)
 age_source_overall <- find_age_source_by_time_direction(samples, df_direction, df_age_time)
 age_source_overall <- age_source_overall[!date_infection_evaluated.RECIPIENT %in% range(date_infection_evaluated.RECIPIENT)]
 plot_mean_age_source_overall(age_source_overall, outdir.fig)

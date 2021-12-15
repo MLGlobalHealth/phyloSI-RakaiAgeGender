@@ -361,6 +361,16 @@ prepare_stan_data <- function(pairs, df_age_time, df_time, df_age){
   MAP_TO_REDUCED <- as.matrix(reshape2::dcast(tmp, idx_reduced~index_age_time, value.var = 'dummy'))[,-1]
   MAP_TO_REDUCED[is.na(MAP_TO_REDUCED)] = 0
   
+  max_length = max(apply(stan_data$MAP_TO_REDUCED, 1, sum))
+  MAP_TO_REDUCED <- vector(mode = 'list', length = stan_data$N_per_group_reduced)
+  for(j in 1:stan_data$N_per_group_reduced){
+    
+    MAP_TO_REDUCED[[j]] = which(stan_data$MAP_TO_REDUCED[j,] == 1)
+    if( max_length - length(MAP_TO_REDUCED[[j]] > 0)){
+      MAP_TO_REDUCED[[j]] = c(MAP_TO_REDUCED[[j]], rep(-1, max_length - length(MAP_TO_REDUCED[[j]])))
+    }
+  }
+  MAP_TO_REDUCED <- do.call('rbind', MAP_TO_REDUCED)
 
   # save stan data
   stan_data[['N_per_group']] = nrow(df_age_time)
@@ -368,6 +378,7 @@ prepare_stan_data <- function(pairs, df_age_time, df_time, df_age){
   stan_data[['y']] = do.call('cbind', y)
   stan_data[['is_mf']] = unlist(is_mf)
   stan_data[['MAP_TO_REDUCED']] =  MAP_TO_REDUCED
+  stan_data[['max_per_group']] =  max_length
   
   return(stan_data)
 }

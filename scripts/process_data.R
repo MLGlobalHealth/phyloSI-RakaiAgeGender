@@ -100,7 +100,7 @@ df_age <- get.age.map(pairs, age_bands = 2)
 # prepare time map
 df_time <- get.time.map(pairs, 
                         time_bands_evaluated = '2 years', 
-                        time_intervals_reduced = c(as.Date('2009-01-01'), as.Date('2011-01-01'), date_implementation_UTT))
+                        time_intervals_reduced = c(as.Date('2009-01-01'), date_implementation_UTT))
 
 # prepare age x time map
 df_age_time <- get.age.time.map(df_age, df_time)

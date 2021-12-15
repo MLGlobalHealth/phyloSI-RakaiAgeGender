@@ -247,3 +247,33 @@ prepare_count_data <- function(stan_data, df_age_time_reduced){
   count_data <- merge(count_data, df_age_time_reduced, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
   return(as.data.table(count_data))
 }
+
+find_range_age_observed <- function(tmp, df_direction){
+  
+  tmp[, is_mf := FALSE]
+  tmp[sex.SOURCE == 'M' & sex.RECIPIENT == 'F', is_mf := T]
+  tmp <- tmp[, list(min_age_infection.RECIPIENT = min(age_infection.RECIPIENT), 
+                    max_age_infection.RECIPIENT = max(age_infection.RECIPIENT),
+                    min_age_infection.SOURCE = min(age_infection.SOURCE), 
+                    max_age_infection.SOURCE = max(age_infection.SOURCE)), by = 'is_mf']
+  tmp <- merge(tmp, df_direction, by = 'is_mf')
+}
+
+create.table.reference <- function(stan_data, df_age_time){
+  df_direction <<- data.table(index_direction = 1:2, is_mf = stan_data$is_mf)
+  df_direction[, label_direction := ifelse(is_mf == 1, 'Male -> Female', 'Female -> Male')]
+  
+  df_age_time[, date_infection_evaluated_name.RECIPIENT:= format(date_infection_evaluated.RECIPIENT, '%Y')]
+  df_age_time[, year_infection_reduced.RECIPIENT := as.numeric(format(date_infection_reduced.RECIPIENT, '%Y'))]
+  time_bands = diff(c(unique(df_age_time$year_infection_reduced.RECIPIENT), max(as.numeric(format(df_time$date_infection.RECIPIENT, '%Y')))))
+  tmp <- data.table(year_infection_reduced.RECIPIENT = unique(df_age_time$year_infection_reduced.RECIPIENT), time_bands = time_bands)
+  df_age_time <<- merge(df_age_time, tmp, by = 'year_infection_reduced.RECIPIENT')
+  df_age_time[, date_infection_reduced_name.RECIPIENT := paste0('Jan ', year_infection_reduced.RECIPIENT, '-Dec ', year_infection_reduced.RECIPIENT + time_bands - 1)]
+  
+  df_age_time_reduced <- unique(df_age_time[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
+  df_age_time_reduced[, index_age_time := 1:nrow(df_age_time_reduced)]
+  df_age_time_reduced <<- merge(df_age_time_reduced, 
+                                unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), 
+                                by = 'date_infection_reduced.RECIPIENT')
+}
+

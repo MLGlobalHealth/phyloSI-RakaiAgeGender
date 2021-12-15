@@ -22,7 +22,7 @@ plot_intensity_reduced_PP <- function(intensity_PP, count_data, outdir){
   }
   
   p <- fct(intensity_PP, count_data_reduced)
-  ggsave(p, file = paste0(outdir, '-intensity_transmission', '.png'), w = 10, h = 8)
+  ggsave(p, file = paste0(outdir, '-intensity_transmission', '.png'), w = 6, h = 6)
   
   p = list(); p1 = list()
   Dates = unique(intensity_PP$date_infection_reduced_name.RECIPIENT)
@@ -63,7 +63,7 @@ plot_intensity_reduced_PP <- function(intensity_PP, count_data, outdir){
   }
   
   p <- ggarrange(plotlist = p1, nrow = 2, heights = c(1, 1))
-  ggsave(p, file = paste0(outdir, '-intensity_transmission_idt', '.png'), w = 10, h = 5)
+  ggsave(p, file = paste0(outdir, '-intensity_transmission_idt', '.png'), w = 8, h = 5)
   
 }
 
@@ -75,7 +75,7 @@ plot_intensity_PP <- function(intensity_PP, outdir){
     Direction <- Directions[i]
     tmp <- subset(intensity_PP, label_direction == Direction)
     
-    p <- ggplot(intensity_PP, aes(y = age_infection_evaluated.SOURCE, x = age_infection_evaluated.RECIPIENT)) + 
+    p <- ggplot(tmp, aes(y = age_infection_evaluated.SOURCE, x = age_infection_evaluated.RECIPIENT)) + 
       geom_raster(aes(fill = M)) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
       theme_bw() + 
@@ -86,7 +86,7 @@ plot_intensity_PP <- function(intensity_PP, outdir){
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
-      scale_fill_viridis_c(limits = range(intensity_PP$M)) + 
+      scale_fill_viridis_c(limits = range(tmp$M)) + 
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = c(0,0)) + 
       scale_size_continuous(range = c(1, 3)) + 
@@ -140,11 +140,13 @@ plot_mean_age_source_old <- function(age_source, direction, outdir){
   ggsave(p, file = paste0(outdir, '-MeanAgeSource_ByAgeRecipient_', gsub(' -> ', '_', direction), '.png'), w = 8, h = 10)
 }
 
-plot_mean_age_source <- function(age_source, outdir){
+plot_mean_age_source <- function(age_source, range_age_observed, outdir){
 
-  p <- ggplot(age_source, aes(x = age_infection_evaluated.RECIPIENT)) + 
-    geom_line(aes(y = M, col = date_infection_evaluated_name.RECIPIENT)) + 
+  p <- ggplot(age_source) + 
+    geom_line(aes(x = age_infection_evaluated.RECIPIENT, y = M, col = date_infection_evaluated_name.RECIPIENT)) + 
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    geom_rect(data = range_age_observed, aes(xmin=min_age_infection.RECIPIENT, xmax=max_age_infection.RECIPIENT, 
+                                             ymin=-Inf, ymax=Inf), alpha=.4) +
     theme_bw() + 
     coord_fixed() +
     labs(x = 'Age at infection recipient', y = 'Mean age at transmission source',
