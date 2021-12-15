@@ -146,7 +146,7 @@ plot_mean_age_source <- function(age_source, range_age_observed, outdir){
     geom_line(aes(x = age_infection_evaluated.RECIPIENT, y = M, col = date_infection_evaluated_name.RECIPIENT)) + 
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     geom_rect(data = range_age_observed, aes(xmin=min_age_infection.RECIPIENT, xmax=max_age_infection.RECIPIENT, 
-                                             ymin=-Inf, ymax=Inf), alpha=.4) +
+                                             ymin=-Inf, ymax=Inf), alpha=.2) +
     theme_bw() + 
     coord_fixed() +
     labs(x = 'Age at infection recipient', y = 'Mean age at transmission source',
