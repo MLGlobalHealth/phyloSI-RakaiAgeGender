@@ -358,14 +358,14 @@ prepare_stan_data <- function(pairs, df_age_time, df_time, df_age){
   # set map from evaluated to all
   tmp <- merge(df_age_time, df_age_time_reduced, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
   setkey(tmp, date_infection_evaluated.RECIPIENT, age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT)
-  MAP_TO_REDUCED <- as.matrix(reshape2::dcast(tmp, idx_reduced~index_age_time, value.var = 'dummy'))[,-1]
-  MAP_TO_REDUCED[is.na(MAP_TO_REDUCED)] = 0
+  tmp <- as.matrix(reshape2::dcast(tmp, idx_reduced~index_age_time, value.var = 'dummy'))[,-1]
+  tmp[is.na(tmp)] = 0
   
-  max_length = max(apply(stan_data$MAP_TO_REDUCED, 1, sum))
-  MAP_TO_REDUCED <- vector(mode = 'list', length = stan_data$N_per_group_reduced)
-  for(j in 1:stan_data$N_per_group_reduced){
+  max_length = max(apply(tmp, 1, sum))
+  MAP_TO_REDUCED <- vector(mode = 'list', length = nrow(df_age_time_reduced))
+  for(j in 1:nrow(df_age_time_reduced)){
     
-    MAP_TO_REDUCED[[j]] = which(stan_data$MAP_TO_REDUCED[j,] == 1)
+    MAP_TO_REDUCED[[j]] = which(tmp[j,] == 1)
     if( max_length - length(MAP_TO_REDUCED[[j]] > 0)){
       MAP_TO_REDUCED[[j]] = c(MAP_TO_REDUCED[[j]], rep(-1, max_length - length(MAP_TO_REDUCED[[j]])))
     }
