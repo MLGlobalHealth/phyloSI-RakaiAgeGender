@@ -66,15 +66,18 @@ samples <- rstan::extract(fit)
 make_convergence_diagnostics_stats(fit, outdir.table)
 
 # intensity of the poisson process
+cat("\nPlot transmission intensity\n")
 intensity_PP <- summarise_var_by_agextime_direction(samples, 'log_lambda', df_direction, df_age_time, transform = 'exp')
 count_data <- prepare_count_data(stan_data, df_age_time)
 plot_intensity_PP(intensity_PP, count_data, outdir.fig)
 
 # median age of source
+cat("\nPlot mean age at transmission of the source by age at infection of recipient\n")
 age_source <- find_age_source_by_agextime_direction(samples, df_direction, df_age_time)
 age_source <- age_source[!date_infection_evaluated.RECIPIENT %in% range(date_infection_evaluated.RECIPIENT)]
 plot_mean_age_source(age_source, range_age_observed, outdir.fig)
 
+cat("\nPlot mean age at transmission of the source overall\n")
 age_source_overall <- find_age_source_by_time_direction(samples, df_direction, df_age_time)
 age_source_overall <- age_source_overall[!date_infection_evaluated.RECIPIENT %in% range(date_infection_evaluated.RECIPIENT)]
 plot_mean_age_source_overall(age_source_overall, outdir.fig)
