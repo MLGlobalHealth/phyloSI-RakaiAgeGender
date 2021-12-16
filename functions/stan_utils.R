@@ -270,52 +270,10 @@ ageanalysis <- function(infile.inference=NULL,infile.prior.samples=NULL,opt=NULL
   return(data.fit)
 }
 
-prepare_stan_data_old <- function(pairs, age_map){
-  stan_data = list()
-  
-  # number of directions
-  stan_data[['N_group']] = 2
-  
-  # f -> M
-  tmp <- pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M']
-  tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), age_infection.RECIPIENT = floor(age_infection.RECIPIENT))]
-  tmp <- tmp[, list(count = .N), by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT')]
-  tmp <- merge(age_map, tmp, by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT'), all.x = T)
-  tmp[is.na(count), count := 0]
-  setkey(tmp, age_infection.RECIPIENT, age_transmission.SOURCE)
-  stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M']))
-  stopifnot(all(tmp$age_transmission.SOURCE == age_map$age_transmission.SOURCE))
-  stopifnot(all(tmp$age_infection.RECIPIENT == age_map$age_infection.RECIPIENT))
-  stan_data[['y']] = matrix(tmp$count, ncol = 1)
-  stan_data[['is_mf']] = 0
-  
-  # M -> F
-  tmp <- pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F']
-  tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), age_infection.RECIPIENT = floor(age_infection.RECIPIENT))]
-  tmp <- tmp[, list(count = .N), by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT')]
-  tmp <- merge(age_map, tmp, by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT'), all.x = T)
-  tmp[is.na(count), count := 0]
-  setkey(tmp, age_infection.RECIPIENT, age_transmission.SOURCE)
-  stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F']))
-  stopifnot(all(tmp$age_transmission.SOURCE == age_map$age_transmission.SOURCE))
-  stopifnot(all(tmp$age_infection.RECIPIENT == age_map$age_infection.RECIPIENT))
-  stan_data[['y']] = cbind(stan_data[['y']], matrix(tmp$count, ncol = 1))
-  stan_data[['is_mf']] = c(stan_data[['is_mf']], 1)
-  
-  # age age entries
-  stan_data[['N_per_group']] = nrow(age_map)
-  
-  return(stan_data)
-}
-
 prepare_stan_data <- function(pairs, df_age_time, df_time, df_age){
   
   
   stan_data = list()
-  
-  # reduced agexagextime 
-  df_age_time_reduced <- unique(df_age_time[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
-  df_age_time_reduced[, idx_reduced := 1:nrow(df_age_time_reduced)]
   
   # number of directions
   directions = list(c('F', 'M'), c('M', 'F'))
@@ -324,64 +282,56 @@ prepare_stan_data <- function(pairs, df_age_time, df_time, df_age){
   # save count in each entry
   y = vector(mode = 'list', length = length(directions))
   is_mf = vector(mode = 'list', length = length(directions))
+  idx_obs = vector(mode = 'list', length = length(directions))
   
   for(i in 1:length(directions)){
+    
     tmp <- pairs[sex.SOURCE == directions[[i]][1] & sex.RECIPIENT == directions[[i]][2]]
     tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), 
                       age_infection.RECIPIENT = floor(age_infection.RECIPIENT), 
                       date_infection.RECIPIENT = as.Date(paste0(format(date_infection.RECIPIENT, '%Y'), '-01-01'), '%Y-%m-%d'))]
     
-    # use reduced time
+    # use evaluated time
     tmp <- merge(tmp, df_time, by = 'date_infection.RECIPIENT')
-    tmp <- tmp[, .(age_transmission.SOURCE, age_infection.RECIPIENT, date_infection_reduced.RECIPIENT)]
+    tmp <- tmp[, .(age_transmission.SOURCE, age_infection.RECIPIENT, date_infection_evaluated.RECIPIENT)]
     
-    # use reduced age 
-    tmp <- merge(tmp, unique(df_age[, .(age_transmission.SOURCE, age_infection_reduced.SOURCE)]), by =  c('age_transmission.SOURCE'))
-    tmp <- tmp[, .(age_infection_reduced.SOURCE, age_infection.RECIPIENT, date_infection_reduced.RECIPIENT)]
-    tmp <- merge(tmp, unique(df_age[, .(age_infection.RECIPIENT, age_infection_reduced.RECIPIENT)]), by =  c('age_infection.RECIPIENT'))
-    tmp <- tmp[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)]
+    # use evaluated age 
+    tmp <- merge(tmp, unique(df_age[, .(age_transmission.SOURCE, age_infection_evaluated.SOURCE)]), by =  c('age_transmission.SOURCE'))
+    tmp <- tmp[, .(age_infection_evaluated.SOURCE, age_infection.RECIPIENT, date_infection_evaluated.RECIPIENT)]
+    tmp <- merge(tmp, unique(df_age[, .(age_infection.RECIPIENT, age_infection_evaluated.RECIPIENT)]), by =  c('age_infection.RECIPIENT'))
+    tmp <- tmp[, .(age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT, date_infection_evaluated.RECIPIENT)]
     
     # count number of observation
-    tmp <- tmp[, list(count = .N), by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT')]
-    tmp <- merge(df_age_time_reduced, tmp, 
-                 by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'), all.x = T)
+    tmp <- tmp[, list(count = .N), by = c('age_infection_evaluated.SOURCE', 'age_infection_evaluated.RECIPIENT', 'date_infection_evaluated.RECIPIENT')]
+    tmp <- merge(df_age_time, tmp, 
+                 by = c('age_infection_evaluated.SOURCE', 'age_infection_evaluated.RECIPIENT', 'date_infection_evaluated.RECIPIENT'), all.x = T)
     tmp[is.na(count), count := 0]
     
-    setkey(tmp, date_infection_reduced.RECIPIENT, age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)
+    setkey(tmp, date_infection_evaluated.RECIPIENT, age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT)
     stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == directions[[i]][1] & sex.RECIPIENT == directions[[i]][2]]))
     
-    y[[i]] = matrix(tmp$count, ncol = 1)
+    .idx_obs = which(tmp$count > 0)
+    .y = tmp[count > 0]$count
+    
+    .idx_obs = c(.idx_obs, rep(-1, nrow(df_age_time) - length(.idx_obs)))
+    .y = c(.y, rep(-1, nrow(df_age_time) - length(.y)))
+    
+    y[[i]] = matrix(.y, ncol = 1)
     is_mf[[i]] = directions[[i]][1] == 'M' & directions[[i]][2] == 'F'
-    
+    idx_obs[[i]] = matrix(.idx_obs, ncol = 1)
   }
   
-  # set map from evaluated to all
-  tmp <- merge(df_age_time, df_age_time_reduced, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
-  setkey(tmp, date_infection_evaluated.RECIPIENT, age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT)
-  tmp <- as.matrix(reshape2::dcast(tmp, idx_reduced~index_age_time, value.var = 'dummy'))[,-1]
-  tmp[is.na(tmp)] = 0
-  
-  max_length = max(apply(tmp, 1, sum))
-  MAP_TO_REDUCED <- vector(mode = 'list', length = nrow(df_age_time_reduced))
-  for(j in 1:nrow(df_age_time_reduced)){
-    
-    MAP_TO_REDUCED[[j]] = which(tmp[j,] == 1)
-    if( max_length - length(MAP_TO_REDUCED[[j]] > 0)){
-      MAP_TO_REDUCED[[j]] = c(MAP_TO_REDUCED[[j]], rep(-1, max_length - length(MAP_TO_REDUCED[[j]])))
-    }
-  }
-  MAP_TO_REDUCED <- do.call('rbind', MAP_TO_REDUCED)
-
   # save stan data
   stan_data[['N_per_group']] = nrow(df_age_time)
-  stan_data[['N_per_group_reduced']] = nrow(df_age_time_reduced)
   stan_data[['y']] = do.call('cbind', y)
+  stan_data[['idx_obs']] = do.call('cbind', idx_obs)
   stan_data[['is_mf']] = unlist(is_mf)
-  stan_data[['MAP_TO_REDUCED']] =  MAP_TO_REDUCED
-  stan_data[['max_per_group']] =  max_length
+  
+  stan_data[['N_non_missing']] = apply(stan_data[['idx_obs']], 2, function(x) max(which(x != -1)))
   
   return(stan_data)
 }
+
 
 
 add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows = 8, n_knots_columns = 8, AGES)
@@ -407,19 +357,37 @@ add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows =
   return(stan_data)
 }
 
-add_3D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_1D = 8, n_knots_2D = 8, knots_3D, X, Y, Z)
+add_3D_splines_stan_data = function(stan_data, X, Y, Z,
+                                    spline_degree = 3, 
+                                    n_knots_1D = NULL, n_knots_2D = NULL, n_knots_3D = NULL, 
+                                    knots_1D = NULL, knots_2D = NULL, knots_3D = NULL)
 {
   stopifnot(length(X) == length(Y))
-  
   stopifnot(stan_data$N_per_group == length(X) * length(Y) * length(Z))
+  stopifnot(!is.null(n_knots_1D) | !is.null(knots_1D))
+  stopifnot(!is.null(n_knots_2D) | !is.null(knots_2D))
+  stopifnot(!is.null(n_knots_3D) | !is.null(knots_3D))
   
   stan_data$A <- length(X)
   stan_data$T <- length(Z)
   
-  knots_1D = X[seq(1, length(X), length.out = n_knots_1D)] 
-  knots_2D = Y[seq(1, length(Y), length.out = n_knots_2D)]
-  # knots_3D = Z[seq(1, length(Z), length.out = n_knots_3D)]
-  knots_3D = c(min(Z), knots_3D, max(Z))
+  if(!is.null(n_knots_1D)){
+    knots_1D = X[seq(1, length(X), length.out = n_knots_1D)] 
+  } else{
+    knots_1D = c(min(X), knots_1D, max(X))
+  }
+  
+  if(!is.null(n_knots_2D)){
+    knots_2D = Y[seq(1, length(Y), length.out = n_knots_2D)]
+  } else{
+    knots_2D = c(min(Y), knots_2D, max(Y))
+  }
+  
+  if(!is.null(n_knots_3D)){
+    knots_3D = Z[seq(1, length(Z), length.out = n_knots_3D)]
+  } else{
+    knots_3D = c(min(Z), knots_3D, max(Z))
+  }
   
   stan_data$num_basis_1D = length(knots_1D) + spline_degree - 1
   stan_data$num_basis_2D = length(knots_2D) + spline_degree - 1

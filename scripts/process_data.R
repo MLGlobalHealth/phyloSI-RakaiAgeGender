@@ -95,12 +95,10 @@ pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT
 pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_implementation_UTT]
 
 # prepare age map
-df_age <- get.age.map(pairs, age_bands = 2)
+df_age <- get.age.map(pairs, age_bands = 1)
 
 # prepare time map
-df_time <- get.time.map(pairs, 
-                        time_bands_evaluated = '2 years', 
-                        time_intervals_reduced = c(as.Date('2009-01-01'), date_implementation_UTT))
+df_time <- get.time.map(pairs, time_bands = '1 years')
 
 # prepare age x time map
 df_age_time <- get.age.time.map(df_age, df_time)
@@ -120,11 +118,11 @@ plot_CI_age_infection(pairs, outdir.lab)
 # prepare stan data
 stan_data <- prepare_stan_data(pairs, df_age_time, df_time, df_age)
 stan_data <- add_3D_splines_stan_data(stan_data, spline_degree = 3, 
-                                      n_knots_1D = 15, n_knots_2D = 15, 
-                                      knots_3D = unique(df_time$time_infection_reduced.RECIPIENT),
+                                      n_knots_1D = 15, n_knots_2D = 15, n_knots_3D = 5,
                                       X = unique(df_age$age_infection_evaluated.SOURCE), 
                                       Y = unique(df_age$age_infection_evaluated.RECIPIENT), 
                                       Z = unique(df_time$time_infection_evaluated.RECIPIENT))
+
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)

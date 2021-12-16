@@ -237,14 +237,19 @@ find_age_source_by_time_direction <- function(samples, df_direction, df_age_time
 }
 
 
-prepare_count_data <- function(stan_data, df_age_time_reduced){
-  count_data <- data.table(stan_data$y)
-  colnames(count_data) <- c(c('Male -> Female', 'Female -> Male')[stan_data$is_mf == 1], c('Female -> Male', 'Male -> Female')[stan_data$is_mf == 1])
-  count_data <- cbind(count_data, df_age_time_reduced[,.(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
-  count_data <- reshape2::melt(count_data, id.vars = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
-  setnames(count_data, c('value', 'variable'), c('count', 'label_direction'))
+prepare_count_data <- function(stan_data, df_age_time){
+
+  count_data <- vector(mode = 'list', length = ncol(stan_data$y))
+  for(i in 1:ncol(stan_data$y)){
+    count_data[[i]] <- data.table(count =  stan_data$y[1:stan_data$N_non_missing[i],i])
+    count_data[[i]][, label_direction := ifelse(stan_data$is_mf[i] == 1, 'Male -> Female', 'Female -> Male')]
+    count_data[[i]][, index_age_time := stan_data$idx_obs[1:stan_data$N_non_missing[i],i]]
+  }
   
-  count_data <- merge(count_data, df_age_time_reduced, by = c('age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT', 'date_infection_reduced.RECIPIENT'))
+  count_data <- do.call('rbind', count_data)
+
+  count_data <- merge(count_data, df_age_time, by = c('index_age_time'))
+  
   return(as.data.table(count_data))
 }
 
@@ -264,20 +269,8 @@ create.table.reference <- function(stan_data, df_age_time){
   df_direction[, label_direction := ifelse(is_mf == 1, 'Male -> Female', 'Female -> Male')]
   
   df_age_time[, date_infection_evaluated_name.RECIPIENT:= format(date_infection_evaluated.RECIPIENT, '%Y')]
-  df_age_time[, year_infection_reduced.RECIPIENT := as.numeric(format(date_infection_reduced.RECIPIENT, '%Y'))]
-  time_bands = diff(c(unique(df_age_time$year_infection_reduced.RECIPIENT), max(as.numeric(format(df_time$date_infection.RECIPIENT, '%Y')))))
-  tmp <- data.table(year_infection_reduced.RECIPIENT = unique(df_age_time$year_infection_reduced.RECIPIENT), time_bands = time_bands)
-  df_age_time <- merge(df_age_time, tmp, by = 'year_infection_reduced.RECIPIENT')
-  df_age_time[, date_infection_reduced_name.RECIPIENT := paste0('Jan ', year_infection_reduced.RECIPIENT, '-Dec ', year_infection_reduced.RECIPIENT + time_bands - 1)]
-  
-  df_age_time_reduced <- unique(df_age_time[, .(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT, date_infection_reduced.RECIPIENT)])
-  df_age_time_reduced[, index_age_time := 1:nrow(df_age_time_reduced)]
-  df_age_time_reduced <- merge(df_age_time_reduced, 
-                                unique(df_age_time[, .(date_infection_reduced.RECIPIENT, date_infection_reduced_name.RECIPIENT)]), 
-                                by = 'date_infection_reduced.RECIPIENT')
   
   df_direction <<- df_direction
   df_age_time <<- df_age_time
-  df_age_time_reduced <<- df_age_time_reduced
 }
 

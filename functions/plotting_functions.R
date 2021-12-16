@@ -213,12 +213,12 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   
   ## stratified by age of recipient
   tmp = data[, list(q= quantile(age_transmission.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
-             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT', 'age_infection_reduced.RECIPIENT')]	
-  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_UTT.RECIPIENT + age_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
+             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT', 'age_infection_evaluated.RECIPIENT')]	
+  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_UTT.RECIPIENT + age_infection_evaluated.RECIPIENT ~ q_label, value.var = "q")
   
   # FM
   tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
-  p1 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
+  p1 <- ggplot(tmp1, aes(x = age_infection_evaluated.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
     labs(x = 'Age at infection male recipient', y = 'Age at transmission female source', 
@@ -230,7 +230,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   
   # MF
   tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
-  p2 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
+  p2 <- ggplot(tmp1, aes(x = age_infection_evaluated.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
     labs(x = 'Age at infection female recipient', y = 'Age at transmission male source', 

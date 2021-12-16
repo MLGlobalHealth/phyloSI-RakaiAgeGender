@@ -67,12 +67,8 @@ make_convergence_diagnostics_stats(fit, outdir.table)
 
 # intensity of the poisson process
 intensity_PP <- summarise_var_by_agextime_direction(samples, 'log_lambda', df_direction, df_age_time, transform = 'exp')
-plot_intensity_PP(intensity_PP, outdir.fig)
-
-# intensity of the poisson process reduced
-intensity_PP_reduced <- summarise_var_by_agextime_direction(samples, 'log_lambda_reduced', df_direction, df_age_time_reduced, transform = 'exp')
-count_data <- prepare_count_data(stan_data, df_age_time_reduced)
-plot_intensity_reduced_PP(intensity_PP_reduced, count_data, outdir.fig)
+count_data <- prepare_count_data(stan_data, df_age_time)
+plot_intensity_PP(intensity_PP, count_data, outdir.fig)
 
 # median age of source
 age_source <- find_age_source_by_agextime_direction(samples, df_direction, df_age_time)
