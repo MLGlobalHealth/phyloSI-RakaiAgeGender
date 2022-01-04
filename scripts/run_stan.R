@@ -1,10 +1,11 @@
 library(rstan)
 library(data.table)	
 
-lab <- "MRC_FALSE_OnlyHTX_TRUE_threshold_0.5"
-.stan_model <- 'gp_211216'
+jobname <- 'firstruncutoff'
+.stan_model <- 'gp_211117'
 DEBUG <- F
 JOBID = 12
+lab <- paste0("MRC_FALSE_OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
 
 .indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 datadir <- "/rds/general/user/mm3218/home/projects/2021/phyloflows"
@@ -47,7 +48,6 @@ model = rstan::stan_model(path.to.stan.model)
 stan_init <- list()
 stan_init$rho_gp1 = rep(1.25, stan_data$N_group)
 stan_init$rho_gp2 = rep(1.25, stan_data$N_group)
-stan_init$rho_gp3 = rep(1.25, stan_data$N_group)
 stan_init$nu = 0
 stan_init$mu = 0
 

@@ -6,10 +6,11 @@ library(ggplot2)
 library(ggpubr)
 library(gridExtra)
 
-lab <- "MRC_FALSE_OnlyHTX_TRUE_threshold_0.5"
+jobname <- 'firstruncutoff'
 .stan_model <- 'gp_211207'
 DEBUG <- F
 .JOBID = 21114
+lab <- paste0("MRC_FALSE_OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
 
 .indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 datadir <- "/rds/general/user/mm3218/home/projects/2021/phyloflows"
@@ -54,10 +55,6 @@ path.to.stan.output = file.path(datadir, paste0(.stan_model,'-', .JOBID), paste0
 outdir.fig <- file.path(.outdir, 'figures', paste0(.stan_model,'-', .JOBID))
 outdir.table <- file.path(.outdir, 'tables', paste0(.stan_model,'-', .JOBID))
 
-# table
-create.table.reference(stan_data, df_age_time)
-range_age_observed <- find_range_age_observed(copy(pairs.all), df_direction)
-
 # samples 
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
@@ -67,19 +64,18 @@ make_convergence_diagnostics_stats(fit, outdir.table)
 
 # intensity of the poisson process
 cat("\nPlot transmission intensity\n")
-intensity_PP <- summarise_var_by_agextime_direction(samples, 'log_lambda', df_direction, df_age_time, transform = 'exp')
-count_data <- prepare_count_data(stan_data, df_age_time)
+intensity_PP <- summarise_var_by_age_group(samples, 'log_lambda', df_group, df_age, transform = 'exp')
+count_data <- prepare_count_data(stan_data, df_age, df_group)
 plot_intensity_PP(intensity_PP, count_data, outdir.fig)
 
 # median age of source
 cat("\nPlot mean age at transmission of the source by age at infection of recipient\n")
-age_source <- find_age_source_by_agextime_direction(samples, df_direction, df_age_time)
-age_source <- age_source[!date_infection_evaluated.RECIPIENT %in% range(date_infection_evaluated.RECIPIENT)]
-plot_mean_age_source(age_source, range_age_observed, outdir.fig)
+age_source <- find_age_source_by_age_group(samples, df_group, df_age)
+range_age_observed <- find_range_age_observed(copy(pairs.all), df_group)
+plot_mean_age_source(age_source, outdir.fig)
 
 cat("\nPlot mean age at transmission of the source overall\n")
-age_source_overall <- find_age_source_by_time_direction(samples, df_direction, df_age_time)
-age_source_overall <- age_source_overall[!date_infection_evaluated.RECIPIENT %in% range(date_infection_evaluated.RECIPIENT)]
+age_source_overall <- find_age_source_by_group(samples, df_group, df_age, incidence)
 plot_mean_age_source_overall(age_source_overall, outdir.fig)
 
 cat("End of postprocessing_results.R")

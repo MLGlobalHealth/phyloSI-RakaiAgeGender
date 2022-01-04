@@ -270,64 +270,50 @@ ageanalysis <- function(infile.inference=NULL,infile.prior.samples=NULL,opt=NULL
   return(data.fit)
 }
 
-prepare_stan_data <- function(pairs, df_age_time, df_time, df_age){
-  
+prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
   
   stan_data = list()
   
-  # number of directions
-  directions = list(c('F', 'M'), c('M', 'F'))
-  stan_data[['N_group']] = length(directions)
+  # number of groups
+  stan_data[['N_group']] = nrow(df_group)
   
   # save count in each entry
-  y = vector(mode = 'list', length = length(directions))
-  is_mf = vector(mode = 'list', length = length(directions))
-  idx_obs = vector(mode = 'list', length = length(directions))
+  y = vector(mode = 'list', length = nrow(df_group))
+  is_mf = vector(mode = 'list', length = nrow(df_group))
+  idx_obs = vector(mode = 'list', length = nrow(df_group))
   
-  for(i in 1:length(directions)){
+  for(i in 1:nrow(df_group)){
     
-    tmp <- pairs[sex.SOURCE == directions[[i]][1] & sex.RECIPIENT == directions[[i]][2]]
+    # direction group
+    directions = unlist(lapply(strsplit(c(gsub('(.+) ->.*', '\\1', df_group[i, label_direction]),
+                                          gsub('.* -> (.+)', '\\1', df_group[i, label_direction])), ''), function(x) x[1]))
+    
+    tmp <- pairs[sex.SOURCE == directions[1] & sex.RECIPIENT == directions[2]]
     tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), 
                       age_infection.RECIPIENT = floor(age_infection.RECIPIENT), 
-                      date_infection.RECIPIENT = as.Date(paste0(format(date_infection.RECIPIENT, '%Y'), '-01-01'), '%Y-%m-%d'))]
+                      date_infection_before_cutoff.RECIPIENT = date_infection_before_cutoff.RECIPIENT)]
     
-    # use evaluated time
-    tmp <- merge(tmp, df_time, by = 'date_infection.RECIPIENT')
-    tmp <- tmp[, .(age_transmission.SOURCE, age_infection.RECIPIENT, date_infection_evaluated.RECIPIENT)]
-    
-    # use evaluated age 
-    tmp <- merge(tmp, unique(df_age[, .(age_transmission.SOURCE, age_infection_evaluated.SOURCE)]), by =  c('age_transmission.SOURCE'))
-    tmp <- tmp[, .(age_infection_evaluated.SOURCE, age_infection.RECIPIENT, date_infection_evaluated.RECIPIENT)]
-    tmp <- merge(tmp, unique(df_age[, .(age_infection.RECIPIENT, age_infection_evaluated.RECIPIENT)]), by =  c('age_infection.RECIPIENT'))
-    tmp <- tmp[, .(age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT, date_infection_evaluated.RECIPIENT)]
+    # time group
+    before_cutoff_date <- df_group[i, is_before_cutoff_date]
+    tmp <- tmp[date_infection_before_cutoff.RECIPIENT == before_cutoff_date]
     
     # count number of observation
-    tmp <- tmp[, list(count = .N), by = c('age_infection_evaluated.SOURCE', 'age_infection_evaluated.RECIPIENT', 'date_infection_evaluated.RECIPIENT')]
-    tmp <- merge(df_age_time, tmp, 
-                 by = c('age_infection_evaluated.SOURCE', 'age_infection_evaluated.RECIPIENT', 'date_infection_evaluated.RECIPIENT'), all.x = T)
+    tmp <- tmp[, list(count = .N), by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT')]
+    tmp <- merge(df_age, tmp, 
+                 by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT'), all.x = T)
     tmp[is.na(count), count := 0]
     
-    setkey(tmp, date_infection_evaluated.RECIPIENT, age_infection_evaluated.SOURCE, age_infection_evaluated.RECIPIENT)
-    stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == directions[[i]][1] & sex.RECIPIENT == directions[[i]][2]]))
-    
-    .idx_obs = which(tmp$count > 0)
-    .y = tmp[count > 0]$count
-    
-    .idx_obs = c(.idx_obs, rep(-1, nrow(df_age_time) - length(.idx_obs)))
-    .y = c(.y, rep(-1, nrow(df_age_time) - length(.y)))
-    
-    y[[i]] = matrix(.y, ncol = 1)
-    is_mf[[i]] = directions[[i]][1] == 'M' & directions[[i]][2] == 'F'
-    idx_obs[[i]] = matrix(.idx_obs, ncol = 1)
+    setkey(tmp, age_transmission.SOURCE, age_infection.RECIPIENT)
+    stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == directions[1] & sex.RECIPIENT == directions[2] & date_infection_before_cutoff.RECIPIENT == before_cutoff_date]))
+
+    y[[i]] = matrix(tmp$count, ncol = 1)
+    is_mf[[i]] = directions[1] == 'M' & directions[2] == 'F'
   }
   
   # save stan data
-  stan_data[['N_per_group']] = nrow(df_age_time)
+  stan_data[['N_per_group']] = nrow(df_age)
   stan_data[['y']] = do.call('cbind', y)
-  stan_data[['idx_obs']] = do.call('cbind', idx_obs)
   stan_data[['is_mf']] = unlist(is_mf)
-  
-  stan_data[['N_non_missing']] = apply(stan_data[['idx_obs']], 2, function(x) max(which(x != -1)))
   
   return(stan_data)
 }

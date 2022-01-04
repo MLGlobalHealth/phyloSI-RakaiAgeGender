@@ -5,7 +5,6 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(knitr)
-# Needed for Network plot:
 library(grid)
 library(ggtree)
 library(ggnet) 
@@ -31,8 +30,9 @@ if(dir.exists('~/Documents/ratmann_deepseq_analyses'))
 include.mrc <- F
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
-date_implementation_UTT <- as.Date('2015-01-01')
-lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs)
+cutoff_date <- as.Date('2015-01-01')
+jobname <- 'firstruncutoff'
+lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_jobname_', jobname)
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'210325_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -57,12 +57,10 @@ meta.rccs.1 <- as.data.table(rccsData)
 meta.rccs.2 <- as.data.table( read.csv(file.path.meta.data.rccs.2))
 meta.mrc <- as.data.table( read.csv(file.path.meta.data.mrc))
 
-
 # load keys
 anonymisation.keys <- as.data.table(read.csv(file.anonymisation.keys))
 print.anonkey.statements()
 community.keys <- as.data.table( read.csv(file.community.keys) )
-
 time.first.positive <- as.data.table( read.csv(file.time.first.positive))
 time.first.positive <- make.time.first.positive(time.first.positive)
 
@@ -92,37 +90,30 @@ print.statements.about.pairs(copy(pairs.all), outdir.lab)
 
 # keep only pairs with source-recipient with proxy for the time of infection
 pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
-pairs[, date_infection_before_UTT.RECIPIENT := date_infection.RECIPIENT <= date_implementation_UTT]
+pairs[, date_infection_before_cutoff.RECIPIENT := date_infection.RECIPIENT < cutoff_date]
 
 # prepare age map
-df_age <- get.age.map(pairs, age_bands = 1)
+df_age <- get.age.map(pairs, age_bands_reduced = 4)
 
-# prepare time map
-df_time <- get.time.map(pairs, time_bands = '1 years')
-
-# prepare age x time map
-df_age_time <- get.age.time.map(df_age, df_time)
+# prepare group map
+df_group <- get.group.map()
 
 # make some explanatory plots
 plot_hist_age_infection(copy(pairs), outdir.lab)
-plot_hist_time_infection(copy(pairs), date_implementation_UTT, outdir.lab)
+plot_hist_time_infection(copy(pairs), cutoff_date, outdir.lab)
 plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF', outdir.lab)
 plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outdir.lab)
 plot_CI_age_infection(pairs, outdir.lab)
+phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)),outdir=outdir.lab, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
 
-# Unfortunately have to run 'manually' at the moment. Need to understand what s wrong with this one.
-# dchain <- as.data.table(dchain)
-# dc <- as.data.table(dc)
-# phsc.plot.transmission.network(copy(dchain), copy(dc),outdir=outdir, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
+# extract incidence rate in rakai
+incidence <- find_incidence_rate(range(df_age$age_infection.RECIPIENT))
 
 # prepare stan data
-stan_data <- prepare_stan_data(pairs, df_age_time, df_time, df_age)
-stan_data <- add_3D_splines_stan_data(stan_data, spline_degree = 3, 
-                                      n_knots_1D = 15, n_knots_2D = 15, n_knots_3D = 5,
-                                      X = unique(df_age$age_infection_evaluated.SOURCE), 
-                                      Y = unique(df_age$age_infection_evaluated.RECIPIENT), 
-                                      Z = unique(df_time$time_infection_evaluated.RECIPIENT))
-
+stan_data <- prepare_stan_data(pairs, df_age, df_group)
+stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3, 
+                                      n_knots_rows = 8, n_knots_columns = 8, 
+                                      AGES = unique(df_age$age_transmission.SOURCE))
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)

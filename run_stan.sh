@@ -1,8 +1,8 @@
 #!/bin/sh
 
 JOBID=$$
-STAN_MODEL="gp_211207"
-TAG="MRC_FALSE_OnlyHTX_TRUE_threshold_0.5"
+STAN_MODEL="gp_211117"
+TAG="MRC_FALSE_OnlyHTX_TRUE_threshold_0.5_jobname_firstruncutoff"
 DATADIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"/$TAG
 INDIR="/rds/general/user/mm3218/home/git/phyloflows"
 
