@@ -280,7 +280,7 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
   # save count in each entry
   y = vector(mode = 'list', length = nrow(df_group))
   is_mf = vector(mode = 'list', length = nrow(df_group))
-  idx_obs = vector(mode = 'list', length = nrow(df_group))
+  is_beforecutoff = vector(mode = 'list', length = nrow(df_group))
   
   for(i in 1:nrow(df_group)){
     
@@ -308,12 +308,14 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
 
     y[[i]] = matrix(tmp$count, ncol = 1)
     is_mf[[i]] = directions[1] == 'M' & directions[2] == 'F'
+    is_beforecutoff[[i]] = before_cutoff_date == 1
   }
   
   # save stan data
   stan_data[['N_per_group']] = nrow(df_age)
   stan_data[['y']] = do.call('cbind', y)
   stan_data[['is_mf']] = unlist(is_mf)
+  stan_data[['is_beforecutoff']] = unlist(is_beforecutoff)
   
   return(stan_data)
 }
@@ -456,5 +458,13 @@ bsplines = function(data, knots, degree)
   m[num_basis,length(data)] = 1
   
   return(m)
+}
+
+add_prior_gp_mean <- function(stan_data, df_age){
+  mu <- rep(0.001,  stan_data[['N_per_group']])
+  mu[df_age[age_infection.RECIPIENT == age_transmission.SOURCE, index_age]] = 1
+  stan_data[['mu']] <- rep(list(mu), stan_data[['N_group']])
+  
+  return(stan_data)
 }
 
