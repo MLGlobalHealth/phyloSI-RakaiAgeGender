@@ -193,8 +193,36 @@ find_age_source_by_age_group <- function(samples, df_group, df_age){
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
   tmp1[, pi := value / total_value]
-  tmp1 <- tmp1[, list(value = sum(pi * age_transmission.SOURCE)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(age_transmission.SOURCE, pi )), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
 
+  tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('index_group', 'age_infection.RECIPIENT')]	
+  tmp1 = dcast(tmp1, index_group + age_infection.RECIPIENT ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
+
+find_age_source_difference_by_age_group <- function(samples, df_group, df_age){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(age_transmission.SOURCE, pi )), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  
+  tmp1[, value := value - age_infection.RECIPIENT]
+  
   tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
               by=c('index_group', 'age_infection.RECIPIENT')]	
   tmp1 = dcast(tmp1, index_group + age_infection.RECIPIENT ~ q_label, value.var = "q")

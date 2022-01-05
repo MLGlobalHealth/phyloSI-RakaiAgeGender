@@ -5,11 +5,12 @@ library(data.table)
 library(ggplot2)
 library(ggpubr)
 library(gridExtra)
+library(matrixStats)
 
 jobname <- 'firstruncutoff'
-.stan_model <- 'gp_211207'
+.stan_model <- 'gp_211117'
 DEBUG <- F
-.JOBID = 21114
+.JOBID = 5892
 lab <- paste0("MRC_FALSE_OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
 
 .indir <- "/rds/general/user/mm3218/home/git/phyloflows"
@@ -72,11 +73,15 @@ plot_intensity_PP(intensity_PP, count_data, outdir.fig)
 cat("\nPlot mean age at transmission of the source by age at infection of recipient\n")
 age_source <- find_age_source_by_age_group(samples, df_group, df_age)
 range_age_observed <- find_range_age_observed(copy(pairs.all), df_group)
-plot_mean_age_source(age_source, outdir.fig)
+plot_median_age_source(age_source, outdir.fig)
+
+cat("\nPlot difference age at transmission of the source to age at infection of recipient\n")
+age_source_difference <- find_age_source_difference_by_age_group(samples, df_group, df_age)
+plot_median_age_source_difference(age_source_difference, outdir.fig)
 
 cat("\nPlot mean age at transmission of the source overall\n")
 age_source_overall <- find_age_source_by_group(samples, df_group, df_age, incidence)
-plot_mean_age_source_overall(age_source_overall, outdir.fig)
+plot_median_age_source_overall(age_source_overall, outdir.fig)
 
 cat("End of postprocessing_results.R")
 
