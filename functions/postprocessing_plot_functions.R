@@ -74,7 +74,6 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
     geom_point(data = count_data[count > 0], aes(size = count), col = 'grey50') +
     theme_bw() + 
-    coord_fixed() +
     labs(x = 'Age at infection recipient', fill = 'transmission rate', y= 'Age at transmission source') +
     geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
     facet_grid(label_direction~label_time) + 
@@ -84,7 +83,8 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
     scale_fill_viridis_c() + 
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
-    scale_size_continuous(range = c(1, 3)) 
+    scale_size_continuous(range = c(1, 3)) +
+    coord_cartesian(ylim = range(df_age$age_infection.RECIPIENT))
   ggsave(p, file = paste0(outdir, '-intensity_transmission.png'), w = 7, h = 7)
   
   Dates <- unique(intensity_PP$label_time)
@@ -99,7 +99,6 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
       geom_point(data = tmp1[count > 0], aes(size = count), col = 'grey50') +
       theme_bw() + 
-      coord_fixed() +
       labs(fill = 'transmission rate', y= 'Age at transmission source') +
       geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
       facet_grid(label_direction~label_time) + 
@@ -110,7 +109,8 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
       scale_fill_viridis_c() + 
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = c(0,0)) + 
-      scale_size_continuous(range = c(1, 3)) 
+      scale_size_continuous(range = c(1, 3)) +
+      coord_cartesian(ylim = range(df_age$age_infection.RECIPIENT))
     
     if(i != 1){
       p[[i]] <- p[[i]] + theme(axis.title.y = element_blank(), axis.text.y = element_blank())
@@ -138,14 +138,14 @@ plot_median_age_source <- function(age_source, outdir){
     geom_rect(data = range_age_observed, aes(xmin=-Inf, xmax=min_age_infection.RECIPIENT, 
                                              ymin=-Inf, ymax=Inf), alpha=.2) +
     theme_bw() + 
-    coord_fixed() +
     labs(x = 'Age at infection recipient', y = 'Median age at transmission source',
          col = 'Date infection recipient', fill = 'Date infection recipient') +
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
     scale_x_continuous(expand = c(0,0)) + 
-    scale_y_continuous(expand = c(0,0), limits = range(age_source$age_infection.RECIPIENT)) + 
+    scale_y_continuous(expand = c(0,0)) + 
+    coord_cartesian(ylim = range(df_age$age_infection.RECIPIENT)) +
     facet_grid(.~label_direction)
   
   ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeRecipient.png'), w = 7, h = 5)
