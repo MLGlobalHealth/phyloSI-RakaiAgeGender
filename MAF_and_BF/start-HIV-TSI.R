@@ -11,17 +11,19 @@ if(length(args_line) > 0)
   file.path.patstats <- as.integer(args_line[[6]])
   outdir <- as.integer(args_line[[8]])
 }else{
- 
-  git.dir <- "~/git/phyloflows"
+  git.phy <- "~/git/phyloflows/MAF_and_BF"
+  git.tsi <- "~/git/HIV-phyloTSI-main"
   outdir <- '~/Documents/2021/phyloTSI'
-  file.path.locs <- file.path(git.dir, 'MAF_and_BF/filelocs_with_selsamples.csv')
+  file.path.locs <- file.path(git.phy, 'filelocs_with_selsamples.csv')
   file.path.patstats <- file.path(outdir, 'PatStats', 'patstats_02_05_30_min_read_100_max_read_noPTY.csv')
 }
+if(dir.exists('/home/andrea')){LOCAL <- 1}else{LOCAL <- 0}
 
-if(!dir.exists('/home/andrea') )
+if(!LOCAL)
 {
   usr <- '/rds/general/user/ab1820/home'
-  git.dir <- file.path(usr, "/git/phyloflows")
+  git.phy <- file.path(usr, "git/phyloflows/MAF_and_BF")
+  git.tsi <- file.path(usr, "git/HIV-phyloTSI-main/")
   outdir <- file.path(usr, '/projects/2021/phyloTSI')
   file.path.locs <- file.path(outdir, 'MAF_and_BF/filelocs_with_selsamples.csv')
   file.path.patstats <- file.path(outdir, 'PatStats', 'patstats_02_05_30_min_read_100_max_read_noPTY.csv')
@@ -72,10 +74,10 @@ make_single_cmd <- function(file.path.patstats){
   file.path.maf <- gsub('^(.*)read_(.*).csv$','\\2', basename(file.path.patstats))
   file.path.maf <- paste0('MAF_',file.path.maf, '_', format(Sys.time(), "%y%m%d"), '.csv')
   file.path.maf <- file.path(outdir, 'phyloTSIinput', file.path.maf)
-  
+  if(1){file.path.maf <- file.path('~/Documents/2021/phyloTSI','20211203_02_05_30_min_read_100_max_read_MAF.csv')}
   
   cmd <- paste0("\necho ----- STEP 1: run Lele s script -----\n" )
-  cmd <- paste0(cmd, 'Rscript generate_sample_MAF.R')
+  cmd <- paste0(cmd, 'Rscript ',file.path(git.phy, 'generate_sample_MAF.R'))
   cmd <- paste0(cmd, " '", file.path.locs, "' '", file.path.maf, "' '", file.path.patstats, "'\n")
   
   
@@ -85,8 +87,8 @@ make_single_cmd <- function(file.path.patstats){
   file.path.output <- file.path(outdir, 'phyloTSIoutput', file.path.output)
   
   cmd <- paste0(cmd, "\necho  ----- STEP 2: run Tanya s script  -----\n")
-  cmd <- paste0(cmd, "python /rds/general/user/ab1820/home/git/HIV-phyloTSI/HIVPhyloTSI.py ",
-                "-d /rds/general/user/ab1820/home/git/HIV-phyloTSI/Model ",
+  cmd <- paste0(cmd, "python ", file.path(git.tsi, "HIVPhyloTSI.py "),
+                "-d ", file.path(git.tsi, "Model "),
                 "-p '", file.path.patstats, "' ",
                 "-m '", file.path.maf, "' ",
                 "-o '", file.path.output, "'\n")
@@ -99,7 +101,7 @@ make_single_cmd <- function(file.path.patstats){
 ########################################
 
 cmd <- ''
-if(dir.exists(file.path.patstats))
+if(!LOCAL)
 {
   tmp <- list.files(file.path.patstats)
   N <- length(tmp)
@@ -119,6 +121,7 @@ if(dir.exists(file.path.patstats))
 }
 
 cmd <- paste(make.PBS.header(hpc.array = N), cmd)
+cat(cmd)
 
 jobfile <- gsub(':','',paste("phyTSI",paste(strsplit(date(),split=' ')[[1]],collapse='_',sep=''),'sh',sep='.'))
 jobfile <- file.path(outdir, jobfile)
@@ -129,6 +132,6 @@ cmd <- ifelse(!dir.exists('/home/andrea'),
               paste("source", jobfile))
 
 cat(cmd)
-cat(system(cmd, intern= TRUE))
+# cat(system(cmd, intern= TRUE))
 
 
