@@ -119,6 +119,7 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   meta <- meta[, .(pt_id, aid, sex, cohort_round, cohort, comm,
                    age_infection,  age_first_positive, age_enrol,
                    date_infection, date_first_positive, date_first_visit)]
+  meta[, birth_date := date_infection - age_infection*365]
   
   # remove very young patients (bug?)
   cat('\nExcluding very young patients')
@@ -146,6 +147,9 @@ pairs.get.meta.data <- function(dchain, meta){
   names(tmp) = paste0(names(tmp), '.RECIPIENT')
   tmp1 <- merge(tmp1, tmp, by.x = 'RECIPIENT', by.y = 'aid.RECIPIENT')
   
+  # find age transmission source
+  tmp1[, age_transmission.SOURCE := as.numeric(date_infection.RECIPIENT - birth_date.SOURCE)/365]
+  
   # individuals without meta data
   missing_indiv = unique(c(dchain$SOURCE, dchain$RECIPIENT)[!(c(dchain$SOURCE, dchain$RECIPIENT) %in% meta$aid)])
   cat('There are ', length(missing_indiv), 'indivs without meta data:\n' )
@@ -158,8 +162,8 @@ print.statements.about.pairs <- function(pairs, outdir){
   
   cat('\nThere is ', nrow(pairs), ' source-recipient pairs\n\n')
   
-  cat(nrow(pairs[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]), ' pairs have a proxy for the time of infection of the source and recipient\n')
-  cat(nrow(pairs[((sex.SOURCE == 'F' & sex.RECIPIENT == 'M') | (sex.SOURCE == 'M' & sex.RECIPIENT == 'F')) & (!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT))]), ' pairs are heteroxuals have a proxy for the time of infection of the source and recipient\n\n')                
+  cat(nrow(pairs[!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT)]), ' pairs have a proxy for the time of infection of the source and recipient\n')
+  cat(nrow(pairs[((sex.SOURCE == 'F' & sex.RECIPIENT == 'M') | (sex.SOURCE == 'M' & sex.RECIPIENT == 'F')) & (!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT))]), ' pairs are heteroxuals have a proxy for the time of infection of the source and recipient\n\n')                
   
   cat('\nPairs by cohort')
   tab <- pairs[, list(count = .N), by = c('cohort.SOURCE', 'cohort.RECIPIENT')]
@@ -182,44 +186,140 @@ print.statements.about.pairs <- function(pairs, outdir){
 
 print_table <- function(table) print(knitr::kable(table))
 
-get.age.map <- function(pairs, age_band = 4){
+get.age.map <- function(pairs, age_bands_reduced = 4){
   
   ages <- pairs[, {
-    min_age = floor(min(c(age_infection.SOURCE, age_infection.RECIPIENT)))
-    max_age = floor(max(c(age_infection.SOURCE, age_infection.RECIPIENT)))
+    min_age = floor(min(c(age_transmission.SOURCE, age_infection.RECIPIENT)))
+    max_age = floor(max(c(age_transmission.SOURCE, age_infection.RECIPIENT)))
     list(age = min_age:max_age)}]
-  age_map <- data.table(expand.grid(age_infection.SOURCE = ages$age, age_infection.RECIPIENT = ages$age))
-  df_age <- age_map[order(age_infection.SOURCE, age_infection.RECIPIENT)]
-  
-  ages <- sort(unique(df_age$age_infection.SOURCE)); 
-  ages <- data.table(age_infection = ages, age_infection_reduced.SOURCE = rep(seq(min(ages), max(ages), age_band), each = age_band )[1:length(ages)])
-  df_age <- merge(df_age, ages, by.x = 'age_infection.SOURCE', by.y = 'age_infection')
+  age_map <- data.table(expand.grid(age_transmission.SOURCE = ages$age, age_infection.RECIPIENT = ages$age))
+  df_age <- age_map[order(age_transmission.SOURCE, age_infection.RECIPIENT)]
+
+  ages <- sort(unique(df_age$age_transmission.SOURCE)); 
+  ages <- data.table(age_infection = ages, age_infection_reduced.SOURCE = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
+  df_age <- merge(df_age, ages, by.x = 'age_transmission.SOURCE', by.y = 'age_infection')
   setnames(ages, 'age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT')
-  df_age <<- merge(df_age, ages, by.x = 'age_infection.RECIPIENT', by.y = 'age_infection')
-  setkey(df_age, age_infection.SOURCE, age_infection.RECIPIENT)
+  df_age <- merge(df_age, ages, by.x = 'age_infection.RECIPIENT', by.y = 'age_infection')
+  setkey(df_age, age_transmission.SOURCE, age_infection.RECIPIENT)
+  
+  df_age[, index_age := 1:nrow(df_age)]
+  
+  return(df_age)
 }
 
-get.time.map <- function(pairs, time_bands = '5 years'){
+get.group.map <- function(){
   
-  DATES <- as.Date(paste0(format(range(pairs$date_infection.RECIPIENT), '%Y'), '-01-01'), '%Y-%m-%d')
-  DATES_SHORT <- seq.Date(DATES[1], DATES[2], time_bands)
+  df_direction <- data.table(index_direction = 1:2, is_mf = c(0, 1))
+  df_direction[, label_direction := ifelse(is_mf == 1, 'Male -> Female', 'Female -> Male')]
   
-  df_time <<- data.table(date_infection.RECIPIENT = seq.Date(DATES[1], DATES[2], '1 year'))
-  df_time[, date_infection_reduced.RECIPIENT := max(DATES_SHORT[date_infection.RECIPIENT - DATES_SHORT >= 0]), by = 'date_infection.RECIPIENT' ]
-  df_time[, idx_date_infection_reduced.RECIPIENT := which(DATES_SHORT == date_infection_reduced.RECIPIENT), by = 'date_infection.RECIPIENT']
+  df_time <- data.table(index_time = 1:2, is_before_cutoff_date = c(1, 0))
+  label_cutoff_date <- format(cutoff_date, '%Y')
+  df_time[, label_time := paste0(ifelse(is_before_cutoff_date == 1, 'Before', 'After'), ' ', label_cutoff_date)]
+  df_time[, label_time := factor(label_time, levels = paste0(c('Before', 'After'), ' ', label_cutoff_date))]
   
+  df_group <- data.table(index_group = 1:(nrow(df_direction) * nrow(df_time)), 
+                         index_direction = rep(df_direction$index_direction, each = nrow(df_time)),
+                         index_time = rep(df_time$index_time, nrow(df_direction)))
+  
+  df_group <- merge(df_group, df_direction, by = 'index_direction')
+  df_group <- merge(df_group, df_time, by = 'index_time')
+
+  setkey(df_group, index_group)
+  
+  return(df_group)
 }
 
-get.age.time.map <- function(df_age, df_time){
+find_incidence_rate <- function(range_age){
+  incidence_female <- data.table(age_group = rep(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-49'), each = 11),
+                                 year = rep(c(2000, 2001, 2003, 2004, 2005, 2007, 2009, 2010, 2012, 2014, 2015), 6),
+                                 incidence = c(0.60, 0.86, 1.90, 0.99, 2.38, 0.97, 0.64, 0.52, 0.68, 0.69, 0.43,
+                                               2.19, 2.03, 1.12, 0.95, 1.02, 1.69, 1.30, 2.00, 1.26, 1.55, 1.71, 
+                                               1.21, 1.57, 1.41, 1.87, 1.71, 1.41, 1.30, 1.51, 0.79, 1.08, 1.46, 
+                                               0.44, 0.51, 1.13, 1.37, 0.51, 1.54, 1.50, 1.13, 0.76, 0.60, 0.56, 
+                                               0.84, 1.86, 0.65, 1.45, 1.21, 0.74, 1.38, 0.73, 0.69, 0.41, 0.50, 
+                                               0.56, 0.37, 0.88, 0.31, 0.50, 1.01, 0.67, 0.72, 1.19, 0.45, 0.31),
+                                 is_mf = 0
+  )
   
-  df_age_reduced <- unique(df_age[,.(age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)])
-  df_age_reduced[, dummy := 1]
+  incidence_male <- data.table(age_group = rep(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-49'), each = 11),
+                               year = rep(c(2000, 2001, 2003, 2004, 2005, 2007, 2009, 2010, 2012, 2014, 2015), 6),
+                               incidence = c(0.39, 0.50, NA, NA, NA, 0.47, 0.34, 0.31, 0.39, 0.12, NA,
+                                             0.60, 1.39, 1.93, 2.01, 0.58, 0.81, 0.82, 1.36, 0.63, 0.29, 0.44,
+                                             1.44, 1.14, 1.26, 1.72, 2.41, 2.15, 1.68, 0.76, 1.70, 1.51, 0.61,
+                                             1.94, 0.96, 1.67, 1.83, 0.99, 0.95, 2.21, 1.49, 0.98, 0.70, 0.92,
+                                             NA, 3.77, 0.78, 0.32, 0.91, 1.12, 1.03, 1.20, 0.57, 0.22, 0.33, 
+                                             NA, 0.63, 0.57, 0.56, 0.81, 0.51, 1.18, 0.66, 0.35, 0.31, 0.34),
+                               is_mf = 1
+  )
   
-  df_time_reduced <-  unique(df_time[,.(date_infection_reduced.RECIPIENT)])
-  df_time_reduced[, dummy := 1]
+  incidence <- rbind(incidence_female, incidence_male)
   
-  df_age_time <<- merge(df_age_reduced, df_time_reduced, by = 'dummy', allow.cartesian=TRUE)
-  setkey(df_age_time, date_infection_reduced.RECIPIENT, age_infection_reduced.SOURCE, age_infection_reduced.RECIPIENT)
+  # extend by age
+  incidence[, age_from := gsub('(.+)-.*', '\\1', age_group)]
+  incidence[, age_to := gsub('.*-(.+)', '\\1', age_group)]
   
+  tmp <- unique(incidence[, .(age_from, age_to)])
+  tmp <- tmp[, list(age = age_from:age_to), by = c('age_from', 'age_to')]
+  
+  incidence <- merge(incidence, tmp, by = c('age_from', 'age_to'), allow.cartesian=TRUE)
+  
+  # mean incidene before and after cutoff
+  incidence[, date := as.Date(paste0(year, '-01-01'))]
+  incidence[, is_before_cutoff_date := date < cutoff_date]
+  incidence <- incidence[, list(incidence = mean(na.omit(incidence))), by = c('age', 'is_mf', 'is_before_cutoff_date')]
+  
+  # extending to age fitted
+  tmp <- unique(incidence[, .(is_mf,is_before_cutoff_date)])
+  tmp[, dummy := 1]
+  tmp <- merge(data.table(age = min(range_age):max(range_age), dummy = 1), 
+               tmp, allow.cartesian=TRUE)
+  incidence <- merge(incidence, tmp, all.y = T, by = c('age', 'is_mf', 'is_before_cutoff_date'))
+  
+  # filling missing incidence
+  setkey(incidence, is_mf, is_before_cutoff_date, age)
+  incidence[, incidence := fill_non_na(incidence), by = c('is_mf', 'is_before_cutoff_date')]
+  
+  
+  return(incidence)
 }
+
+fill_non_na <- function(x){
+  
+  index <- which(is.na(x))
+  index_non_na <- which(!is.na(x))
+  
+  if(length(index) == 0){
+    return(x)
+  }
+  
+  if(length(index_non_na) == 0){
+    return(x)
+  }
+  
+  for(i in index){
+    
+    index_down = index_non_na[which(index_non_na < i)]
+    index_up = index_non_na[which(index_non_na > i)]
+    
+    if(length(index_down) > 0 & length(index_up) > 0){
+      x[i] = mean(c(x[max(index_down)], x[min(index_up)]))
+      next
+    }
+    
+    if(length(index_down) > 0){
+      x[i] = x[max(index_down)]
+      next
+    }
+    
+    if(length(index_up) > 0){
+      x[i] = x[min(index_up)]
+      next
+    }
+    
+  }
+  
+  return(x)
+}
+
+
 

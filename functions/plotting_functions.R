@@ -2,90 +2,90 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
   
   plots = list()
   
-  data <- data[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
+  data <- data[!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT)]
   data[, `Cohort round recipient` := cohort_round.RECIPIENT]
   data[, `Cohort round source` := cohort_round.SOURCE]
   data[, `Community recipient` := comm.RECIPIENT]
   data[, `Community source` := comm.SOURCE]
   
   # all pairs
-  p <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
+  p <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point() + 
-    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
+    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
-    scale_x_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT)))+
-    scale_y_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT))) +
+    scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
+    scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) 
     if(!is.null(outdir))
       ggsave(p, filename = file.path(outdir, paste0('AgeInfection_AllPairs_', lab, '.png')), w = 4, h = 4)
   plots = c(plots, list(p))
   
   # by cohort round
-  p1 <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
+  p1 <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col = `Cohort round source`)) + 
-    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
+    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
-    scale_x_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT)))+
-    scale_y_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT))) +
+    scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
+    scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
 
-  p2 <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
+  p2 <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col = `Cohort round recipient`)) + 
-    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
+    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
-    scale_x_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT)))+
-    scale_y_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT))) +
+    scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
+    scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
 
   p <- ggarrange(p1, p2, ncol = 2)
   if(!is.null(outdir))
-    ggsave(p1, filename = file.path(outdir, paste0('AgeInfection_CohortRound_', lab, '.png')), w = 9, h = 7)
+    ggsave(p, filename = file.path(outdir, paste0('AgeInfection_CohortRound_', lab, '.png')), w = 9, h = 7)
   plots = c(plots, list(p))
   
   # by age infection round
-  p <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
-    geom_point(aes(col = date_infection_before_UTT.RECIPIENT)) + 
-    labs(y = 'Age at infection source', x = 'Age at infection recipient',
-         col = 'Date infection recipient before UTT') +
+  p <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+    geom_point(aes(col = date_infection_before_cutoff.RECIPIENT)) + 
+    labs(y = 'Age at transmission source', x = 'Age at infection recipient',
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
-    scale_x_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT)))+
-    scale_y_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT))) +
+    scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
+    scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
   if(!is.null(outdir))
-    ggsave(p, filename = file.path(outdir, paste0('AgeInfection_DateInfectionRecipient_', lab, '.png')), w = 5, h = 5)
+    ggsave(p, filename = file.path(outdir, paste0('AgeInfection_DateInfectionRecipient_', lab, '.png')), w = 4, h = 4)
   plots = c(plots, list(p))
   
   # by community
-  p1 <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
+  p1 <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col = `Community source`)) + 
-    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
+    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
-    scale_x_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT)))+
-    scale_y_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT))) +
+    scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
+    scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
 
-  p2 <- ggplot(data, aes(y = age_infection.SOURCE, x = age_infection.RECIPIENT)) + 
+  p2 <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col =`Community recipient`)) + 
-    labs(y = 'Age at infection source', x = 'Age at infection recipient') +
+    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     coord_fixed() +
-    scale_x_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT)))+
-    scale_y_continuous(limits = range(c(data$age_infection.SOURCE, data$age_infection.RECIPIENT))) +
+    scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
+    scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
   
@@ -100,12 +100,12 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
 plot_hist_age_infection <- function(pairs, outdir = NULL){
   
   pairs[, Sex := sex.SOURCE]
-  p1 <- ggplot(pairs, aes(x = age_infection.SOURCE)) + 
+  p1 <- ggplot(pairs, aes(x = age_transmission.SOURCE)) + 
     geom_histogram(bins = 30) + 
     facet_wrap(~Sex, ncol = 1, label = 'label_both') + 
     theme_bw() + 
-    labs(x = 'Age at infection source') +
-    scale_x_continuous(limits = range(c(pairs$age_infection.SOURCE, pairs$age_infection.RECIPIENT)))
+    labs(x = 'Age at transmission source') +
+    scale_x_continuous(limits = range(c(pairs$age_transmission.SOURCE, pairs$age_infection.RECIPIENT)))
   
   pairs[, Sex := sex.RECIPIENT]
   p2 <- ggplot(pairs, aes(x = age_infection.RECIPIENT)) + 
@@ -113,7 +113,7 @@ plot_hist_age_infection <- function(pairs, outdir = NULL){
     facet_wrap(~Sex, ncol = 1, label = 'label_both') + 
     theme_bw() + 
     labs(x = 'Age at infection recipient')  +
-    scale_x_continuous(limits = range(c(pairs$age_infection.SOURCE, pairs$age_infection.RECIPIENT)))
+    scale_x_continuous(limits = range(c(pairs$age_transmission.SOURCE, pairs$age_infection.RECIPIENT)))
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
   
@@ -126,7 +126,7 @@ plot_hist_age_infection <- function(pairs, outdir = NULL){
   return(p)
 }
 
-plot_hist_time_infection <- function(pairs, date_implementation_UTT, outdir = NULL){
+plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
   
   pairs[, `Round source` := cohort_round.SOURCE]
   p1 <- ggplot(pairs, aes(x = date_infection.SOURCE)) + 
@@ -134,7 +134,7 @@ plot_hist_time_infection <- function(pairs, date_implementation_UTT, outdir = NU
     facet_wrap(~`Round source`, nrow = length(unique(pairs$cohort_round.SOURCE))) +
     theme_bw() + 
     labs(x = 'Date of infection source') + 
-    geom_vline(xintercept = date_implementation_UTT, linetype = 'dashed')
+    geom_vline(xintercept = cutoff_date, linetype = 'dashed')
   
   pairs[, `Round recipient` := cohort_round.RECIPIENT]
   p2 <- ggplot(pairs, aes(x = date_infection.RECIPIENT)) + 
@@ -142,7 +142,7 @@ plot_hist_time_infection <- function(pairs, date_implementation_UTT, outdir = NU
     facet_wrap(~`Round recipient`, nrow = length(unique(pairs$cohort_round.RECIPIENT))) +
     theme_bw() + 
     labs(x = 'Date of infection recipient') + 
-    geom_vline(xintercept = date_implementation_UTT, linetype = 'dashed')
+    geom_vline(xintercept = cutoff_date, linetype = 'dashed')
 
   p <- ggarrange(p1, p2, ncol = 2)
   
@@ -177,12 +177,12 @@ plot_hist_age_infection_diff_threshold <- function(pairs, outdir){
   }
   
   pairs[, Sex := sex.SOURCE]
-  p1 <- ggplot(pairs, aes(x = age_infection.SOURCE)) + 
+  p1 <- ggplot(pairs, aes(x = age_transmission.SOURCE)) + 
     geom_density(aes( group = threshold, fill = threshold), alpha = 0.5) + 
     facet_wrap(~Sex, ncol = 1, label = 'label_both') + 
     theme_bw() + 
-    labs(x = 'Age at infection source') +
-    scale_x_continuous(limits = range(c(pairs$age_infection.SOURCE, pairs$age_infection.RECIPIENT)))
+    labs(x = 'Age at transmission source') +
+    scale_x_continuous(limits = range(c(pairs$age_transmission.SOURCE, pairs$age_infection.RECIPIENT)))
   
   pairs[, Sex := sex.SOURCE]
   p2 <- ggplot(pairs, aes(x = age_infection.RECIPIENT)) + 
@@ -190,7 +190,7 @@ plot_hist_age_infection_diff_threshold <- function(pairs, outdir){
     facet_wrap(~Sex, ncol = 1, label = 'label_both') + 
     theme_bw() + 
     labs(x = 'Age at infection recipient')  +
-    scale_x_continuous(limits = range(c(pairs$age_infection.SOURCE, pairs$age_infection.RECIPIENT)))
+    scale_x_continuous(limits = range(c(pairs$age_transmission.SOURCE, pairs$age_infection.RECIPIENT)))
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
   
@@ -204,24 +204,25 @@ plot_hist_age_infection_diff_threshold <- function(pairs, outdir){
 plot_CI_age_infection <- function(pairs, outdir = NULL){
   
   data <- copy(pairs)
-  data[, age_infection.SOURCE := floor(age_infection.SOURCE)]
+  data[, age_transmission.SOURCE := floor(age_transmission.SOURCE)]
   data[, age_infection.RECIPIENT := floor(age_infection.RECIPIENT)]
-  data <- merge(data, df_age, by = c('age_infection.RECIPIENT', 'age_infection.SOURCE'))
+  data <- merge(data, df_age, by = c('age_infection.RECIPIENT', 'age_transmission.SOURCE'))
   
   ps <- c(0.5, 0.2, 0.8)
   p_labs <- c('M','CL','CU')
   
   ## stratified by age of recipient
-  tmp = data[, list(q= quantile(age_infection.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
-             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT', 'age_infection_reduced.RECIPIENT')]	
-  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_UTT.RECIPIENT + age_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
+  tmp = data[, list(q= quantile(age_transmission.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
+             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT', 'age_infection_reduced.RECIPIENT')]	
+  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT + age_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
   
   # FM
   tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
   p1 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Age at infection male recipient', y = 'Age at infection female source', col = 'Date infection of recipient before 2017') +
+    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Age at infection male recipient', y = 'Age at transmission female source', 
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -230,9 +231,10 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   # MF
   tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
   p2 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Age at infection female recipient', y = 'Age at infection male source', col = 'Date infection of recipient before 2017') +
+    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Age at infection female recipient', y = 'Age at transmission male source', 
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -243,16 +245,17 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   
   
   ## not stratified by age of recipient
-  tmp = data[, list(q= quantile(age_infection.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
-             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_UTT.RECIPIENT')]	
-  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_UTT.RECIPIENT  ~ q_label, value.var = "q")
+  tmp = data[, list(q= quantile(age_transmission.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
+             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT')]	
+  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT  ~ q_label, value.var = "q")
   
   # FM
   tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
-  p1 <- ggplot(tmp1, aes(x = date_infection_before_UTT.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Date infection of recipient before 2017', y = 'Age at infection female source', col = 'Date infection of recipient before 2017') +
+  p1 <- ggplot(tmp1, aes(x = date_infection_before_cutoff.RECIPIENT)) + 
+    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = paste0('Date infection recipient before ', format(cutoff_date, '%Y')), y = 'Age at transmission female source', 
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -260,10 +263,11 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   
   # MF
   tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
-  p2 <- ggplot(tmp1, aes(x = date_infection_before_UTT.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_UTT.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = 'Date infection of recipient before 2017', y = 'Age at infection male source', col = 'Date infection of recipient before 2017') +
+  p2 <- ggplot(tmp1, aes(x = date_infection_before_cutoff.RECIPIENT)) + 
+    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = paste0('Date infection recipient before ', format(cutoff_date, '%Y')), y = 'Age at transmission male source', 
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 

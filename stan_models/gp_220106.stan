@@ -36,6 +36,7 @@ data {
   int<lower=1> N_per_group; // age-age entries
   int y[N_per_group, N_group]; // count of transmissions for each age-age entry
   int<lower=0,upper=1> is_mf[N_group]; // is the direction mf
+	int<lower=0,upper=1> is_beforecutoff[N_group]; // is before cutoff
 	
 	//splines
 	int A;
@@ -47,7 +48,7 @@ data {
   // GP
   real IDX_BASIS_ROWS[num_basis_rows];
   real IDX_BASIS_COLUMNS[num_basis_columns];
-
+  vector[N_per_group] mu[N_group];
 }
 
 transformed data
@@ -60,7 +61,8 @@ parameters {
   real<lower=0> rho_gp2[N_group];
   real<lower=0> alpha_gp[N_group];
   real nu;
-  real mu;
+  real alpha;
+  real gamma;
   matrix[num_basis_rows,num_basis_columns] z1[N_group];
 }
 
@@ -72,12 +74,16 @@ transformed parameters {
   for(i in 1:N_group){
     beta[i] = gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0,
               alpha_gp[i], rho_gp1[i], rho_gp2[i], z1[i]);
-    f[i] = to_vector(((BASIS_ROWS') * beta[i] * BASIS_COLUMNS)');
+    f[i] = to_vector(((BASIS_ROWS') * beta[i] * BASIS_COLUMNS)')
+           + mu[i];
 
-    log_lambda[i] = mu + f[i];
+    log_lambda[i] = alpha + f[i];
     
     if(is_mf[i])
       log_lambda[i] += nu;
+      
+    if(is_beforecutoff[i])
+      log_lambda[i] += gamma;
   }
   
 
@@ -87,8 +93,9 @@ model {
   alpha_gp ~ cauchy(0,1);
   rho_gp1 ~ inv_gamma(5, 5);
   rho_gp2 ~ inv_gamma(5, 5);
-  mu ~ normal(0, 10);
+  alpha ~ normal(0, 10);
   nu ~ normal(0, 10);
+  gamma ~ normal(0, 10);
   
   for(i in 1:num_basis_rows){
     for(j in 1:num_basis_columns){

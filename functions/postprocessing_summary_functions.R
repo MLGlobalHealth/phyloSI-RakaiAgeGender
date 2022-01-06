@@ -156,77 +156,147 @@ check_rhat <- function(fit) {
     print('  Rhat above 1.1 indicates that the chains very likely have not mixed')
 }
 
-summarise_var_by_age_direction <- function(samples, var, df_direction, df_age, transform = NULL){
+summarise_var_by_age_group <- function(samples, var, df_group, df_age, transform = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
-  setnames(tmp1, 2:3, c('index_direction','index_age'))
+  setnames(tmp1, 2:3, c('index_group','index_age'))
   
   if(!is.null(transform)){
     tmp1[, value := sapply(value, transform)]
   }
   
   tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), 
-              by=c('index_direction', 'index_age')]	
-  tmp1 = dcast(tmp1, index_direction + index_age ~ q_label, value.var = "q")
+              by=c('index_group', 'index_age')]	
+  tmp1 = dcast(tmp1, index_group + index_age ~ q_label, value.var = "q")
   
-  tmp1 <- merge(tmp1, df_direction, by = 'index_direction')
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
   tmp1 <- merge(tmp1, df_age, by = 'index_age')
   
   return(tmp1)
 }
 
-plot_intensity_PP <- function(intensity_PP, count_data, outdir){
-  
-  count_data_reduced <- count_data[count > 0]
-  
-  p <- ggplot(intensity_PP, aes(x = age_infection.SOURCE, y = age_infection.RECIPIENT)) + 
-    geom_raster(aes(fill = M)) + 
-    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
-    geom_point(data = count_data_reduced, aes(size = count), col = 'grey50') +
-    theme_bw() + 
-    coord_fixed() +
-    labs(x = 'Age at infection source', y = 'Age at infection recipient', fill = 'transmission rate') +
-    geom_contour(aes(z = M), col = 'red') + 
-    facet_grid(.~label_direction) + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)),
-          legend.position = 'bottom') +
-    scale_fill_viridis_c() + 
-    scale_x_continuous(expand = c(0,0)) + 
-    scale_y_continuous(expand = c(0,0)) 
-  
-  ggsave(p, file = paste0(outdir, '-intensity_transmission.png'), w = 8, h = 5)
-}
-
-find_age_source <- function(samples, df_direction, df_age){
+find_age_source_by_age_group <- function(samples, df_group, df_age){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
-  tmp1 = as.data.table( reshape2::melt(samples[['y_predict']]) )
-  setnames(tmp1, 2:3, c('index_age', 'index_direction'))
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
   
-  tmp1 = merge(tmp1, df_age, by = 'index_age')
+  tmp1[, value := exp(value)]
   
-  tmp1 <- tmp1[, list(value = as.numeric(median(rep(age_infection.SOURCE, value)))), by = c('iterations', 'age_infection.RECIPIENT', 'index_direction')]
-  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(age_transmission.SOURCE, pi )), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+
   tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
-              by=c('index_direction', 'age_infection.RECIPIENT')]	
-  tmp1 = dcast(tmp1, index_direction + age_infection.RECIPIENT ~ q_label, value.var = "q")
+              by=c('index_group', 'age_infection.RECIPIENT')]	
+  tmp1 = dcast(tmp1, index_group + age_infection.RECIPIENT ~ q_label, value.var = "q")
   
-  tmp1 <- merge(tmp1, df_direction, by = 'index_direction')
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
   
   return(tmp1)
 }
 
-prepare_count_data <- function(stan_data){
-  count_data <- data.table(stan_data$y)
-  colnames(count_data) <- c(c('Male -> Female', 'Female -> Male')[stan_data$is_mf == 1], c('Female -> Male', 'Male -> Female')[stan_data$is_mf == 1])
-  count_data <- cbind(count_data, df_age[,-3])
-  count_data <- reshape2::melt(count_data, id.vars = c('age_infection.SOURCE', 'age_infection.RECIPIENT'))
-  setnames(count_data, c('value', 'variable'), c('count', 'label_direction'))
-  return(count_data)
+find_age_source_difference_by_age_group <- function(samples, df_group, df_age){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(age_transmission.SOURCE, pi )), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  
+  tmp1[, value := value - age_infection.RECIPIENT]
+  
+  tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('index_group', 'age_infection.RECIPIENT')]	
+  tmp1 = dcast(tmp1, index_group + age_infection.RECIPIENT ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
 }
+
+find_age_source_by_group <- function(samples, df_group, df_age, incidence){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = sum(pi * age_transmission.SOURCE)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  
+  # weight recipient by incidence
+  incidence[, is_before_cutoff_date := as.numeric(is_before_cutoff_date)]
+  incidence <- merge(incidence, df_group, by = c('is_mf', 'is_before_cutoff_date'))
+  tmp2 <- incidence[, list(total_incidence = sum(incidence)), by = c('index_group')]
+  tmp2 <- merge(incidence, tmp2, by = 'index_group')
+  tmp2[, incidence_weight := incidence / total_incidence]
+  setnames(tmp2, 'age', 'age_infection.RECIPIENT')
+  tmp1 <- merge(tmp1, tmp2, by = c('age_infection.RECIPIENT', 'index_group'))
+  tmp1 <- tmp1[, list(value = sum(incidence_weight * value)), by = c('iterations', 'index_group')]
+  
+  tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('index_group')]	
+  tmp1 = dcast(tmp1, index_group ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
+
+
+prepare_count_data <- function(stan_data, df_age, df_group){
+
+  count_data <- vector(mode = 'list', length = ncol(stan_data$y))
+  
+  for(i in 1:ncol(stan_data$y)){
+    count_data[[i]] <- data.table(count =  stan_data$y[,i])
+    count_data[[i]][, index_group := i]
+    count_data[[i]][, index_age := 1:nrow(count_data[[i]])]
+  }
+  
+  count_data <- do.call('rbind', count_data)
+
+  count_data <- merge(count_data, df_age, by = 'index_age')
+  count_data <- merge(count_data, df_group, by = 'index_group')
+  
+  return(as.data.table(count_data))
+}
+
+find_range_age_observed <- function(tmp, df_group){
+  
+  tmp[, is_mf := 0]
+  tmp[sex.SOURCE == 'M' & sex.RECIPIENT == 'F', is_mf := 1]
+  tmp <- tmp[, list(min_age_infection.RECIPIENT = min(age_infection.RECIPIENT), 
+                    max_age_infection.RECIPIENT = max(age_infection.RECIPIENT),
+                    min_age_infection.SOURCE = min(age_infection.SOURCE), 
+                    max_age_infection.SOURCE = max(age_infection.SOURCE)), by = 'is_mf']
+  tmp <- merge(tmp, df_group, by = 'is_mf')
+}
+
+
+

@@ -1,0 +1,195 @@
+# plot_intensity_reduced_PP <- function(intensity_PP, count_data, outdir){
+#   
+#   count_data_reduced <- count_data[count > 0]
+#   
+#   fct <- function(intensity_PP, count_data_reduced){
+#     ggplot(intensity_PP, aes(y = age_infection_reduced.SOURCE, x = age_infection_reduced.RECIPIENT)) + 
+#       geom_raster(aes(fill = M)) + 
+#       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+#       geom_point(data = count_data_reduced, aes(size = count), col = 'grey50') +
+#       theme_bw() + 
+#       coord_fixed() +
+#       labs(x = 'Age at infection recipient', fill = 'transmission rate', y= 'Age at transmission source') +
+#       geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+#       facet_grid(label_direction~date_infection_reduced_name.RECIPIENT) + 
+#       theme(strip.background = element_rect(colour="white", fill="white"),
+#             strip.text = element_text(size = rel(1)),
+#             legend.position = 'bottom') +
+#       scale_fill_viridis_c(limits = range(intensity_PP$M)) + 
+#       scale_x_continuous(expand = c(0,0)) + 
+#       scale_y_continuous(expand = c(0,0)) + 
+#       scale_size_continuous(range = c(1, 3))
+#   }
+#   
+#   p <- fct(intensity_PP, count_data_reduced)
+#   ggsave(p, file = paste0(outdir, '-intensity_transmission', '.png'), w = 6, h = 6)
+#   
+#   p = list(); p1 = list()
+#   Dates = unique(intensity_PP$date_infection_reduced_name.RECIPIENT)
+#   Directions = unique(intensity_PP$label_direction)
+#   for(j in 1:length(Directions)){
+#     for(i in 1:length(Dates)){
+#       Date = Dates[i]; Direction = Directions[j]
+#       tmp <- subset(intensity_PP, date_infection_reduced_name.RECIPIENT == Date & label_direction == Direction)
+#       tmp1 <- subset(count_data_reduced, date_infection_reduced_name.RECIPIENT == Date & label_direction == Direction)
+#       
+#       p[[i]] <- fct(tmp, tmp1) + theme(legend.position='none')
+#       
+#       if(i != length(Dates)){
+#         p[[i]] <- p[[i]] + 
+#           theme(strip.text.y = element_blank())
+#       }
+#       if(i != 1){
+#         p[[i]] <- p[[i]] + 
+#           theme(axis.title.y = element_blank(),
+#                 axis.ticks.y = element_blank(),
+#                 axis.text.y = element_blank())
+#       }
+#       
+#       if(j != 1){
+#         p[[i]] <- p[[i]] + 
+#           theme(strip.text.x = element_blank())
+#       }
+#       if(j != length(Directions)){
+#         p[[i]] <- p[[i]] + 
+#           theme(axis.title.x = element_blank(),
+#                 axis.ticks.x = element_blank(),
+#                 axis.text.x = element_blank())
+#       }
+#       
+#     }
+#     p1[[j]] <- ggarrange(plotlist = p, nrow = 1, widths = c(1, 0.87, 0.87, 1))
+#     
+#   }
+#   
+#   p <- ggarrange(plotlist = p1, nrow = 2, heights = c(1, 1))
+#   ggsave(p, file = paste0(outdir, '-intensity_transmission_idt', '.png'), w = 8, h = 5)
+#   
+# }
+
+plot_intensity_PP <- function(intensity_PP, count_data, outdir){
+  
+  p <- ggplot(intensity_PP, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+    geom_raster(aes(fill = M)) + 
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+    geom_point(data = count_data[count > 0], aes(size = count), col = 'grey50') +
+    theme_bw() + 
+    coord_fixed() +
+    labs(x = 'Age at infection recipient', fill = 'transmission rate', y= 'Age at transmission source') +
+    geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+    facet_grid(label_direction~label_time) + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    scale_fill_viridis_c() + 
+    scale_x_continuous(expand = c(0,0)) + 
+    scale_y_continuous(expand = c(0,0)) + 
+    scale_size_continuous(range = c(1, 3)) 
+  ggsave(p, file = paste0(outdir, '-intensity_transmission.png'), w = 7, h = 7)
+  
+  Dates <- unique(intensity_PP$label_time)
+  p = list(); i = 1
+  for(Date in Dates){
+    
+    tmp <- subset(intensity_PP, label_time == Date)
+    tmp1 <- subset(count_data, label_time == Date)
+    
+    p[[i]] <- ggplot(tmp, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+      geom_raster(aes(fill = M)) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+      geom_point(data = tmp1[count > 0], aes(size = count), col = 'grey50') +
+      theme_bw() + 
+      coord_fixed() +
+      labs(fill = 'transmission rate', y= 'Age at transmission source') +
+      geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+      facet_grid(label_direction~label_time) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'none',
+            axis.title.x = element_blank()) +
+      scale_fill_viridis_c() + 
+      scale_x_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0)) + 
+      scale_size_continuous(range = c(1, 3)) 
+    
+    if(i != 1){
+      p[[i]] <- p[[i]] + theme(axis.title.y = element_blank(), axis.text.y = element_blank())
+    }
+    
+    if(i != length(Dates)){
+      p[[i]] <- p[[i]] + theme(strip.text.y = element_blank())
+    }
+    
+    i = i + 1
+  }
+  
+  p <- grid.arrange(grobs = p, ncol =2, bottom = text_grob('Age at infection recipient'))
+  ggsave(p, file = paste0(outdir, '-intensity_transmission_scaled.png'), w = 7, h = 7)
+} 
+
+plot_median_age_source <- function(age_source, outdir){
+  
+  p <- ggplot(age_source) + 
+    geom_line(aes(x = age_infection.RECIPIENT, y = M, col = label_time)) + 
+    geom_ribbon(aes(x = age_infection.RECIPIENT, ymin= CL, ymax = CU, fill = label_time), alpha = 0.15) + 
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    geom_rect(data = range_age_observed, aes(xmin=max_age_infection.RECIPIENT, xmax=Inf, 
+                                             ymin=-Inf, ymax=Inf), alpha=.2) +
+    geom_rect(data = range_age_observed, aes(xmin=-Inf, xmax=min_age_infection.RECIPIENT, 
+                                             ymin=-Inf, ymax=Inf), alpha=.2) +
+    theme_bw() + 
+    coord_fixed() +
+    labs(x = 'Age at infection recipient', y = 'Median age at transmission source',
+         col = 'Date infection recipient', fill = 'Date infection recipient') +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    scale_x_continuous(expand = c(0,0)) + 
+    scale_y_continuous(expand = c(0,0), limits = range(age_source$age_infection.RECIPIENT)) + 
+    facet_grid(.~label_direction)
+  
+  ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeRecipient.png'), w = 7, h = 5)
+  
+}
+
+plot_median_age_source_difference <- function(age_source_difference, outdir){
+
+  p <- ggplot(age_source_difference) + 
+    geom_line(aes(x = age_infection.RECIPIENT, y = M, col = label_time)) + 
+    geom_ribbon(aes(x = age_infection.RECIPIENT, ymin= CL, ymax = CU, fill = label_time), alpha = 0.15) + 
+    geom_hline(yintercept = 0, linetype = 'dashed', col = 'grey50') + 
+    geom_rect(data = range_age_observed, aes(xmin=max_age_infection.RECIPIENT, xmax=Inf, 
+                                             ymin=-Inf, ymax=Inf), alpha=.2) +
+    geom_rect(data = range_age_observed, aes(xmin=-Inf, xmax=min_age_infection.RECIPIENT, 
+                                             ymin=-Inf, ymax=Inf), alpha=.2) +
+    theme_bw() + 
+    labs(x = 'Age at infection recipient', y = 'Median difference age at transmission source\nto age at infection recipient',
+         col = 'Date infection recipient', fill = 'Date infection recipient') +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    scale_x_continuous(expand = c(0,0)) + 
+    scale_y_continuous(expand = c(0,0)) + 
+    facet_grid(.~label_direction)
+  
+  ggsave(p, file = paste0(outdir, '-MedianAgeSourceDifference_ByAgeRecipient.png'), w = 7, h = 5)
+  
+}
+
+plot_median_age_source_overall <- function(age_source_overall, outdir){
+  
+  p <- ggplot(age_source_overall, aes(x = label_time)) + 
+    geom_point(aes(y = M)) + 
+    geom_errorbar(aes(ymin= CL, ymax = CU), alpha = 0.15) + 
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    labs(y = "Median age at transmission source\nadjusted by the recipient's incidence rate", x = 'Date infection recipient') +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    facet_grid(.~label_direction)
+  
+  ggsave(p, file = paste0(outdir, '-MedianAgeSource.png'), w = 7, h = 5)
+}
+
+

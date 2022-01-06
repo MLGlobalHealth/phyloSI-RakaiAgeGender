@@ -66,13 +66,17 @@ functions {
 data {
   int<lower=1> N_group; // number of directions
   int<lower=1> N_per_group; // age-age-time entries
-  int<lower=1> N_non_missing_per_group; // age-age-time entries with observation
-  int y[N_non_missing_per_group, N_group]; // count of transmissions for each age-age entry
+  int<lower=1> N_per_group_reduced; // age-age-time entries with observation
+  int y[N_per_group_reduced, N_group]; // count of transmissions for each age-age entry
   int<lower=0,upper=1> is_mf[N_group]; // is the direction mf
-	int idx_obs[N_non_missing_per_group, N_group]; // coordinates 
 	
+	// ages and time array
 	int A; // number of ages
 	int T; // number of times
+	
+	// reduced map
+	int max_per_group;
+	int<lower=-1,upper=N_per_group> MAP_TO_REDUCED[N_per_group_reduced, max_per_group];
 	
 	//splines
   int num_basis_1D;
@@ -106,23 +110,41 @@ parameters {
 
 transformed parameters {
   vector[N_per_group] log_lambda[N_group];  
-  vector[N_per_group] f[N_group];
-  matrix[num_basis_1D,num_basis_2D_times_3D] beta[N_group]; 
+  vector[N_per_group_reduced] log_lambda_reduced[N_group];  
   
   for(i in 1:N_group){
-    beta[i] = gp_3D(num_basis_1D, num_basis_2D, num_basis_3D,
-                    IDX_BASIS_1D, IDX_BASIS_2D, IDX_BASIS_3D,
-                    delta0,
-                    alpha_gp[i], rho_gp1[i], rho_gp2[i], rho_gp3[i], 
-                    z1[i]);
-
-    f[i] = to_vector((BASIS_1D') * beta[i] * kronecker_prod(BASIS_3D, BASIS_2D));
-
-    log_lambda[i] = mu + f[i];
+    vector[N_per_group] f;
+    matrix[num_basis_1D,num_basis_2D_times_3D] beta;  
+    vector[N_per_group] lambda;  
+    vector[N_per_group_reduced] lambda_reduced;  
+    
+    beta = gp_3D(num_basis_1D, num_basis_2D, num_basis_3D,
+                  IDX_BASIS_1D, IDX_BASIS_2D, IDX_BASIS_3D,
+                  delta0,
+                  alpha_gp[i], rho_gp1[i], rho_gp2[i], rho_gp3[i], 
+                  z1[i]);
+                  
+    f = to_vector((BASIS_1D') * beta * kronecker_prod(BASIS_3D, BASIS_2D)); 
+    
+    log_lambda[i] = mu + f;
     
     if(is_mf[i])
       log_lambda[i] += nu;
+    
+    lambda = exp(log_lambda[i]);
+    for(j in 1:N_per_group_reduced){
+      lambda_reduced[j] = 0;
+      for(k in MAP_TO_REDUCED[j,:]){
+        if(k != -1){
+          lambda_reduced[j] += lambda[k];
+        }
+      }
+    }
+    
+
+    log_lambda_reduced[i] = log(lambda_reduced);
   }
+  
   
 }
 
@@ -131,8 +153,8 @@ model {
   rho_gp1 ~ inv_gamma(5, 5);
   rho_gp2 ~ inv_gamma(5, 5);
   rho_gp3 ~ inv_gamma(5, 5);
-  mu ~ normal(0, 5);
-  nu ~ normal(0, 5);
+  mu ~ normal(0, 1);
+  nu ~ normal(0, 1);
   
   for(i in 1:num_basis_1D){
     for(j in 1:num_basis_2D_times_3D){
@@ -141,17 +163,15 @@ model {
   } 
       
   for (i in 1:N_group){
-    y[:,i] ~ poisson_log(log_lambda[i][idx_obs[:,i]]);
+    y[:,i] ~ poisson_log(log_lambda_reduced[i]);
   }
 }
 
 generated quantities{
-  // int y_predict[N_per_group,N_group];
-  real log_lik[N_non_missing_per_group,N_group];
+  real log_lik[N_per_group_reduced,N_group];
   for(i in 1:N_group){
-    for(j in 1:N_non_missing_per_group){
-      // y_predict[j,i] = poisson_log_rng(log_lambda[i][j]);
-      log_lik[j,i] = poisson_log_lpmf(y[j,i]| log_lambda[i][idx_obs[j,i]]);
+    for(j in 1:N_per_group_reduced){
+      log_lik[j,i] = poisson_log_lpmf(y[j,i]| log_lambda_reduced[i][j]);
     }
   }
 }
