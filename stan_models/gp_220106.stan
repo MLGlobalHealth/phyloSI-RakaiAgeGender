@@ -39,11 +39,12 @@ data {
 	int<lower=0,upper=1> is_beforecutoff[N_group]; // is before cutoff
 	
 	//splines
-	int A;
+	int number_rows;
+	int number_columns;
   int num_basis_rows;
   int num_basis_columns;
-  matrix[num_basis_rows, A] BASIS_ROWS; 
-  matrix[num_basis_columns, A] BASIS_COLUMNS; 
+  matrix[num_basis_rows, number_rows] BASIS_ROWS; 
+  matrix[num_basis_columns, number_columns] BASIS_COLUMNS; 
   
   // GP
   real IDX_BASIS_ROWS[num_basis_rows];
