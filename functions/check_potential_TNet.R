@@ -1,40 +1,52 @@
 print.anonkey.statements <- function()
 {
+  cat('------ print.anonkey.statements ------\n\n')
   # Metadata from RCCS 1 
   tmp <- unique(meta.rccs.1[, .(studyid, Pangea.id)])
   tmp <- tmp[! (is.na(studyid) & is.na(Pangea.id))]
-  cat('There were ',tmp[!is.na(studyid), length(unique(studyid))],' distinct study IDs in rccsData \n')
-  cat('There were ',tmp[!is.na(Pangea.id), length(unique(Pangea.id))],' distinct study IDs in rccsData \n')
+  # cat('There are ',tmp[!is.na(studyid), length(unique(studyid))],' distinct study IDs in rccsData \n')
+  # cat('There are ',tmp[!is.na(Pangea.id), length(unique(Pangea.id))],' distinct PANGEA IDs in rccsData \n')
   # tmp[,.N,by= Pangea.id][N > 1]
-  cat(tmp[,.N,by= studyid][N > 1, .N],'study ids had more than one associated Pangea ID.\n')
+  # cat(tmp[,.N,by= studyid][N > 1, .N],'study ids had more than one associated Pangea ID.\n')
   tmp[, STUDY_ID := gsub('R[0-9][0-9]$|R[0-9][0-9]S', '', studyid)] # Important to consider those entries that end with an S as well!
 
   # meta data from RCCS2 (those that are not included in above as here STUDY ID doesn t contain round (so less informative))
-  tmp2 <- unique(meta.rccs.2[, .(pt_id, pangea_id)])
-  tmp2[,.N,by='pt_id'][, table(N)]
-  tmp2[, STUDY_ID := gsub('RK-', '', pt_id)]
-  tmp2[! STUDY_ID %in% tmp$STUDY_ID, list(.N, pangea_id),by = STUDY_ID][N>1, ]
-  tmp2 <- tmp2[! STUDY_ID %in% tmp$STUDY_ID,]
-
-  # compare to anonymisation keys
-  tmp1 <- unique(anonymisation.keys[,.(PT_ID, AID)])
-  tmp1[, lapply( .SD, FUN <- function(x){length(unique(x))}), .SDcols = c('PT_ID','AID')]
-  tmp1[, STUDY_ID := gsub('^RK-', '', PT_ID)]
-
-  if(all(tmp$STUDY_ID %in% tmp1$STUDY_ID))
-  {
-    cat('Every STUDY_ID in the rccsData has a corresponding STUDY_ID in the Anonymised Keys\n')
-  }
-  if(all(tmp2$STUDY_ID %in% tmp1$STUDY_ID))
-  {
-    cat('Every STUDY_ID in the second meta data file has a corresponding STUDY_ID in the Anonymised Keys\n')
-  }
-  cat( round(mean(tmp1$STUDY_ID %in% c(tmp$STUDY_ID, tmp2$STUDY_ID))*100,2),'% of STUDY_IDs in the rccsData or meta data 2 are in the Anonymised Keys\n')
-  tmp1[, table(substr(PT_ID, 1,3))]
+  tmp1 <- unique(meta.rccs.2[, .(pt_id, pangea_id)]) # no NA entries
+  cat('There are ',tmp1[, length(unique(pt_id))],' distinct person IDs (pt_id) in the RCCS2 metadata\n')
+  cat('There are ',tmp1[, length(unique(pangea_id))],' distinct PANGEA IDs in the RCCS2 metadata\n')
+  cat(tmp1[,.N,by='pt_id'][N>1, length(pt_id)],
+      ' pt_id s are associated with one or more PANGEA_IDs\n\n')
   
-  tmp1 <- tmp1[substr(PT_ID, 1,3) == 'RK-', ]
-  cat( round(mean(tmp1$STUDY_ID %in% c(tmp$STUDY_ID, tmp2$STUDY_ID))*100,2),'% of STUDY_IDs in the rccsData or meta data 2 are in the Anonymised Keys\n')
+  tmp1[, STUDY_ID := gsub('RK-', '', pt_id)]
+  # tmp1[! STUDY_ID %in% tmp$STUDY_ID, list(.N, pangea_id),by = STUDY_ID][N>1, ]
+  # tmp1 <- tmp1[! STUDY_ID %in% tmp$STUDY_ID,]
+  
+  # meta data from MRC
+  tmp2 <- unique(meta.mrc[, .(pt_id, pangea_id)]) # no NA entries
+  cat('There are ',tmp2[, length(unique(pt_id))],' distinct person IDs (pt_id) in the MRC metadata\n')
+  cat('There are ',tmp2[, length(unique(pangea_id))],' distinct PANGEA IDs in the MRC metadata\n')
+  cat(tmp2[,.N,by='pt_id'][N>1, length(pt_id)],
+      ' pt_id s are associated with one or more PANGEA_IDs\n\n')
+  
+  # compare to anonymisation keys
+  dak <- unique(anonymisation.keys[,.(PT_ID, AID)])
+  dak[, lapply( .SD, FUN <- function(x){length(unique(x))}), .SDcols = c('PT_ID','AID')]
+  # dak[, STUDY_ID := gsub('^RK-', '', PT_ID)]
 
+  dak[, GROUP:='']
+  dak[PT_ID %in% tmp1$pt_id, GROUP := paste0('RCCS2', GROUP)]
+  dak[PT_ID %in% tmp2$pt_id, GROUP := paste0(GROUP,'MRC')]
+  cat('There are ',dak[,.N],' entries in the anonymisation keys:\n')
+  cat(' - ',dak[GROUP=='MRC',.N],' are in the MRC\n - ',dak[GROUP=='RCCS2',.N],' are in the RCCS2\n')
+  dak[, table(GROUP)]
+  
+  if(all(tmp1$pt_id %in% dak$PT_ID) & all(tmp2$pt_id %in% dak$PT_ID)){
+    cat('Every PT_ID in the PANGEA2 and MRC metadata is represented in the anonymised keys\n\n')
+  } # This is also true for the first study ID.
+  
+  rm(dak, tmp, tmp1, tmp2)
+  cat('----------------------------------------\n')
+  
 }
 
 make.cluster.assignments <- function()
@@ -76,7 +88,7 @@ print.statements.about.potential.TNet <- function()
   {
     break('Cannot find MRC potential networks "MRC_phscnetworks.rda", ask Andrea\n')
   }else{
-    cat('POTENTIAL TRANSMISSION NETWORK: Comparison with Nicholas Bossa MRC analysis:\n')
+    cat('POTENTIAL TRANSMISSION NETWORK: Comparison with Nicholas Bbosa MRC analysis:\n')
     print.statements.about.potential.TNet.MRC(file.path.chains.data.MRC)
   }
 
@@ -141,7 +153,7 @@ print.statements.about.potential.TNet.rakai1516 <- function(filename)
 
 
 
-print.statements.about.potential.TNet.MRC <- function(filename, coverage_threshold = 0.95)
+print.statements.about.potential.TNet.MRC <- function(filename, coverage_threshold = 0.6)
 {
   cat('Using a coverage threshold of', coverage_threshold, ' and a transmission given linkage threshold of 0.6:\n')
   
