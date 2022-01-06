@@ -293,8 +293,8 @@ find_range_age_observed <- function(tmp, df_group){
   tmp[sex.SOURCE == 'M' & sex.RECIPIENT == 'F', is_mf := 1]
   tmp <- tmp[, list(min_age_infection.RECIPIENT = min(age_infection.RECIPIENT), 
                     max_age_infection.RECIPIENT = max(age_infection.RECIPIENT),
-                    min_age_infection.SOURCE = min(age_infection.SOURCE), 
-                    max_age_infection.SOURCE = max(age_infection.SOURCE)), by = 'is_mf']
+                    min_age_transmission.SOURCE = min(age_transmission.SOURCE), 
+                    max_age_transmission.SOURCE = max(age_transmission.SOURCE)), by = 'is_mf']
   tmp <- merge(tmp, df_group, by = 'is_mf')
 }
 

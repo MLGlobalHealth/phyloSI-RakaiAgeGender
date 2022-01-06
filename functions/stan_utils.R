@@ -322,13 +322,15 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
 
 
 
-add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows = 8, n_knots_columns = 8, AGES)
+add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows = 8, n_knots_columns = 8, 
+                                    X, Y)
 {
   
-  stan_data$A <- length(AGES)
+  stan_data$number_rows <- length(X)
+  stan_data$number_columns <- length(Y)
   
-  knots_rows = AGES[seq(1, length(AGES), length.out = n_knots_rows)] 
-  knots_columns = AGES[seq(1, length(AGES), length.out = n_knots_columns)]
+  knots_rows = X[seq(1, length(X), length.out = n_knots_rows)] 
+  knots_columns = Y[seq(1, length(Y), length.out = n_knots_columns)]
   
   stan_data$num_basis_rows = length(knots_rows) + spline_degree - 1
   stan_data$num_basis_columns = length(knots_columns) + spline_degree - 1
@@ -336,8 +338,8 @@ add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows =
   stan_data$IDX_BASIS_ROWS = 1:stan_data$num_basis_rows
   stan_data$IDX_BASIS_COLUMNS = 1:stan_data$num_basis_columns
   
-  stan_data$BASIS_ROWS = bsplines(AGES, knots_rows, spline_degree)
-  stan_data$BASIS_COLUMNS = bsplines(AGES, knots_columns, spline_degree)
+  stan_data$BASIS_ROWS = bsplines(X, knots_rows, spline_degree)
+  stan_data$BASIS_COLUMNS = bsplines(Y, knots_columns, spline_degree)
   
   stopifnot(all( apply(stan_data$BASIS_ROWS, 1, sum) > 0  ))
   stopifnot(all( apply(stan_data$BASIS_COLUMNS, 1, sum) > 0  ))
@@ -460,10 +462,56 @@ bsplines = function(data, knots, degree)
   return(m)
 }
 
-add_prior_gp_mean <- function(stan_data, df_age){
-  mu <- rep(0.001,  stan_data[['N_per_group']])
-  mu[df_age[age_infection.RECIPIENT == age_transmission.SOURCE, index_age]] = 1
-  stan_data[['mu']] <- rep(list(mu), stan_data[['N_group']])
+add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL){
+  
+  tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
+  tmp[, mu := - (abs(age_infection.RECIPIENT - age_transmission.SOURCE) / 10)]
+  mu <- as.matrix(dcast(tmp, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
+  
+  A = t(stan_data[['BASIS_ROWS']])
+  B = stan_data[['BASIS_COLUMNS']]
+  theta <- MASS::ginv(A) %*% mu %*% MASS::ginv(B)
+  
+  stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
+  
+  # plot
+  if(!is.null(outdir)){
+    
+    mu_pred <- A %*% theta %*% B
+    tmp1 = as.data.table(reshape2::melt(mu_pred))
+    setkey(tmp1, Var1, Var2)
+    
+    tmp <- copy(df_age)
+    tmp[, transmission_rate := exp(tmp1$value)]
+
+    ggplot(tmp, aes(x =age_infection.RECIPIENT, y = age_transmission.SOURCE)) + 
+      geom_raster(aes(fill = transmission_rate)) + 
+      labs(x = 'age infection recipient', y = 'age transmission source', fill = 'prior median\ntransmission rate') + 
+      scale_fill_viridis_c() + 
+      scale_y_continuous(expand = c(0,0)) + 
+      scale_x_continuous(expand = c(0,0)) + 
+      theme(legend.position = 'bottom')
+    ggsave(file.path(outdir, paste0('Prior_transmissionRate.png')), w = 5, h = 5)
+    
+    tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_infection.RECIPIENT']
+    tmp <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
+    tmp[, pi := transmission_rate / total_transmission]
+    
+    tmp1 <- tmp[, list(estimator_age = sum(age_transmission.SOURCE * pi)), by = 'age_infection.RECIPIENT']
+    tmp1[, type := 'mean']
+    tmp2 <- tmp[, list(estimator_age = matrixStats::weightedMedian(age_transmission.SOURCE, pi )), by = 'age_infection.RECIPIENT']
+    tmp2[, type := 'median']
+    
+    tmp <- rbind(tmp1, tmp2)
+    
+    ggplot(tmp[type == 'median'], aes(x =age_infection.RECIPIENT, y = estimator_age, col = type)) + 
+      geom_line() + 
+      geom_abline(intercept = 0, slope = 1, linetype= 'dashed') + 
+      labs(x = 'age infection recipient', y = 'Median age transmission source', color = 'prior median') + 
+      theme(legend.position = 'bottom')
+    ggsave(file.path(outdir, paste0('Prior_Agetransmission.png')), w = 5, h = 5)
+    
+  }
   
   return(stan_data)
 }
