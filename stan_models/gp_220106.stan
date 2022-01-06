@@ -93,9 +93,9 @@ model {
   alpha_gp ~ cauchy(0,1);
   rho_gp1 ~ inv_gamma(5, 5);
   rho_gp2 ~ inv_gamma(5, 5);
-  alpha ~ normal(0, 10);
-  nu ~ normal(0, 10);
-  gamma ~ normal(0, 10);
+  alpha ~ normal(0, 1);
+  nu ~ normal(0, 1);
+  gamma ~ normal(0, 1);
   
   for(i in 1:num_basis_rows){
     for(j in 1:num_basis_columns){
