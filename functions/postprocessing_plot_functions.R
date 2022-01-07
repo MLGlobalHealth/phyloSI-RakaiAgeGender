@@ -84,7 +84,7 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
     scale_fill_viridis_c() + 
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
-    scale_size_continuous(range = c(1, 3), breaks = sort(unique(tmp1[count > 0]$count))) +
+    scale_size_continuous(range = c(1, 3), breaks = sort(unique(count_data[count > 0]$count))) +
     coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) + 
     guides(fill = guide_colorbar(order = 1), 
            shape = guide_legend(order = 2)) 
