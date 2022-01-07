@@ -245,6 +245,7 @@ find_age_source_by_group <- function(samples, df_group, df_age, incidence, range
   tmp1 <- merge(tmp1, df_age, by = 'index_age')
   tmp1 <- merge(tmp1, df_group, by = 'index_group')
   
+  tmp1 <- merge(tmp1, range_age_observed, by = 'index_group')
   tmp1[age_infection.RECIPIENT >= min_age_infection.RECIPIENT & age_infection.RECIPIENT <= max_age_infection.RECIPIENT, by = 'is_mf']
   tmp1[age_transmission.SOURCE >= min_age_transmission.SOURCE & age_transmission.SOURCE <= max_age_transmission.SOURCE, by = 'is_mf']
   
