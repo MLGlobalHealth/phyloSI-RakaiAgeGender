@@ -232,7 +232,7 @@ find_age_source_difference_by_age_group <- function(samples, df_group, df_age){
   return(tmp1)
 }
 
-find_age_source_by_group <- function(samples, df_group, df_age, incidence){
+find_age_source_by_group <- function(samples, df_group, df_age, incidence, range_age_observed){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -243,6 +243,10 @@ find_age_source_by_group <- function(samples, df_group, df_age, incidence){
   tmp1[, value := exp(value)]
   
   tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  tmp1[age_infection.RECIPIENT >= min_age_infection.RECIPIENT & age_infection.RECIPIENT <= max_age_infection.RECIPIENT, by = 'is_mf']
+  tmp1[age_transmission.SOURCE >= min_age_transmission.SOURCE & age_transmission.SOURCE <= max_age_transmission.SOURCE, by = 'is_mf']
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
@@ -268,6 +272,100 @@ find_age_source_by_group <- function(samples, df_group, df_age, incidence){
   return(tmp1)
 }
 
+find_age_recipient_by_age_group <- function(samples, df_group, df_age){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_transmission.SOURCE')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_transmission.SOURCE'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(age_infection.RECIPIENT, pi )), by = c('iterations', 'index_group', 'age_transmission.SOURCE')]
+  
+  tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('index_group', 'age_transmission.SOURCE')]	
+  tmp1 = dcast(tmp1, index_group + age_transmission.SOURCE ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
+
+find_age_recipient_difference_by_age_group <- function(samples, df_group, df_age){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_transmission.SOURCE')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_transmission.SOURCE'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(age_infection.RECIPIENT, pi )), by = c('iterations', 'index_group', 'age_transmission.SOURCE')]
+  
+  tmp1[, value := value - age_transmission.SOURCE]
+  
+  tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('index_group', 'age_transmission.SOURCE')]	
+  tmp1 = dcast(tmp1, index_group + age_transmission.SOURCE ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
+
+find_age_recipient_by_group <- function(samples, df_group, df_age, incidence, range_age_observed){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  tmp1 <- merge(tmp1, range_age_observed, by = 'index_group')
+  tmp1[age_infection.RECIPIENT >= min_age_infection.RECIPIENT & age_infection.RECIPIENT <= max_age_infection.RECIPIENT]
+  tmp1[age_transmission.SOURCE >= min_age_transmission.SOURCE & age_transmission.SOURCE <= max_age_transmission.SOURCE]
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_transmission.SOURCE')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_transmission.SOURCE'))
+  tmp1[, pi := value / total_value]
+  tmp1 <- tmp1[, list(value = sum(pi * age_infection.RECIPIENT)), by = c('iterations', 'index_group', 'age_transmission.SOURCE')]
+  
+  # weight recipient by incidence
+  incidence[, is_before_cutoff_date := as.numeric(is_before_cutoff_date)]
+  incidence <- merge(incidence, df_group, by = c('is_mf', 'is_before_cutoff_date'))
+  tmp2 <- incidence[, list(total_incidence = sum(incidence)), by = c('index_group')]
+  tmp2 <- merge(incidence, tmp2, by = 'index_group')
+  tmp2[, incidence_weight := incidence / total_incidence]
+  setnames(tmp2, 'age', 'age_transmission.SOURCE')
+  tmp1 <- merge(tmp1, tmp2, by = c('age_transmission.SOURCE', 'index_group'))
+  tmp1 <- tmp1[, list(value = sum(incidence_weight * value)), by = c('iterations', 'index_group')]
+  
+  tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('index_group')]	
+  tmp1 = dcast(tmp1, index_group ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
 
 prepare_count_data <- function(stan_data, df_age, df_group){
 
@@ -294,7 +392,13 @@ find_range_age_observed <- function(tmp, df_group){
   tmp <- tmp[, list(min_age_infection.RECIPIENT = min(age_infection.RECIPIENT), 
                     max_age_infection.RECIPIENT = max(age_infection.RECIPIENT),
                     min_age_transmission.SOURCE = min(age_transmission.SOURCE), 
-                    max_age_transmission.SOURCE = max(age_transmission.SOURCE)), by = 'is_mf']
+                    max_age_transmission.SOURCE = max(age_transmission.SOURCE)), 
+             by = c('is_mf', 'date_infection_before_cutoff.RECIPIENT')]
+  tmp <- tmp[, list(min_age_infection.RECIPIENT = max(min_age_infection.RECIPIENT), 
+                    max_age_infection.RECIPIENT = min(max_age_infection.RECIPIENT),
+                    min_age_transmission.SOURCE = max(min_age_transmission.SOURCE), 
+                    max_age_transmission.SOURCE = min(max_age_transmission.SOURCE)), 
+             by = c('is_mf')]
   tmp <- merge(tmp, df_group, by = 'is_mf')
 }
 
