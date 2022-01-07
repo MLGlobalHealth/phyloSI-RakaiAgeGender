@@ -462,35 +462,47 @@ bsplines = function(data, knots, degree)
   return(m)
 }
 
-add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL){
+add_prior_gp_mean <- function(stan_data, df_age, projected = T, outdir = NULL){
   
   tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
-  tmp[, mu := - (abs(age_infection.RECIPIENT - age_transmission.SOURCE) / 10)]
+  tmp[, mu := - (abs(age_infection.RECIPIENT - age_transmission.SOURCE) / 3)]
   mu <- as.matrix(dcast(tmp, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
   
   A = t(stan_data[['BASIS_ROWS']])
   B = stan_data[['BASIS_COLUMNS']]
   theta <- MASS::ginv(A) %*% mu %*% MASS::ginv(B)
   
-  stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
-  
+  if(projected){
+    stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
+    
+  } else{
+    stan_data[['mu']] <- rep(list(tmp$mu), stan_data[['N_group']])
+    
+  }
+
   # plot
   if(!is.null(outdir)){
     
+    mu <- tmp$mu
     mu_pred <- A %*% theta %*% B
     tmp1 = as.data.table(reshape2::melt(mu_pred))
     setkey(tmp1, Var1, Var2)
     
     tmp <- copy(df_age)
-    tmp[, transmission_rate := exp(tmp1$value)]
-
+    if(projected){
+      tmp[, transmission_rate := exp(tmp1$value)]
+    } else{
+      tmp[, transmission_rate := exp(mu)]
+    }
+    
     ggplot(tmp, aes(x =age_infection.RECIPIENT, y = age_transmission.SOURCE)) + 
       geom_raster(aes(fill = transmission_rate)) + 
       labs(x = 'age infection recipient', y = 'age transmission source', fill = 'prior median\ntransmission rate') + 
       scale_fill_viridis_c() + 
-      scale_y_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0), limits = range(tmp$age_infection.RECIPIENT)) + 
       scale_x_continuous(expand = c(0,0)) + 
-      theme(legend.position = 'bottom')
+      theme(legend.position = 'bottom') +
+      geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'white') 
     ggsave(file.path(outdir, paste0('Prior_transmissionRate.png')), w = 5, h = 5)
     
     tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_infection.RECIPIENT']
