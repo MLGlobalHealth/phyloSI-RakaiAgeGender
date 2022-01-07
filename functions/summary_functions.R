@@ -188,15 +188,14 @@ print_table <- function(table) print(knitr::kable(table))
 
 get.age.map <- function(pairs, age_bands_reduced = 4){
   
+  extended_age_length <- 5
+  
   ages_source <- pairs[, {
-    min_age = floor(min(age_infection.RECIPIENT) - 5)
-    max_age = floor(max(age_infection.RECIPIENT) + 5)
+    min_age = floor(min(c(age_transmission.SOURCE,age_infection.RECIPIENT))) - extended_age_length
+    max_age = floor(max(c(age_transmission.SOURCE,age_infection.RECIPIENT))) + extended_age_length
     list(age = min_age:max_age)}]
   
-  ages_recipient <- pairs[, {
-    min_age = floor(min(age_infection.RECIPIENT))
-    max_age = floor(max(age_infection.RECIPIENT))
-    list(age = min_age:max_age)}]
+  ages_recipient <- ages_source
   
   age_map <- data.table(expand.grid(age_transmission.SOURCE = ages_source$age, 
                                     age_infection.RECIPIENT = ages_recipient$age))
@@ -216,6 +215,9 @@ get.age.map <- function(pairs, age_bands_reduced = 4){
   setkey(df_age, age_transmission.SOURCE, age_infection.RECIPIENT)
   
   df_age[, index_age := 1:nrow(df_age)]
+  
+  range_age_non_extended <<- c(min(df_age$age_infection.RECIPIENT) + extended_age_length, 
+                               max(df_age$age_infection.RECIPIENT) - extended_age_length)
   
   return(df_age)
 }

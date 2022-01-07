@@ -499,29 +499,52 @@ add_prior_gp_mean <- function(stan_data, df_age, projected = T, outdir = NULL){
       geom_raster(aes(fill = transmission_rate)) + 
       labs(x = 'age infection recipient', y = 'age transmission source', fill = 'prior median\ntransmission rate') + 
       scale_fill_viridis_c() + 
-      scale_y_continuous(expand = c(0,0), limits = range(tmp$age_infection.RECIPIENT)) + 
+      scale_y_continuous(expand = c(0,0)) + 
       scale_x_continuous(expand = c(0,0)) + 
+      coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +
       theme(legend.position = 'bottom') +
       geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'white') 
     ggsave(file.path(outdir, paste0('Prior_transmissionRate.png')), w = 5, h = 5)
     
     tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_infection.RECIPIENT']
-    tmp <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
-    tmp[, pi := transmission_rate / total_transmission]
+    tmp1 <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
+    tmp1[, pi := transmission_rate / total_transmission]
     
-    tmp1 <- tmp[, list(estimator_age = sum(age_transmission.SOURCE * pi)), by = 'age_infection.RECIPIENT']
-    tmp1[, type := 'mean']
-    tmp2 <- tmp[, list(estimator_age = matrixStats::weightedMedian(age_transmission.SOURCE, pi )), by = 'age_infection.RECIPIENT']
-    tmp2[, type := 'median']
+    tmp2 <- tmp1[, list(estimator_age = sum(age_transmission.SOURCE * pi)), by = 'age_infection.RECIPIENT']
+    tmp2[, type := 'mean']
+    tmp1 <- tmp1[, list(estimator_age = matrixStats::weightedMedian(age_transmission.SOURCE, pi )), by = 'age_infection.RECIPIENT']
+    tmp1[, type := 'median']
     
-    tmp <- rbind(tmp1, tmp2)
+    tmp1 <- rbind(tmp1, tmp2)
     
-    ggplot(tmp[type == 'median'], aes(x =age_infection.RECIPIENT, y = estimator_age, col = type)) + 
+    ggplot(tmp1[type == 'median'], aes(x =age_infection.RECIPIENT, y = estimator_age, col = type)) + 
       geom_line() + 
       geom_abline(intercept = 0, slope = 1, linetype= 'dashed') + 
       labs(x = 'age infection recipient', y = 'Median age transmission source', color = 'prior median') + 
-      theme(legend.position = 'bottom')
+      theme(legend.position = 'bottom') +
+      scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
+      scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
     ggsave(file.path(outdir, paste0('Prior_Agetransmission.png')), w = 5, h = 5)
+    
+    tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_transmission.SOURCE']
+    tmp1 <- merge(tmp, tmp1, by = 'age_transmission.SOURCE')
+    tmp1[, pi := transmission_rate / total_transmission]
+    
+    tmp2 <- tmp1[, list(estimator_age = sum(age_transmission.SOURCE * pi)), by = 'age_transmission.SOURCE']
+    tmp2[, type := 'mean']
+    tmp1 <- tmp1[, list(estimator_age = matrixStats::weightedMedian(age_infection.RECIPIENT, pi )), by = 'age_transmission.SOURCE']
+    tmp1[, type := 'median']
+    
+    tmp1 <- rbind(tmp1, tmp2)
+    
+    ggplot(tmp1[type == 'median'], aes(x =age_transmission.SOURCE, y = estimator_age, col = type)) + 
+      geom_line() + 
+      geom_abline(intercept = 0, slope = 1, linetype= 'dashed') + 
+      labs(x = 'age transmission source', y = 'Median age infection recipient', color = 'prior median') + 
+      theme(legend.position = 'bottom') + 
+      scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
+      scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
+    ggsave(file.path(outdir, paste0('Prior_AgeInfection.png')), w = 5, h = 5)
     
   }
   

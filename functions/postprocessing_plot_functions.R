@@ -84,7 +84,7 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
     scale_size_continuous(range = c(1, 3)) +
-    coord_cartesian(ylim = range(df_age$age_infection.RECIPIENT))
+    coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) 
   ggsave(p, file = paste0(outdir, '-intensity_transmission.png'), w = 7, h = 7)
   
   Dates <- unique(intensity_PP$label_time)
@@ -110,7 +110,7 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = c(0,0)) + 
       scale_size_continuous(range = c(1, 3)) +
-      coord_cartesian(ylim = range(df_age$age_infection.RECIPIENT))
+      coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) 
     
     if(i != 1){
       p[[i]] <- p[[i]] + theme(axis.title.y = element_blank(), axis.text.y = element_blank())
@@ -147,7 +147,7 @@ plot_median_age_source <- function(age_source, outdir){
           legend.position = 'bottom') +
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
-    coord_cartesian(ylim = range(df_age$age_infection.RECIPIENT)) +
+    coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +
     facet_grid(.~label_direction)
   
   ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeRecipient.png'), w = 7, h = 5)
@@ -174,6 +174,7 @@ plot_median_age_source_difference <- function(age_source_difference, outdir){
           legend.position = 'bottom') +
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
+    coord_cartesian(xlim = range_age_non_extended) +
     facet_grid(.~label_direction)
   
   ggsave(p, file = paste0(outdir, '-MedianAgeSourceDifference_ByAgeRecipient.png'), w = 7, h = 5)
@@ -193,7 +194,8 @@ plot_median_age_source_overall <- function(age_source_overall, outdir){
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
-    facet_grid(.~label_direction)
+    facet_grid(.~label_direction) +
+    coord_cartesian(xlim = range_age_non_extended) +
   
   ggsave(p, file = paste0(outdir, '-MedianAgeSource.png'), w = 7, h = 5)
 }
@@ -218,7 +220,7 @@ plot_median_age_recipient <- function(age_recipient, outdir){
           legend.position = 'bottom') +
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
-    coord_cartesian(ylim = range(df_age$age_transmission.SOURCE)) +
+    coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +    
     facet_grid(.~label_direction)
   
   ggsave(p, file = paste0(outdir, '-MedianAgeRecipient_ByAgeSource.png'), w = 7, h = 5)
@@ -245,7 +247,8 @@ plot_median_age_recipient_difference <- function(age_recipient_difference, outdi
           legend.position = 'bottom') +
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
-    facet_grid(.~label_direction)
+    facet_grid(.~label_direction) +
+    coord_cartesian(xlim = range_age_non_extended) +
   
   ggsave(p, file = paste0(outdir, '-MedianAgeRecipientDifference_ByAgeSource.png'), w = 7, h = 5)
   
@@ -264,7 +267,8 @@ plot_median_age_recipient_overall <- function(age_recipient_overall, outdir){
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
-    facet_grid(.~label_direction)
+    facet_grid(.~label_direction) +
+    coord_cartesian(xlim = range_age_non_extended) +
   
   ggsave(p, file = paste0(outdir, '-MedianAgeRecipient.png'), w = 7, h = 5)
 }
