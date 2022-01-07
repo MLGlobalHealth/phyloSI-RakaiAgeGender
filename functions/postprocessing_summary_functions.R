@@ -243,11 +243,10 @@ find_age_source_by_group <- function(samples, df_group, df_age, incidence, range
   tmp1[, value := exp(value)]
   
   tmp1 <- merge(tmp1, df_age, by = 'index_age')
-  tmp1 <- merge(tmp1, df_group, by = 'index_group')
   
   tmp1 <- merge(tmp1, range_age_observed, by = 'index_group')
-  tmp1[age_infection.RECIPIENT >= min_age_infection.RECIPIENT & age_infection.RECIPIENT <= max_age_infection.RECIPIENT, by = 'is_mf']
-  tmp1[age_transmission.SOURCE >= min_age_transmission.SOURCE & age_transmission.SOURCE <= max_age_transmission.SOURCE, by = 'is_mf']
+  tmp1 <- tmp1[age_infection.RECIPIENT >= min_age_infection.RECIPIENT & age_infection.RECIPIENT <= max_age_infection.RECIPIENT]
+  tmp1 <- tmp1[age_transmission.SOURCE >= min_age_transmission.SOURCE & age_transmission.SOURCE <= max_age_transmission.SOURCE]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
@@ -256,11 +255,14 @@ find_age_source_by_group <- function(samples, df_group, df_age, incidence, range
   
   # weight recipient by incidence
   incidence[, is_before_cutoff_date := as.numeric(is_before_cutoff_date)]
-  incidence <- merge(incidence, df_group, by = c('is_mf', 'is_before_cutoff_date'))
+  incidence <- merge(incidence, range_age_observed, by = c('is_mf', 'is_before_cutoff_date'))
+  incidence <- incidence[age >= min_age_infection.RECIPIENT & age <= max_age_infection.RECIPIENT]
+  
   tmp2 <- incidence[, list(total_incidence = sum(incidence)), by = c('index_group')]
   tmp2 <- merge(incidence, tmp2, by = 'index_group')
   tmp2[, incidence_weight := incidence / total_incidence]
   setnames(tmp2, 'age', 'age_infection.RECIPIENT')
+  
   tmp1 <- merge(tmp1, tmp2, by = c('age_infection.RECIPIENT', 'index_group'))
   tmp1 <- tmp1[, list(value = sum(incidence_weight * value)), by = c('iterations', 'index_group')]
   
@@ -341,8 +343,8 @@ find_age_recipient_by_group <- function(samples, df_group, df_age, incidence, ra
   tmp1 <- merge(tmp1, df_group, by = 'index_group')
   
   tmp1 <- merge(tmp1, range_age_observed, by = 'index_group')
-  tmp1[age_infection.RECIPIENT >= min_age_infection.RECIPIENT & age_infection.RECIPIENT <= max_age_infection.RECIPIENT]
-  tmp1[age_transmission.SOURCE >= min_age_transmission.SOURCE & age_transmission.SOURCE <= max_age_transmission.SOURCE]
+  tmp1 <- tmp1[age_infection.RECIPIENT >= min_age_infection.RECIPIENT & age_infection.RECIPIENT <= max_age_infection.RECIPIENT]
+  tmp1 <- tmp1[age_transmission.SOURCE >= min_age_transmission.SOURCE & age_transmission.SOURCE <= max_age_transmission.SOURCE]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_transmission.SOURCE')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_transmission.SOURCE'))
@@ -351,11 +353,15 @@ find_age_recipient_by_group <- function(samples, df_group, df_age, incidence, ra
   
   # weight recipient by incidence
   incidence[, is_before_cutoff_date := as.numeric(is_before_cutoff_date)]
-  incidence <- merge(incidence, df_group, by = c('is_mf', 'is_before_cutoff_date'))
+
+  incidence <- merge(incidence, range_age_observed, by = c('is_mf', 'is_before_cutoff_date'))
+  incidence <- incidence[age >= min_age_transmission.SOURCE & age <= max_age_transmission.SOURCE]
+  
   tmp2 <- incidence[, list(total_incidence = sum(incidence)), by = c('index_group')]
   tmp2 <- merge(incidence, tmp2, by = 'index_group')
   tmp2[, incidence_weight := incidence / total_incidence]
   setnames(tmp2, 'age', 'age_transmission.SOURCE')
+  
   tmp1 <- merge(tmp1, tmp2, by = c('age_transmission.SOURCE', 'index_group'))
   tmp1 <- tmp1[, list(value = sum(incidence_weight * value)), by = c('iterations', 'index_group')]
   

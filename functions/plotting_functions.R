@@ -241,7 +241,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionSource_', lab, '.png')), w = 8, h = 5)
+  ggsave(p, filename = file.path(outdir, paste0('AgeTransmissionSource_', lab, '.png')), w = 8, h = 5)
   
   
   ## not stratified by age of recipient
@@ -274,9 +274,86 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionSource_Unstratified_', lab, '.png')), w = 8, h = 5)
+  ggsave(p, filename = file.path(outdir, paste0('AgeTransmissionSource_Unstratified_', lab, '.png')), w = 8, h = 5)
   
 }
+
+plot_CI_age_transmission <- function(pairs, outdir = NULL){
+  
+  data <- copy(pairs)
+  data[, age_transmission.SOURCE := floor(age_transmission.SOURCE)]
+  data[, age_infection.RECIPIENT := floor(age_infection.RECIPIENT)]
+  data <- merge(data, df_age, by = c('age_infection.RECIPIENT', 'age_transmission.SOURCE'))
+  
+  ps <- c(0.5, 0.2, 0.8)
+  p_labs <- c('M','CL','CU')
+  
+  ## stratified by age of recipient
+  tmp = data[, list(q= quantile(age_infection.RECIPIENT, prob=ps, na.rm = T), q_label=p_labs), 
+             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT', 'age_transmission_reduced.SOURCE')]	
+  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT + age_transmission_reduced.SOURCE ~ q_label, value.var = "q")
+  
+  # FM
+  tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
+  p1 <- ggplot(tmp1, aes(x = age_transmission_reduced.SOURCE)) + 
+    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Age at transmission female source', y = 'Age at infection male recipient', 
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    # coord_fixed() + 
+    theme(legend.position = 'bottom') 
+  
+  # MF
+  tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
+  p2 <- ggplot(tmp1, aes(x = age_transmission_reduced.SOURCE)) + 
+    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Age at transmission male source', y = 'Age at infection female recipient', 
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    # coord_fixed() + 
+    theme(legend.position = 'bottom') 
+  
+  p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
+  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionRecipient_', lab, '.png')), w = 8, h = 5)
+  
+  
+  ## not stratified by age of recipient
+  tmp = data[, list(q= quantile(age_infection.RECIPIENT, prob=ps, na.rm = T), q_label=p_labs), 
+             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT')]	
+  tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT  ~ q_label, value.var = "q")
+  
+  # FM
+  tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
+  p1 <- ggplot(tmp1, aes(x = date_infection_before_cutoff.RECIPIENT)) + 
+    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = paste0('Date infection recipient before ', format(cutoff_date, '%Y')), y = 'Age at infection male recipient', 
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    # coord_fixed() + 
+    theme(legend.position = 'bottom') 
+  
+  # MF
+  tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
+  p2 <- ggplot(tmp1, aes(x = date_infection_before_cutoff.RECIPIENT)) + 
+    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = paste0('Date infection recipient before ', format(cutoff_date, '%Y')), y = 'Age at infection female recipient', 
+         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    # coord_fixed() + 
+    theme(legend.position = 'bottom') 
+  
+  p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
+  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionRecipient_Unstratified_', lab, '.png')), w = 8, h = 5)
+}
+
 
 # Tranmission Network plot from: https://github.com/olli0601/Phyloscanner.R.utilities/blob/7c58edac4812e53b0b67e69770f70e9d3826881d/R/phyloscan.fun.plotting.R
 phsc.plot.transmission.network<- function(dchain, dc, outdir=NULL, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.02, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=c('M' = 15, 'F' = 17), node.fill.values=c('F'='hotpink2', 'M'='steelblue2') , threshold.linked=NA_real_)

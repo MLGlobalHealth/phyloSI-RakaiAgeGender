@@ -104,6 +104,7 @@ plot_hist_time_infection(copy(pairs), cutoff_date, outdir.lab)
 plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF', outdir.lab)
 plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outdir.lab)
 plot_CI_age_infection(pairs, outdir.lab)
+plot_CI_age_transmission(pairs, outdir.lab)
 phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)),outdir=outdir.lab, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
 
 # extract incidence rate in rakai
@@ -115,7 +116,7 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 8, n_knots_columns = 8, 
                                       X = unique(df_age$age_transmission.SOURCE),
                                       Y = unique(df_age$age_infection.RECIPIENT))
-stan_data <- add_prior_gp_mean(stan_data, df_age, F, outdir.lab)
+stan_data <- add_prior_gp_mean(stan_data, df_age, T, outdir.lab)
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)
