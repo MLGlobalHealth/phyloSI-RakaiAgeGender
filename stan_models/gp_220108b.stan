@@ -60,7 +60,8 @@ parameters {
   real<lower=0> rho_gp1[N_group];
   real<lower=0> rho_gp2[N_group];
   real<lower=0> alpha_gp[N_group];
-  real alpha[N_group];
+  real alpha;
+  real nu[N_group];
   matrix[num_basis_rows,num_basis_columns] z1[N_group];
 }
 
@@ -74,7 +75,7 @@ transformed parameters {
               alpha_gp[i], rho_gp1[i], rho_gp2[i], z1[i]);
     f[i] = to_vector(((BASIS_ROWS') * beta[i] * BASIS_COLUMNS)');
 
-    log_lambda[i] = alpha[i] + f[i];
+    log_lambda[i] = alpha + nu[i] + f[i];
   }
   
 
@@ -85,6 +86,7 @@ model {
   rho_gp1 ~ inv_gamma(5, 5);
   rho_gp2 ~ inv_gamma(5, 5);
   alpha ~ normal(0, 1);
+  nu ~ normal(0, 1);
   
   for(i in 1:num_basis_rows){
     for(j in 1:num_basis_columns){
