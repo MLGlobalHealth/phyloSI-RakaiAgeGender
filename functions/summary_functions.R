@@ -281,6 +281,16 @@ find_incidence_rate <- function(range_age){
   # mean incidene before and after cutoff
   incidence[, date := as.Date(paste0(year, '-01-01'))]
   incidence[, is_before_cutoff_date := date < cutoff_date]
+  
+  if(sum(!incidence$is_before_cutoff_date) == 0){
+    tmp <- incidence[year == max(year)]
+    tmp[, year := as.numeric(format(cutoff_date, '%Y'))]
+    tmp[, date := as.Date(paste0(year, '-01-01'))]
+    tmp[, is_before_cutoff_date := date < cutoff_date]
+    
+    incidence <- rbind(incidence, tmp)
+  }
+  
   incidence <- incidence[, list(incidence = mean(na.omit(incidence))), by = c('age', 'is_mf', 'is_before_cutoff_date')]
   
   # extending to age fitted
