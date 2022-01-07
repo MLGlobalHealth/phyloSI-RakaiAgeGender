@@ -31,7 +31,7 @@ include.mrc <- F
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
 cutoff_date <- as.Date('2014-01-01')
-jobname <- 'cutoff2014priorgp'
+jobname <- '2014_IpriorGP'
 lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_jobname_', jobname)
 
 # file paths
@@ -116,7 +116,7 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 8, n_knots_columns = 8, 
                                       X = unique(df_age$age_transmission.SOURCE),
                                       Y = unique(df_age$age_infection.RECIPIENT))
-stan_data <- add_prior_gp_mean(stan_data, df_age, T, outdir.lab)
+stan_data <- add_prior_gp_mean(stan_data, df_age, outdir.lab)
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)

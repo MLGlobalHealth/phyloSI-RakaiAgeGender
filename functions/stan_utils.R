@@ -462,7 +462,7 @@ bsplines = function(data, knots, degree)
   return(m)
 }
 
-add_prior_gp_mean <- function(stan_data, df_age, projected = T, outdir = NULL){
+add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
   
   tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
   tmp[, mu := - (abs(age_infection.RECIPIENT - age_transmission.SOURCE) / 3)]
