@@ -215,14 +215,17 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   tmp = data[, list(q= quantile(age_transmission.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
              by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT', 'age_infection_reduced.RECIPIENT')]	
   tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT + age_infection_reduced.RECIPIENT ~ q_label, value.var = "q")
+  tmp[, date_infection_before_cutoff_name.RECIPIENT := paste0('Before ', format(cutoff_date, '%Y'))]
+  tmp[date_infection_before_cutoff.RECIPIENT == 0, date_infection_before_cutoff_name.RECIPIENT := paste0('After ', format(cutoff_date, '%Y'))]
+  tmp[, date_infection_before_cutoff_name.RECIPIENT := factor(date_infection_before_cutoff_name.RECIPIENT, levels = paste0(c('Before ', 'After '), format(cutoff_date, '%Y')))]
   
   # FM
   tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
   p1 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
     labs(x = 'Age at infection male recipient', y = 'Age at transmission female source', 
-         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+         col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -231,10 +234,10 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   # MF
   tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
   p2 <- ggplot(tmp1, aes(x = age_infection_reduced.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
     labs(x = 'Age at infection female recipient', y = 'Age at transmission male source', 
-         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+         col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -248,14 +251,17 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   tmp = data[, list(q= quantile(age_transmission.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
              by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT')]	
   tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT  ~ q_label, value.var = "q")
+  tmp[, date_infection_before_cutoff_name.RECIPIENT := paste0('Before ', format(cutoff_date, '%Y'))]
+  tmp[date_infection_before_cutoff.RECIPIENT == 0, date_infection_before_cutoff_name.RECIPIENT := paste0('After ', format(cutoff_date, '%Y'))]
+  tmp[, date_infection_before_cutoff_name.RECIPIENT := factor(date_infection_before_cutoff_name.RECIPIENT, levels = paste0(c('Before ', 'After '), format(cutoff_date, '%Y')))]
   
   # FM
   tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
   p1 <- ggplot(tmp1, aes(x = date_infection_before_cutoff.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = paste0('Date infection recipient before ', format(cutoff_date, '%Y')), y = 'Age at transmission female source', 
-         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+    geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Date infection recipient', y = 'Age at transmission female source', 
+         col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -266,8 +272,8 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   p2 <- ggplot(tmp1, aes(x = date_infection_before_cutoff.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = paste0('Date infection recipient before ', format(cutoff_date, '%Y')), y = 'Age at transmission male source', 
-         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+    labs(x = 'Date infection recipient', y = 'Age at transmission male source', 
+         col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -292,14 +298,17 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
   tmp = data[, list(q= quantile(age_infection.RECIPIENT, prob=ps, na.rm = T), q_label=p_labs), 
              by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT', 'age_transmission_reduced.SOURCE')]	
   tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT + age_transmission_reduced.SOURCE ~ q_label, value.var = "q")
+  tmp[, date_infection_before_cutoff_name.RECIPIENT := paste0('Before ', format(cutoff_date, '%Y'))]
+  tmp[date_infection_before_cutoff.RECIPIENT == 0, date_infection_before_cutoff_name.RECIPIENT := paste0('After ', format(cutoff_date, '%Y'))]
+  tmp[, date_infection_before_cutoff_name.RECIPIENT := factor(date_infection_before_cutoff_name.RECIPIENT, levels = paste0(c('Before ', 'After '), format(cutoff_date, '%Y')))]
   
   # FM
   tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
   p1 <- ggplot(tmp1, aes(x = age_transmission_reduced.SOURCE)) + 
-    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
     labs(x = 'Age at transmission female source', y = 'Age at infection male recipient', 
-         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+         col ='Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -308,10 +317,10 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
   # MF
   tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
   p2 <- ggplot(tmp1, aes(x = age_transmission_reduced.SOURCE)) + 
-    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
     labs(x = 'Age at transmission male source', y = 'Age at infection female recipient', 
-         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+         col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -325,14 +334,17 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
   tmp = data[, list(q= quantile(age_infection.RECIPIENT, prob=ps, na.rm = T), q_label=p_labs), 
              by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT')]	
   tmp = dcast(tmp, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT  ~ q_label, value.var = "q")
+  tmp[, date_infection_before_cutoff_name.RECIPIENT := paste0('Before ', format(cutoff_date, '%Y'))]
+  tmp[date_infection_before_cutoff.RECIPIENT == 0, date_infection_before_cutoff_name.RECIPIENT := paste0('After ', format(cutoff_date, '%Y'))]
+  tmp[, date_infection_before_cutoff_name.RECIPIENT := factor(date_infection_before_cutoff_name.RECIPIENT, levels = paste0(c('Before ', 'After '), format(cutoff_date, '%Y')))]
   
   # FM
   tmp1 <- subset(tmp, sex.SOURCE == 'F' & sex.RECIPIENT == 'M') 
-  p1 <- ggplot(tmp1, aes(x = date_infection_before_cutoff.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = paste0('Date infection recipient before ', format(cutoff_date, '%Y')), y = 'Age at infection male recipient', 
-         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+  p1 <- ggplot(tmp1, aes(x = date_infection_before_cutoff_name.RECIPIENT)) + 
+    geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Date infection recipient', y = 'Age at infection male recipient', 
+         col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
@@ -340,11 +352,11 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
   
   # MF
   tmp1 <- subset(tmp, sex.SOURCE == 'M' & sex.RECIPIENT == 'F') 
-  p2 <- ggplot(tmp1, aes(x = date_infection_before_cutoff.RECIPIENT)) + 
-    geom_point(aes(y = M, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
-    labs(x = paste0('Date infection recipient before ', format(cutoff_date, '%Y')), y = 'Age at infection female recipient', 
-         col = paste0('Date infection recipient before ', format(cutoff_date, '%Y'))) +
+  p2 <- ggplot(tmp1, aes(x = date_infection_before_cutoff_name.RECIPIENT)) + 
+    geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    labs(x = 'Date infection recipient', y = 'Age at infection female recipient', 
+         col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     # coord_fixed() + 
