@@ -16,23 +16,28 @@ make.time.first.positive <- function(time.first.positive)
 {
   time.first.positive[,  `:=` (date_first_visit=as.Date( visit_dt ,'%d/%m/%Y'), date_first_positive=as.Date( first_pos_dt ,'%d/%m/%Y') ) ]
   time.first.positive[, diff := as.numeric(difftime(date_first_positive, date_first_visit, units="weeks")/52.25) ]
+  
   time.first.positive[, age_first_positive := round(age_at_visit + diff, 1)]
   time.first.positive[, `:=` (visit_dt = NULL, first_pos_dt=NULL , diff=NULL)]
   
-  # time.first.positive[, date_birth := date_first_visit - age_at_visit * 365]
-  # time.first.positive[, age_first_positive := as.numeric(as.Date(date_first_positive, '%d/%m/%Y') - date_birth) / 365]
-
   # Check age_at_first_pos is coherent
   tmp <- time.first.positive[, max(age_first_positive)-min(age_first_positive), by='pt_id']
-  tmp[,range(V1, na.rm=T),]
-  time.first.positive[pt_id %in% tmp[V1 > 1, pt_id]]
+  stopifnot(nrow(time.first.positive[pt_id %in% tmp[V1 > 1, pt_id]]))
 
   # Take median of estimated ages at first positive (given the results are fine)
   time.first.positive[, age_first_positive := round(median(age_first_positive),1) ,by='pt_id']
-  time.first.positive <- unique(time.first.positive)
+  # time.first.positive <- unique(time.first.positive)
+
+  # age at infection estimated as first positive detection - estimated TSI
+  tmp <- unique(time.first.positive[, .(pt_id, age_first_positive)])
+  tmp <- merge(tmp, time.since.infection, by.x='pt_id', by.y='PT_ID')
+  tmp <- tmp[, .(pt_id, TSI_estimated_mean, TSI_estimated_min, TSI_estimated_max)]
+  time.first.positive <- merge(time.first.positive, tmp, by = 'pt_id')
+  time.first.positive[, age_infection := age_first_positive - TSI_estimated_mean]
 
   return(time.first.positive)
 }
+
 
 get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positive, anonymisation.keys, community.keys){
   
@@ -65,7 +70,7 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   
   # merge
   meta.rccs <- merge(meta.rccs, time.first.positive[, .(pt_id, 
-                                                        age_first_positive, date_first_positive, 
+                                                        age_first_positive, age_infection, date_first_positive, 
                                                         age_enrol, date_first_visit)], by = 'pt_id')
   meta.rccs <- unique(meta.rccs)
 
@@ -99,7 +104,7 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   meta[, date_infection := date_first_positive - 365]
   meta[is.na(date_first_positive), date_infection := date_first_visit - 365]
   
-  meta[, age_infection := as.numeric(age_first_positive) - 1]
+  # meta[, age_infection := as.numeric(age_first_positive) - 1]
   meta[is.na(age_first_positive) & !is.na(age_enrol), age_infection := as.numeric(age_enrol) - 1]
   cat('There is ', nrow(meta[!is.na(age_infection)]), ' individuals included in the meta-data with proxy for the age at infection\n')
 
@@ -181,7 +186,40 @@ print.statements.about.pairs <- function(pairs, outdir){
   tab <- pairs[, list(count = .N), by = c('comm.SOURCE', 'comm.RECIPIENT')]
   print_table(tab)
   
+}
 
+# Want to see how many AIDs in potential pairs have an associated prefix and base frequency file => SOMETHING
+print.statements.about.basefreq.files <- function(chain)
+{
+  # get aids of potential pairs
+  aid <- chain[, unique(c(SOURCE, RECIPIENT))]
+  stopifnot(all(aid %in% anonymisation.keys$AID))
+  
+  # Translate AID <-> PREFIXes
+  tmp <- file.path(file.path.phscinput)
+  tmp <- as.data.table(readRDS(tmp))
+  tmp[, `:=` (AID = gsub('-fq[0-9]$','',RENAME_ID), PREFIX=gsub('_remap$','',basename(SAMPLE_ID)))]
+  stopifnot(all(aid %in% tmp$AID))
+  tmp <- unique(tmp[AID %in% aid, .(AID, PREFIX)])
+  
+  # Translate PREFIXES <-> bf.csv file existance 
+  bflocs <- as.data.table(readRDS(file.path.bflocs)) 
+  bflocs <- unique(bflocs[, list(PREFIX=PREFIX, HPC_EXISTS=!is.na(FULL))])
+  
+  # cat('Out of ', tmp[, length(unique(PREFIX))], ' prefixes associated with our individuals, XX are not in the \n')
+  # tmp$PREFIX[which(! tmp$PREFIX %in% bflocs$PREFIX)]
+  
+  tmp <- merge(tmp, bflocs, by='PREFIX', all.x=T)
+  tmp[is.na(HPC_EXISTS), HPC_EXISTS := FALSE]
+
+  cat('PREFIXes with existing base frequency file:')
+  print_table(tmp[, table(HPC_EXISTS)])
+  
+  cat('AIDs with at least one existing base frequency file:')
+  tmp1 <- tmp[, list(HPC_EXISTS=any(HPC_EXISTS)), by='AID'][, table(HPC_EXISTS)]
+  print_table(tmp1)
+  
+  return(tmp)
 }
 
 print_table <- function(table) print(knitr::kable(table))
