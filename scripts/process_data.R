@@ -42,6 +42,10 @@ file.path.meta.data.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','2003
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 file.community.keys <- file.path(indir.deepsequence_analyses,'community_names.csv')
 file.time.first.positive <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '211111_pangea_db_sharing_extract_rakai_age_firstpos_lastneg.csv')
+file.path.phscinput <- file.path(indir.deepsequence_analyses, '210120_RCCSUVRI_phscinput_runs.rds')
+file.path.bflocs <- file.path(indir.repository, 'data/bfloc2hpc_20220103.rds')
+file.path.tsiestimates <- file.path(indir.repository, 'data/TSI_estimates_20220601.csv')
+
 outdir.lab <- file.path(outdir, lab); dir.create(outdir.lab)
   
 # load functions
@@ -57,12 +61,17 @@ meta.rccs.1 <- as.data.table(rccsData)
 meta.rccs.2 <- as.data.table( read.csv(file.path.meta.data.rccs.2))
 meta.mrc <- as.data.table( read.csv(file.path.meta.data.mrc))
 
-# load keys
-anonymisation.keys <- as.data.table(read.csv(file.anonymisation.keys))
+# load keys 
+anonymisation.keys <- as.data.table(read.csv(file.anonymisation.keys))[, X:=NULL]
 print.anonkey.statements()
 community.keys <- as.data.table( read.csv(file.community.keys) )
+
+# get age at infection
 time.first.positive <- as.data.table( read.csv(file.time.first.positive))
+time.since.infection <- as.data.table(read.csv(file.path.tsiestimates))
+time.since.infection <- merge(time.since.infection, anonymisation.keys, by='AID')
 time.first.positive <- make.time.first.positive(time.first.positive)
+
 
 # get meta data
 meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positive, anonymisation.keys, community.keys)
@@ -87,6 +96,21 @@ if(include.only.heterosexual.pairs){
 }
 
 print.statements.about.pairs(copy(pairs.all), outdir.lab)
+if(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
+{
+  missing_bff <- print.statements.about.basefreq.files(pairs.all)
+  missing_bff <- merge(anonymisation.keys, missing_bff[HPC_EXISTS == FALSE, ], by='AID')
+  missing_bff[, HPC_EXISTS := NULL]
+  
+  # if want to send Tanya:
+  tmp <- missing_bff[,  .(PT_ID, PREFIX)]
+  name <- file.path(indir.repository, 'data/missing_bf_files_20220106.csv')
+  if(!file.exists(name)){write.csv(tmp, name, row.names = F)}
+  # commented out here, but all missing bf's have RCCS2 prefixes.
+}
+
+
+
 
 # keep only pairs with source-recipient with proxy for the time of infection
 pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
