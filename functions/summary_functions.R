@@ -14,32 +14,34 @@ keep.likely.transmission.pairs <- function(dchain, threshold){
 
 make.time.first.positive <- function(time.first.positive)
 {
-  time.first.positive[,  `:=` (date_first_visit=as.Date( visit_dt ,'%d/%m/%Y'), date_first_positive=as.Date( first_pos_dt ,'%d/%m/%Y') ) ]
+  time.first.positive[,  `:=` (date_first_visit = as.Date( visit_dt ,'%d/%m/%Y'), 
+                               date_first_positive = as.Date( first_pos_dt ,'%d/%m/%Y') ) ]
   time.first.positive[, diff := as.numeric(difftime(date_first_positive, date_first_visit, units="weeks")/52.25) ]
-  
   time.first.positive[, age_first_positive := round(age_at_visit + diff, 1)]
   time.first.positive[, `:=` (visit_dt = NULL, first_pos_dt=NULL , diff=NULL)]
-  
+ 
   # Check age_at_first_pos is coherent
   tmp <- time.first.positive[, max(age_first_positive)-min(age_first_positive), by='pt_id']
-  stopifnot(nrow(time.first.positive[pt_id %in% tmp[V1 > 1, pt_id]]))
+  stopifnot(nrow(time.first.positive[pt_id %in% tmp[!is.na(V1) & V1 > 1, pt_id]]) == 0)
 
   # Take median of estimated ages at first positive (given the results are fine)
-  time.first.positive[, age_first_positive := round(median(age_first_positive),1) ,by='pt_id']
-  # time.first.positive <- unique(time.first.positive)
-
+  time.first.positive[, age_first_positive := round(median(age_first_positive, na.rm = T),1) ,by='pt_id']
+  # There re 243 inds without age_first_positive
+  
   # age at infection estimated as first positive detection - estimated TSI
   tmp <- unique(time.first.positive[, .(pt_id, age_first_positive)])
   tmp <- merge(tmp, time.since.infection, by.x='pt_id', by.y='PT_ID')
   tmp <- tmp[, .(pt_id, TSI_estimated_mean, TSI_estimated_min, TSI_estimated_max)]
   time.first.positive <- merge(time.first.positive, tmp, by = 'pt_id')
-  time.first.positive[, age_infection := age_first_positive - TSI_estimated_mean]
+  # time.first.positive[, age_infection := age_first_positive - TSI_estimated_mean]
 
   return(time.first.positive)
 }
 
-
 get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positive, anonymisation.keys, community.keys){
+  
+  # TODO: weird that enrolment date can be after date of first positive....
+  # was this based on the wrong assumption that we have for every individual visit?
   
   colnames(meta.rccs.1) <- tolower(colnames(meta.rccs.1))
   colnames(meta.rccs.2) <- tolower(colnames(meta.rccs.2))
@@ -70,12 +72,13 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   
   # merge
   meta.rccs <- merge(meta.rccs, time.first.positive[, .(pt_id, 
-                                                        age_first_positive, age_infection, date_first_positive, 
-                                                        age_enrol, date_first_visit)], by = 'pt_id')
+                                                        age_first_positive, age_enrol, 
+                                                        date_first_positive, date_first_visit,
+                                                        TSI_estimated_mean)], by = 'pt_id')
   meta.rccs <- unique(meta.rccs)
 
   stopifnot(length(unique(meta.rccs$pt_id)) == nrow(meta.rccs))
-  stopifnot(nrow(meta.rccs[is.na(age_first_positive) & is.na(age_enrol)]) > 0)
+  stopifnot(nrow(meta.rccs[is.na(age_first_positive) & is.na(age_enrol)]) == 0)
   cat('There is ', nrow(meta.rccs), ' individuals included in the RCCS meta-data\n')
   
   
@@ -100,14 +103,19 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   cat('There is ', nrow(meta), ' individuals included in the meta-data\n')
   
   
-  # transform variables
-  meta[, date_infection := date_first_positive - 365]
-  meta[is.na(date_first_positive), date_infection := date_first_visit - 365]
+  # transform variables WAIT HERE recursive definition
+  setnames(meta, "TSI_estimated_mean", 'tsi_years')
+  meta[, tsi_days := round(tsi_years * 365, 0)]
+  meta[, date_infection := date_first_positive - tsi_days] 
+  meta[is.na(date_first_positive), date_infection := date_first_visit - tsi_days]
   
-  # meta[, age_infection := as.numeric(age_first_positive) - 1]
-  meta[is.na(age_first_positive) & !is.na(age_enrol), age_infection := as.numeric(age_enrol) - 1]
+  meta[, INFECTION := NA_character_]
+  meta[!is.na(age_first_positive) , INFECTION := 'age_first_positive']
+  meta[, age_infection := as.numeric(age_first_positive) - tsi_years]
+  meta[is.na(age_first_positive) & !is.na(age_enrol), age_infection := as.numeric(age_enrol) - tsi_years]
+  meta[is.na(age_first_positive) & !is.na(age_enrol), INFECTION := 'age_enrol' ]
   cat('There is ', nrow(meta[!is.na(age_infection)]), ' individuals included in the meta-data with proxy for the age at infection\n')
-
+  meta[, `:=` (tsi_years=NULL, tsi_days=NULL)]
   
   #
   # last changes
@@ -121,15 +129,16 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   meta <- merge(meta, community.keys, by.x = 'comm_num', by.y = 'comm_num_raw', all.x = T)
   
   # keep only variable of interest
-  meta <- meta[, .(pt_id, aid, sex, cohort_round, cohort, comm,
+  meta <- meta[, .(pt_id, aid, sex, cohort_round, cohort, comm, INFECTION,
                    age_infection,  age_first_positive, age_enrol,
                    date_infection, date_first_positive, date_first_visit)]
   meta[, birth_date := date_infection - age_infection*365]
   
   # remove very young patients (bug?)
   cat('\nExcluding very young patients')
-  print_table(meta[age_infection < 11, .(aid, age_infection)])
-  meta <- meta[is.na(age_infection) | age_infection >= 11]
+  # print_table(meta[age_infection < 11, .(aid, age_infection)])
+  # print_table(meta[age_infection < 11, INFECTION])
+  # meta <- meta[is.na(age_infection) | age_infection >= 11]
 
   # rm duplicate
   meta <- unique(meta)
@@ -142,12 +151,10 @@ pairs.get.meta.data <- function(dchain, meta){
   # stopifnot(unique(dchain$SOURCE) %in% unique(meta_data$aid))
   # stopifnot(unique(dchain$RECIPIENT) %in% unique(meta_data$aid))
   
-  # merge by source
+  # merge by source, then recipient
   tmp <- copy(meta)
   names(tmp) = paste0(names(tmp), '.SOURCE')
   tmp1 <- merge(dchain, tmp, by.x = 'SOURCE', by.y = 'aid.SOURCE')
-  
-  # merge by recipient
   tmp <- copy(meta)
   names(tmp) = paste0(names(tmp), '.RECIPIENT')
   tmp1 <- merge(tmp1, tmp, by.x = 'RECIPIENT', by.y = 'aid.RECIPIENT')
@@ -167,7 +174,7 @@ print.statements.about.pairs <- function(pairs, outdir){
   
   cat('\nThere is ', nrow(pairs), ' source-recipient pairs\n\n')
   
-  cat(nrow(pairs[!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT)]), ' pairs have a proxy for the time of infection of the source and recipient\n')
+  cat(nrow(pairs[!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT)]), ' pairs have a proxy for the age at infection of the source and recipient\n')
   cat(nrow(pairs[((sex.SOURCE == 'F' & sex.RECIPIENT == 'M') | (sex.SOURCE == 'M' & sex.RECIPIENT == 'F')) & (!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT))]), ' pairs are heteroxuals have a proxy for the time of infection of the source and recipient\n\n')                
   
   cat('\nPairs by cohort')
