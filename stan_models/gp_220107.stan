@@ -49,7 +49,7 @@ data {
   // GP
   real IDX_BASIS_ROWS[num_basis_rows];
   real IDX_BASIS_COLUMNS[num_basis_columns];
-  vector[N_per_group] mu[N_group];
+  matrix[num_basis_rows,num_basis_columns] theta[N_group];
 }
 
 transformed data
@@ -74,9 +74,9 @@ transformed parameters {
 
   for(i in 1:N_group){
     beta[i] = gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0,
-              alpha_gp[i], rho_gp1[i], rho_gp2[i], z1[i]);
-    f[i] = to_vector(((BASIS_ROWS') * beta[i] * BASIS_COLUMNS)')
-           + mu[i];
+              alpha_gp[i], rho_gp1[i], rho_gp2[i], z1[i])
+              + theta[i];
+    f[i] = to_vector(((BASIS_ROWS') * beta[i] * BASIS_COLUMNS)');
 
     log_lambda[i] = alpha + f[i];
     

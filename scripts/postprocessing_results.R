@@ -7,10 +7,10 @@ library(ggpubr)
 library(gridExtra)
 library(matrixStats)
 
-jobname <- 'firstruncutoff'
-.stan_model <- 'gp_211117'
+jobname <- 'cutoff2015priorgp2'
+.stan_model <- 'gp_220107'
 DEBUG <- F
-.JOBID = 5892
+.JOBID = 19904
 lab <- paste0("MRC_FALSE_OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
 
 .indir <- "/rds/general/user/mm3218/home/git/phyloflows"
@@ -60,28 +60,38 @@ outdir.table <- file.path(.outdir, 'tables', paste0(.stan_model,'-', .JOBID))
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# convergence diagnostics 
+## convergence diagnostics 
 make_convergence_diagnostics_stats(fit, outdir.table)
 
-# intensity of the poisson process
+## intensity of the poisson process
 cat("\nPlot transmission intensity\n")
 intensity_PP <- summarise_var_by_age_group(samples, 'log_lambda', df_group, df_age, transform = 'exp')
 count_data <- prepare_count_data(stan_data, df_age, df_group)
 plot_intensity_PP(intensity_PP, count_data, outdir.fig)
 
+## shift in age-specific transmission dynamics
+range_age_observed <- find_range_age_observed(copy(pairs), df_group)
+
 # median age of source
-cat("\nPlot mean age at transmission of the source by age at infection of recipient\n")
 age_source <- find_age_source_by_age_group(samples, df_group, df_age)
-range_age_observed <- find_range_age_observed(copy(pairs.all), df_group)
 plot_median_age_source(age_source, outdir.fig)
 
-cat("\nPlot difference age at transmission of the source to age at infection of recipient\n")
 age_source_difference <- find_age_source_difference_by_age_group(samples, df_group, df_age)
 plot_median_age_source_difference(age_source_difference, outdir.fig)
 
-cat("\nPlot mean age at transmission of the source overall\n")
-age_source_overall <- find_age_source_by_group(samples, df_group, df_age, incidence)
+age_source_overall <- find_age_source_by_group(samples, df_group, df_age, incidence, range_age_observed)
 plot_median_age_source_overall(age_source_overall, outdir.fig)
+
+# median age of recipient
+age_recipient <- find_age_recipient_by_age_group(samples, df_group, df_age)
+plot_median_age_recipient(age_recipient, outdir.fig)
+
+age_recipient_difference <- find_age_recipient_difference_by_age_group(samples, df_group, df_age)
+plot_median_age_recipient_difference(age_recipient_difference, outdir.fig)
+
+age_recipient_overall <- find_age_recipient_by_group(samples, df_group, df_age, incidence, range_age_observed)
+plot_median_age_recipient_overall(age_recipient_overall, outdir.fig)
+
 
 cat("End of postprocessing_results.R")
 

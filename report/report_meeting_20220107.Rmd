@@ -1,0 +1,217 @@
+---
+title: "Methods developement to capture time shift in age-specific transmission dynamics"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r, echo=FALSE}
+library(data.table)
+library(ggplot2)
+library(ggpubr)
+
+outdir.full <- '/Users/melodiemonod/Box\ Sync/2021/phyloflows/'
+```
+
+```{r, echo=FALSE}
+lab <- 'MRC_FALSE_OnlyHTX_TRUE_threshold_0.5_jobname_cutoff2014priorgp2'
+jobid <- 'gp_220107-25200'
+load(file.path(outdir.full, lab, paste0('stanin_', lab, '.RData')))
+```
+
+## Data
+
+As presented in the last report, we use heterosexual source-recipient pairs enrolled in RCCS in rounds R15-R16 and R17-R18 identified by Ratmann et al. (2019) accounting for a number of pairs:
+```{r, echo=FALSE}
+nrow(pairs)
+```
+
+The number of source-recipient pairs stratified by sex are
+```{r, echo=FALSE}
+tab <- pairs[, list(count = .N), by = c('sex.SOURCE', 'sex.RECIPIENT')]
+knitr::kable(tab)
+```
+
+by cohort round
+```{r, echo=FALSE}
+tab <- pairs[, list(count = .N), by = c('cohort_round.SOURCE', 'cohort_round.RECIPIENT')]
+knitr::kable(tab)
+```
+
+and for which the recipient was infected before or after 2014
+```{r, echo=FALSE}
+pairs[, date_infection_before_2014.RECIPIENT := date_infection_before_cutoff.RECIPIENT]
+tab <- pairs[, list(count = .N), by = c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_2014.RECIPIENT')]
+knitr::kable(tab)
+```
+
+### Time period at infection recipient 
+We first look at the time period at infection of the source and recipient by cohort round. And here we indicate January 2014 by a dashed vertical line.
+
+```{r, echo=FALSE, out.width="70%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, paste0('hist_date_infection_', lab, '.png'))
+knitr::include_graphics(plot)
+```
+
+We observe that the time period at infection of the recipient extends from years 1998 to 2018.
+
+
+### Age- and sex- specific transmission dynamics
+Let us explore the age-specific transmission dynamics stratified by the direction of transmission. We indicate on the y-axis the age of the source when the source infected the recipient and on the x-axis the age of the recipient when the recipient was infected by the source. We refer to those two ages in the following by age at transmission (for the source) and age at infection (for the recipient). Every source-recipient pair is indicated by a dot. 
+
+```{r, echo=FALSE, out.width="40%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, 'AgeInfection_AllPairs_FM.png')
+knitr::include_graphics(plot)
+
+plot <- file.path(outdir.full, lab, 'AgeInfection_AllPairs_MF.png')
+knitr::include_graphics(plot)
+```
+
+Note that this plot include pairs for which the recipient has been infected somewhere between 1998 and 2018. We then wonder whether the age-specific transmission dynamics changed over time and therefore could be further stratified by the time period at infection of the recipient. Empirically, we look at the plot above again but this time coloring the pairs for which the recipient was infected before 2014 in blue and after 2014 in red.
+
+```{r, echo=FALSE, out.width="40%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, 'AgeInfection_DateInfectionRecipient_FM.png')
+knitr::include_graphics(plot)
+
+plot <- file.path(outdir.full, lab, 'AgeInfection_DateInfectionRecipient_MF.png')
+knitr::include_graphics(plot)
+```
+
+Further, we can compute the crude credible interval of the age at transmission of the source for each age at infection of the recipient (aggregated in 4 years age bands).
+
+```{r, echo=FALSE, out.width="60%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, paste0('AgeTransmissionSource_', lab, '.png'))
+knitr::include_graphics(plot)
+```
+
+Looking at the Female to Male direction, we observe that there might be a shift over time, with male
+getting infected from older female than before. No shift can be easily observed for the Male to Female direction.
+
+We can also compute the crude credible interval of the age at infection of the recipient for each age at transmission of the source (aggregated in 4 years age bands).
+
+```{r, echo=FALSE, out.width="60%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, paste0('AgeInfectionRecipient_', lab, '.png'))
+knitr::include_graphics(plot)
+```
+
+
+
+## Methods
+
+Xi et al. (2021) investigated the age-specific transmission dynamics for the Male to Female and Female to Male directions considering all pairs enrolled in the R15-R16 cohorts together. Here we extend her model by adding another dimension: the time period at infection of the recipient.
+Let us denote by $y_{d,t,a,b}$ the number of source-recipient pairs observed in the direction $d$ and time period $t$ for which the source transmitted at age $a$ and the recipient was infected at age $b$, with
+$$d \in \{\text{Male} \rightarrow \text{Female}, \text{Female} \rightarrow \text{Male}\}$$
+$$t \in \mathcal{T} = \{\text{Before } 2014, \text{After } 2014\}$$
+$$a \in \mathcal{A} = \{15, 16, \dots, 50\}$$
+$$b \in \mathcal{B} = \{15, 16, \dots, 50\}.$$
+
+We use a Poisson point process to model the count of pairs, 
+\begin{align}
+y_{d,t,a,b} &\sim \text{Poisson}(\lambda_{d,t,a,b})\\
+\log \lambda_{d,t,a,b} &= \alpha + \nu \; \mathbb{1}_{d = \text{Male} \rightarrow \text{Female}} + \gamma \; \mathbb{1}_{t = \text{Before } 2014} + f^{d,t}(a,b).
+\end{align}
+
+The log transmission rate $\lambda_{d,t,a,b}$ is modelled with a common baseline $\alpha$. A shift in the baseline level for the Male to Female direction is captured by $\nu$ and a shift in the time period before 2014 is captured by $\gamma$. Lastly, each combination of direction $d \in \mathcal{D}$ and time period $t \in \mathcal{T}$ (4 combinations in total) is attached to a specific two-dimensional random function $f^{d,t}(a,b)$.
+
+We model the two-dimensional random function $f^{d,t}(a,b)$ independently for each direction $d$ and time period $t$. We use a low-rank Gaussian Process projected by regularized B-Splines, as proposed by Monod et al. (2021), 
+$$
+\boldsymbol{f}^{d,t} \: | \: \boldsymbol{\mu}, \boldsymbol{K}^{d,t} \sim \mathcal{GP}\big(\boldsymbol{\mu}, (\boldsymbol{B}^1)^T \boldsymbol{K}^{d,t} \boldsymbol{B}^2 \big)
+$$
+where $\boldsymbol{B}_1$ and $\boldsymbol{B}_2$ are matrices of B-spline basis functions over the space on which the age at infection of the source is defined $\mathcal{A}$ and on which the age at infection of the recipient is defined $\mathcal{B}$. $\boldsymbol{K}^{d,t}$ is a covariance matrix evaluated with a squared exponential kernel function on the indices of the B-splines basis functions and parametrised with scale-variance $\sigma^{d,t}$ and dimension-specific length-scale $\rho_1^{d,t}$ and $\rho_2^{d,t}$.
+
+B-splines are a popular choice for non-parametric modelling, due to their continuity properties, ensuring smoothness of the fitted surface. In our context, using a non-parametric smoothing method ensure that the model borrows information across the 2 dimensions which is essential given the low number of pairs observed.
+
+<!-- Several statistical considerations still have to be considered including: -->
+Note, that for now we do not include sampling probabilities of the pairs (as in Xi et al.).
+
+### Generated quantities
+We are interested in the possible shift of age-specific transmission dynamics over time. To summarize transmission rates, we compute the median age at which the source transmitted to the recipient for every age at infection of the recipient ; and the median age at which the recipient was infected for every age at transmission of the source. In other word, how old are the sources when they transmit stratified by the age of the individuals they transmit to ; and how old are the recipient when they are infected stratified by the age of the individuals that infect them. Note that we drop the direction and time period indices in the following. 
+
+We show how to compute the median age at transmission of the source for every age at infection of the recipient. First, we start by computing the weight that sources aged $a$ have on transmissions to recipient aged $b$, 
+$$
+\pi_{a,b} = \frac{\lambda_{a,b}}{\sum_{a'} \lambda_{a',b}}
+$$
+Next, we weight each age $a$ with its corresponding weight $\pi_{a,b}$ and find the median age at transmission of the source for every age at infection of the recipient $b$.
+
+The median age at infection of the recipient for every age at infection of the source can be obtained following the same logic.
+
+
+### Priors
+We set the following non-informative priors
+$$
+  \alpha, \nu, \gamma \sim \mathcal{N}(0, 1) \\
+  \sigma^{d,t} \sim \text{Cauchy}(0,1) \\
+  \rho_1^{d,t}, \rho_2^{d,t} \sim \text{Inverse Gamma}(5, 5)
+$$
+
+We use an informative prior on the GP mean $\mu$, that implies a higher transmission rate's prior mean in entries for which the source and recipient have the same age (i.e., when $a = b$). In the context of the low rank Gaussian Process, $\mu$ is a projection of a lower dimensional vector. We choose the lower dimensional vector to satisfy $\boldsymbol{\mu} \approx \boldsymbol{\mu}^{\star}$, with
+$$
+  \mu^{\star}(a,b) = | a - b | / \phi
+$$
+
+In this way, we imply that apriori, transmissions occurs more often between individuals of the same age. Here $\phi$ governs the speed at which the transmission rate decreases when the age at transmission of the source and the age at infection of the recipient get further apart, and we choose $\phi = 3$. 
+
+Importantly, this prior is calibrated such that the median age at transmission of the source is equal to the age at infection of the recipient and that the median age at infection of the recipient is equal to the age at transmission of the recipient. Such that a priori, individuals infect individuals of the same age as them; and that individuals are infected by individuals of the same age as them.
+
+In the first plot on the left, we show the prior median of the transmission rate $\lambda_{a,b}$. On the second plot in the middle, we show the resulting prior median of the age at transmission of the source for every age at infection of the recipient. On the third plot on the left, we show the prior median of the age at infection of the recipient for every age at transmission of the source. A doted black line indicates the diagonal. Note that the prior is the same for all combinations of direction $d$ and time period $t$.
+
+```{r, echo=FALSE, out.width="30%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, 'Prior_transmissionRate.png')
+knitr::include_graphics(plot)
+
+plot <- file.path(outdir.full, lab, 'Prior_Agetransmission.png')
+knitr::include_graphics(plot)
+
+plot <- file.path(outdir.full, lab, 'Prior_Ageinfection.png')
+knitr::include_graphics(plot)
+```
+
+
+## Results 
+
+### Transmission rates
+We start by showing the estimated median of the transmission rate $\lambda$. Notice the different color scale for the time period before and after 2014. The observed source-recipient pairs are indicated with grey dots.
+
+```{r, echo=FALSE, out.width="80%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, jobid, paste0(jobid, '-intensity_transmission_scaled.png'))
+knitr::include_graphics(plot)
+```
+
+### Median age at transmission of the source
+We present the estimated median (line) and 95% credible intervals (ribbon) of the source's age at transmission for every age at infection of the recipient. In other words, how old were sources when they transmitted. Shaded areas represent areas where no data were observed for one of the time period, and therefore when extrapolation were performed. 
+
+```{r, echo=FALSE, out.width="60%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, jobid, paste0(jobid, '-MedianAgeSource_ByAgeRecipient.png'))
+knitr::include_graphics(plot)
+```
+
+We notice that after 2014, male are infected by older female than before 2014, albeit this result is not significant. No changes is noticed in the male source to female recipient direction.
+
+We can aggregate those results further by weighting each recipient's age group by their incidence rate. We therefore obtain the overall age at which source transmitted before and after 2014 for the two directions. We show the median (dot) and 95% credible intervals (error bar) of the overall age at which source transmitted in the plot below.
+
+```{r, echo=FALSE, out.width="60%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, jobid, paste0(jobid, '-MedianAgeSource.png'))
+knitr::include_graphics(plot)
+```
+
+Consistently over time, females transmitting to males are younger than males transmitting to females,  Moreover, since 2014 female source are found to be older while the median age of male source stayed the same.
+
+### Median age at infection of the recipient
+We present the estimated median (line) and 95% credible intervals (ribbon) of the recipient's age at infection for every age at transmission of the source. In other words, how old were the recipients when they got infected. Shaded areas represent areas where no data were observed for one of the time period, and therefore when extrapolation were performed. 
+
+```{r, echo=FALSE, out.width="60%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, jobid, paste0(jobid, '-MedianAgeRecipient_ByAgeSource.png'))
+knitr::include_graphics(plot)
+```
+
+We notice that since 2014, females are transmitting to younger males while males are transmitting to older females. Albeit those results are not statistically significant. 
+
+We can aggregate those results further by weighting each source's age group by their incidence rate. We therefore obtain the overall age at which recipients were infected before and after 2014 for the two directions. We show the overall median (dot) and 95% credible interval (error bar) of the overall age at which recipients were infected in the plot below.
+
+```{r, echo=FALSE, out.width="60%", fig.show='hold', fig.align='centre'}
+plot <- file.path(outdir.full, lab, jobid, paste0(jobid, '-MedianAgeRecipient.png'))
+knitr::include_graphics(plot)
+```
+
+Consistently over time, males infected by females are older than females infected by males. Overall, since 2014, we found a decrease in the medin age of male infected by females and an increase in the median age of females infected by males. Again, those results are not statistically significant.
+
