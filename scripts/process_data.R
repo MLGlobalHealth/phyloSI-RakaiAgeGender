@@ -30,6 +30,7 @@ if(dir.exists('~/Documents/ratmann_deepseq_analyses'))
 include.mrc <- F
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
+use.tsi.estimates <- T
 cutoff_date <- as.Date('2015-01-01')
 jobname <- 'cutoff2015priorgp'
 lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_jobname_', jobname)
@@ -70,8 +71,12 @@ community.keys <- as.data.table( read.csv(file.community.keys) )
 time.first.positive <- as.data.table( read.csv(file.time.first.positive))
 time.since.infection <- as.data.table(read.csv(file.path.tsiestimates))
 time.since.infection <- merge(time.since.infection, anonymisation.keys, by='AID')
+if(! use.tsi.estimates)
+{
+  cat("Do not use TSI estimates ")
+  time.since.infection[, TSI_estimated_mean := 1]
+}
 time.first.positive <- make.time.first.positive(time.first.positive)
-
 
 # get meta data
 meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positive, anonymisation.keys, community.keys)
@@ -96,6 +101,7 @@ if(include.only.heterosexual.pairs){
 }
 
 print.statements.about.pairs(copy(pairs.all), outdir.lab)
+
 if(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
 {
   missing_bff <- print.statements.about.basefreq.files(pairs.all)
@@ -108,8 +114,6 @@ if(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
   if(!file.exists(name)){write.csv(tmp, name, row.names = F)}
   # commented out here, but all missing bf's have RCCS2 prefixes.
 }
-
-
 
 
 # keep only pairs with source-recipient with proxy for the time of infection
@@ -144,4 +148,3 @@ stan_data <- add_prior_gp_mean(stan_data, df_age)
 tmp <- names(.GlobalEnv)
 tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
 save(list=tmp, file=file.path(outdir.lab, paste0("stanin_",lab,".RData")) )
-
