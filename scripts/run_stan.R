@@ -1,8 +1,8 @@
 library(rstan)
 library(data.table)	
 
-jobname <- 'cutoff2015priorgp'
-.stan_model <- 'gp_220106'
+jobname <- '2014_priorGP'
+.stan_model <- 'gp_220108b'
 DEBUG <- F
 JOBID = 12
 lab <- paste0("MRC_FALSE_OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
@@ -48,9 +48,8 @@ model = rstan::stan_model(path.to.stan.model)
 stan_init <- list()
 stan_init$rho_gp1 = rep(1.25, stan_data$N_group)
 stan_init$rho_gp2 = rep(1.25, stan_data$N_group)
-stan_init$nu = 0
 stan_init$alpha = 0
-stan_init$gamma = 0
+stan_init$nu = rep(0, stan_data$N_group)
 
 if(DEBUG){
   fit <- sampling(model, data = stan_data, iter = 10, warmup = 5, chains=1, thin=1, init=rep(list(stan_init),1))

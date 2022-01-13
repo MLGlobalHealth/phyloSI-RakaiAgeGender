@@ -233,21 +233,36 @@ print_table <- function(table) print(knitr::kable(table))
 
 get.age.map <- function(pairs, age_bands_reduced = 4){
   
-  ages <- pairs[, {
-    min_age = floor(min(c(age_transmission.SOURCE, age_infection.RECIPIENT)))
-    max_age = floor(max(c(age_transmission.SOURCE, age_infection.RECIPIENT)))
+  extended_age_length <- 5
+  
+  ages_source <- pairs[, {
+    min_age = floor(min(c(age_transmission.SOURCE,age_infection.RECIPIENT))) - extended_age_length
+    max_age = floor(max(c(age_transmission.SOURCE,age_infection.RECIPIENT))) + extended_age_length
     list(age = min_age:max_age)}]
-  age_map <- data.table(expand.grid(age_transmission.SOURCE = ages$age, age_infection.RECIPIENT = ages$age))
+  
+  ages_recipient <- ages_source
+  
+  age_map <- data.table(expand.grid(age_transmission.SOURCE = ages_source$age, 
+                                    age_infection.RECIPIENT = ages_recipient$age))
   df_age <- age_map[order(age_transmission.SOURCE, age_infection.RECIPIENT)]
 
-  ages <- sort(unique(df_age$age_transmission.SOURCE)); 
-  ages <- data.table(age_infection = ages, age_infection_reduced.SOURCE = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
+  ages <- sort(unique(df_age$age_transmission.SOURCE))
+  ages <- data.table(age_infection = ages, 
+                     age_transmission_reduced.SOURCE = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
   df_age <- merge(df_age, ages, by.x = 'age_transmission.SOURCE', by.y = 'age_infection')
-  setnames(ages, 'age_infection_reduced.SOURCE', 'age_infection_reduced.RECIPIENT')
+  
+  
+  ages <- sort(unique(df_age$age_infection.RECIPIENT))
+  ages <- data.table(age_infection = ages, 
+                     age_infection_reduced.RECIPIENT = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
   df_age <- merge(df_age, ages, by.x = 'age_infection.RECIPIENT', by.y = 'age_infection')
+  
   setkey(df_age, age_transmission.SOURCE, age_infection.RECIPIENT)
   
   df_age[, index_age := 1:nrow(df_age)]
+  
+  range_age_non_extended <<- c(min(df_age$age_infection.RECIPIENT) + extended_age_length, 
+                               max(df_age$age_infection.RECIPIENT) - extended_age_length)
   
   return(df_age)
 }
@@ -311,6 +326,16 @@ find_incidence_rate <- function(range_age){
   # mean incidene before and after cutoff
   incidence[, date := as.Date(paste0(year, '-01-01'))]
   incidence[, is_before_cutoff_date := date < cutoff_date]
+  
+  if(sum(!incidence$is_before_cutoff_date) == 0){
+    tmp <- incidence[year == max(year)]
+    tmp[, year := as.numeric(format(cutoff_date, '%Y'))]
+    tmp[, date := as.Date(paste0(year, '-01-01'))]
+    tmp[, is_before_cutoff_date := date < cutoff_date]
+    
+    incidence <- rbind(incidence, tmp)
+  }
+  
   incidence <- incidence[, list(incidence = mean(na.omit(incidence))), by = c('age', 'is_mf', 'is_before_cutoff_date')]
   
   # extending to age fitted
