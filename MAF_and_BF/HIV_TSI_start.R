@@ -6,6 +6,8 @@
 #     - Delete subsetted PS
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
+if(dir.exists('/home/andrea')){LOCAL <- 1}else{LOCAL <- 0}
+
 if(length(args_line) > 0) 
 {
   stopifnot(args_line[[1]]=='-p')	
@@ -14,13 +16,23 @@ if(length(args_line) > 0)
   file.path.maf <- as.integer(args_line[[4]])
   outdir <- as.integer(args_line[[8]])
 }else{
-  git.phy <- "~/git/phyloflows/MAF_and_BF"
-  git.tsi <- "~/git/HIV-phyloTSI-main"
-  outdir <- '~/Documents/2021/phyloTSI/outputs'
-  file.path.patstats <- "~/Documents/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/patstats_02_05_30_min_read_100_max_read.csv"
-  file.path.maf <- "~/Documents/2021/phyloTSI/MAF_20220104.csv"
+  if(LOCAL)
+  {
+    git.phy <- "~/git/phyloflows/MAF_and_BF"
+    git.tsi <- "~/git/HIV-phyloTSI-main"
+    outdir <- '~/Documents/2021/phyloTSI/outputs'
+    file.path.patstats <- "~/Documents/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/patstats_02_05_30_min_read_100_max_read.csv"
+    file.path.maf <- "~/Documents/2021/phyloTSI/MAF_20220104.csv"
+  }else{
+    git.phy <- "~/git/phyloflows/MAF_and_BF"
+    git.tsi <- "~/git/HIV-phyloTSI-main"
+    outdir <- '~/Documents/2021/phyloTSI/outputs'
+    file.path.patstats <- "~/Documents/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/patstats_02_05_30_min_read_100_max_read.csv"
+    file.path.maf <- "~/Documents/2021/phyloTSI/MAF_20220104.csv"
+  }
+  
 }
-if(dir.exists('/home/andrea')){LOCAL <- 1}else{LOCAL <- 0}
+
 
 
 ########################################
