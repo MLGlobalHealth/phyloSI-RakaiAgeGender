@@ -70,13 +70,15 @@ community.keys <- as.data.table( read.csv(file.community.keys) )
 # get age at infection
 time.first.positive <- as.data.table( read.csv(file.time.first.positive))
 time.since.infection <- as.data.table(read.csv(file.path.tsiestimates))
+time.since.infection[, X:=NULL]
 time.since.infection <- merge(time.since.infection, anonymisation.keys, by='AID')
 if(! use.tsi.estimates)
 {
   cat("Do not use TSI estimates ")
   time.since.infection[, TSI_estimated_mean := 1]
 }
-time.first.positive <- make.time.first.positive(time.first.positive)
+# time.first.positive <- make.time.first.positive(time.first.positive)
+time.first.positive <- get.time.collection(file.path.bflocs)
 
 # get meta data
 meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positive, anonymisation.keys, community.keys)
