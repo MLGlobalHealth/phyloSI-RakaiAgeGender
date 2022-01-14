@@ -44,8 +44,8 @@ file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anon
 file.community.keys <- file.path(indir.deepsequence_analyses,'community_names.csv')
 file.time.first.positive <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '211111_pangea_db_sharing_extract_rakai_age_firstpos_lastneg.csv')
 file.path.phscinput <- file.path(indir.deepsequence_analyses, '210120_RCCSUVRI_phscinput_runs.rds')
-file.path.bflocs <- file.path(indir.repository, 'data/bfloc2hpc_20220103.rds')
-file.path.tsiestimates <- file.path(indir.repository, 'data/TSI_estimates_20220601.csv')
+file.path.bflocs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'bfloc2hpc_20220103.rds')
+file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_20220601.csv')
 
 outdir.lab <- file.path(outdir, lab); dir.create(outdir.lab)
   
