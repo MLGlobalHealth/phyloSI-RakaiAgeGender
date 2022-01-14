@@ -1,3 +1,8 @@
+.read <- function(x){
+  if(grepl('.csv$', x)){return(as.data.table(read.csv(x)))}
+  if(grepl('.rds$|.RDS$',x)){return(as.data.table(readRDS(x)))}
+}
+
 keep.likely.transmission.pairs <- function(dchain, threshold){
   
   dchain <- dchain[SCORE_LINKED>threshold]
@@ -38,6 +43,87 @@ make.time.first.positive <- function(time.first.positive)
   return(time.first.positive)
 }
 
+get.time.collection <- function(bflocs.path)
+{
+  # could also move to HIV_TSI_postprocessing.R
+  
+  #preprocess time.first.positive
+  dates <- c('visit_dt', 'first_pos_dt') 
+  time.first.positive[, (dates):=lapply(.SD, function(x){as.Date(x, format('%d/%m/%Y'))}), .SDcols=dates]
+  time.first.positive[, birthdate2 := (visit_dt - age_at_visit*365)]
+  time.first.positive[, birthdate2:=median(birthdate2, na.rm = T), by=pt_id]
+  time.first.positive <- unique(time.first.positive)
+  # time.first.positive[is.na(birthdate2), pt_id] # some missing but none important
+
+  
+  # load phsc.input
+  phsc.input2 <- .read(file.path.phscinput)
+  phsc.input2 <- phsc.input2[, .(RENAME_ID,PANGEA_ID,SAMPLE_ID)]
+  phsc.input2[ , `:=` (AID=gsub('-fq[0-9]$','',RENAME_ID), RENAME_ID=NULL,
+                       PANGEA_ID = gsub('^.*_','',PANGEA_ID),
+                       PREFIX = gsub('_remap', '',basename(SAMPLE_ID)), SAMPLE_ID=NULL)]
+  
+  # load locs and do the same as in HIV_TSI_generate_maf.R, so we get the same prefixes used.
+  bflocs <- .read(bflocs.path)
+  bflocs <- unique(bflocs[, .(PREFIX, FULL, HPC_LOC)])
+  bflocs <- merge(phsc.input2, bflocs, all.x=T, by='PREFIX')
+  
+  bflocs <- unique(bflocs[,.(AID, HPC_LOC, FULL)])
+  bflocs <- bflocs[!is.na(FULL)] 
+  bflocs <- bflocs[, list(HPC_LOC=HPC_LOC[1],FULL=FULL[1]) ,by=AID]
+  
+  # finally get the pangea_id used for each AID
+  bflocs[, PREFIX:=gsub('_remap.*?$','',basename(FULL))]
+  tmp <- merge(bflocs[, .(AID, PREFIX)], unique(phsc.input2[,.(PANGEA_ID, PREFIX)]), by='PREFIX')
+  tmp[, PREFIX := NULL]  
+  
+  # mean(tmp$PANGEA_ID %in% c(meta.rccs.2$pangea_id, meta.rccs.1$Pangea.id))
+  tmp1 <- merge(tmp, meta.rccs.2[, .(pangea_id,visit_dt)], by.x='PANGEA_ID', by.y='pangea_id', all.x=T)
+  
+  # The remaining AID without date of collection are in MRC. Can ignore.
+  tmp1 <- merge(tmp1, anonymisation.keys, by='AID')
+  tmp1[is.na(visit_dt),all(grepl('^MRC',PT_ID))]
+  if(!include.mrc){tmp1 <- tmp1[!is.na(visit_dt)]}
+  
+  # merge estimated TSI
+  tmp1 <- merge(tmp1, time.since.infection, by=c('AID', 'PT_ID'))
+  tmp1[, visit_dt := as.Date(visit_dt, '%Y-%m-%d')]
+  tmp1[, date_first_positive := visit_dt - as.integer(TSI_estimated_mean*365)]
+  setcolorder(tmp1, c('PT_ID','AID', 'PANGEA_ID','visit_dt','date_first_positive',
+                      'TSI_estimated_mean', 'TSI_estimated_min','TSI_estimated_max'))
+  
+  # I need age at infection. Can get birthdays from meta.rccs.1 and time.first.positive
+  tmp2 <- meta.rccs.1[, .(RCCS_studyid, birthdate  )]
+  tmp2 <- unique( tmp2[, `:=` (PT_ID = paste0('RK-',RCCS_studyid), RCCS_studyid=NULL,
+                               birthdate = as.Date(birthdate, '%Y-%m-%d'))])
+  tmp1 <- merge(tmp1, tmp2, by='PT_ID')
+  tmp1 <- merge(tmp1, unique(time.first.positive[, .(pt_id, birthdate2)]) , by.x='PT_ID', by.y='pt_id', all.x=T)
+  if(0)
+  {
+    ggplot(tmp1, aes(x=birthdate, y=birthdate2)) + geom_point() 
+    hist(tmp1[ , as.numeric(birthdate-birthdate2)], breaks=100)
+    tmp1[as.numeric(birthdate.x-birthdate.y) >= 380]
+  }
+  tmp1[is.na(birthdate), birthdate := birthdate2]
+  tmp1[, birthdate2:= NULL]
+  
+
+  tmp1[is.na(birthdate), PANGEA_ID %in% meta.rccs.2$pangea_id]
+  # for these  assume age of enrolment == age at first visit reported in meta.rccs.2
+  # no, age na there as well. Forget it
+  tmp2 <-meta.rccs.2[, list(visit_dt=min(as.Date(visit_dt, format='%Y-%m-%d')), age_enrol=age_enrol[[1]]) , by=pt_id]
+  tmp2[!is.null(age_enrol) & !is.na(age_enrol), birthdate:= visit_dt - (as.numeric(age_enrol)*365)]
+  
+  tmp1[, `:=` ( age_first_positive=(date_first_positive-birthdate)/365,
+                age_at_visit=(visit_dt-birthdate)/365 )]
+  tmp1[, (c('age_first_positive', 'age_at_visit')) := lapply(.SD, function(x){round(as.numeric(x), 1)}), .SDcols= c('age_first_positive', 'age_at_visit')]
+  
+  setnames(tmp1, c('PT_ID'), c('pt_id'))
+
+  return(tmp1)
+}
+
+
 get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positive, anonymisation.keys, community.keys){
   
   # TODO: weird that enrolment date can be after date of first positive....
@@ -66,19 +152,19 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   
   # add time first positive
   time.first.positive <- time.first.positive[pt_id %in% unique(meta.rccs$pt_id)]
-  tmp <- time.first.positive[, list(date_first_visit=min(date_first_visit)), by = 'pt_id']
-  time.first.positive <- merge(time.first.positive, tmp, by = c('date_first_visit', 'pt_id'))
-  setnames(time.first.positive, 'age_at_visit', 'age_enrol')
+  # tmp <- time.first.positive[, list(date_first_visit=min(date_first_visit)), by = 'pt_id']
+  # time.first.positive <- merge(time.first.positive, tmp, by = c('date_first_visit', 'pt_id'))
+  # setnames(time.first.positive, 'age_at_visit', 'age_enrol')
   
   # merge
   meta.rccs <- merge(meta.rccs, time.first.positive[, .(pt_id, 
-                                                        age_first_positive, age_enrol, 
-                                                        date_first_positive, date_first_visit,
+                                                        age_first_positive,  
+                                                        date_first_positive, # date_first_visit,
                                                         TSI_estimated_mean)], by = 'pt_id')
   meta.rccs <- unique(meta.rccs)
 
   stopifnot(length(unique(meta.rccs$pt_id)) == nrow(meta.rccs))
-  stopifnot(nrow(meta.rccs[is.na(age_first_positive) & is.na(age_enrol)]) == 0)
+  stopifnot( nrow(meta.rccs[is.na(age_first_positive)]) == 0 ) #  & is.na(age_enrol)]) == 0)
   cat('There is ', nrow(meta.rccs), ' individuals included in the RCCS meta-data\n')
   
   
@@ -107,7 +193,7 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   setnames(meta, "TSI_estimated_mean", 'tsi_years')
   meta[, tsi_days := round(tsi_years * 365, 0)]
   meta[, date_infection := date_first_positive - tsi_days] 
-  meta[is.na(date_first_positive), date_infection := date_first_visit - tsi_days]
+  meta[is.na(date_first_positive), date_infection := date_first_visit - tsi_days] ###
   
   meta[, INFECTION := NA_character_]
   meta[!is.na(age_first_positive) , INFECTION := 'age_first_positive']
