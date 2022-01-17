@@ -17,13 +17,15 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 }
-if(dir.exists('~/Documents/ratmann_deepseq_analyses'))
+
+tmp <- '~/Documents/Box/'
+if(dir.exists(tmp))
 {
   indir.repository <-'~/git/phyloflows'
-  indir.deepsequence_analyses   <- '~/Documents/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
-  indir.deepsequence_analyses_MRC   <- '~/Documents/PANGEA2_MRCUVRI'
-  indir.deepsequencedata <- '~/Documents/ratmann_pangea_deepsequencedata/'
-  outdir <- '~/Documents/2021/phyloflows'
+  indir.deepsequence_analyses   <- file.path(tmp, 'ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI')
+  # indir.deepsequence_analyses_MRC   <- '~/Documents/PANGEA2_MRCUVRI'
+  indir.deepsequencedata <- file.path(tmp, 'ratmann_pangea_deepsequencedata/')
+  outdir <- file.path(tmp, '2021/phyloflows')
 }
 
 # indicators 
