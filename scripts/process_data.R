@@ -18,14 +18,13 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 }
 
-tmp <- '~/Documents/Box/'
-if(dir.exists(tmp))
+if(dir.exists('/home/andrea'))
 {
   indir.repository <-'~/git/phyloflows'
-  indir.deepsequence_analyses   <- file.path(tmp, 'ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI')
-  # indir.deepsequence_analyses_MRC   <- '~/Documents/PANGEA2_MRCUVRI'
-  indir.deepsequencedata <- file.path(tmp, 'ratmann_pangea_deepsequencedata/')
-  outdir <- file.path(tmp, '2021/phyloflows')
+  indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
+  # indir.deepsequence_analyses_MRC   <- '~/Documents/PANGEA2_MRCUVRI'  
+  indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
+  outdir <- '~/Documents/Box/2021/phyloflows'
 }
 
 # indicators 
@@ -33,6 +32,7 @@ include.mrc <- F
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- T
+remove.inconsistent.infection.dates <- F
 cutoff_date <- as.Date('2014-01-01')
 jobname <- '2014_IpriorGP'
 lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_jobname_', jobname)
@@ -82,6 +82,25 @@ if(! use.tsi.estimates)
 # time.first.positive <- make.time.first.positive(time.first.positive)
 time.first.positive <- get.time.collection(file.path.bflocs)
 
+
+if(0)
+{
+  chain_IDs <- unique(dchain$H1, dchain$H2) 
+  all(chain_IDs %in% phsc.input2[, gsub('-fq[0-9]$','',RENAME_ID)])
+  mean(chain_IDs %in% time.since.infection$AID)
+  mean(chain_IDs %in% time.first.positive$AID)
+  
+  chain_IDs1=chain_IDs[chain_IDs%in%anonymisation.keys[grepl('RK-', PT_ID), AID]]
+  all(chain_IDs1 %in% phsc.input2[, gsub('-fq[0-9]$','',RENAME_ID)])
+  mean(chain_IDs1 %in% time.since.infection$AID)
+  mean(chain_IDs1 %in% time.first.positive$AID)
+  
+}
+
+# meta.rccs.2[, all(pt_id %in% anonymisation.keys[grepl('RK-', PT_ID), PT_ID])]
+
+#anonymisation.keys[grepl('RK-',PT_ID), list(with_date=sum(AID %in% time.first.positive$AID), tot=.N)]
+
 # get meta data
 meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positive, anonymisation.keys, community.keys)
 
@@ -103,6 +122,12 @@ if(include.only.heterosexual.pairs){
   cat('Keep only heterosexual pairs\n')
   pairs.all <- pairs.all[(sex.RECIPIENT == 'M' & sex.SOURCE == 'F') | (sex.RECIPIENT == 'F' & sex.SOURCE == 'M')]
 }
+if(remove.inconsistent.infection.dates)
+{
+  cat('Remove infections for which estimated date at infection of source is more than one year after the estimated date at infection of the recipient.\n ')
+  pairs.all <- pairs.all[! date_infection.SOURCE >= date_infection.RECIPIENT + 365 ]
+}
+
 
 print.statements.about.pairs(copy(pairs.all), outdir.lab)
 

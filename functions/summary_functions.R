@@ -48,35 +48,32 @@ get.time.collection <- function(bflocs.path)
   # could also move to HIV_TSI_postprocessing.R
   
   #preprocess time.first.positive
-  dates <- c('visit_dt', 'first_pos_dt') 
+  dates <- c('visit_dt', 'first_pos_dt', 'last_neg_dt') 
   time.first.positive[, (dates):=lapply(.SD, function(x){as.Date(x, format('%d/%m/%Y'))}), .SDcols=dates]
   time.first.positive[, birthdate2 := (visit_dt - age_at_visit*365)]
   time.first.positive[, birthdate2:=median(birthdate2, na.rm = T), by=pt_id]
   time.first.positive <- unique(time.first.positive)
   # time.first.positive[is.na(birthdate2), pt_id] # some missing but none important
 
-  
-  # load phsc.input
+  # load phsc.input to get the pangea_id <-> aid mappings
   phsc.input2 <- .read(file.path.phscinput)
   phsc.input2 <- phsc.input2[, .(RENAME_ID,PANGEA_ID,SAMPLE_ID)]
   phsc.input2[ , `:=` (AID=gsub('-fq[0-9]$','',RENAME_ID), RENAME_ID=NULL,
                        PANGEA_ID = gsub('^.*_','',PANGEA_ID),
                        PREFIX = gsub('_remap', '',basename(SAMPLE_ID)), SAMPLE_ID=NULL)]
   
-  # load locs and do the same as in HIV_TSI_generate_maf.R, so we get the same prefixes used.
+  # load locs and do the same as in HIV_TSI_generate_maf.R, so we get the same PREFIXes used for TSI estimation.
   bflocs <- .read(bflocs.path)
   bflocs <- unique(bflocs[, .(PREFIX, FULL, HPC_LOC)])
   bflocs <- merge(phsc.input2, bflocs, all.x=T, by='PREFIX')
-  
   bflocs <- unique(bflocs[,.(AID, HPC_LOC, FULL)])
   bflocs <- bflocs[!is.na(FULL)] 
   bflocs <- bflocs[, list(HPC_LOC=HPC_LOC[1],FULL=FULL[1]) ,by=AID]
-  
+
   # finally get the pangea_id used for each AID
   bflocs[, PREFIX:=gsub('_remap.*?$','',basename(FULL))]
-  tmp <- merge(bflocs[, .(AID, PREFIX)], unique(phsc.input2[,.(PANGEA_ID, PREFIX)]), by='PREFIX')
-  tmp[, PREFIX := NULL]  
-  
+  tmp <- merge( unique(phsc.input2[,.(PANGEA_ID, PREFIX)]), bflocs[, .(AID, PREFIX)], by='PREFIX')
+  tmp[, PREFIX := NULL] 
   # mean(tmp$PANGEA_ID %in% c(meta.rccs.2$pangea_id, meta.rccs.1$Pangea.id))
   tmp1 <- merge(tmp, meta.rccs.2[, .(pangea_id,visit_dt)], by.x='PANGEA_ID', by.y='pangea_id', all.x=T)
   
@@ -86,7 +83,25 @@ get.time.collection <- function(bflocs.path)
   if(!include.mrc){tmp1 <- tmp1[!is.na(visit_dt)]}
   
   # merge estimated TSI
-  tmp1 <- merge(tmp1, time.since.infection, by=c('AID', 'PT_ID'))
+  tmp1 <- merge(tmp1, time.since.infection, by=c('AID', 'PT_ID'), all.x=T, all.y=T)
+  
+  cat('There are ', tmp1[is.na(TSI_estimated_mean), .N], 'individuals with bf files without Time Since Infection estimates\n')
+  cat('- Setting NAs to 1 year\n')
+  tmp1[is.na(TSI_estimated_mean), TSI_estimated_mean := 1]
+  
+  cat('There are ', tmp1[is.na(PANGEA_ID), .N], 'for which I do not find a PangeaID\n')
+  cat('This is interesting, what happened? why have estimates but not PangeaID?\n')
+  cat('For the moment just find any visit date and set TSI estimated mean == 1.\n')
+  tmp2 <- tmp1[is.na(PANGEA_ID)]
+  tmp2 <- meta.rccs.2[pt_id %in% tmp2$PT_ID, list(visit_dt = visit_dt[[1]]), by=pt_id]
+  setnames(tmp2, 'pt_id', 'PT_ID')
+  # merge(tmp1[PT_ID %in% tmp2$PT_ID, !"visit_dt"], tmp2, by='PT_ID')
+  tmp1 <- rbind(
+    tmp1[!PT_ID %in% tmp2$PT_ID,],
+    merge(tmp1[PT_ID %in% tmp2$PT_ID, !"visit_dt"], tmp2, by='PT_ID')
+  )
+  tmp1[is.na(PANGEA_ID), TSI_estimated_mean := 1]
+
   tmp1[, visit_dt := as.Date(visit_dt, '%Y-%m-%d')]
   tmp1[, date_first_positive := visit_dt - as.integer(TSI_estimated_mean*365)]
   setcolorder(tmp1, c('PT_ID','AID', 'PANGEA_ID','visit_dt','date_first_positive',
@@ -96,23 +111,16 @@ get.time.collection <- function(bflocs.path)
   tmp2 <- meta.rccs.1[, .(RCCS_studyid, birthdate  )]
   tmp2 <- unique( tmp2[, `:=` (PT_ID = paste0('RK-',RCCS_studyid), RCCS_studyid=NULL,
                                birthdate = as.Date(birthdate, '%Y-%m-%d'))])
-  tmp1 <- merge(tmp1, tmp2, by='PT_ID')
+  tmp1 <- merge(tmp1, tmp2, by='PT_ID', all.x=T)
   tmp1 <- merge(tmp1, unique(time.first.positive[, .(pt_id, birthdate2)]) , by.x='PT_ID', by.y='pt_id', all.x=T)
   if(0)
   {
     ggplot(tmp1, aes(x=birthdate, y=birthdate2)) + geom_point() 
     hist(tmp1[ , as.numeric(birthdate-birthdate2)], breaks=100)
-    tmp1[as.numeric(birthdate.x-birthdate.y) >= 380]
+    tmp1[as.numeric(birthdate-birthdate2) >= 380]
   }
   tmp1[is.na(birthdate), birthdate := birthdate2]
   tmp1[, birthdate2:= NULL]
-  
-
-  tmp1[is.na(birthdate), PANGEA_ID %in% meta.rccs.2$pangea_id]
-  # for these  assume age of enrolment == age at first visit reported in meta.rccs.2
-  # no, age na there as well. Forget it
-  tmp2 <-meta.rccs.2[, list(visit_dt=min(as.Date(visit_dt, format='%Y-%m-%d')), age_enrol=age_enrol[[1]]) , by=pt_id]
-  tmp2[!is.null(age_enrol) & !is.na(age_enrol), birthdate:= visit_dt - (as.numeric(age_enrol)*365)]
   
   tmp1[, `:=` ( age_first_positive=(date_first_positive-birthdate)/365,
                 age_at_visit=(visit_dt-birthdate)/365 )]
@@ -231,6 +239,7 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
   
   return(meta)
 }
+
 
 pairs.get.meta.data <- function(dchain, meta){
   
@@ -476,6 +485,4 @@ fill_non_na <- function(x){
   
   return(x)
 }
-
-
 
