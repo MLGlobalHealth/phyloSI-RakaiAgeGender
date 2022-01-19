@@ -6,29 +6,32 @@
 #     - Delete subsetted PS
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
+
+git.phy <- "~/git/phyloflows/MAF_and_BF"
+git.tsi <- "~/git/HIV-phyloTSI-main"
+
 if(dir.exists('/home/andrea')){LOCAL <- 1}else{LOCAL <- 0}
 
 if(length(args_line) > 0) 
 {
   stopifnot(args_line[[1]]=='-p')	
-  # file.path.maf <- args_line[[3]]
+  stopifnot(args_line[[3]]=='-m')
+  stopifnot(args_line[[5]]=='-o')
   file.path.patstats <- args_line[[2]]
-  file.path.maf <- as.integer(args_line[[4]])
-  outdir <- as.integer(args_line[[8]])
+  file.path.maf <- args_line[[4]]
+  outdir <- args_line[[6]]
+
 }else{
+  
   if(LOCAL)
   {
-    git.phy <- "~/git/phyloflows/MAF_and_BF"
-    git.tsi <- "~/git/HIV-phyloTSI-main"
     outdir <- '~/Documents/2021/phyloTSI/outputs'
-    file.path.patstats <- "~/Documents/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/patstats_02_05_30_min_read_100_max_read.csv"
-    file.path.maf <- "~/Documents/2021/phyloTSI/MAF_20220104.csv"
+    file.path.patstats <- "~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/patstats_02_05_30_min_read_100_max_read.csv"
+    file.path.maf <- "~/Documents/Box/2021/phyloTSI/MAF_20220118.csv"
   }else{
-    git.phy <- "~/git/phyloflows/MAF_and_BF"
-    git.tsi <- "~/git/HIV-phyloTSI-main"
     outdir <- '~/Documents/2021/phyloTSI/outputs'
     file.path.patstats <- "~/Documents/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/patstats_02_05_30_min_read_100_max_read.csv"
-    file.path.maf <- "~/Documents/2021/phyloTSI/MAF_20220104.csv"
+    file.path.maf <- "~/Documents/2021/phyloTSI/MAF_20220118.csv"
   }
   
 }
@@ -41,7 +44,7 @@ if(length(args_line) > 0)
 # Loop assuminig PTY_idx does not have 'holes' from 1 to max element
 
 PTY_idx = 1:409 #max(patstats$PTY_RUN) 
-output_pty <- file.path(outdir2,paste0('tsi_', PTY_idx, '.csv'))
+output_pty <- file.path(outdir,paste0('tsi_', PTY_idx, '.csv'))
 
 # Subset Patstats according to PTY_RUN
 tmp_pat <- file.path(outdir, paste0('tmp_pat',PTY_idx,'.csv'))
@@ -78,7 +81,7 @@ if(length(PTY_idx>1))
   cmd <- paste0('\necho ',PTY_idx, '\n', cmd, ';;\n')
   cmd <- paste0(cmd, collapse = '\n')
   
-  if(!LOCAL){cmd <- paste0('case $PBS_ARRAY_INDEX in\n', cmd, '\nesac\n')}else{gsub(';;','',cmd)}
+  if(!LOCAL){cmd <- paste0('case $PBS_ARRAY_INDEX in\n', cmd, '\nesac\n')}else{cmd <- gsub(';;','',cmd)}
 }
 
 
@@ -110,7 +113,6 @@ make.PBS.header <- function(hpc.walltime=47, hpc.select=1, hpc.nproc=1, hpc.mem=
     pbshead <- paste(pbshead, paste("#PBS -q", hpc.q), sep = "\n")
   }		
   pbshead	<- paste(pbshead, hpc.load, '', sep = "\n")
-  pbshead
 }
 
 ########################################
