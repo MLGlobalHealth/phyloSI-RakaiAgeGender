@@ -367,6 +367,32 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
 }
 
 
+plot_pairs_infection_dates <- function(pairs.all)
+{
+  
+  tmp <- copy(pairs.all)
+  tmp[, DUMMY:= date_infection.SOURCE - date_infection.RECIPIENT]
+  setkey(tmp, date_first_positive.SOURCE)
+  tmp[, CONS:=ifelse(DUMMY < 0, 'consistent', 'inconsistent')]
+  setkey(tmp, DUMMY)
+  # tmp[, DUMMY:=1:.N]
+  tmp[date_first_positive.SOURCE < date_first_positive.RECIPIENT ] # (316 pairs for which )
+  tmp[date_infection.SOURCE < date_infection.RECIPIENT  ]
+  
+  p <- ggplot(tmp, aes(y=date_first_positive.SOURCE, col=CONS)) + 
+    geom_point(aes(x=date_infection.SOURCE)) + 
+    geom_errorbarh(aes(xmin=date_infection.SOURCE, xmax=date_infection.RECIPIENT)) +
+    geom_abline(intercept = 0, slope = 1) +
+    geom_point(data=tmp[date_first_positive.SOURCE > date_first_positive.RECIPIENT],aes(x=date_first_positive.RECIPIENT), color='black', pch=18) +
+    scale_x_date(date_labels = '%Y', breaks = '12 months') +
+    scale_y_date(date_labels = '%Y', breaks = '12 months') +
+    theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1), legend.position = 'bottom') +
+    labs(x='Estimated infection dates', y=" Source's date of first positive test", col='source-date relationship')
+  
+  ggsave(p, filename = file.path(outdir, paste0('PairsInfectionDates.png')), w = 8, h = 10)
+}
+
+
 # Tranmission Network plot from: https://github.com/olli0601/Phyloscanner.R.utilities/blob/7c58edac4812e53b0b67e69770f70e9d3826881d/R/phyloscan.fun.plotting.R
 phsc.plot.transmission.network<- function(dchain, dc, outdir=NULL, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.02, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=c('M' = 15, 'F' = 17), node.fill.values=c('F'='hotpink2', 'M'='steelblue2') , threshold.linked=NA_real_)
 {	
