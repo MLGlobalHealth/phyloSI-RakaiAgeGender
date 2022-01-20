@@ -2,6 +2,12 @@
   if(grepl('.csv$', x)){return(as.data.table(read.csv(x)))}
   if(grepl('.rds$|.RDS$',x)){return(as.data.table(readRDS(x)))}
 }
+.pt2aid <- function(x){
+  anonymisation.keys[PT_ID %in% x, AID]
+}
+.aid2pt <- function(x){
+  anonymisation.keys[AID %in% x, PT_ID]
+}
 
 keep.likely.transmission.pairs <- function(dchain, threshold){
   
@@ -53,82 +59,102 @@ get.time.collection <- function(bflocs.path)
   time.first.positive[, birthdate2 := (visit_dt - age_at_visit*365)]
   time.first.positive[, birthdate2:=median(birthdate2, na.rm = T), by=pt_id]
   time.first.positive <- unique(time.first.positive)
-  # time.first.positive[is.na(birthdate2), pt_id] # some missing but none important
-
-  # load phsc.input to get the pangea_id <-> aid mappings
-  phsc.input2 <- .read(file.path.phscinput)
-  phsc.input2 <- phsc.input2[, .(RENAME_ID,PANGEA_ID,SAMPLE_ID)]
-  phsc.input2[ , `:=` (AID=gsub('-fq[0-9]$','',RENAME_ID), RENAME_ID=NULL,
-                       PANGEA_ID = gsub('^.*_','',PANGEA_ID),
-                       PREFIX = gsub('_remap', '',basename(SAMPLE_ID)), SAMPLE_ID=NULL)]
   
-  # load locs and do the same as in HIV_TSI_generate_maf.R, so we get the same PREFIXes used for TSI estimation.
-  bflocs <- .read(bflocs.path)
-  bflocs <- unique(bflocs[, .(PREFIX, FULL, HPC_LOC)])
-  bflocs <- merge(phsc.input2, bflocs, all.x=T, by='PREFIX')
-  bflocs <- unique(bflocs[,.(AID, HPC_LOC, FULL)])
-  bflocs <- bflocs[!is.na(FULL)] 
-  bflocs <- bflocs[, list(HPC_LOC=HPC_LOC[1],FULL=FULL[1]) ,by=AID]
-
-  # finally get the pangea_id used for each AID
-  bflocs[, PREFIX:=gsub('_remap.*?$','',basename(FULL))]
-  tmp <- merge( unique(phsc.input2[,.(PANGEA_ID, PREFIX)]), bflocs[, .(AID, PREFIX)], by='PREFIX')
-  tmp[, PREFIX := NULL] 
-  # mean(tmp$PANGEA_ID %in% c(meta.rccs.2$pangea_id, meta.rccs.1$Pangea.id))
-  tmp1 <- merge(tmp, meta.rccs.2[, .(pangea_id,visit_dt)], by.x='PANGEA_ID', by.y='pangea_id', all.x=T)
+  # TSI data (there are individuals without PANGEA_ID because their bf file didn t exist. Fill these up).
+  time.since.infection[, STUDY_ID := NULL]
+  time.since.infection <- merge(anonymisation.keys, time.since.infection, all.y=T, by='AID')
+  tmp <- time.since.infection[is.na(PANGEA_ID), .aid2pt(AID)]
+  tmp <- meta.rccs.2[pt_id %in% tmp, .(AID=.pt2aid(pt_id), visit_dt=visit_dt)]
+  tmp1 <- merge(time.since.infection[AID %in% tmp$AID, -'visit_dt'], tmp, by='AID')
+  time.since.infection <- rbind(time.since.infection[!AID %in% tmp$AID], tmp1)
+  setkey(time.since.infection, AID)
+  cat("There are ",time.since.infection[ is.na(PANGEA_ID) & !is.na(visit_dt), .N], " AID without associated bf files but with TSI estimates.\nUse visit_dates in meta.rccs.2 for these.\n")
   
-  # The remaining AID without date of collection are in MRC. Can ignore.
-  tmp1 <- merge(tmp1, anonymisation.keys, by='AID')
-  tmp1[is.na(visit_dt),all(grepl('^MRC',PT_ID))]
-  if(!include.mrc){tmp1 <- tmp1[!is.na(visit_dt)]}
   
-  # merge estimated TSI
-  tmp1 <- merge(tmp1, time.since.infection, by=c('AID', 'PT_ID'), all.x=T, all.y=T)
+  tmp <- unique(time.since.infection[, .(AID, PT_ID, PANGEA_ID, visit_dt, TSI_estimated_mean)])
   
-  cat('There are ', tmp1[is.na(TSI_estimated_mean), .N], 'individuals with bf files without Time Since Infection estimates\n')
-  cat('- Setting NAs to 1 year\n')
-  tmp1[is.na(TSI_estimated_mean), TSI_estimated_mean := 1]
+  # Merge
+  tmp1 <- unique(time.first.positive[, .(pt_id,first_pos_dt, last_neg_dt)])
+  tmp <- merge(tmp, tmp1, by.x='PT_ID', by.y='pt_id', all.x=T)
   
-  cat('There are ', tmp1[is.na(PANGEA_ID), .N], 'for which I do not find a PangeaID\n')
-  cat('This is interesting, what happened? why have estimates but not PangeaID?\n')
-  cat('For the moment just find any visit date and set TSI estimated mean == 1.\n')
-  tmp2 <- tmp1[is.na(PANGEA_ID)]
-  tmp2 <- meta.rccs.2[pt_id %in% tmp2$PT_ID, list(visit_dt = visit_dt[[1]]), by=pt_id]
-  setnames(tmp2, 'pt_id', 'PT_ID')
-  # merge(tmp1[PT_ID %in% tmp2$PT_ID, !"visit_dt"], tmp2, by='PT_ID')
-  tmp1 <- rbind(
-    tmp1[!PT_ID %in% tmp2$PT_ID,],
-    merge(tmp1[PT_ID %in% tmp2$PT_ID, !"visit_dt"], tmp2, by='PT_ID')
-  )
-  tmp1[is.na(PANGEA_ID), TSI_estimated_mean := 1]
-
-  tmp1[, visit_dt := as.Date(visit_dt, '%Y-%m-%d')]
-  tmp1[, date_first_positive := visit_dt - as.integer(TSI_estimated_mean*365)]
-  setcolorder(tmp1, c('PT_ID','AID', 'PANGEA_ID','visit_dt','date_first_positive',
-                      'TSI_estimated_mean', 'TSI_estimated_min','TSI_estimated_max'))
   
   # I need age at infection. Can get birthdays from meta.rccs.1 and time.first.positive
-  tmp2 <- meta.rccs.1[, .(RCCS_studyid, birthdate  )]
-  tmp2 <- unique( tmp2[, `:=` (PT_ID = paste0('RK-',RCCS_studyid), RCCS_studyid=NULL,
+  tmp1 <- meta.rccs.1[, .(RCCS_studyid, birthdate  )]
+  tmp1 <- unique( tmp1[, `:=` (PT_ID = paste0('RK-',RCCS_studyid), RCCS_studyid=NULL,
                                birthdate = as.Date(birthdate, '%Y-%m-%d'))])
-  tmp1 <- merge(tmp1, tmp2, by='PT_ID', all.x=T)
-  tmp1 <- merge(tmp1, unique(time.first.positive[, .(pt_id, birthdate2)]) , by.x='PT_ID', by.y='pt_id', all.x=T)
+  tmp <- merge(tmp, tmp1, by='PT_ID', all.x=T)
+  tmp <- merge(tmp, unique(time.first.positive[, .(pt_id, birthdate2)]) , by.x='PT_ID', by.y='pt_id', all.x=T)
   if(0)
   {
-    ggplot(tmp1, aes(x=birthdate, y=birthdate2)) + geom_point() 
-    hist(tmp1[ , as.numeric(birthdate-birthdate2)], breaks=100)
-    tmp1[as.numeric(birthdate-birthdate2) >= 380]
+    ggplot(tmp, aes(x=birthdate, y=birthdate2)) + geom_point() 
+    hist(tmp[ , as.numeric(birthdate-birthdate2)], breaks=100)
+    tmp[as.numeric(birthdate-birthdate2) >= 380]
   }
-  tmp1[is.na(birthdate), birthdate := birthdate2]
-  tmp1[, birthdate2:= NULL]
+  tmp[is.na(birthdate), birthdate := birthdate2]
+  tmp[, birthdate2:= NULL]
   
-  tmp1[, `:=` ( age_first_positive=(date_first_positive-birthdate)/365,
-                age_at_visit=(visit_dt-birthdate)/365 )]
-  tmp1[, (c('age_first_positive', 'age_at_visit')) := lapply(.SD, function(x){round(as.numeric(x), 1)}), .SDcols= c('age_first_positive', 'age_at_visit')]
+  # The problem of using the latest visit date is that, for chronic infections
+  # we will tend to underestimate TSI.
+  # "TSI for recent infections (under 1 year) tends to be slightly overestimated, while TSI for long-term infections is increasingly underestimated."
+  tmp[, visit_dt := as.Date(visit_dt, '%Y-%m-%d')]
+  tmp[, date_first_positive := visit_dt - as.integer(TSI_estimated_mean*365)]
   
-  setnames(tmp1, c('PT_ID'), c('pt_id'))
+  tmp1 <- tmp[, list(x=(visit_dt - first_pos_dt)/365, 
+                     y=(date_first_positive-first_pos_dt)/365)]
+  fit <- lm(data=tmp1, y~x)
+  
+  if(0)
+  {
+    tmp1[, y2:=y-fit$coefficients[2]*x]
+    g1 <- ggplot(tmp1, aes(x=x, y=y)) + 
+      geom_hline(aes(yintercept=0), col='red', linetype='dotted') + 
+      geom_point() + 
+      geom_smooth(method='lm') + 
+      labs(x='last visit date - first_positive date', y='estimated infection date - first  positive date') 
+    ggsave(g1, filename = 'TSI_estimates_bias.png')
+    g2 <- ggplot(tmp1, aes(x=x, y=y2) ) + 
+      geom_hline(aes(yintercept=0), col='red', linetype='dotted') + 
+      geom_point() + 
+      geom_smooth(method='lm') + 
+      labs(x='last visit date - first_positive date', y='estimated infection date - beta*x - first positive date') 
+    ggsave(g2, filename = 'TSI_estimates_bias_adj.png')
+  }
+  
+  # Consider adjusting by time difference from visit to first positive
+  tmp[, TSI_estimated_mean_adj := TSI_estimated_mean + fit$coefficients[2]*(visit_dt-first_pos_dt)/365]
+  tmp[is.na(TSI_estimated_mean_adj), TSI_estimated_mean_adj :=TSI_estimated_mean]
+  tmp[, TSI_estimated_mean_adj:=as.numeric(TSI_estimated_mean_adj)]  
+  
+  # tmp[TSI_estimated_mean != TSI_estimated_mean_adj, TSI_estimated_mean<TSI_estimated_mean_adj, ]
+  tmp[, date_first_positive_adj := visit_dt - as.integer(TSI_estimated_mean_adj*365)]
+  
+  # tmp1 <- tmp[, list(x=(visit_dt - first_pos_dt)/365, 
+  #   labs(x='last visit date - first_positive date', y='estimated infection da  #                    y=(date_first_positive_adj-first_pos_dt)/365)]
+  # g1 <- ggplot(tmp1, aes(x=x, y=y)) + 
+  #   geom_hline(aes(yintercept=0), col='red', linetype='dotted') + 
+  #   geom_point() + 
+  #   geom_smooth(method='lm') + te - first  positive date') 
 
-  return(tmp1)
+  cat('There are ',tmp[date_first_positive_adj>first_pos_dt, .N],' individuals with Estimated Date of Infection larger than the date of first positive test.\nWhat to do about it?\n')
+
+
+  if(make.TSI.linear.adjustment)
+  {
+    cat('Adjsut TSI estimates by accounting for last_visit - first_positive dates difference')
+    tmp[, `:=` (date_first_positive=date_first_positive_adj,
+                TSI_estimated_mean=TSI_estimated_mean_adj)]
+  }
+  
+  
+  tmp[, `:=` ( age_first_positive=as.numeric(date_first_positive-birthdate)/365,
+                age_at_visit=as.numeric(visit_dt-birthdate)/365 )]
+  tmp[, (c('age_first_positive', 'age_at_visit')) := lapply(.SD, function(x){round(as.numeric(x), 1)}), .SDcols= c('age_first_positive', 'age_at_visit')]
+  setnames(tmp, c('PT_ID'), c('pt_id'))
+  
+
+  setcolorder(tmp, c('pt_id','AID', 'PANGEA_ID','visit_dt','date_first_positive','TSI_estimated_mean'))
+  
+  return(tmp)
 }
 
 
@@ -173,6 +199,8 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, time.first.positiv
 
   stopifnot(length(unique(meta.rccs$pt_id)) == nrow(meta.rccs))
   stopifnot( nrow(meta.rccs[is.na(age_first_positive)]) == 0 ) #  & is.na(age_enrol)]) == 0)
+  
+  
   cat('There is ', nrow(meta.rccs), ' individuals included in the RCCS meta-data\n')
   
   

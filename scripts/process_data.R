@@ -33,6 +33,8 @@ include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- T
 remove.inconsistent.infection.dates <- F
+make.TSI.linear.adjustment <- F
+
 cutoff_date <- as.Date('2014-01-01')
 jobname <- '2014_IpriorGP'
 lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_jobname_', jobname)
@@ -47,7 +49,7 @@ file.community.keys <- file.path(indir.deepsequence_analyses,'community_names.cs
 file.time.first.positive <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '211111_pangea_db_sharing_extract_rakai_age_firstpos_lastneg.csv')
 file.path.phscinput <- file.path(indir.deepsequence_analyses, '210120_RCCSUVRI_phscinput_runs.rds')
 file.path.bflocs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'bfloc2hpc_20220103.rds')
-file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_20220601.csv')
+file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 
 outdir.lab <- file.path(outdir, lab); dir.create(outdir.lab)
   
@@ -72,15 +74,13 @@ community.keys <- as.data.table( read.csv(file.community.keys) )
 # get age at infection
 time.first.positive <- as.data.table( read.csv(file.time.first.positive))
 time.since.infection <- as.data.table(read.csv(file.path.tsiestimates))
-time.since.infection[, X:=NULL]
-time.since.infection <- merge(time.since.infection, anonymisation.keys, by='AID')
 if(! use.tsi.estimates)
 {
   cat("Do not use TSI estimates ")
   time.since.infection[, TSI_estimated_mean := 1]
 }
 # time.first.positive <- make.time.first.positive(time.first.positive)
-time.first.positive <- get.time.collection(file.path.bflocs)
+time.first.positive <- get.time.collection()
 
 
 if(0)
@@ -124,6 +124,7 @@ if(include.only.heterosexual.pairs){
 }
 if(remove.inconsistent.infection.dates)
 {
+  plot_pairs_infection_dates(pairs.all)
   cat('Remove infections for which estimated date at infection of source is more than one year after the estimated date at infection of the recipient.\n ')
   pairs.all <- pairs.all[! date_infection.SOURCE >= date_infection.RECIPIENT + 365 ]
 }
