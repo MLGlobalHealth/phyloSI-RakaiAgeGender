@@ -15,6 +15,10 @@ keep.likely.transmission.pairs <- function(dchain, threshold){
   dchain[, `:=` (SOURCE=H1, RECIPIENT=H2)]
   dchain[EST_DIR == '21', `:=` (SOURCE=H2, RECIPIENT=H1) ]
   dchain[, `:=` (H1=NULL, H2=NULL)]
+  
+  cat('There are ', nrow(dchain), ' likely source-recipient pairs')
+  
+  return(dchain)
 }
 
 
@@ -91,12 +95,13 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positiv
                           anonymisation.keys, community.keys, use.tsi.estimates)
 {
   
+  
   colnames(meta.rccs.1) <- tolower(colnames(meta.rccs.1))
   colnames(meta.rccs.2) <- tolower(colnames(meta.rccs.2))
   colnames(meta.mrc) <- tolower(colnames(meta.mrc))
   colnames(time.since.infection) <- tolower(colnames(time.since.infection))
   
-  
+
   #
   # process RCCS meta-data
   #
@@ -114,7 +119,6 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positiv
   
   meta.rccs.1 <- unique( meta.rccs.1[, .(pt_id, comm_num)] ) 
   
-  
   # second meta data for RCCS to get [sex] 
   meta.rccs.2[, visit_dt := as.Date(visit_dt)]
   meta.rccs.2[age_enrol == 'NULL', age_enrol := NA]
@@ -129,13 +133,14 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positiv
   
   meta.rccs.2 <- unique( meta.rccs.2[, .(pt_id, sex)] )  
   
-  
   # merge two data sources of RCCS 
   meta.rccs <- merge(meta.rccs.2, meta.rccs.1, by = 'pt_id', all.x = T)
   
   # add date first and last visit
-  tmp <- date.range.visit[, list(date_first_visit = min(date_first_visit), date_last_visit = max(date_last_visit)), by = 'pt_id'] # keep info of first visit
-  date.range.visit <- merge(date.range.visit, tmp, by = c('pt_id', 'date_first_visit', 'date_last_visit')) 
+  tmp <- date.range.visit[, list(date_first_visit = min(date_first_visit)), by = 'pt_id'] # keep info of first visit
+  date.range.visit <- merge(date.range.visit, tmp, by = c('pt_id', 'date_first_visit')) 
+  tmp <- date.range.visit[, list(date_last_visit = max(date_last_visit)), by = 'pt_id'] # keep info of first visit
+  date.range.visit <- merge(date.range.visit, tmp, by = c('pt_id', 'date_last_visit')) 
   meta.rccs <- merge(meta.rccs, date.range.visit, by = 'pt_id')
   
   # add birthdate 
@@ -230,11 +235,6 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positiv
                    date_birth,
                    age_infection, age_at_first_visit,
                    date_infection, date_first_positive, date_first_visit, date_last_visit)]
-  
-  # exclude young indivis
-  cat('\nExcluding very young individuals')
-  print_table(meta[age_infection < 11, .(pt_id, age_infection)])
-  meta <- meta[age_infection >= 11]
   
   return(meta)
 }
