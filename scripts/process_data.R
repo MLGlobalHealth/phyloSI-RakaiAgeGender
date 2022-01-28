@@ -27,19 +27,22 @@ if(dir.exists('/home/andrea'))
 }
 
 # indicators 
-jobname <- '2014_priorGP_T'
+jobname <- '2014_priorGP_thre05'
 cutoff_date <- as.Date('2014-01-01')
+
+threshold.potential.close.pairs <- 0.5 # can be 0.5 or 0.8
+use.tsi.estimates <- F
+remove.inconsistent.infection.dates <- F
+remove.yound.individuals <- T
 
 include.mrc <- F
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
-use.tsi.estimates <- T
-remove.inconsistent.infection.dates <- F
 
 lab <- paste0('MRC_', include.mrc, '_OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_jobname_', jobname)
+outdir.lab <- file.path(outdir, lab); dir.create(outdir.lab)
 
 # file paths
-file.path.chains.data <- file.path(indir.deepsequence_analyses,'210325_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
 file.path.meta.data.rccs.1 <- file.path(indir.deepsequence_analyses, 'RakaiPangeaMetaData_v2.rda')
 file.path.meta.data.rccs.2 <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '200316_pangea_db_sharing_extract_rakai.csv')
 file.path.meta.data.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
@@ -50,7 +53,14 @@ file.path.phscinput <- file.path(indir.deepsequence_analyses, '210120_RCCSUVRI_p
 file.path.bflocs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'bfloc2hpc_20220103.rds')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 
-outdir.lab <- file.path(outdir, lab); dir.create(outdir.lab)
+if(threshold.potential.close.pairs == 0.5){
+  path.chains.data <- '211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd'
+} else{
+  # defaiut threshold = 0.9
+  path.chains.data <- '210325_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd'
+}
+file.path.chains.data <- file.path(indir.deepsequence_analyses, path.chains.data, 'Rakai_phscnetworks.rda')
+
 
 # load functions
 source(file.path(indir.repository, 'functions', 'summary_functions.R'))
@@ -109,33 +119,50 @@ pairs.all <- pairs.get.meta.data(chain, meta_data)
 
 if(!include.mrc){
   cat('Keep only pairs in RCCS\n')
+  cat('removing ', nrow(pairs.all[cohort.RECIPIENT == 'MRC' | cohort.SOURCE == 'MRC']), ' pairs\n')
   pairs.all <- pairs.all[cohort.RECIPIENT == 'RCCS' & cohort.SOURCE == 'RCCS']
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(include.only.heterosexual.pairs){
   cat('Keep only heterosexual pairs\n')
+  cat('Removing ', nrow(pairs.all[! ((sex.RECIPIENT == 'M' & sex.SOURCE == 'F') | (sex.RECIPIENT == 'F' & sex.SOURCE == 'M'))]), ' pairs\n')
   pairs.all <- pairs.all[(sex.RECIPIENT == 'M' & sex.SOURCE == 'F') | (sex.RECIPIENT == 'F' & sex.SOURCE == 'M')]
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(remove.inconsistent.infection.dates){
   plot_pairs_infection_dates(pairs.all)
   cat('Remove infections for which estimated date at infection of source is more than one year after the estimated date at infection of the recipient.\n ')
+  cat('Removing ', nrow(pairs.all[ date_infection.SOURCE >= date_infection.RECIPIENT + 365]), ' pairs\n')
   pairs.all <- pairs.all[! date_infection.SOURCE >= date_infection.RECIPIENT + 365 ]
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
+  
+}
+if(remove.yound.individuals){
+  # exclude young indivis
+  cat('\nExcluding very young individuals')
+  cat('Removing ', nrow(pairs.all[age_infection.SOURCE < 11 | age_infection.RECIPIENT < 11]), ' pairs\n')
+  pairs.all <- pairs.all[age_infection.SOURCE >= 11 & age_infection.RECIPIENT >= 11]
+  cat('resulting in a total of ', nrow(pairs.all),' pairs')
+  
 }
 
 print.statements.about.pairs(copy(pairs.all), outdir.lab)
 
 # TODO: I don't understand what this thing does, is really its place? Here we process the stan data.
-if(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
-{
-  missing_bff <- print.statements.about.basefreq.files(pairs.all)
-  missing_bff <- merge(anonymisation.keys, missing_bff[HPC_EXISTS == FALSE, ], by='AID')
-  missing_bff[, HPC_EXISTS := NULL]
-  
-  # if want to send Tanya:
-  tmp <- missing_bff[,  .(PT_ID, PREFIX)]
-  name <- file.path(indir.repository, 'data/missing_bf_files_20220106.csv')
-  # if(!file.exists(name)){write.csv(tmp, name, row.names = F)}
-  # commented out here, but all missing bf's have RCCS2 prefixes.
-}
+# and i get this error  Error in print.statements.about.basefreq.files(pairs.all) : 
+# all(aid %in% tmp$AID) is not TRUE 
+# if(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
+# {
+#   missing_bff <- print.statements.about.basefreq.files(pairs.all)
+#   missing_bff <- merge(anonymisation.keys, missing_bff[HPC_EXISTS == FALSE, ], by='AID')
+#   missing_bff[, HPC_EXISTS := NULL]
+#   
+#   # if want to send Tanya:
+#   tmp <- missing_bff[,  .(PT_ID, PREFIX)]
+#   name <- file.path(indir.repository, 'data/missing_bf_files_20220106.csv')
+#   # if(!file.exists(name)){write.csv(tmp, name, row.names = F)}
+#   # commented out here, but all missing bf's have RCCS2 prefixes.
+# }
 
 # keep only pairs with source-recipient with proxy for the time of infection
 pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
