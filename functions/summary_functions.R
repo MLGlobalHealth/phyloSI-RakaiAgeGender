@@ -3,6 +3,19 @@
   if(grepl('.rds$|.RDS$',x)){return(as.data.table(readRDS(x)))}
 }
 
+.aid2pt <- function(x){
+  if (length(unique(x)) < length(x)){stop('Error: avoid repeated entries')}
+  x <- data.table(AID=x)
+  x <- merge(x, anonymisation.keys, all.x=T)
+  x$PT_ID
+}
+.pt2aid <- function(x){
+  if (length(unique(x)) < length(x)){stop('Error: avoid repeated entries')}
+  x <- data.table(PT_ID=x)
+  x <- merge(x, anonymisation.keys, all.x=T)
+  x$AID
+}
+
 keep.likely.transmission.pairs <- function(dchain, threshold){
   
   dchain <- dchain[SCORE_LINKED>threshold]
@@ -133,10 +146,10 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positiv
   # merge two data sources of RCCS 
   meta.rccs <- merge(meta.rccs.2, meta.rccs.1, by = 'pt_id', all.x = T)
   
-  # add date first and last visit
+  # add date first and last visit (here we are missing some without dates)
   tmp <- date.range.visit[, list(date_first_visit = min(date_first_visit), date_last_visit = max(date_last_visit)), by = 'pt_id'] # keep info of first visit
   date.range.visit <- merge(date.range.visit, tmp, by = c('pt_id', 'date_first_visit', 'date_last_visit')) 
-  meta.rccs <- merge(meta.rccs, date.range.visit, by = 'pt_id')
+  meta.rccs <- merge(meta.rccs, date.range.visit, by = 'pt_id', all.x=T)
   
   # add birthdate 
   date.birth.rccs <- rbind(date.birth, date.birth.rccs)[!is.na(date_birth)]
@@ -257,8 +270,11 @@ pairs.get.meta.data <- function(dchain, meta){
   
   # individuals without meta data
   missing_indiv = unique(c(dchain$SOURCE, dchain$RECIPIENT)[!(c(dchain$SOURCE, dchain$RECIPIENT) %in% meta$aid)])
+  missing_indiv <- .aid2pt(missing_indiv)
   cat('There are ', length(missing_indiv), 'indivs without meta data:\n' )
-  cat(missing_indiv)
+  missing_indiv <- grep('RK-', missing_indiv, value=T)
+  cat('- ', length(missing_indiv), 'of which are in the Rakai Cohort.\n')
+  cat(missing_indiv, '\n')
   
   return(tmp1)
 }
@@ -482,6 +498,22 @@ fill_non_na <- function(x){
   }
   
   return(x)
+}
+
+print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
+{
+  cols <- colnames(dt); cols <- grep(regex, cols, value=T)
+  .f <- function(x){sum(is.na(x))}
+  tmp <- dt[, lapply(.SD, .f), .SDcols=cols]
+  cols <- cols[which(tmp[1,] != 0)]
+  tmp <- tmp[,
+             {
+               n <- names(.SD);
+               cat('\n-------------------------------------- \nColumns with NA entries : # NA entries \n-------------------------------------- \n')
+               lapply(seq_along(.SD),
+                      FUN=function(i){ cat(n[[i]], ': ', .SD[[i]], '\n'); 0})
+             }
+  , .SDcols=cols]
 }
 
 

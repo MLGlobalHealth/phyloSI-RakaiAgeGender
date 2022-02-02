@@ -96,7 +96,6 @@ time.since.infection <- make.time.since.infection(time.since.infection, anonymis
 meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positive, date.birth, time.since.infection, 
                            anonymisation.keys, community.keys, use.tsi.estimates)
 
-
 # get likely transmission pairs
 chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
 
@@ -121,6 +120,7 @@ if(remove.inconsistent.infection.dates){
   pairs.all <- pairs.all[! date_infection.SOURCE >= date_infection.RECIPIENT + 365 ]
 }
 
+print.which.NA(pairs.all)
 print.statements.about.pairs(copy(pairs.all), outdir.lab)
 
 # TODO: I don't understand what this thing does, is really its place? Here we process the stan data.
