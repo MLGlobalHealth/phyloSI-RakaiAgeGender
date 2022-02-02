@@ -136,20 +136,8 @@ print.statements.about.pairs(copy(pairs.all), outdir.lab)
 # TODO: I don't understand what this thing does, is really its place? Here we process the stan data.
 # It was more of a 'print.statement file concerning which base frequency files we have on the HPC
 # I made it all one line
+missing_bff <- print.statements.about.basefreq.files(pairs.all)
 
-
-if(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
-{
-  missing_bff <- print.statements.about.basefreq.files(pairs.all)
-  missing_bff <- merge(anonymisation.keys, missing_bff[HPC_EXISTS == FALSE, ], by='AID')
-  missing_bff[, HPC_EXISTS := NULL]
-  
-  # if want to send Tanya:
-  tmp <- missing_bff[,  .(PT_ID, PREFIX)]
-  name <- file.path(indir.repository, 'data/missing_bf_files_20220106.csv')
-  # if(!file.exists(name)){write.csv(tmp, name, row.names = F)}
-  # commented out here, but all missing bf's have RCCS2 prefixes.
-}
 
 # keep only pairs with source-recipient with proxy for the time of infection
 pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]

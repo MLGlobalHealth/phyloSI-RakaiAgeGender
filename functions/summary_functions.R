@@ -307,6 +307,9 @@ print.statements.about.pairs <- function(pairs, outdir){
 # Want to see how many AIDs in potential pairs have an associated prefix and base frequency file => SOMETHING
 print.statements.about.basefreq.files <- function(chain)
 {
+  
+  stopifnot(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
+  
   # get aids of potential pairs
   aid <- chain[, unique(c(SOURCE, RECIPIENT))]
   stopifnot(all(aid %in% anonymisation.keys$AID))
@@ -334,6 +337,18 @@ print.statements.about.basefreq.files <- function(chain)
   cat('AIDs with at least one existing base frequency file:')
   tmp1 <- tmp[, list(HPC_EXISTS=any(HPC_EXISTS)), by='AID'][, table(HPC_EXISTS)]
   print_table(tmp1)
+  
+  if(0) # if want to send Tanya
+  {
+    missing_bff <- copy(tmp)
+    missing_bff[, HPC_EXISTS := NULL]
+    
+    # if want to send Tanya:
+    tmp <- missing_bff[,  .(PT_ID, PREFIX)]
+    name <- file.path(indir.repository, 'data/missing_bf_files_20220106.csv')
+    if(!file.exists(name)){write.csv(tmp, name, row.names = F)}
+    # commented out here, but all missing bf's have RCCS2 prefixes.
+  }
   
   return(tmp)
 }
