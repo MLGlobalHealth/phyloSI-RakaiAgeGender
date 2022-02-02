@@ -516,4 +516,52 @@ print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
   , .SDcols=cols]
 }
 
+resolve.duplicate.ids <- function(discarded_ids)
+{
+  
+  discarded_ids <- discarded_ids[, lapply(.SD, function(x){paste0('RK-', x)})]
+  discarded_ids[, aid_discarded := .pt2aid(discarded_ids$pt_id_discarded)]
+  discarded_ids[, aid_original := .pt2aid(discarded_ids$pt_id_original)]
+  
+  .disc2org <- function(x){
+    if (length(unique(x)) < length(x)){stop('Error: avoid repeated entries')}
+    x <- data.table(pt_id_discarded=x)
+    x <- merge(x, discarded_ids, all.x=T)
+    x$pt_id_original
+  }
+  
+  # substitute discarded ids with original in meta.rccs.1
+  tmp <- discarded_ids[, .(pt_id_discarded, pt_id_original)]
+  tmp <- tmp[, lapply(.SD, function(x){gsub('RK-', '', x)} ),]
+  tmp <- merge(tmp, meta.rccs.1[RCCS_studyid %in% tmp$pt_id_discarded, ], by.y='RCCS_studyid', by.x='pt_id_discarded')
+  setnames(tmp, 'pt_id_original','RCCS_studyid')
+  tmp[, pt_id_discarded := NULL]
 
+  meta.rccs.1 <- rbind(meta.rccs.1[!RCCS_studyid %in% tmp$pt_id_discarded, ],
+                       tmp)
+  setkey(meta.rccs.1, 'RCCS_studyid')
+  
+  
+  # substitute discarded ids with original in meta.rccs.2
+  tmp <- meta.rccs.2[pt_id %in% discarded_ids$pt_id_discarded, ]
+  setnames(tmp, 'pt_id', 'pt_id_discarded')
+  tmp <- merge(discarded_ids[, .(pt_id_discarded,pt_id_original)], tmp, by='pt_id_discarded')
+  setnames(tmp, 'pt_id_original', 'pt_id')
+  tmp[, pt_id_discarded := NULL] 
+  
+  meta.rccs.2 <- rbind( tmp, meta.rccs.2[!pt_id %in% discarded_ids$pt_id_discarded, ])
+  setkey(meta.rccs.2, pt_id)
+  
+  # First positive and birthdates
+  date.first.positive.and.birthdate[pt_id %in% discarded_ids$pt_id_discarded, pt_id := .disc2org(pt_id) ]
+  setkey(date.first.positive.and.birthdate, 'pt_id')
+  date.first.positive.and.birthdate[pt_id %in% discarded_ids$pt_id_original,]
+  
+  date.first.positive <- date.first.positive[! pt_id %in% discarded_ids$pt_id_discarded]
+  date.birth <- date.birth[! pt_id %in% discarded_ids$pt_id_discarded]
+  
+  # time since infection
+  stopifnot(time.since.infection[PT_ID %in% discarded_ids$pt_id_discarded, .N == 0])
+  
+  return(discarded_ids)
+}

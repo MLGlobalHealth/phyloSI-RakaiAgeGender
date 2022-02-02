@@ -87,6 +87,16 @@ time.since.infection <- as.data.table(read.csv(file.path.tsiestimates))
 time.since.infection <- make.time.since.infection(time.since.infection, anonymisation.keys)
 
 
+# Duplicate IDs sent by Joseph (25/01)
+discarded_ids <- data.table(pt_id_discarded =  c('E107108', 'E120028', 'J105762', 'J114702', 'K010841'),
+                            pt_id_original =  c('A060732', 'J036888', 'D065675', 'H095872', 'H053854'))
+
+# Rename discarded IDs with original names in above dt's.
+# Don t think we need to change anything in the phylogeneteic analyisis because
+# discarded pt_id's weren't associated with Pangea_ids meaning the analysis
+# should have been impossible (also quick check in dchain showed it was alright)
+discarded_ids <- resolve.duplicate.ids(discarded_ids)
+
 
 #
 # PREPARE META DATA AND ASSOCIATE TO INDIVIDUALS IN THE CHAINS
@@ -124,6 +134,10 @@ print.which.NA(pairs.all)
 print.statements.about.pairs(copy(pairs.all), outdir.lab)
 
 # TODO: I don't understand what this thing does, is really its place? Here we process the stan data.
+# It was more of a 'print.statement file concerning which base frequency files we have on the HPC
+# I made it all one line
+
+
 if(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
 {
   missing_bff <- print.statements.about.basefreq.files(pairs.all)
