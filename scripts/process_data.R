@@ -103,8 +103,8 @@ time.since.infection <- make.time.since.infection(time.since.infection, anonymis
 #
 
 # get meta data
-meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positive, date.birth, time.since.infection, 
-                           anonymisation.keys, community.keys, use.tsi.estimates)
+meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positive, date.birth, 
+                           anonymisation.keys, community.keys, use.tsi.estimates, time.since.infection)
 
 
 # get likely transmission pairs
@@ -187,7 +187,7 @@ plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == '
 plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outdir.lab)
 plot_CI_age_infection(pairs, outdir.lab)
 plot_CI_age_transmission(pairs, outdir.lab)
-phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)),outdir=outdir.lab, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
+phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outdir.lab, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
 
 
 
