@@ -91,16 +91,15 @@ get.time.collection <- function(bflocs)
 }
 
 
-get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positive, date.birth, time.since.infection, 
-                          anonymisation.keys, community.keys, use.tsi.estimates)
+get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positive, date.birth, 
+                          anonymisation.keys, community.keys, use.tsi.estimates = F, time.since.infection = NULL)
 {
   
   
   colnames(meta.rccs.1) <- tolower(colnames(meta.rccs.1))
   colnames(meta.rccs.2) <- tolower(colnames(meta.rccs.2))
   colnames(meta.mrc) <- tolower(colnames(meta.mrc))
-  colnames(time.since.infection) <- tolower(colnames(time.since.infection))
-  
+
 
   #
   # process RCCS meta-data
@@ -155,15 +154,18 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positiv
   # add time first positive
   meta.rccs <- merge(meta.rccs, date.first.positive, by = 'pt_id', all.x = T)
   
-  # add Tanya's estimate time since infection 
-  meta.rccs <- merge(meta.rccs, time.since.infection[, .(tsi_estimated_mean, date_collection, pt_id)], by = 'pt_id', all.x = T)
-  
   stopifnot(length(unique(meta.rccs$pt_id)) == nrow(meta.rccs))
   cat('There is ', nrow(meta.rccs), ' individuals included in the RCCS meta-data\n')
   cat('Out of them ', nrow(meta.rccs[is.na(date_first_positive)]), ' that do not have time of first positive\n')
-  cat('Out of them ', nrow(meta.rccs[is.na(tsi_estimated_mean)]), ' that do not have Tanya s TSI estimates\n')
   cat('Out of them ', nrow(meta.rccs[is.na(date_birth)]), ' that do not have birth date\n')
   
+  # add Tanya's estimate time since infection 
+  if(use.tsi.estimates){
+    colnames(time.since.infection) <- tolower(colnames(time.since.infection))
+    meta.rccs <- merge(meta.rccs, time.since.infection[, .(tsi_estimated_mean, date_collection, pt_id)], by = 'pt_id', all.x = T)
+    cat('Out of them ', nrow(meta.rccs[is.na(tsi_estimated_mean)]), ' that do not have Tanya s TSI estimates\n')
+  }
+
   
   #
   # process MRC meta-data
