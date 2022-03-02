@@ -3,6 +3,19 @@
   if(grepl('.rds$|.RDS$',x)){return(as.data.table(readRDS(x)))}
 }
 
+.aid2pt <- function(x){
+  if (length(unique(x)) < length(x)){stop('Error: avoid repeated entries')}
+  x <- data.table(AID=x)
+  x <- merge(x, anonymisation.keys, all.x=T)
+  x$PT_ID
+}
+.pt2aid <- function(x){
+  if (length(unique(x)) < length(x)){stop('Error: avoid repeated entries')}
+  x <- data.table(PT_ID=x)
+  x <- merge(x, anonymisation.keys, all.x=T)
+  x$AID
+}
+
 keep.likely.transmission.pairs <- function(dchain, threshold){
   
   dchain <- dchain[SCORE_LINKED>threshold]
@@ -135,12 +148,10 @@ get.meta.data <- function(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positiv
   # merge two data sources of RCCS 
   meta.rccs <- merge(meta.rccs.2, meta.rccs.1, by = 'pt_id', all.x = T)
   
-  # add date first and last visit
-  tmp <- date.range.visit[, list(date_first_visit = min(date_first_visit)), by = 'pt_id'] # keep info of first visit
-  date.range.visit <- merge(date.range.visit, tmp, by = c('pt_id', 'date_first_visit')) 
-  tmp <- date.range.visit[, list(date_last_visit = max(date_last_visit)), by = 'pt_id'] # keep info of first visit
-  date.range.visit <- merge(date.range.visit, tmp, by = c('pt_id', 'date_last_visit')) 
-  meta.rccs <- merge(meta.rccs, date.range.visit, by = 'pt_id')
+  # add date first and last visit (here we are missing some without dates)
+  tmp <- date.range.visit[, list(date_first_visit = min(date_first_visit), date_last_visit = max(date_last_visit)), by = 'pt_id'] # keep info of first visit
+  date.range.visit <- merge(date.range.visit, tmp, by = c('pt_id', 'date_first_visit', 'date_last_visit')) 
+  meta.rccs <- merge(meta.rccs, date.range.visit, by = 'pt_id', all.x=T)
   
   # add birthdate 
   date.birth.rccs <- rbind(date.birth, date.birth.rccs)[!is.na(date_birth)]
@@ -259,8 +270,11 @@ pairs.get.meta.data <- function(dchain, meta){
   
   # individuals without meta data
   missing_indiv = unique(c(dchain$SOURCE, dchain$RECIPIENT)[!(c(dchain$SOURCE, dchain$RECIPIENT) %in% meta$aid)])
+  missing_indiv <- .aid2pt(missing_indiv)
   cat('There are ', length(missing_indiv), 'indivs without meta data:\n' )
-  cat(missing_indiv)
+  missing_indiv <- grep('RK-', missing_indiv, value=T)
+  cat('- ', length(missing_indiv), 'of which are in the Rakai Cohort.\n')
+  cat(missing_indiv, '\n')
   
   return(tmp1)
 }
@@ -293,6 +307,9 @@ print.statements.about.pairs <- function(pairs, outdir){
 # Want to see how many AIDs in potential pairs have an associated prefix and base frequency file => SOMETHING
 print.statements.about.basefreq.files <- function(chain)
 {
+  
+  stopifnot(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
+  
   # get aids of potential pairs
   aid <- chain[, unique(c(SOURCE, RECIPIENT))]
   stopifnot(all(aid %in% anonymisation.keys$AID))
@@ -320,6 +337,18 @@ print.statements.about.basefreq.files <- function(chain)
   cat('AIDs with at least one existing base frequency file:')
   tmp1 <- tmp[, list(HPC_EXISTS=any(HPC_EXISTS)), by='AID'][, table(HPC_EXISTS)]
   print_table(tmp1)
+  
+  if(0) # if want to send Tanya
+  {
+    missing_bff <- copy(tmp)
+    missing_bff[, HPC_EXISTS := NULL]
+    
+    # if want to send Tanya:
+    tmp <- missing_bff[,  .(PT_ID, PREFIX)]
+    name <- file.path(indir.repository, 'data/missing_bf_files_20220106.csv')
+    if(!file.exists(name)){write.csv(tmp, name, row.names = F)}
+    # commented out here, but all missing bf's have RCCS2 prefixes.
+  }
   
   return(tmp)
 }
@@ -486,4 +515,68 @@ fill_non_na <- function(x){
   return(x)
 }
 
+print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
+{
+  cols <- colnames(dt); cols <- grep(regex, cols, value=T)
+  .f <- function(x){sum(is.na(x))}
+  tmp <- dt[, lapply(.SD, .f), .SDcols=cols]
+  cols <- cols[which(tmp[1,] != 0)]
+  tmp <- tmp[,
+             {
+               n <- names(.SD);
+               cat('\n-------------------------------------- \nColumns with NA entries : # NA entries \n-------------------------------------- \n')
+               lapply(seq_along(.SD),
+                      FUN=function(i){ cat(n[[i]], ': ', .SD[[i]], '\n'); 0})
+             }
+  , .SDcols=cols]
+}
 
+resolve.duplicate.ids <- function(discarded_ids)
+{
+  
+  discarded_ids <- discarded_ids[, lapply(.SD, function(x){paste0('RK-', x)})]
+  discarded_ids[, aid_discarded := .pt2aid(discarded_ids$pt_id_discarded)]
+  discarded_ids[, aid_original := .pt2aid(discarded_ids$pt_id_original)]
+  
+  .disc2org <- function(x){
+    if (length(unique(x)) < length(x)){stop('Error: avoid repeated entries')}
+    x <- data.table(pt_id_discarded=x)
+    x <- merge(x, discarded_ids, all.x=T)
+    x$pt_id_original
+  }
+  
+  # substitute discarded ids with original in meta.rccs.1
+  tmp <- discarded_ids[, .(pt_id_discarded, pt_id_original)]
+  tmp <- tmp[, lapply(.SD, function(x){gsub('RK-', '', x)} ),]
+  tmp <- merge(tmp, meta.rccs.1[RCCS_studyid %in% tmp$pt_id_discarded, ], by.y='RCCS_studyid', by.x='pt_id_discarded')
+  setnames(tmp, 'pt_id_original','RCCS_studyid')
+  tmp[, pt_id_discarded := NULL]
+
+  meta.rccs.1 <- rbind(meta.rccs.1[!RCCS_studyid %in% tmp$pt_id_discarded, ],
+                       tmp)
+  setkey(meta.rccs.1, 'RCCS_studyid')
+  
+  
+  # substitute discarded ids with original in meta.rccs.2
+  tmp <- meta.rccs.2[pt_id %in% discarded_ids$pt_id_discarded, ]
+  setnames(tmp, 'pt_id', 'pt_id_discarded')
+  tmp <- merge(discarded_ids[, .(pt_id_discarded,pt_id_original)], tmp, by='pt_id_discarded')
+  setnames(tmp, 'pt_id_original', 'pt_id')
+  tmp[, pt_id_discarded := NULL] 
+  
+  meta.rccs.2 <- rbind( tmp, meta.rccs.2[!pt_id %in% discarded_ids$pt_id_discarded, ])
+  setkey(meta.rccs.2, pt_id)
+  
+  # First positive and birthdates
+  date.first.positive.and.birthdate[pt_id %in% discarded_ids$pt_id_discarded, pt_id := .disc2org(pt_id) ]
+  setkey(date.first.positive.and.birthdate, 'pt_id')
+  date.first.positive.and.birthdate[pt_id %in% discarded_ids$pt_id_original,]
+  
+  date.first.positive <- date.first.positive[! pt_id %in% discarded_ids$pt_id_discarded]
+  date.birth <- date.birth[! pt_id %in% discarded_ids$pt_id_discarded]
+  
+  # time since infection
+  stopifnot(time.since.infection[PT_ID %in% discarded_ids$pt_id_discarded, .N == 0])
+  
+  return(discarded_ids)
+}

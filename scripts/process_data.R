@@ -97,6 +97,16 @@ time.since.infection <- as.data.table(read.csv(file.path.tsiestimates))
 time.since.infection <- make.time.since.infection(time.since.infection, anonymisation.keys)
 
 
+# Duplicate IDs sent by Joseph (25/01)
+discarded_ids <- data.table(pt_id_discarded =  c('E107108', 'E120028', 'J105762', 'J114702', 'K010841'),
+                            pt_id_original =  c('A060732', 'J036888', 'D065675', 'H095872', 'H053854'))
+
+# Rename discarded IDs with original names in above dt's.
+# Don t think we need to change anything in the phylogeneteic analyisis because
+# discarded pt_id's weren't associated with Pangea_ids meaning the analysis
+# should have been impossible (also quick check in dchain showed it was alright)
+discarded_ids <- resolve.duplicate.ids(discarded_ids)
+
 
 #
 # PREPARE META DATA AND ASSOCIATE TO INDIVIDUALS IN THE CHAINS
@@ -105,7 +115,6 @@ time.since.infection <- make.time.since.infection(time.since.infection, anonymis
 # get meta data
 meta_data <- get.meta.data(meta.rccs.1, meta.rccs.2, meta.mrc, date.first.positive, date.birth, 
                            anonymisation.keys, community.keys, use.tsi.estimates, time.since.infection)
-
 
 # get likely transmission pairs
 chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
@@ -146,23 +155,12 @@ if(remove.yound.individuals){
   
 }
 
+print.which.NA(pairs.all)
 print.statements.about.pairs(copy(pairs.all), outdir.lab)
 
-# TODO: I don't understand what this thing does, is really its place? Here we process the stan data.
-# and i get this error  Error in print.statements.about.basefreq.files(pairs.all) : 
-# all(aid %in% tmp$AID) is not TRUE 
-# if(file.exists(file.path.phscinput) & file.exists(file.path.bflocs))
-# {
-#   missing_bff <- print.statements.about.basefreq.files(pairs.all)
-#   missing_bff <- merge(anonymisation.keys, missing_bff[HPC_EXISTS == FALSE, ], by='AID')
-#   missing_bff[, HPC_EXISTS := NULL]
-#   
-#   # if want to send Tanya:
-#   tmp <- missing_bff[,  .(PT_ID, PREFIX)]
-#   name <- file.path(indir.repository, 'data/missing_bf_files_20220106.csv')
-#   # if(!file.exists(name)){write.csv(tmp, name, row.names = F)}
-#   # commented out here, but all missing bf's have RCCS2 prefixes.
-# }
+# which base frequency files we have on the HPC
+missing_bff <- print.statements.about.basefreq.files(pairs.all)
+
 
 # keep only pairs with source-recipient with proxy for the time of infection
 pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
