@@ -1,18 +1,24 @@
 library(rstan)
 library(data.table)	
 
-jobname <- '2014_priorGP'
+jobname <- '2014_IpriorGP'
 .stan_model <- 'gp_220108b'
 DEBUG <- F
 JOBID = 12
-lab <- paste0("MRC_FALSE_OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
+lab <- paste0("OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
 
 .indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 datadir <- "/rds/general/user/mm3218/home/projects/2021/phyloflows"
 
-if(0){
+if(0)
+{
   .indir <- '~/git/phyloflows'
   datadir <- '~/Box\ Sync/2021/phyloflows/'
+}
+if(Sys.info()[['user']] == 'andrea')
+{
+  .indir <- '~/git/phyloflows'
+  datadir <- '~/Documents/Box/2021/phyloflows'
 }
 
 .outdir <- file.path(datadir, lab)
@@ -65,6 +71,7 @@ if(DEBUG){
 sum = summary(fit)
 sum$summary[which(sum$summary[,9] < 100),]
 
+.JOBID <- 'TEST'
 file = file.path(outdir, paste0(.stan_model,'-', .JOBID), paste0(.stan_model,'-', .JOBID, '_', lab, '.rds'))
 cat("Save file ", file)
 saveRDS(fit,file = file)
