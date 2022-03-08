@@ -7,14 +7,15 @@ print_table <- function(table) print(knitr::kable(table))
   if(grepl('.rds$|.RDS$',x)){return(as.data.table(readRDS(x)))}
 }
 
-.aid2pt <- function(x){
+.aid2pt <- function(x, aik){
   if ( .lu(x) < length(x)){stop('Error: avoid repeated entries')}
+  colnames(aik) <- tolower(colnames(aik))
   x <- data.table(aid=x)
   x <- merge(x, aik, all.x=T, by='aid')
   x$pt_id
 }
 
-.pt2aid <- function(x){
+.pt2aid <- function(x, aik){
   if (.lu(x) < length(x)){stop('Error: avoid repeated entries')}
   x <- data.table(pt_id=x)
   x <- merge(x, aik, all.x=T, by='pt_id')
@@ -59,50 +60,47 @@ print.which.NA <- function(dt,regex='', name='dt')
 
 .year.diff <- function(x, y)
 {
-  require(lubridate)
-  if (!is.Date(x)) {x <- as.Date(x)}
-  if (!is.Date(y)) {y <- as.Date(y)}
+  if (!is.Date(x)) {x <- as.Date(x, format = '%Y-%m-%d')}
+  if (!is.Date(y)) {y <- as.Date(y, format = '%Y-%m-%d')}
   round(lubridate::time_length(difftime(x, y),"years"),1)
 }
 
 process.quest <- function(quest)
 {
 
-  # one individual with weird reported birthdate: 2018, while birthyr=1882. Set it to 1982
-  cat("Manual fix for one individual with birthdate == 1882\n\n")
+  # one individual with reported birthyr=1882 and birthdate: 2018-08-18 , set year to 1982
   quest[study_id == 'RK-C110340', birthdat:=gsub('-18$','-82',birthdat)]
   
-  # Fix dates
+  # Set to date format
   cols <- c('intdate', 'birthdat')
   quest[, (cols) := lapply(.SD, .dates), .SDcols=cols, by = seq_len(nrow(quest))]
   quest[,  (cols) := lapply(.SD, function(x) {
     as.Date(x, format = '%d-%b-%Y')
   }), .SDcols = cols]
-  tmp <- quest[is.na(birthdat), unique(study_id)]
-  cat("There are ", length(tmp), " study_ids without birthdate\n")
   
-  # can compute an estimate of birthdate by using visit date and age at visit
-  stopifnot(all(!quest[study_id %in% tmp, any(!is.na(birthdat)), by = 'study_id']$V1))
-  cat('Estimating birthdates using age at visit\n')
-  quest[study_id %in% tmp, birthdat := median(intdate - 365 * ageyrs), by = 'study_id']
+  # for birthdate NA, find birthdate with age at visit and visit date
+  quest[is.na(birthdat), birthdat := median(intdate - 365 * ageyrs), by = 'study_id']
   
   # select columns of interest
   cols <- c('study_id', 'round', 'comm_num', 'curr_id', 'intdate', 'birthdat', 'sex', 'id')
   quest <- quest[, .SD, .SDcols=cols]
   
+  cat('Range of interview date is ', format(quest[, range(intdate)]), '\n')
+  cat('Range of birth date is ', format(quest[, range(birthdat)]), '\n')
+  
   # NAs in each col
-  print.which.NA(quest, name='quest')
+  print.which.NA(quest, 'quest')
   
   return(quest)
 }
 
-process.allhiv <- function(allhiv)
+make_date_first_positive <- function(allhiv)
 {
 
   # Check whether there are hidden NAs 
-  stopifnot(allhiv[nchar(date_coll) != 9, .N == 0])
-  allhiv[nchar(firstpos_diagnosis_dt) != 9, firstpos_diagnosis_dt := NA]
-  allhiv[nchar(lastnegvd) != 9, lastnegvd := NA]
+  stopifnot(allhiv[nchar(as.character(date_coll)) != 9, .N == 0])
+  allhiv[nchar(as.character(firstpos_diagnosis_dt)) != 9, firstpos_diagnosis_dt := NA]
+  allhiv[nchar(as.character(lastnegvd)) != 9, lastnegvd := NA]
   cols <- c('visitno','copies', 'new_copies', 'rct', 'lastnegv', 'lastnegvd', 'firstpos_diagnosis_vis')
   allhiv[, (cols):=lapply(.SD, .remove.spaces), .SDcols = cols]
   
@@ -116,14 +114,14 @@ process.allhiv <- function(allhiv)
   cat('- all of these had visitno == "R017"\n')
   
   tmp <- allhiv[is.na(firstpos_diagnosis_dt), unique(study_id)]
-  cat("There are ", length(tmp), " study_ids without collection dates\n")
+  cat("There are ", length(tmp), " study_ids without date of first positive\n")
   cat("- these had visit rounds in ", allhiv[study_id %in% tmp, paste0(unique(visitno), collapse = ', ')], '\n')
 
   # rename
   setnames(allhiv, c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis'), c('date_first_positive', 'visit_first_positive'))
   
   # NAs in each col
-  print.which.NA(allhiv, name='allhiv')
+  print.which.NA(allhiv, 'allhiv')
   
   return(allhiv)
 }
@@ -237,7 +235,7 @@ make.date.first.last.visit <- function(hiv)
 {
         tmp <- hiv[, list(min=min(hivdate), max=max(hivdate)), by='study_id']
         stopifnot(tmp[, .lu(study_id) == .N ])
-        cat(quest[, sum(! study_id %in% tmp$study_id)], "participants do not have first and last visit dates\n")
+        cat(tmp[, sum(! study_id %in% tmp$study_id)], "participants do not have first and last visit dates\n")
         setnames(tmp, c('min', 'max'), c('date_first_visit', 'date_last_visit'))
         return(tmp)
 }
@@ -245,9 +243,8 @@ make.date.first.last.visit <- function(hiv)
 make.time.since.infection <- function(time.since.infection)
 {
         colnames(time.since.infection)[1:3] <- tolower(colnames(time.since.infection))[1:3]
-        time.since.infection <- merge(aik, time.since.infection, by='aid')
-        
-        setnames(time.since.infection, c('visit_dt', 'pt_id'), c('date_collection', 'study_id'))
+
+        setnames(time.since.infection, c('visit_dt'), c('date_collection'))
 
         time.since.infection[, date_collection := as.Date(date_collection)]
         time.since.infection <- time.since.infection[, .(study_id, date_collection, TSI_estimated_mean, TSI_estimated_min, TSI_estimated_max)]
@@ -270,11 +267,11 @@ keep.likely.transmission.pairs <- function(dchain, threshold){
   dchain[, `:=` (H1=NULL, H2=NULL)]
 }
 
-get.meta.data <- function(quest, aik, date.first.positive, time.since.infection)
+get.meta.data <- function(quest, date.first.positive, date.first.last.visit, aik, community.keys)
 {
   # Start building metadata
   meta <- copy(quest)
-  meta <- unique(meta[, .(study_id, sex, birthdat, comm_num, intdate)])
+  meta <- unique(meta[, .(study_id, sex, birthdat, comm_num, intdate, round)])
 
   # study migrants
   setkey(meta, study_id, intdate)
@@ -286,87 +283,148 @@ get.meta.data <- function(quest, aik, date.first.positive, time.since.infection)
   
   # community key
   colnames(community.keys) <- tolower(colnames(community.keys))
-  community.keys[, comm := ifelse(strsplit(comm_num_a, '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'comm_num_a']
+  community.keys[, comm := ifelse(strsplit(as.character(comm_num_a), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'comm_num_a']
   meta <- merge(meta, community.keys[, .(comm_num_raw, comm)], by.x = 'comm_num', by.y = 'comm_num_raw', all.x = T)
   meta[, `:=` (intdate=NULL, is_latest=NULL, comm_num=NULL)]
   meta <- unique(meta)
+  
+  # list rounds
+  tmp <- meta[, list(round = paste0(round, collapse = "_")), by ='study_id' ]
+  meta <- merge(unique(select(meta, -round)), tmp, by ='study_id')
   stopifnot(meta[, .lu(study_id) == .N])
-  meta[, round:='R15-R18']
 
   # get dates of first and last visit
   meta <- merge(meta,date.first.last.visit, by='study_id')
   
   # Get anonymised ID
-  aik <- aik[grepl('RK',pt_id), ]
-  aik[grepl('RK',pt_id) & ! (pt_id %in% meta$study_id),] -> missing 
-  cat('Out of ', aik[, .N], 'Rakai study_ids in our previous PHSC analysis, ',aik[, sum(pt_id %in% meta$study_id)], 'are in this metadata\n ')
-  # Careful: our Phyloscanner analysis may contain sequences
-  # sampled prior to round 15
-  # Look at aik and meta.rccs.2 for fairer comparison
   meta <- merge(meta, aik, by.x='study_id', by.y='pt_id', all.x=T)
   
   # Add times first positive
   # stopifnot(meta[!study_id %in%  hiv$study_id, .N==0])
   meta <- merge(meta, date.first.positive[, .(study_id, date_first_positive)], by='study_id')
-
-  # we do not currently have the date of first visit.
-  # however this is not necessary if we know the date of first positive test for everyone
-  stopifnot(meta[is.na(date_first_positive)] != 0)
   
   # compute ages:
   meta[ , `:=` (age_first_positive = .year.diff(date_first_positive, birthdat))]
+  meta[ , `:=` (age_first_visit = .year.diff(date_first_visit, birthdat))]
+  
+  setnames(meta, c('aid', 'birthdat'), c('aid', 'date_birth'))
+  setcolorder(meta, c('study_id', 'aid','sex', 'comm', 'date_birth','round', 'age_first_positive'))
+  stopifnot(meta[, .lu(study_id) == .N, ])
+
+  return(meta)
+}
+
+process.meta.data <- function(raw_metadata, aik, community.keys){
+  
+  # make date format
+  raw_metadata[, sample_date := as.Date(sample_date, format = '%Y-%m-%d')]
+  raw_metadata[, firstposvd := as.Date(firstposvd, format = '%Y-%m-%d')]
+  
+  # remove id with no information
+  raw_metadata[is.na(sample_date), sample_date := firstposvd]
+  raw_metadata <- raw_metadata[!is.na(sample_date)]
+  
+  # study migrants
+  setkey(raw_metadata, study_id, sample_date)
+  tmp <- unique(raw_metadata[,.(study_id, community_number)])
+  tmp <- tmp[, .N, by= study_id][N > 1, study_id]
+  raw_metadata[, is_migrant:=ifelse(study_id %in% tmp, TRUE, FALSE)]
+  raw_metadata[, is_latest:=(sample_date == max(sample_date)), by='study_id']
+  raw_metadata <- raw_metadata[is_latest == T]
+  
+  # find community
+  colnames(community.keys) <- tolower(colnames(community.keys))
+  community.keys[, comm := ifelse(strsplit(as.character(comm_num_a), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'comm_num_a']
+  raw_metadata <- merge(raw_metadata, community.keys[, .(comm_num_raw, comm)], by.x = 'community_number', by.y = 'comm_num_raw', all.x = T)
+  raw_metadata[, `:=` (community_number=NULL)]
+  raw_metadata <- unique(raw_metadata)
+  
+  # input birthdate
+  raw_metadata[, date_birth := as.Date(paste0(birthyr, '-', birthmo, '-', '01'), format = '%Y-%m-%d')]
+  
+  # get age first positive
+  setnames(raw_metadata, c('firstposvd'), c('date_first_positive'))
+  
+  # find date first, last visit and round
+  tmp <- raw_metadata[, list(date_first_visit = min(sample_date), 
+                             date_last_visit = max(sample_date),
+                             round = paste0('R0', round, collapse = "_")), by = 'study_id']
+  raw_metadata <- merge(unique(select(raw_metadata, - sample_date, -round)), tmp , by = 'study_id')
+  stopifnot(raw_metadata[, length(unique(study_id))] == nrow(raw_metadata))
+  
+  # find age at first visit and age first positive 
+  raw_metadata[, age_first_visit := .year.diff(date_first_visit, date_birth)]
+  raw_metadata[, age_first_positive := .year.diff(date_first_positive, date_birth)]
+  
+  # Get anonymised ID
+  raw_metadata <- merge(raw_metadata, aik, by.x='study_id', by.y='pt_id', all.x=T)
+  
+  # keep variable of interest
+  raw_metadata[, .(study_id, aid, sex, comm, date_birth, round, age_first_positive, is_migrant, 
+                   date_first_visit, date_last_visit, date_first_positive, age_first_visit)]
+  
+}
+
+.f <- function(x){round(x, 1)}
+
+find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate){
   
   # time.since.infection to produce age at infection and time.since.infection
-  if(make.TSI.linear.adjustment)
+  if(use.TSI.estimate)
   {
     cat("# MAKE TSI ADJUSTMENT\n")
-    tmp <- unique(meta[,.(study_id, birthdat)])
+    tmp <- unique(meta[,.(study_id, date_birth)])
     tmp <- merge(time.since.infection, tmp, by='study_id')
-    tmp[, age_collection := .year.diff(date_collection, birthdat)]
+    tmp[, age_collection := .year.diff(date_collection, date_birth)]
     cols <- grep('TSI_estimated', colnames(tmp), value=T)
-    tmp[, `:=` (TSI_estimated_mean = age_collection - TSI_estimated_mean,
-                TSI_estimated_min = age_collection - TSI_estimated_min,
-                TSI_estimated_max = age_collection - TSI_estimated_max)]
-    .f <- function(x){round(x, 1)}
+    tmp[, `:=` (age_infection_mean = age_collection - TSI_estimated_mean,
+                age_infection_max = age_collection - TSI_estimated_min,
+                age_infection_min = age_collection - TSI_estimated_max)]
     tmp[, (cols) := lapply(.SD, .f),.SDcols=cols]
-    setnames(tmp, 'TSI_estimated_mean', 'age_infection')
+    setnames(tmp, 'age_infection_mean', 'age_infection')
     tmp <- tmp[, .(study_id, age_infection)]
     
     meta <- merge(meta, tmp, by='study_id', all.x=T) 
     
     tmp <- unique(meta[,.(study_id, age_infection)])
-    cat("We have ", tmp[, sum(!is.na(age_infection))], "TSI estimates out of", tmp[,.N], "reported HIV positive inds\n")
+    cat(tmp[, sum(!is.na(age_infection))], "TSI estimates out of", tmp[,.N], "individuals in meta data\n")
     
     cat(tmp[is.na(age_infection), .N], " HIV-positive individuals do not have an estimate for age at infection\n" )
     cat(tmp[is.na(age_infection), round(mean(study_id %in% time.since.infection$study_id)*100,2)], "% of which are included in the TSI analysis and do not have sampling date\n")
-
+    
   }else{
     
     cat("# ASSUME INFECTION 1y PRIOR TO DIAGNOSIS\n")
     meta[, age_infection := age_first_positive - 1]
+    meta[is.na(age_first_positive), age_infection := age_first_visit - 1]
     tmp <- unique(meta[, .(study_id,age_infection)])
     cat(tmp[age_infection <= 16, .N], "out of", tmp[, .N], "HIV-positive individuals are estimated to have been infected prior to 16 yo\n")
-  
+    
+    cat(tmp[is.na(age_infection), .N], " HIV-positive individuals do not have an estimate for age at infection\n" )
+    
   }
-  meta[, date_infection := date_first_positive - (age_first_positive - age_infection)*365]
   
-  setnames(meta, c('aid', 'birthdat'), c('aid', 'date_birth'))
-  setcolorder(meta, c('study_id', 'aid','sex', 'comm', 'date_birth','round', 'age_first_positive', 'age_infection'))
-  stopifnot(meta[, .lu(study_id) == .N, ])
+  meta[, `:=` (date_birth = as.Date(date_birth),
+               date_first_visit = as.Date(date_first_visit),
+               date_last_visit = as.Date(date_last_visit),
+               date_first_positive = as.Date(date_first_positive))]
+  
+  meta[, date_infection := date_first_visit - age_infection]
+  
   return(meta)
 }
 
-pairs.get.meta.data <- function(dchain, meta){
+pairs.get.meta.data <- function(chain, meta, aik){
   
   # stopifnot(unique(dchain$SOURCE) %in% unique(meta_data$aid))
   # stopifnot(unique(dchain$RECIPIENT) %in% unique(meta_data$aid))
-        meta <- copy(meta_data); dchain <- copy(chain)
+  meta <- copy(meta_data); 
   
   # merge by source, then recipient
   tmp <- copy(meta)
   names(tmp) = paste0(names(tmp), '.SOURCE')
   
-  tmp1 <- merge(dchain, tmp, by.x = 'SOURCE', by.y = 'aid.SOURCE')
+  tmp1 <- merge(chain, tmp, by.x = 'SOURCE', by.y = 'aid.SOURCE')
   tmp <- copy(meta)
   names(tmp) = paste0(names(tmp), '.RECIPIENT')
   tmp1 <- merge(tmp1, tmp, by.x = 'RECIPIENT', by.y = 'aid.RECIPIENT')
@@ -375,8 +433,8 @@ pairs.get.meta.data <- function(dchain, meta){
   tmp1[, age_transmission.SOURCE := as.numeric(date_infection.RECIPIENT - date_birth.SOURCE)/365]
   
   # individuals without meta data
-  missing_indiv = unique(c(dchain$SOURCE, dchain$RECIPIENT)[!(c(dchain$SOURCE, dchain$RECIPIENT) %in% meta$aid)])
-  missing_indiv <- .aid2pt(missing_indiv)
+  missing_indiv = unique(c(chain$SOURCE, chain$RECIPIENT)[!(c(chain$SOURCE, chain$RECIPIENT) %in% meta$aid)])
+  missing_indiv <- .aid2pt(missing_indiv, aik)
   cat('There are ', length(missing_indiv), 'indivs without meta data:\n' )
   missing_indiv <- grep('RK-', missing_indiv, value=T)
   cat('- ', length(missing_indiv), 'of which are in the Rakai Cohort.\n')
