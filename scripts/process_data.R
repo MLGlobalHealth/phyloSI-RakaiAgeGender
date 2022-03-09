@@ -25,7 +25,7 @@ if(dir.exists('/home/andrea'))
   indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
   outdir <- '~/Documents/Box/2021/phyloflows'
-  file.path(indir.deepsequencedata,'RCCS_R15_18')
+  file.path(indir.deepsequencedata,'RCCS_R15_R18')
 }
 
 # indicators 
@@ -56,10 +56,10 @@ file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI
 outdir.lab <- file.path(outdir, lab); dir.create(outdir.lab)
 
 # Latest data from Rakai's CCS (Joseph's data)
-file.path.allhiv <- file.path(indir.deepsequencedata, 'RCCS_R15_18', 'All_HIVpcr_for_questR15_R18_220129.csv')
-file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_18', 'FlowR15_R18_VoIs_220129.csv')
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_18', 'HIV_R15_R18_VOIs_220129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_18', 'quest_R15_R18_VoIs_220129.csv')
+file.path.allhiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'All_HIVpcr_for_questR15_R18_220129.csv')
+file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv')
+file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
 
 # load functions
 source(file.path(indir.repository, 'functions', 'summary_functions.R'))
