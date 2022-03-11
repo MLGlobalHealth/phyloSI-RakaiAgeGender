@@ -67,6 +67,8 @@ samples <- rstan::extract(fit)
 ## convergence diagnostics 
 make_convergence_diagnostics_stats(fit, outdir.table)
 
+range_age_observed <- find_range_age_observed(copy(pairs), df_group)
+
 ## intensity of the poisson process
 cat("\nPlot transmission intensity\n")
 intensity_PP <- summarise_var_by_age_group(samples, 'log_lambda', df_group, df_age, transform = 'exp')
@@ -81,8 +83,6 @@ plot_incident_cases(incident_cases, outdir.fig)
 
 ## shift in age-specific transmission dynamics
 cat("\nPlot age-specific transmission dynamics\n")
-
-range_age_observed <- find_range_age_observed(copy(pairs), df_group)
 
 # median age of source
 age_source <- find_age_source_by_age_group(samples, df_group, df_age)
