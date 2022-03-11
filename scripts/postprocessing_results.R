@@ -7,10 +7,10 @@ library(ggpubr)
 library(gridExtra)
 library(matrixStats)
 
-jobname <- 'cutoff2015priorgp2'
-.stan_model <- 'gp_220107'
+jobname <- '2014_priorGP'
+.stan_model <- 'gp_220108'
 DEBUG <- F
-.JOBID = 19904
+.JOBID = 27103
 lab <- paste0("MRC_FALSE_OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
 
 .indir <- "/rds/general/user/mm3218/home/git/phyloflows"
@@ -51,6 +51,10 @@ source(file.path(.indir, 'functions', 'postprocessing_plot_functions.R'))
 path.to.stan.data <- file.path(datadir, paste0("stanin_",lab,".RData"))
 load(path.to.stan.data)
 
+# load incidence from Adam
+infile.incidence <- file.path(dirname(datadir), 'RCCS_incident_cases_220311.csv')
+incidence <- read.csv(infile.incidence)
+
 # paths
 path.to.stan.output = file.path(datadir, paste0(.stan_model,'-', .JOBID), paste0(.stan_model,'-', .JOBID, '_', lab, '.rds'))
 outdir.fig <- file.path(.outdir, 'figures', paste0(.stan_model,'-', .JOBID))
@@ -69,7 +73,15 @@ intensity_PP <- summarise_var_by_age_group(samples, 'log_lambda', df_group, df_a
 count_data <- prepare_count_data(stan_data, df_age, df_group)
 plot_intensity_PP(intensity_PP, count_data, outdir.fig)
 
+## number of incident cases
+cat("\nPlot incident cases\n")
+incident_cases <- find_incident_cases_by_group(samples, df_group, df_age, incidence, range_age_observed)
+plot_incident_cases(incident_cases, outdir.fig)
+
+
 ## shift in age-specific transmission dynamics
+cat("\nPlot age-specific transmission dynamics\n")
+
 range_age_observed <- find_range_age_observed(copy(pairs), df_group)
 
 # median age of source

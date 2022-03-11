@@ -132,6 +132,31 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
   ggsave(p, file = paste0(outdir, '-intensity_transmission_scaled.png'), w = 10, h = 7)
 } 
 
+
+plot_incident_cases <- function(incident_cases, outdir){
+  
+  p <- ggplot(incident_cases, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+    geom_raster(aes(fill = M)) + 
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+    theme_bw() + 
+    labs(x = 'Age at infection recipient', fill = 'Estimated incident cases\nper year', 
+         y= 'Age at transmission source',size='Pairs\ncount') +
+    geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+    facet_grid(label_direction~label_time) + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    scale_fill_viridis_c() + 
+    scale_x_continuous(expand = c(0,0)) + 
+    scale_y_continuous(expand = c(0,0)) + 
+    scale_size_continuous(range = c(1, 3), breaks = sort(unique(count_data[count > 0]$count))) +
+    guides(fill = guide_colorbar(order = 1), 
+           shape = guide_legend(order = 2)) 
+  ggsave(p, file = paste0(outdir, '-incident_cases.png'), w = 7, h = 7)
+  
+} 
+
+
 plot_median_age_source <- function(age_source, outdir){
   
   cat("\nPlot mean age at transmission of the source by age at infection of recipient\n")

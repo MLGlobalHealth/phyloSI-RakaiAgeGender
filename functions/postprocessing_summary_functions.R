@@ -254,14 +254,16 @@ find_age_source_by_group <- function(samples, df_group, df_age, incidence, range
   tmp1 <- tmp1[, list(value = sum(pi * age_transmission.SOURCE)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
   
   # weight recipient by incidence
-  incidence[, is_before_cutoff_date := as.numeric(is_before_cutoff_date)]
-  incidence <- merge(incidence, range_age_observed, by = c('is_mf', 'is_before_cutoff_date'))
-  incidence <- incidence[age >= min_age_infection.RECIPIENT & age <= max_age_infection.RECIPIENT]
+  di <- as.data.table(incidence)
+  di <- di[ROUND == 16]
+  di[, is_mf := ifelse(SEX == 'F', 1, 0)]
+  di <- merge(di, range_age_observed, by = c('is_mf'), allow.cartesian=TRUE)
+  di <- di[AGEYRS >= min_age_infection.RECIPIENT & AGEYRS <= max_age_infection.RECIPIENT]
   
-  tmp2 <- incidence[, list(total_incidence = sum(incidence)), by = c('index_group')]
-  tmp2 <- merge(incidence, tmp2, by = 'index_group')
-  tmp2[, incidence_weight := incidence / total_incidence]
-  setnames(tmp2, 'age', 'age_infection.RECIPIENT')
+  tmp2 <- di[, list(total_incidence = sum(INCIDENCE)), by = c('SEX')]
+  tmp2 <- merge(di, tmp2, by = 'SEX')
+  tmp2[, incidence_weight := INCIDENCE / total_incidence]
+  setnames(tmp2, 'AGEYRS', 'age_infection.RECIPIENT')
   
   tmp1 <- merge(tmp1, tmp2, by = c('age_infection.RECIPIENT', 'index_group'))
   tmp1 <- tmp1[, list(value = sum(incidence_weight * value)), by = c('iterations', 'index_group')]
@@ -352,15 +354,16 @@ find_age_recipient_by_group <- function(samples, df_group, df_age, incidence, ra
   tmp1 <- tmp1[, list(value = sum(pi * age_infection.RECIPIENT)), by = c('iterations', 'index_group', 'age_transmission.SOURCE')]
   
   # weight recipient by incidence
-  incidence[, is_before_cutoff_date := as.numeric(is_before_cutoff_date)]
-
-  incidence <- merge(incidence, range_age_observed, by = c('is_mf', 'is_before_cutoff_date'))
-  incidence <- incidence[age >= min_age_transmission.SOURCE & age <= max_age_transmission.SOURCE]
+  di <- as.data.table(incidence)
+  di <- di[ROUND == 16]
+  di[, is_mf := ifelse(SEX == 'M', 1, 0)]
+  di <- merge(di, range_age_observed, by = c('is_mf'), allow.cartesian=TRUE)
+  di <- di[AGEYRS >= min_age_infection.RECIPIENT & AGEYRS <= max_age_infection.RECIPIENT]
   
-  tmp2 <- incidence[, list(total_incidence = sum(incidence)), by = c('index_group')]
-  tmp2 <- merge(incidence, tmp2, by = 'index_group')
-  tmp2[, incidence_weight := incidence / total_incidence]
-  setnames(tmp2, 'age', 'age_transmission.SOURCE')
+  tmp2 <- di[, list(total_incidence = sum(INCIDENCE)), by = c('SEX')]
+  tmp2 <- merge(di, tmp2, by = 'SEX')
+  tmp2[, incidence_weight := INCIDENCE / total_incidence]
+  setnames(tmp2, 'AGEYRS', 'age_transmission.SOURCE')
   
   tmp1 <- merge(tmp1, tmp2, by = c('age_transmission.SOURCE', 'index_group'))
   tmp1 <- tmp1[, list(value = sum(incidence_weight * value)), by = c('iterations', 'index_group')]
@@ -373,6 +376,45 @@ find_age_recipient_by_group <- function(samples, df_group, df_age, incidence, ra
   
   return(tmp1)
 }
+
+find_incident_cases_by_group <- function(samples, df_group, df_age, incidence, range_age_observed){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+
+  tmp1 <- merge(tmp1, range_age_observed, by = 'index_group')
+  # tmp1 <- tmp1[age_infection.RECIPIENT >= min_age_infection.RECIPIENT & age_infection.RECIPIENT <= max_age_infection.RECIPIENT]
+  # tmp1 <- tmp1[age_transmission.SOURCE >= min_age_transmission.SOURCE & age_transmission.SOURCE <= max_age_transmission.SOURCE]
+
+  # find incident cases 
+  di <- as.data.table(incidence)
+  di <- di[ROUND == 16]
+  di[, is_mf := ifelse(SEX == 'F', 1, 0)]
+  setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'age_infection.RECIPIENT'))
+
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, pi := value / total_value]
+  
+  tmp1 <- tmp1[, value := INFECTIONS * pi]
+  
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'index_age')]	
+  tmp1 = dcast(tmp1, index_group + index_age ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  
+  return(tmp1)
+}
+
 
 prepare_count_data <- function(stan_data, df_age, df_group){
 
