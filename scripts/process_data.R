@@ -13,7 +13,7 @@ require(lubridate)
 # change as appropriate
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 {
-  indir.repository <- '~/git/phyloflows'
+  indir <- '~/git/phyloflows'
   indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
@@ -21,7 +21,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 
 if(dir.exists('/home/andrea'))
 {
-  indir.repository <-'~/git/phyloflows'
+  indir <-'~/git/phyloflows'
   indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
   outdir <- '~/Documents/Box/2021/phyloflows'
@@ -35,10 +35,11 @@ threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
+only.inland <- T
 
 cutoff_date <- as.Date('2014-01-01')
-jobname <- '2014_IpriorGP'
-lab <- paste0('OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_jobname_', jobname)
+jobname <- 'cutoff_2014'
+lab <- paste0('OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_onlyinland', only.inland, '_jobname_', jobname)
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -49,10 +50,10 @@ file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anon
 outdir.lab <- file.path(outdir, lab); dir.create(outdir.lab)
 
 # load functions
-source(file.path(indir.repository, 'functions', 'summary_functions.R'))
-source(file.path(indir.repository, 'functions', 'plotting_functions.R'))
-source(file.path(indir.repository, 'functions', 'stan_utils.R'))
-source(file.path(indir.repository, 'functions', 'check_potential_TNet.R'))
+source(file.path(indir, 'functions', 'summary_functions.R'))
+source(file.path(indir, 'functions', 'plotting_functions.R'))
+source(file.path(indir, 'functions', 'stan_utils.R'))
+source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 
 # load chains
 load(file.path.chains.data)
@@ -99,6 +100,10 @@ if(remove.young.individuals){
   cat('Removing ', nrow(pairs.all[age_infection.SOURCE < 11 | age_infection.RECIPIENT < 11]), ' pairs\n')
   pairs.all <- pairs.all[age_infection.SOURCE >= 11 & age_infection.RECIPIENT >= 11]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
+}
+if(only.inland){
+  cat('\Include only inland recipients')
+  pairs.all <- pairs.all[comm.RECIPIENT == 'inland']
 }
 
 print.which.NA(pairs.all)
