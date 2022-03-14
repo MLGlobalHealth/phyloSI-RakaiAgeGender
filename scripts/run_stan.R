@@ -55,8 +55,8 @@ if(DEBUG){
                   init=rep(list(stan_init), 4))
 }
 
-sum = summary(fit)
-sum$summary[which(sum$summary[,9] < 100),]
+# sum = summary(fit)
+# sum$summary[which(sum$summary[,9] < 100),]
 
 file = paste0(outfile, "-stanout_", jobname, ".rds")
 cat("Save file ", file)

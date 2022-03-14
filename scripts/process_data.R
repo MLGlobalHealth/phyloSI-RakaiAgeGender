@@ -9,7 +9,7 @@ library(ggtree)
 library(ggnet) 
 require(lubridate)
 
-# change as appropriate
+# laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 {
   indir <- '~/git/phyloflows'
@@ -36,6 +36,12 @@ if(dir.exists('/home/andrea'))
   dir.create(outdir)
 }
 
+# hpc
+if(dir.exists('/rds/general/project/ratmann_pangea_deepsequencedata/')){
+  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+}
+
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
 print(args_line)
 if(length(args_line) > 0)
@@ -51,6 +57,7 @@ if(length(args_line) > 0)
 }
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
+outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
 
 # indicators 
 cutoff_date <- as.Date('2014-01-01')
@@ -155,12 +162,12 @@ df_group <- get.group.map()
 #
 
 if(1){
-  plot_hist_age_infection(copy(pairs), outfile)
-  plot_hist_time_infection(copy(pairs), cutoff_date, outfile)
-  plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile)
-  plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outfile)
-  plot_CI_age_infection(pairs, outfile)
-  plot_CI_age_transmission(pairs, outfile)
+  plot_hist_age_infection(copy(pairs), outfile.figures)
+  plot_hist_time_infection(copy(pairs), cutoff_date, outfile.figures)
+  plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)
+  plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outfile.figures)
+  plot_CI_age_infection(pairs, outfile.figures)
+  plot_CI_age_transmission(pairs, outfile.figures)
   # phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outfile, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
 }
 
@@ -175,11 +182,11 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 8, n_knots_columns = 8, 
                                       X = unique(df_age$age_transmission.SOURCE),
                                       Y = unique(df_age$age_infection.RECIPIENT))
-stan_data <- add_prior_gp_mean(stan_data, df_age, outfile)
+stan_data <- add_prior_gp_mean(stan_data, df_age, outfile.figures)
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)
 tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
-save(list=tmp, file=file.path(outdir.jobname, paste0("stanin_",jobname,".RData")) )
+save(list=tmp, file=paste0(outfile, "-stanin_",jobname,".RData")) 
 
 

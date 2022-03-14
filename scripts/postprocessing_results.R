@@ -39,14 +39,14 @@ source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
-# load data
-path.to.stan.data <- file.path(outfile, paste0("stanin_",jobname,".RData"))
-load(path.to.stan.data)
-
 # paths
 path.to.stan.output = paste0(outfile, "-stanout_", jobname, ".rds")
-outdir.fig <- file.path(outdir, 'figures', paste0(stan_model,'-', .JOBID))
-outdir.table <- file.path(outdir, 'tables', paste0(stan_model,'-', .JOBID))
+outdir.fig <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
+outdir.table <- file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
+
+# load data
+path.to.stan.data <- paste0(outfile, "-stanin_",jobname,".RData")
+load(path.to.stan.data)
 
 # samples 
 fit <- readRDS(path.to.stan.output)

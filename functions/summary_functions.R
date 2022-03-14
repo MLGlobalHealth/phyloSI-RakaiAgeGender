@@ -541,19 +541,16 @@ get.age.map <- function(pairs, age_bands_reduced = 4){
                                     age_infection.RECIPIENT = ages_recipient$age))
   df_age <- age_map[order(age_transmission.SOURCE, age_infection.RECIPIENT)]
 
-  .bin.ages<- function(col)
-  {
-          ages <- df_age[, c(sort(unique(.SD))), .SDcols=col][[1]]
-          ages <- data.table(age_infection = ages, 
-                             tmp = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
-
-          tmp1 <- sub('(.*?)\\.', '\\1_reduced.', col)
-          setnames(ages, 'tmp', tmp1 )
-          df_age <- merge(df_age, ages, by.x = col, by.y = 'age_infection')
-  }
-  df_age <- .bin.ages("age_transmission.SOURCE")
-  df_age <- .bin.ages("age_infection.RECIPIENT")
-  df_age
+  ages <- sort(unique(df_age$age_transmission.SOURCE))
+  ages <- data.table(age_infection = ages, 
+                     age_transmission_reduced.SOURCE = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
+  df_age <- merge(df_age, ages, by.x = 'age_transmission.SOURCE', by.y = 'age_infection')
+  
+  
+  ages <- sort(unique(df_age$age_infection.RECIPIENT))
+  ages <- data.table(age_infection = ages, 
+                     age_infection_reduced.RECIPIENT = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
+  df_age <- merge(df_age, ages, by.x = 'age_infection.RECIPIENT', by.y = 'age_infection')
 
   setkey(df_age, age_transmission.SOURCE, age_infection.RECIPIENT)
   

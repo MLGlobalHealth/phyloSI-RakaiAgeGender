@@ -26,10 +26,13 @@ STAN_MODEL=$STAN_MODEL
 JOBNAME=$JOBNAME
   
 # main directory
-mkdir \$PWD/\$STAN_MODEL-\$JOBNAME
+CWD=\$PWD/\$STAN_MODEL-\$JOBNAME
+
+mkdir \$CWD
+mkdir \$CWD/figures
   
-Rscript \$INDIR/scripts/process_data.R -indir \$INDIR -outdir \$PWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
-Rscript \$INDIR/scripts/run_stan.R -indir \$INDIR -outdir \$PWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
+Rscript \$INDIR/scripts/process_data.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
+Rscript \$INDIR/scripts/run_stan.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
   
 cp -R --no-preserve=mode,ownership \$PWD/* \$OUTDIR
   
@@ -47,14 +50,18 @@ cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME-postprocessing.pbs <<EOF
 module load anaconda3/personal
 
 INDIR=$INDIR
+OUTDIR=$OUTDIR
 STAN_MODEL=$STAN_MODEL
 JOBNAME=$JOBNAME
   
-# directories for figure and table
-mkdir \$PWD/\$STAN_MODEL-\$JOBNAME/figures
-mkdir \$PWD/\$STAN_MODEL-\$JOBNAME/tables
+# main directory
+CWD=\$OUTDIR/\$STAN_MODEL-\$JOBNAME
 
-Rscript \$INDIR/scripts/postprocessing_results.R -indir \$INDIR -outdir \$PWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+# directories for figure and table
+mkdir \$CWD/figures
+mkdir \$CWD/tables
+
+Rscript \$INDIR/scripts/postprocessing_results.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 
 EOF
   
