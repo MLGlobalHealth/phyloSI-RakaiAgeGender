@@ -2,7 +2,7 @@ library(rstan)
 library(data.table)	
 
 jobname <- '2014_IpriorGP'
-.stan_model <- 'gp_220108b'
+.stan_model <- 'gp_220108'
 DEBUG <- F
 JOBID = 12
 lab <- paste0("OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
@@ -71,7 +71,6 @@ if(DEBUG){
 sum = summary(fit)
 sum$summary[which(sum$summary[,9] < 100),]
 
-.JOBID <- 'TEST'
 file = file.path(outdir, paste0(.stan_model,'-', .JOBID), paste0(.stan_model,'-', .JOBID, '_', lab, '.rds'))
 cat("Save file ", file)
 saveRDS(fit,file = file)
