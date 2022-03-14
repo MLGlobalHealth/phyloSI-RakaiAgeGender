@@ -504,7 +504,7 @@ add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
       coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +
       theme(legend.position = 'bottom') +
       geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'white') 
-    ggsave(file.path(outdir, paste0('Prior_transmissionRate.png')), w = 5, h = 5)
+    ggsave(paste0(outdir, '-Prior_transmissionRate.png'), w = 5, h = 5)
     
     tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_infection.RECIPIENT']
     tmp1 <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
@@ -524,7 +524,7 @@ add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
       theme(legend.position = 'bottom') +
       scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
       scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
-    ggsave(file.path(outdir, paste0('Prior_Agetransmission.png')), w = 5, h = 5)
+    ggsave(paste0(outdir, '-Prior_Agetransmission.png'), w = 5, h = 5)
     
     tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_transmission.SOURCE']
     tmp1 <- merge(tmp, tmp1, by = 'age_transmission.SOURCE')
@@ -544,7 +544,7 @@ add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
       theme(legend.position = 'bottom') + 
       scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
       scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
-    ggsave(file.path(outdir, paste0('Prior_AgeInfection.png')), w = 5, h = 5)
+    ggsave(file = paste0(outdir, '-Prior_AgeInfection.png'), w = 5, h = 5)
     
   }
   

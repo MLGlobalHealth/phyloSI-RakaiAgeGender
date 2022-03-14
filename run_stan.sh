@@ -20,6 +20,7 @@ JOB_TEMP=\${EPHEMERAL}/\${PBS_JOBID}
 mkdir -p \$JOB_TEMP
 cd \$JOB_TEMP  
 PWD=\$(pwd)
+OUTDIR=\$PWD/\$STAN_MODEL-\$JOBID
 DATADIR=$DATADIR
 INDIR=$INDIR
 STAN_MODEL=$STAN_MODEL
@@ -27,9 +28,10 @@ JOBID=$JOBID
 TAG=$TAG
   
 # main directory
-mkdir \$PWD/\$STAN_MODEL-\$JOBID
+mkdir \$OUTDIR
   
-Rscript \$INDIR/scripts/run_stan.R -indir \$INDIR -datadir \$DATADIR -outdir \$PWD -stan_model \$STAN_MODEL -JOBID \$JOBID -lab \$TAG
+Rscript \$INDIR/scripts/process_data.R -indir \$INDIR -datadir \$DATADIR -outdir \$OUTDIR -stan_model \$STAN_MODEL -JOBID \$JOBID -lab \$TAG
+Rscript \$INDIR/scripts/run_stan.R -indir \$INDIR -datadir \$DATADIR -outdir \$OUTDIR -stan_model \$STAN_MODEL -JOBID \$JOBID -lab \$TAG
   
 cp -R --no-preserve=mode,ownership \$PWD/* \$DATADIR
   

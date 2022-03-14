@@ -7,58 +7,46 @@ library(ggpubr)
 library(gridExtra)
 library(matrixStats)
 
-jobname <- '2014_priorGP'
-.stan_model <- 'gp_220108'
+jobname <- '2014_IpriorGP'
+stan_model <- 'gp_220108'
 DEBUG <- F
-.JOBID = 27103
-lab <- paste0("MRC_FALSE_OnlyHTX_TRUE_threshold_0.5", '_jobname_', jobname)
 
-.indir <- "/rds/general/user/mm3218/home/git/phyloflows"
-datadir <- "/rds/general/user/mm3218/home/projects/2021/phyloflows"
-.outdir <- file.path(datadir, lab, paste0(.stan_model,'-', .JOBID))
+indir <- "/rds/general/user/mm3218/home/git/phyloflows"
+outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
 
-if(0){
-  .indir <- '~/git/phyloflows'
-  datadir <- '~/Box\ Sync/2021/phyloflows/'
-  .outdir <- file.path(datadir, lab)
+if(0)
+{
+  indir <- '~/git/phyloflows'
 }
-
-datadir <- file.path(datadir, lab)
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
 print(args_line)
 if(length(args_line) > 0)
 {
   stopifnot(args_line[[1]]=='-indir')
-  stopifnot(args_line[[3]]=='-datadir')
-  stopifnot(args_line[[5]]=='-outdir')
-  stopifnot(args_line[[7]]=='-stan_model')
-  stopifnot(args_line[[9]]=='-JOBID')
-  stopifnot(args_line[[11]]=='-lab')
-  .indir <- args_line[[2]]
-  datadir <- args_line[[4]]
-  .outdir <- args_line[[6]]
-  .stan_model <- args_line[[8]]
-  .JOBID <- args_line[[10]]
-  lab <- args_line[[12]]
+  stopifnot(args_line[[3]]=='-outdir')
+  stopifnot(args_line[[5]]=='-stan_model')
+  stopifnot(args_line[[7]]=='-jobname')
+  indir <- args_line[[2]]
+  outdir <- args_line[[4]]
+  stan_model <- args_line[[6]]
+  jobname <- args_line[[8]]
 }
 
 # load functions
-source(file.path(.indir, 'functions', 'postprocessing_summary_functions.R'))
-source(file.path(.indir, 'functions', 'postprocessing_plot_functions.R'))
+source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
+source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
+
+outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
 # load data
-path.to.stan.data <- file.path(datadir, paste0("stanin_",lab,".RData"))
+path.to.stan.data <- file.path(outfile, paste0("stanin_",jobname,".RData"))
 load(path.to.stan.data)
 
-# load incidence from Adam
-infile.incidence <- file.path(dirname(datadir), 'RCCS_incident_cases_220311.csv')
-incidence <- read.csv(infile.incidence)
-
 # paths
-path.to.stan.output = file.path(datadir, paste0(.stan_model,'-', .JOBID), paste0(.stan_model,'-', .JOBID, '_', lab, '.rds'))
-outdir.fig <- file.path(.outdir, 'figures', paste0(.stan_model,'-', .JOBID))
-outdir.table <- file.path(.outdir, 'tables', paste0(.stan_model,'-', .JOBID))
+path.to.stan.output = paste0(outfile, "-stanout_", jobname, ".rds")
+outdir.fig <- file.path(outdir, 'figures', paste0(stan_model,'-', .JOBID))
+outdir.table <- file.path(outdir, 'tables', paste0(stan_model,'-', .JOBID))
 
 # samples 
 fit <- readRDS(path.to.stan.output)

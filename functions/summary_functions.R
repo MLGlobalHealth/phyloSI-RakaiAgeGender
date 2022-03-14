@@ -444,7 +444,7 @@ pairs.get.meta.data <- function(chain, meta, aik){
 }
 
 
-print.statements.about.pairs <- function(pairs, outdir){
+print.statements.about.pairs <- function(pairs){
   
   cat('\nThere is ', nrow(pairs), ' source-recipient pairs\n\n')
   
