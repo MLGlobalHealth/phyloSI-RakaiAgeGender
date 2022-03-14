@@ -155,13 +155,13 @@ plot_incident_cases <- function(incident_cases, outdir){
   
 } 
 
-plot_standardised_intensity_PP <- function(standardised_intensity_PP, outdir){
+plot_relative_intensity_PP <- function(relative_intensity_PP, outdir){
   
-  p <- ggplot(standardised_intensity_PP, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+  p <- ggplot(relative_intensity_PP, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_raster(aes(fill = M)) + 
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
     theme_bw() + 
-    labs(x = 'Age at infection recipient', fill = 'Standardised transmission flow', 
+    labs(x = 'Age at infection recipient', fill = 'Relative transmission flow', 
          y= 'Age at transmission source',size='Pairs\ncount') +
     geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
     facet_grid(label_direction~label_time) + 
@@ -173,9 +173,35 @@ plot_standardised_intensity_PP <- function(standardised_intensity_PP, outdir){
     scale_y_continuous(expand = c(0,0)) + 
     guides(fill = guide_colorbar(order = 1), 
            shape = guide_legend(order = 2)) 
-  ggsave(p, file = paste0(outdir, '-standardised_intensity_PP.png'), w = 7, h = 7)
+  ggsave(p, file = paste0(outdir, '-relative_intensity_PP.png'), w = 7, h = 7)
   
 } 
+
+plot_relative_intensity_PP_standardised <- function(relative_intensity_PP_aggregated, relative_incident_cases_aggregated, df_age_aggregated, outdir){
+  relative_intensity_PP_aggregated[, type := 'Unstandardised']
+  relative_incident_cases_aggregated[, type := 'Standardised']
+  
+  tmp <- rbind(relative_intensity_PP_aggregated, relative_incident_cases_aggregated)
+  tmp <- merge(tmp, unique(df_age_aggregated[, .(age_group_transmission.SOURCE, age_group_infection.RECIPIENT, 
+                                                 age_from.RECIPIENT, age_from.SOURCE)]), by = c('age_group_transmission.SOURCE', 'age_group_infection.RECIPIENT'))
+  tmp  <- tmp[age_from.RECIPIENT != 5 & age_from.SOURCE != 5]
+  tmp[, age_age_cat := paste0(age_group_transmission.SOURCE, '->', age_group_infection.RECIPIENT)]
+  
+  p <- ggplot(tmp, aes(x = age_age_cat)) + 
+    geom_bar(aes(y = M, fill = type), stat = 'identity', position = "dodge") + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, group = type), position = "dodge") + 
+    labs(x = 'Age source -> Age recipient', y = 'Relative transmission flows', fill = '') + 
+    theme_bw() +
+    facet_grid(label_direction~label_time)+
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom', 
+          axis.text.x = element_text(angle = 70,hjust =1)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
+  ggsave(p, file = paste0(outdir, '-relative_intensity_PP_standardised.png'), w = 9, h = 7)
+  
+}
+
 
 plot_median_age_source <- function(age_source, outdir){
   
