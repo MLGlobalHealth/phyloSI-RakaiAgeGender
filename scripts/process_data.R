@@ -58,6 +58,7 @@ if(length(args_line) > 0)
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
+if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
 
 # indicators 
 cutoff_date <- as.Date('2014-01-01')

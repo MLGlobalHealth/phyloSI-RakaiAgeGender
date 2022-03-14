@@ -149,13 +149,33 @@ plot_incident_cases <- function(incident_cases, outdir){
     scale_fill_viridis_c() + 
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
-    scale_size_continuous(range = c(1, 3), breaks = sort(unique(count_data[count > 0]$count))) +
     guides(fill = guide_colorbar(order = 1), 
            shape = guide_legend(order = 2)) 
   ggsave(p, file = paste0(outdir, '-incident_cases.png'), w = 7, h = 7)
   
 } 
 
+plot_standardised_intensity_PP <- function(standardised_intensity_PP, outdir){
+  
+  p <- ggplot(standardised_intensity_PP, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+    geom_raster(aes(fill = M)) + 
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+    theme_bw() + 
+    labs(x = 'Age at infection recipient', fill = 'Standardised transmission flow', 
+         y= 'Age at transmission source',size='Pairs\ncount') +
+    geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+    facet_grid(label_direction~label_time) + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    scale_fill_viridis_c() + 
+    scale_x_continuous(expand = c(0,0)) + 
+    scale_y_continuous(expand = c(0,0)) + 
+    guides(fill = guide_colorbar(order = 1), 
+           shape = guide_legend(order = 2)) 
+  ggsave(p, file = paste0(outdir, '-standardised_intensity_PP.png'), w = 7, h = 7)
+  
+} 
 
 plot_median_age_source <- function(age_source, outdir){
   
@@ -181,6 +201,30 @@ plot_median_age_source <- function(age_source, outdir){
     facet_grid(.~label_direction)
   
   ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeRecipient.png'), w = 7, h = 5)
+  
+}
+
+plot_incident_cases_age_source <- function(incident_cases_age_source, outdir){
+  
+  p <- ggplot(incident_cases_age_source) + 
+    geom_line(aes(x = age_transmission.SOURCE, y = M, col = label_time)) + 
+    geom_ribbon(aes(x = age_transmission.SOURCE, ymin= CL, ymax = CU, fill = label_time), alpha = 0.15) + 
+    geom_rect(data = range_age_observed, aes(xmin=max_age_infection.RECIPIENT, xmax=Inf, 
+                                             ymin=-Inf, ymax=Inf), alpha=.2) +
+    geom_rect(data = range_age_observed, aes(xmin=-Inf, xmax=min_age_infection.RECIPIENT, 
+                                             ymin=-Inf, ymax=Inf), alpha=.2) +
+    theme_bw() + 
+    labs(x = 'Age at transmission source', y = 'Median number of incident cases per year',
+         col = 'Date trasmission', fill = 'Date trasmission') +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    scale_x_continuous(expand = c(0,0)) + 
+    scale_y_continuous(expand = c(0,0)) + 
+    coord_cartesian(xlim = range_age_non_extended) +
+    facet_grid(.~label_direction)
+  
+  ggsave(p, file = paste0(outdir, '-incident_cases_age_source.png'), w = 7, h = 5)
   
 }
 

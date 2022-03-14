@@ -41,7 +41,7 @@ outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
 # paths
 path.to.stan.output = paste0(outfile, "-stanout_", jobname, ".rds")
-outdir.fig <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
+outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
 outdir.table <- file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
 
 # load data
@@ -61,36 +61,42 @@ range_age_observed <- find_range_age_observed(copy(pairs), df_group)
 cat("\nPlot transmission intensity\n")
 intensity_PP <- summarise_var_by_age_group(samples, 'log_lambda', df_group, df_age, transform = 'exp')
 count_data <- prepare_count_data(stan_data, df_age, df_group)
-plot_intensity_PP(intensity_PP, count_data, outdir.fig)
+plot_intensity_PP(intensity_PP, count_data, outfile.figures)
+
+## standardised intensity of the poisson process
+standardised_intensity_PP <- find_standardised_standardised_intensity_PP(samples, df_group, df_age)
+plot_standardised_intensity_PP(standardised_intensity_PP, outfile.figures)
 
 ## number of incident cases
 cat("\nPlot incident cases\n")
 incident_cases <- find_incident_cases_by_group(samples, df_group, df_age, incidence, range_age_observed)
-plot_incident_cases(incident_cases, outdir.fig)
+plot_incident_cases(incident_cases, outfile.figures)
 
-
+incident_cases_age_source <- find_incident_cases_by_age_source_group(samples, df_group, df_age, incidence)
+plot_incident_cases_age_source(incident_cases_age_source, outfile.figures)
+  
 ## shift in age-specific transmission dynamics
 cat("\nPlot age-specific transmission dynamics\n")
 
 # median age of source
 age_source <- find_age_source_by_age_group(samples, df_group, df_age)
-plot_median_age_source(age_source, outdir.fig)
+plot_median_age_source(age_source, outfile.figures)
 
 age_source_difference <- find_age_source_difference_by_age_group(samples, df_group, df_age)
-plot_median_age_source_difference(age_source_difference, outdir.fig)
+plot_median_age_source_difference(age_source_difference, outfile.figures)
 
 age_source_overall <- find_age_source_by_group(samples, df_group, df_age, incidence, range_age_observed)
-plot_median_age_source_overall(age_source_overall, outdir.fig)
+plot_median_age_source_overall(age_source_overall, outfile.figures)
 
 # median age of recipient
 age_recipient <- find_age_recipient_by_age_group(samples, df_group, df_age)
-plot_median_age_recipient(age_recipient, outdir.fig)
+plot_median_age_recipient(age_recipient, outfile.figures)
 
 age_recipient_difference <- find_age_recipient_difference_by_age_group(samples, df_group, df_age)
-plot_median_age_recipient_difference(age_recipient_difference, outdir.fig)
+plot_median_age_recipient_difference(age_recipient_difference, outfile.figures)
 
 age_recipient_overall <- find_age_recipient_by_group(samples, df_group, df_age, incidence, range_age_observed)
-plot_median_age_recipient_overall(age_recipient_overall, outdir.fig)
+plot_median_age_recipient_overall(age_recipient_overall, outfile.figures)
 
 
 cat("End of postprocessing_results.R")
