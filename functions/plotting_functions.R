@@ -329,7 +329,6 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
   ggsave(p, filename = paste0(outdir, '-AgeInfectionRecipient_Unstratified.png'), w = 8, h = 5)
 }
 
-
 plot_pairs_infection_dates <- function(pairs.all)
 {
   
@@ -355,10 +354,10 @@ plot_pairs_infection_dates <- function(pairs.all)
   ggsave(p, filename = file.path(outdir, paste0('PairsInfectionDates.png')), w = 8, h = 10)
 }
 
-
 # Tranmission Network plot from: https://github.com/olli0601/Phyloscanner.R.utilities/blob/7c58edac4812e53b0b67e69770f70e9d3826881d/R/phyloscan.fun.plotting.R
 phsc.plot.transmission.network<- function(dchain, dc, pairs, outdir=NULL, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.02, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=c('M' = 15, 'F' = 17), node.fill.values=c('F'='hotpink2', 'M'='steelblue2') , threshold.linked=NA_real_, N_min = 4)
 {	
+  library(phyloscannerR)
   # translate dchain and dc in terms of df and di as required
   tmp.dchain <- copy(dchain)
   tmp.dc <- copy(dc)

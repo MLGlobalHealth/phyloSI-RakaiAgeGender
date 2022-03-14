@@ -1,5 +1,4 @@
 library(data.table)
-library(phyloscannerR)
 library(igraph)
 library(dplyr)
 library(ggplot2)

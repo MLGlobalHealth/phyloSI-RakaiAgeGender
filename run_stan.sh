@@ -7,7 +7,7 @@ OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"
 
 mkdir $OUTDIR
 
-cat > $OUTDIR/bash_$STAN_MODEL-$JOBID.pbs <<EOF
+cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME.pbs <<EOF
   
 #!/bin/sh
 #PBS -l walltime=48:00:00
@@ -26,7 +26,7 @@ STAN_MODEL=$STAN_MODEL
 JOBNAME=$JOBNAME
   
 # main directory
-mkdir \$PWD/\$STAN_MODEL-\$JOBID
+mkdir \$PWD/\$STAN_MODEL-\$JOBNAME
   
 Rscript \$INDIR/scripts/process_data.R -indir \$INDIR -outdir \$PWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
 Rscript \$INDIR/scripts/run_stan.R -indir \$INDIR -outdir \$PWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
@@ -34,11 +34,11 @@ Rscript \$INDIR/scripts/run_stan.R -indir \$INDIR -outdir \$PWD -stan_model \$ST
 cp -R --no-preserve=mode,ownership \$PWD/* \$OUTDIR
   
 cd \$OUTDIR
-qsub bash_$STAN_MODEL-$JOBID-postprocessing.pbs
+qsub bash_$STAN_MODEL-$JOBNAME-postprocessing.pbs
 
 EOF
 
-cat > $OUTDIR/bash_$STAN_MODEL-$JOBID-postprocessing.pbs <<EOF
+cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME-postprocessing.pbs <<EOF
   
 #!/bin/sh
 #PBS -l walltime=24:00:00
@@ -51,12 +51,12 @@ STAN_MODEL=$STAN_MODEL
 JOBNAME=$JOBNAME
   
 # directories for figure and table
-mkdir \$PWD/\$STAN_MODEL-\$JOBID/figures
-mkdir \$PWD/\$STAN_MODEL-\$JOBID/tables
+mkdir \$PWD/\$STAN_MODEL-\$JOBNAME/figures
+mkdir \$PWD/\$STAN_MODEL-\$JOBNAME/tables
 
 Rscript \$INDIR/scripts/postprocessing_results.R -indir \$INDIR -outdir \$PWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 
 EOF
   
 cd $OUTDIR
-qsub bash_$STAN_MODEL-$JOBID.pbs
+qsub bash_$STAN_MODEL-$JOBNAME.pbs
