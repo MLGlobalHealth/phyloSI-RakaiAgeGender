@@ -161,7 +161,7 @@ plot_relative_intensity_PP <- function(relative_intensity_PP, outdir){
     geom_raster(aes(fill = M)) + 
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
     theme_bw() + 
-    labs(x = 'Age at infection recipient', fill = 'Relative transmission flow', 
+    labs(x = 'Age at infection recipient', fill = 'Transmission flow', 
          y= 'Age at transmission source',size='Pairs\ncount') +
     geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
     facet_grid(label_direction~label_time) + 
@@ -178,6 +178,7 @@ plot_relative_intensity_PP <- function(relative_intensity_PP, outdir){
 } 
 
 plot_relative_intensity_PP_standardised <- function(relative_intensity_PP_aggregated, relative_incident_cases_aggregated, df_age_aggregated, outdir){
+  
   relative_intensity_PP_aggregated[, type := 'Unstandardised']
   relative_incident_cases_aggregated[, type := 'Standardised']
   
@@ -186,22 +187,105 @@ plot_relative_intensity_PP_standardised <- function(relative_intensity_PP_aggreg
                                                  age_from.RECIPIENT, age_from.SOURCE)]), by = c('age_group_transmission.SOURCE', 'age_group_infection.RECIPIENT'))
   tmp  <- tmp[age_from.RECIPIENT != 5 & age_from.SOURCE != 5]
   tmp[, age_age_cat := paste0(age_group_transmission.SOURCE, '->', age_group_infection.RECIPIENT)]
+  tmp[, `Age Recipient` := age_group_infection.RECIPIENT]
+  tmp[, `Age Source` := age_group_transmission.SOURCE]
   
-  p <- ggplot(tmp, aes(x = age_age_cat)) + 
+  tmp[age_from.RECIPIENT == age_from.SOURCE, age_source := 'Same age']
+  tmp[age_from.RECIPIENT > age_from.SOURCE, age_source := 'Younger']
+  tmp[age_from.RECIPIENT < age_from.SOURCE, age_source := 'Older']
+  tmp[, age_source := factor(age_source, levels = c('Younger', 'Same age', 'Older'))]
+  
+  p <- ggplot(tmp[is_before_cutoff_date == 1 & is_mf == 1], aes(x = `Age Source`)) + 
     geom_bar(aes(y = M, fill = type), stat = 'identity', position = "dodge") + 
     geom_errorbar(aes(ymin = CL, ymax = CU, group = type), position = "dodge") + 
-    labs(x = 'Age source -> Age recipient', y = 'Relative transmission flows', fill = '') + 
+    labs(x = 'Age source', y = 'Transmission flows', fill = '') + 
     theme_bw() +
-    facet_grid(label_direction~label_time)+
+    facet_grid(.~`Age Recipient`, scale = 'free', label = 'label_both')+
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom', 
           axis.text.x = element_text(angle = 70,hjust =1)) +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
-  ggsave(p, file = paste0(outdir, '-relative_intensity_PP_standardised.png'), w = 9, h = 7)
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = tmp[, range(c(CU, 0))]) + 
+    ggtitle('Male --> Female')
+  ggsave(p, file = paste0(outdir, '-relative_intensity_PP_comparison_mf.png'), w = 7, h = 5.5)
   
+  p <- ggplot(tmp[is_before_cutoff_date == 1 & is_mf == 0], aes(x = `Age Source`)) + 
+    geom_bar(aes(y = M, fill = type), stat = 'identity', position = "dodge") + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, group = type), position = "dodge") + 
+    labs(x = 'Age source', y = 'Transmission flows', fill = '') + 
+    theme_bw() +
+    facet_grid(.~`Age Recipient`, scale = 'free', label = 'label_both')+
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom', 
+          axis.text.x = element_text(angle = 70,hjust =1)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = tmp[, range(c(CU, 0))]) + 
+    ggtitle('Female --> Male')
+  ggsave(p, file = paste0(outdir, '-relative_intensity_PP_comparison_fm.png'), w = 7, h = 5.5)
+  
+  p <- ggplot(tmp[type == 'Standardised' & is_mf == 1], aes(x = `Age Source`)) + 
+    geom_bar(aes(y = M, fill = label_time), stat = 'identity', position = "dodge") + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, group = label_time), position = "dodge") + 
+    labs(x = 'Age source', y = 'Transmission flows', fill = '') + 
+    theme_bw() +
+    facet_grid(.~`Age Recipient`, scale = 'free', label = 'label_both')+
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom', 
+          axis.text.x = element_text(angle = 70,hjust =1)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = tmp[, range(c(CU, 0))]) + 
+    ggtitle('Male --> Female') + 
+    scale_fill_viridis_d()
+  ggsave(p, file = paste0(outdir, '-relative_intensity_PP_standardised_mf.png'), w = 7, h = 5.5)
+  
+  p <- ggplot(tmp[type == 'Standardised' & is_mf == 0], aes(x = `Age Source`)) + 
+    geom_bar(aes(y = M, fill = label_time), stat = 'identity', position = "dodge") + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, group = label_time), position = "dodge") + 
+    labs(x = 'Age source', y = 'Transmission flows', fill = '') + 
+    theme_bw() +
+    facet_grid(.~`Age Recipient`, scale = 'free', label = 'label_both')+
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom', 
+          axis.text.x = element_text(angle = 70,hjust =1)) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = tmp[, range(c(CU, 0))]) + 
+    ggtitle('Female --> Male') + 
+    scale_fill_viridis_d()
+  ggsave(p, file = paste0(outdir, '-relative_intensity_PP_standardised_fm.png'), w = 7, h = 5.5)
 }
 
+plot_sex_source_standardised <- function(sex_source, sex_source_standardised, outdir){
+  sex_source[, type := 'Unstandardised']
+  sex_source_standardised[, type := 'Standardised']
+  
+  tmp <- rbind(sex_source, sex_source_standardised)
+  tmp[is_mf == 1, sex_source := 'Male']
+  tmp[is_mf == 0, sex_source := 'Female']
+  
+  p <- ggplot(tmp[is_before_cutoff_date == 1], aes(x = sex_source)) + 
+    geom_bar(aes(y = M, fill = type), stat = 'identity', position = position_dodge()) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, group = type), position = position_dodge()) + 
+    theme_bw() + 
+    labs(x = 'Sex source', y = 'Transmission flows', fill = '') + 
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)))  + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom')
+  ggsave(p, file = paste0(outdir, '-sex_source_comparison.png'), w = 6, h = 4)
+  
+  p <- ggplot(tmp[type == 'Standardised'], aes(x = sex_source)) + 
+    geom_bar(aes(y = M, fill = label_time), stat = 'identity', position = position_dodge()) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, group = label_time), position = position_dodge()) + 
+    theme_bw() + 
+    labs(x = 'Sex source', y = 'Transmission flows', fill = '') + 
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)))  + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') + 
+    scale_fill_viridis_d()
+  ggsave(p, file = paste0(outdir, '-sex_source_standardised.png'), w = 6, h = 4)
+  
+}
 
 plot_median_age_source <- function(age_source, outdir){
   

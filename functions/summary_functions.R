@@ -701,3 +701,22 @@ print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
              }
   , .SDcols=cols]
 }
+
+get.age.aggregated.map <- function(age_aggregated){
+  # age_aggregated <- c('5-14', '15-24', '25-34', '35-54')
+  df_age_aggregated <- data.table(expand.grid(age_group_infection.RECIPIENT = age_aggregated, age_group_transmission.SOURCE = age_aggregated))
+  df_age_aggregated[, age_from.RECIPIENT := gsub('(.+)-.*', '\\1', age_group_infection.RECIPIENT)]
+  df_age_aggregated[, age_from.SOURCE := gsub('(.+)-.*', '\\1', age_group_transmission.SOURCE)]
+  df_age_aggregated[, age_to.RECIPIENT := gsub('.*-(.+)', '\\1', age_group_infection.RECIPIENT)]
+  df_age_aggregated[, age_to.SOURCE := gsub('.*-(.+)', '\\1', age_group_transmission.SOURCE)]
+  tmp <- df_age_aggregated[, list(age_infection.RECIPIENT = unique(age_from.RECIPIENT):unique(age_to.RECIPIENT)), by = c('age_group_infection.RECIPIENT')]
+  tmp1 <- df_age_aggregated[, list(age_transmission.SOURCE = unique(age_from.SOURCE):unique(age_to.SOURCE)), by = c('age_group_transmission.SOURCE')]
+  df_age_aggregated <- merge(df_age_aggregated, tmp, by = 'age_group_infection.RECIPIENT', allow.cartesian=TRUE)
+  df_age_aggregated <- merge(df_age_aggregated, tmp1, by = 'age_group_transmission.SOURCE', allow.cartesian=TRUE)
+  
+  return(df_age_aggregated)
+}
+
+get.round.map <- function(){
+  data.table(ROUND = 6:18, DATE_ROUND = as.Date(paste0(2004:2016,'-01-01')))
+}
