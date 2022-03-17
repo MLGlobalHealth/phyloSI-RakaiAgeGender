@@ -38,21 +38,20 @@ path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'
 model = rstan::stan_model(path.to.stan.model)
 
 # run stan model
-stan_init <- list()
-stan_init$rho_gp1 = rep(1.25, stan_data$N_group)
-stan_init$rho_gp2 = rep(1.25, stan_data$N_group)
-stan_init$alpha = 0
-stan_init$nu = rep(0, stan_data$N_group)
+# stan_init <- list()
+# stan_init$rho_gp1 = rep(1.25, stan_data$N_group)
+# stan_init$rho_gp2 = rep(1.25, stan_data$N_group)
+# stan_init$alpha = 0
+# stan_init$nu = rep(0, stan_data$N_group)
 
 if(DEBUG){
-  fit <- sampling(model, data = stan_data, iter = 10, warmup = 5, chains=1, thin=1, init=rep(list(stan_init),1))
+  fit <- sampling(model, data = stan_data, iter = 10, warmup = 5, chains=1, thin=1)
 }else{
   options(mc.cores = parallel::detectCores())
   rstan_options(auto_write = TRUE)
   fit <- sampling(model, data = stan_data,
                   iter = 3000, warmup = 500, chains=4, thin=1, seed = 5,
-                  verbose = FALSE, control = list(adapt_delta = 0.999,max_treedepth=15),
-                  init=rep(list(stan_init), 4))
+                  verbose = FALSE, control = list(adapt_delta = 0.999,max_treedepth=15))
 }
 
 # sum = summary(fit)

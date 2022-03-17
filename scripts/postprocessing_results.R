@@ -15,7 +15,6 @@ DEBUG <- F
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
 
-
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
 print(args_line)
 if(length(args_line) > 0)
@@ -50,37 +49,66 @@ outdir.table <- .outdir.table
 
 # maps
 range_age_observed <- find_range_age_observed(copy(pairs), df_group)
-df_age_aggregated <- get.age.aggregated.map(c('5-14', '15-24', '25-34', '35-54'))
-df_round <- get.round.map()
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'), incidence)
 
 # samples 
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
+#
 ## convergence diagnostics 
-# make_convergence_diagnostics_stats(fit, outdir.table)
+#
 
+make_convergence_diagnostics_stats(fit, outdir.table)
+
+
+#
 ## intensity of the poisson process
+#
+
 cat("\nPlot transmission intensity\n")
-# intensity_PP <- summarise_var_by_age_group(samples, 'log_lambda', df_group, df_age, transform = 'exp')
-# count_data <- prepare_count_data(stan_data, df_age, df_group)
-# plot_intensity_PP(intensity_PP, count_data, outfile.figures)
 
-## relative intensity of the poisson process
-relative_intensity_PP <- find_relative_intensity_PP(samples, df_group, df_age)
-plot_relative_intensity_PP(relative_intensity_PP, outfile.figures)
-relative_intensity_PP_aggregated <- find_relative_intensity_PP_aggregated(samples, df_group, df_age, df_age_aggregated)
+intensity_PP <- summarise_var_by_age_group(samples, 'log_lambda', df_group, df_age, transform = 'exp')
+count_data <- prepare_count_data(stan_data, df_age, df_group)
+plot_intensity_PP(intensity_PP, count_data, outfile.figures)
 
-# ## number of incident cases
-# cat("\nPlot incident cases\n")
-incidence <- read.csv(file.incidence)
-# incident_cases <- find_incident_cases(samples, df_group, df_age, incidence)
-# plot_incident_cases(incident_cases, outfile.figures)
-relative_incident_cases_aggregated <- find_relative_incident_cases_aggregated(samples, df_group, df_age, df_age_aggregated, incidence)
-plot_relative_intensity_PP_standardised(relative_intensity_PP_aggregated, relative_incident_cases_aggregated, df_age_aggregated, outfile.figures)
+transmission_flows <- find_transmission_flows(samples, df_group, df_age)
+plot_transmission_flows(transmission_flows, outfile.figures)
+
+transmission_flows_aggregated <- find_transmission_flows_aggregated(samples, df_group, df_age, df_age_aggregated)
+transmission_flows_aggregated2 <- find_transmission_flows_aggregated2(samples, df_group, df_age, df_age_aggregated)
 
 
+#
+## Standardised transmission flows
+#
+
+cat("\nPlot Standardised transmission flows\n")
+
+standardised_transmission_flows <- find_standardised_transmission_flows(samples, df_group, df_age, incidence)
+plot_transmission_flows(standardised_transmission_flows, outfile.figures, lab = 'Standardised')
+
+standardised_transmission_flows_aggregated <- find_standardised_transmission_flows_aggregated(samples, df_group, df_age, df_age_aggregated, incidence)
+standardised_transmission_flows_aggregated2 <- find_standardised_transmission_flows_aggregated2(samples, df_group, df_age, df_age_aggregated, incidence)
+
+plot_transmission_flows_aggregated(transmission_flows_aggregated, standardised_transmission_flows_aggregated, df_age_aggregated, outfile.figures)
+plot_transmission_flows_aggregated2(transmission_flows_aggregated2, standardised_transmission_flows_aggregated2, df_age_aggregated, outfile.figures)
+
+
+#
+## shift in sex-specific transmission dynamics
+#
+
+sex_source <- find_sex_source(samples, df_group, df_age, incidence)
+sex_source_standardised <- find_sex_source_standardised(samples, df_group, df_age, incidence)
+plot_sex_source_standardised(sex_source, sex_source_standardised, outfile.figures)
+
+
+
+#
 ## shift in age-specific transmission dynamics
+#
+
 cat("\nPlot age-specific transmission dynamics\n")
 
 # median age of source
@@ -93,10 +121,7 @@ cat("\nPlot age-specific transmission dynamics\n")
 # age_source_overall <- find_age_source_by_group(samples, df_group, df_age, incidence, range_age_observed)
 # plot_median_age_source_overall(age_source_overall, outfile.figures)
 
-# sex source
-sex_source_standardised <- find_sex_source_standardised(samples, df_group, df_age, incidence)
-sex_source <- find_sex_source(samples, df_group)
-plot_sex_source_standardised(sex_source, sex_source_standardised, outfile.figures)
+
 
 
 cat("End of postprocessing_results.R")
