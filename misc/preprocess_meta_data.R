@@ -36,11 +36,16 @@ file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_
 # Latest data from Rakai's CCS (Kate's data from 2022-03-08)
 file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
 
+# Latest data from Rakai's CCS (Kate's data from 2022-03-08)
+file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
+
+
 #
 # LOAD FUNCTIONS
 #
 
-source(file.path(indir.repository, 'functions', 'summary_functions.R'))
+source(file.path(indir.repository, 'functions', 'utils.R'))
+source(file.path(indir.repository, 'misc', 'functions', 'preprocess_meta_data-functions.R'))
 
 
 #
@@ -60,13 +65,17 @@ quest <- .read(file.path.quest)
 # Load Kate's data from 2022-03-08
 raw_metadata <- .read(file.path.metadata)
 
+# Load Neuro cohort's data from 2022-03-17
+raw_neuro_metadata <- .read(file.path.neuro.metadata)
+setnames(raw_neuro_metadata,  'studyid', 'study_id')
+
 
 #
 # PROCESS RAW DATA
 #
 
 # Add 'RK-' to all data.tables study_ids
-invisible(lapply(list(hiv, allhiv, quest, raw_metadata),
+invisible(lapply(list(hiv, allhiv, quest, raw_metadata, raw_neuro_metadata),
                  function(dt) {
                    dt[!grepl('RK-', study_id), study_id := paste0('RK-', study_id)]
                  }))
@@ -90,6 +99,9 @@ stopifnot(.vars.with.multiple.values(date.first.positive, 'study_id')[, .N == 0]
 # process Kate's meta data
 meta_data_2 <- process.meta.data(raw_metadata, aik, community.keys)
 
+# process Neuro's meta data
+meta_data_neuro <- process.neuro.meta.data(raw_neuro_metadata, aik)
+
 
 #
 # MAKE META DATA
@@ -101,6 +113,9 @@ meta_data <- get.meta.data(quest, date.first.positive, date.first.last.visit, ai
 # add Kate's data for missing individuals
 meta_data <- rbind(meta_data, meta_data_2[!study_id %in% meta_data[, study_id]])
 
+# add Neuro's data for missing individuals
+meta_data <- rbind(meta_data, meta_data_neuro[!study_id %in% meta_data[, study_id]], fill=TRUE)
+
 # compare to missing
 # missing <- as.data.table(read.csv(file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'missing_study_id_RCCS_R15_R18_220113.csv')))
 # stillmissing <- missing[!RCCS_studyid %in% meta_data[, gsub('RK-(.+)', '\\1', study_id)]]
@@ -109,8 +124,23 @@ meta_data <- rbind(meta_data, meta_data_2[!study_id %in% meta_data[, study_id]])
 
 
 #
+# Find start and end data round
+#
+
+df_round <-  raw_metadata[!is.na(round), list(min_sample_date = min(na.omit(sample_date)), 
+                        max_sample_date = max(na.omit(sample_date))), by = 'round']
+
+if(0){
+  library(ggplot2)
+  ggplot(df_round, aes(y = as.factor(round))) + 
+    geom_errorbarh(aes(xmin =min_sample_date , xmax =  max_sample_date, col = as.factor(round)))
+}
+
+
+
+#
 # SAVE META DATA
 #
 
-write.csv(meta_data, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220308.csv'), row.names = F)
+save(meta_data, df_round, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220317.RData'), row.names = F)
 
