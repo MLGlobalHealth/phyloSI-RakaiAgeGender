@@ -277,11 +277,20 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
   # number of groups
   stan_data[['N_group']] = nrow(df_group)
   
+  # number of groups without communities
+  stan_data[['N_group_without_community']] = stan_data[['N_group']] / df_group[, length(unique(label_community))]
+  
+  # index without community
+  df_group[, temp := paste0(index_time, '_', index_direction)]
+  tmp <- unique(df_group[, .(temp)])
+  tmp[, index_group_without_community := 1:nrow(tmp)]
+  df_group <- merge(df_group, tmp, by = 'temp')
+  set(df_group, NULL, 'temp', NULL)
+  df_group <- df_group[order(index_group)]
+  stan_data[['index_group_without_community']] = df_group[, index_group_without_community]
+  
   # save count in each entry
   y = vector(mode = 'list', length = nrow(df_group))
-  is_mf = vector(mode = 'list', length = nrow(df_group))
-  is_beforecutoff = vector(mode = 'list', length = nrow(df_group))
-  
   for(i in 1:nrow(df_group)){
     
     # direction group
@@ -291,11 +300,14 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
     tmp <- pairs[sex.SOURCE == directions[1] & sex.RECIPIENT == directions[2]]
     tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), 
                       age_infection.RECIPIENT = floor(age_infection.RECIPIENT), 
-                      date_infection_before_cutoff.RECIPIENT = date_infection_before_cutoff.RECIPIENT)]
+                      date_infection_before_cutoff.RECIPIENT = date_infection_before_cutoff.RECIPIENT, 
+                      comm.RECIPIENT = comm.RECIPIENT)]
     
     # time group
-    before_cutoff_date <- df_group[i, is_before_cutoff_date]
-    tmp <- tmp[date_infection_before_cutoff.RECIPIENT == before_cutoff_date]
+    tmp <- tmp[date_infection_before_cutoff.RECIPIENT == df_group[i, is_before_cutoff_date]]
+    
+    # community group
+    tmp <- tmp[comm.RECIPIENT == df_group[i, comm]]
     
     # count number of observation
     tmp <- tmp[, list(count = .N), by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT')]
@@ -304,18 +316,19 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
     tmp[is.na(count), count := 0]
     
     setkey(tmp, age_transmission.SOURCE, age_infection.RECIPIENT)
-    stopifnot(sum(tmp$count) == nrow(pairs[sex.SOURCE == directions[1] & sex.RECIPIENT == directions[2] & date_infection_before_cutoff.RECIPIENT == before_cutoff_date]))
+    
+    tmp1 <- pairs[sex.SOURCE == directions[1] & sex.RECIPIENT == directions[2] & date_infection_before_cutoff.RECIPIENT == df_group[i, is_before_cutoff_date] & comm.RECIPIENT == df_group[i, comm]]
+    stopifnot(sum(tmp$count) == nrow(tmp1))
 
+    cat(nrow(tmp1), ' pairs with infection ', df_group[i, label_direction], as.character(df_group[i, label_time]), 'towards ', df_group[i, label_community], '\n')
     y[[i]] = matrix(tmp$count, ncol = 1)
-    is_mf[[i]] = directions[1] == 'M' & directions[2] == 'F'
-    is_beforecutoff[[i]] = before_cutoff_date == 1
+    
   }
+  
   
   # save stan data
   stan_data[['N_per_group']] = nrow(df_age)
   stan_data[['y']] = do.call('cbind', y)
-  stan_data[['is_mf']] = unlist(is_mf)
-  stan_data[['is_beforecutoff']] = unlist(is_beforecutoff)
   
   return(stan_data)
 }
@@ -462,7 +475,7 @@ bsplines = function(data, knots, degree)
   return(m)
 }
 
-add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
+add_prior_gp_mean <- function(stan_data, df_age, use.diagonal.prior, outdir = NULL){
   
   tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
   tmp[, mu := - (abs(age_infection.RECIPIENT - age_transmission.SOURCE) / 3)]
@@ -472,12 +485,11 @@ add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
   B = stan_data[['BASIS_COLUMNS']]
   theta <- MASS::ginv(A) %*% mu %*% MASS::ginv(B)
   
-  if(projected){
+  if(use.diagonal.prior){
     stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
-    
   } else{
-    stan_data[['mu']] <- rep(list(tmp$mu), stan_data[['N_group']])
-    
+    theta <- matrix(nrow = stan_data[['num_basis_rows']], ncol = stan_data[['num_basis_columns']], 0)
+    stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
   }
 
   # plot
@@ -489,10 +501,10 @@ add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
     setkey(tmp1, Var1, Var2)
     
     tmp <- copy(df_age)
-    if(projected){
+    if(use.diagonal.prior){
       tmp[, transmission_rate := exp(tmp1$value)]
     } else{
-      tmp[, transmission_rate := exp(mu)]
+      tmp[, transmission_rate := exp(0)]
     }
     
     ggplot(tmp, aes(x =age_infection.RECIPIENT, y = age_transmission.SOURCE)) + 
@@ -504,7 +516,7 @@ add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
       coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +
       theme(legend.position = 'bottom') +
       geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'white') 
-    ggsave(file.path(outdir, paste0('Prior_transmissionRate.png')), w = 5, h = 5)
+    ggsave(paste0(outdir, '-Prior_transmissionRate.png'), w = 5, h = 5)
     
     tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_infection.RECIPIENT']
     tmp1 <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
@@ -524,7 +536,7 @@ add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
       theme(legend.position = 'bottom') +
       scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
       scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
-    ggsave(file.path(outdir, paste0('Prior_Agetransmission.png')), w = 5, h = 5)
+    ggsave(paste0(outdir, '-Prior_Agetransmission.png'), w = 5, h = 5)
     
     tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_transmission.SOURCE']
     tmp1 <- merge(tmp, tmp1, by = 'age_transmission.SOURCE')
@@ -544,7 +556,7 @@ add_prior_gp_mean <- function(stan_data, df_age, outdir = NULL, projected = T){
       theme(legend.position = 'bottom') + 
       scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
       scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
-    ggsave(file.path(outdir, paste0('Prior_AgeInfection.png')), w = 5, h = 5)
+    ggsave(file = paste0(outdir, '-Prior_AgeInfection.png'), w = 5, h = 5)
     
   }
   

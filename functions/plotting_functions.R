@@ -1,12 +1,16 @@
-plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL){
+plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = NULL){
   
   plots = list()
   
   data <- data[!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT)]
+  
+  data[, `Community source` := comm.SOURCE]
+  data[, `Community recipient` := comm.RECIPIENT]
+  
+  data[, cohort_round.SOURCE := substr(round.SOURCE, 1, 4)]
+  data[, cohort_round.RECIPIENT := substr(round.RECIPIENT, 1, 4)]
   data[, `Cohort round recipient` := cohort_round.RECIPIENT]
   data[, `Cohort round source` := cohort_round.SOURCE]
-  data[, `Community recipient` := comm.RECIPIENT]
-  data[, `Community source` := comm.SOURCE]
   
   # all pairs
   p <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
@@ -19,7 +23,7 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
     scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) 
     if(!is.null(outdir))
-      ggsave(p, filename = file.path(outdir, paste0('AgeInfection_AllPairs_', lab, '.png')), w = 4, h = 4)
+      ggsave(p, filename = paste0(outdir, '-AgeInfection_AllPairs_', plotlab, '.png'), w = 4, h = 4)
   plots = c(plots, list(p))
   
   # by cohort round
@@ -32,7 +36,8 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
     scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
     scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom')+
+    guides(col=guide_legend(nrow=2,byrow=TRUE))
 
   p2 <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
     geom_point(aes(col = `Cohort round recipient`)) + 
@@ -43,11 +48,12 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
     scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
     scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom') +
+    guides(col=guide_legend(nrow=2,byrow=TRUE))
 
   p <- ggarrange(p1, p2, ncol = 2)
   if(!is.null(outdir))
-    ggsave(p, filename = file.path(outdir, paste0('AgeInfection_CohortRound_', lab, '.png')), w = 9, h = 7)
+    ggsave(p, filename = paste0(outdir, '-AgeInfection_CohortRound_', plotlab, '.png'), w = 9, h = 7)
   plots = c(plots, list(p))
   
   # by age infection round
@@ -63,7 +69,7 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
   if(!is.null(outdir))
-    ggsave(p, filename = file.path(outdir, paste0('AgeInfection_DateInfectionRecipient_', lab, '.png')), w = 4, h = 4)
+    ggsave(p, filename = paste0(outdir, '-AgeInfection_DateInfectionRecipient_', plotlab, '.png'), w = 4, h = 4)
   plots = c(plots, list(p))
   
   # by community
@@ -88,11 +94,26 @@ plot_age_infection_source_recipient <- function(data, title, lab, outdir = NULL)
     scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
-  
+
   p <- ggarrange(p1, p2, ncol = 2)
   if(!is.null(outdir))
-    ggsave(p, filename = file.path(outdir, paste0('AgeInfection_CommunityRecipient_', lab, '.png')), w = 9, h = 7)
+    ggsave(p, filename = paste0(outdir, '-AgeInfection_CommunitySourceRecipient_', plotlab, '.png'), w = 9, h = 7)
   plots = c(plots, list(p))
+  
+  data[, date_infection_before_cutoff_name.RECIPIENT := 'After 2014']
+  data[date_infection_before_cutoff.RECIPIENT == T, date_infection_before_cutoff_name.RECIPIENT := 'Before 2014']
+  p2 <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+    geom_point(aes(col =`Community recipient`)) + 
+    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    coord_fixed() +
+    scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
+    scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
+    ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
+    theme(legend.position = 'bottom') + 
+    facet_grid(.~date_infection_before_cutoff_name.RECIPIENT)
+  ggsave(p2, filename = paste0(outdir, '-AgeInfection_CommunityRecipient_', plotlab, '.png'), w = 5, h = 5)
   
   return(plots)
 }
@@ -118,7 +139,7 @@ plot_hist_age_infection <- function(pairs, outdir = NULL){
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
   
   if(!is.null(outdir)){
-    file = file.path(outdir, paste0('hist_age_infection_', lab, '.png'))
+    file = paste0(outdir, '-hist_age_infection.png')
     cat('saving', file)
     ggsave(p, file = file, w = 6, h = 6)
   }
@@ -128,7 +149,11 @@ plot_hist_age_infection <- function(pairs, outdir = NULL){
 
 plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
   
+  pairs[, cohort_round.SOURCE := substr(round.SOURCE, 1, 4)]
+  pairs[, cohort_round.RECIPIENT := substr(round.RECIPIENT, 1, 4)]
   pairs[, `Round source` := cohort_round.SOURCE]
+  pairs[, `Round recipient` := cohort_round.RECIPIENT]
+  
   p1 <- ggplot(pairs, aes(x = date_infection.SOURCE)) + 
     geom_histogram(bins = 30) +
     facet_wrap(~`Round source`, nrow = length(unique(pairs$cohort_round.SOURCE))) +
@@ -136,7 +161,6 @@ plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
     labs(x = 'Date of infection source') + 
     geom_vline(xintercept = cutoff_date, linetype = 'dashed')
   
-  pairs[, `Round recipient` := cohort_round.RECIPIENT]
   p2 <- ggplot(pairs, aes(x = date_infection.RECIPIENT)) + 
     geom_histogram(bins = 30) +
     facet_wrap(~`Round recipient`, nrow = length(unique(pairs$cohort_round.RECIPIENT))) +
@@ -147,57 +171,11 @@ plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
   p <- ggarrange(p1, p2, ncol = 2)
   
   if(!is.null(outdir)){
-    file = file.path(outdir, paste0('hist_date_infection_', lab, '.png'))
+    file = paste0(outdir, '-hist_date_infection.png')
     cat('saving', file)
     ggsave(p, file = file, w = 6, h = 6)
   }
 
-  return(p)
-}
-
-plot_hist_age_infection_diff_threshold <- function(pairs, outdir){
-  
-  chain <- keep.likely.transmission.pairs(as.data.table(dchain), 0.5)
-  pairs <- pairs.get.meta.data(chain, meta_data)
-  pairs$threshold = '0.5'
-  
-  chain <- keep.likely.transmission.pairs(as.data.table(dchain), 0.6)
-  pairs2 <- pairs.get.meta.data(chain, meta_data)
-  pairs2$threshold = '0.6'
-  
-  pairs = rbind(pairs, pairs2)
-  
-  if(!include.mrc){
-    cat('Keep only pairs in RCCS')
-    pairs <- pairs[cohort.RECIPIENT == 'RCCS' & cohort.SOURCE == 'RCCS']
-  }
-  if(include.only.heterosexual.pairs){
-    cat('Keep only heterosexual pairs')
-    pairs <- pairs[(sex.RECIPIENT == 'M' & sex.SOURCE == 'F') | (sex.RECIPIENT == 'F' & sex.SOURCE == 'M')]
-  }
-  
-  pairs[, Sex := sex.SOURCE]
-  p1 <- ggplot(pairs, aes(x = age_transmission.SOURCE)) + 
-    geom_density(aes( group = threshold, fill = threshold), alpha = 0.5) + 
-    facet_wrap(~Sex, ncol = 1, label = 'label_both') + 
-    theme_bw() + 
-    labs(x = 'Age at transmission source') +
-    scale_x_continuous(limits = range(c(pairs$age_transmission.SOURCE, pairs$age_infection.RECIPIENT)))
-  
-  pairs[, Sex := sex.SOURCE]
-  p2 <- ggplot(pairs, aes(x = age_infection.RECIPIENT)) + 
-    geom_density(aes( group = threshold, fill = threshold), alpha = 0.5) + 
-    facet_wrap(~Sex, ncol = 1, label = 'label_both') + 
-    theme_bw() + 
-    labs(x = 'Age at infection recipient')  +
-    scale_x_continuous(limits = range(c(pairs$age_transmission.SOURCE, pairs$age_infection.RECIPIENT)))
-  
-  p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  
-  file = file.path(outdir, paste0('hist_age_infection_source_', gsub('(.+)_threshold.*', '\\1', lab), '.png'))
-  cat('saving', file)
-  ggsave(p, file = file, w = 6, h = 6)
-  
   return(p)
 }
 
@@ -244,7 +222,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = file.path(outdir, paste0('AgeTransmissionSource_', lab, '.png')), w = 8, h = 5)
+  ggsave(p, filename = paste0(outdir, '-AgeTransmissionSource.png'), w = 8, h = 5)
   
   
   ## not stratified by age of recipient
@@ -280,7 +258,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = file.path(outdir, paste0('AgeTransmissionSource_Unstratified_', lab, '.png')), w = 8, h = 5)
+  ggsave(p, filename = paste0(outdir, '-AgeTransmissionSource_Unstratified.png'), w = 8, h = 5)
   
 }
 
@@ -327,7 +305,7 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionRecipient_', lab, '.png')), w = 8, h = 5)
+  ggsave(p, filename = paste0(outdir, '-AgeInfectionRecipient.png'), w = 8, h = 5)
   
   
   ## not stratified by age of recipient
@@ -363,9 +341,8 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = file.path(outdir, paste0('AgeInfectionRecipient_Unstratified_', lab, '.png')), w = 8, h = 5)
+  ggsave(p, filename = paste0(outdir, '-AgeInfectionRecipient_Unstratified.png'), w = 8, h = 5)
 }
-
 
 plot_pairs_infection_dates <- function(pairs.all)
 {
@@ -392,10 +369,10 @@ plot_pairs_infection_dates <- function(pairs.all)
   ggsave(p, filename = file.path(outdir, paste0('PairsInfectionDates.png')), w = 8, h = 10)
 }
 
-
 # Tranmission Network plot from: https://github.com/olli0601/Phyloscanner.R.utilities/blob/7c58edac4812e53b0b67e69770f70e9d3826881d/R/phyloscan.fun.plotting.R
 phsc.plot.transmission.network<- function(dchain, dc, pairs, outdir=NULL, point.size=10, point.size.couple=point.size*1.4, edge.gap=0.04, edge.size=0.4, curvature= -0.2, arrow=arrow(length=unit(0.02, "npc"), type="open"), curv.shift=0.08, label.size=3, node.label='ID', node.shape=NA_character_, node.fill=NA_character_, node.shape.values=c('M' = 15, 'F' = 17), node.fill.values=c('F'='hotpink2', 'M'='steelblue2') , threshold.linked=NA_real_, N_min = 4)
 {	
+  library(phyloscannerR)
   # translate dchain and dc in terms of df and di as required
   tmp.dchain <- copy(dchain)
   tmp.dc <- copy(dc)
@@ -533,7 +510,7 @@ phsc.plot.transmission.network<- function(dchain, dc, pairs, outdir=NULL, point.
   # p$layout	<- layout
   
   if(!is.null(outdir))
-    ggsave(p, filename = file.path(outdir, paste0('TransmissionNetworkClusters_', lab, '.png')), w = 10, h = 10)
+    ggsave(p, filename = paste0(outdir, '-TransmissionNetworkClusters.png'), w = 10, h = 10)
 
   return(p)
   

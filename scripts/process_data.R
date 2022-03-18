@@ -1,5 +1,4 @@
 library(data.table)
-library(phyloscannerR)
 library(igraph)
 library(dplyr)
 library(ggplot2)
@@ -10,61 +9,95 @@ library(ggtree)
 library(ggnet) 
 require(lubridate)
 
-# change as appropriate
+# laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 {
-  indir.repository <- '~/git/phyloflows'
+  indir <- '~/git/phyloflows'
   indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
+  
+  jobname <- 'test'
+  stan_model <- 'gp_220108'
+  outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
+  dir.create(outdir)
 }
 
 if(dir.exists('/home/andrea'))
 {
-  indir.repository <-'~/git/phyloflows'
+  indir <-'~/git/phyloflows'
   indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
   outdir <- '~/Documents/Box/2021/phyloflows'
   file.path(indir.deepsequencedata,'RCCS_R15_R18')
 }
 
+args_line <-  as.list(commandArgs(trailingOnly=TRUE))
+print(args_line)
+if(length(args_line) > 0)
+{
+  stopifnot(args_line[[1]]=='-indir')
+  stopifnot(args_line[[3]]=='-outdir')
+  stopifnot(args_line[[5]]=='-stan_model')
+  stopifnot(args_line[[7]]=='-jobname')
+  indir <- args_line[[2]]
+  outdir <- args_line[[4]]
+  stan_model <- args_line[[6]]
+  jobname <- args_line[[8]]
+}
+
+outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
+outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
+if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
 
 # indicators 
+cutoff_date <- as.Date('2014-01-01')
+start_observational_period <- as.Date('2010-01-01')
+
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
-
-cutoff_date <- as.Date('2014-01-01')
-jobname <- '2014_IpriorGP'
-lab <- paste0('OnlyHTX_', include.only.heterosexual.pairs, '_threshold_', threshold.likely.connected.pairs, '_jobname_', jobname)
+only.inland <- F
+only.transmission.after.start.observational.period <- T
+use.diagonal.prior <- T
+remove.missing.community.recipient <- T
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
-file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220308.csv')
+file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220317.RData')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
-
-outdir.lab <- file.path(outdir, lab); dir.create(outdir.lab)
+file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220311.csv')
 
 # load functions
-source(file.path(indir.repository, 'functions', 'summary_functions.R'))
-source(file.path(indir.repository, 'functions', 'plotting_functions.R'))
-source(file.path(indir.repository, 'functions', 'stan_utils.R'))
-source(file.path(indir.repository, 'functions', 'check_potential_TNet.R'))
+source(file.path(indir, 'functions', 'utils.R'))
+source(file.path(indir, 'functions', 'summary_functions.R'))
+source(file.path(indir, 'functions', 'plotting_functions.R'))
+source(file.path(indir, 'functions', 'stan_utils.R'))
+source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 
 # load chains
 load(file.path.chains.data)
 dchain <- as.data.table(dchain)
 
 # load meta data
-aik <- .read(file.anonymisation.keys); aik$X <- NULL
-meta_data <- .read(file.path.meta)
+load(file.path.meta)
 
 # load Tanya's estimate time since infection using phylogenetic data
-time.since.infection <- as.data.table(read.csv(file.path.tsiestimates))
-time.since.infection <- make.time.since.infection(time.since.infection)
+time.since.infection <- make.time.since.infection(as.data.table(read.csv(file.path.tsiestimates)))
+
+# load incidence from adam
+incidence <- read.csv(file.incidence)
+
+# load anonymous aid
+aik <- .read(file.anonymisation.keys); aik$X <- NULL
+
+#
+# TRANSFORM AND MERGE DATA
+#
+
 
 # get time of infection (using Tanya's estimate if use.tsi.estimates == T)
 meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
@@ -74,11 +107,6 @@ chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.
 
 # merge meta data to source and recipienx
 pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
-
-
-# 99 study id NOT in Joseph Data. All appear in meta.rccs.2 and in 66% in meta.rccs.1
-# But none of them appears in any new datesets (quest, hiv, allhiv and flow)
-# tmp <- c("RK-A066261", "RK-J055504", "RK-C054888", "RK-J068023", "RK-H065970", "RK-H133273", "RK-H132927", "RK-G063880", "RK-J054622", "RK-B132191", "RK-B095525", "RK-F005239", "RK-D050431", "RK-F115356", "RK-K059296", "RK-A133666", "RK-K132741", "RK-F100447", "RK-J069565", "RK-A094422", "RK-D021259", "RK-C094814", "RK-B067364", "RK-K100417", "RK-K066707", "RK-B038263", "RK-C038434", "RK-J133656", "RK-C051281", "RK-H030219", "RK-H046775", "RK-C100842", "RK-A132124", "RK-H133061", "RK-D115354", "RK-C073172", "RK-E102438", "RK-J133698", "RK-D131863", "RK-K094560", "RK-C056943", "RK-F101418", "RK-G100383", "RK-C133359", "RK-F061554", "RK-E115410", "RK-B046282", "RK-K027734", "RK-G054078", "RK-D131588", "RK-H039230", "RK-B063380", "RK-K058835", "RK-D039919", "RK-H096194", "RK-C132388", "RK-G131743", "RK-K100823", "RK-H061522", "RK-E100111", "RK-J188436", "RK-K094633", "RK-D095072", "RK-J036456", "RK-K088460", "RK-J067882", "RK-B009138", "RK-K096293", "RK-F026612", "RK-F038893", "RK-A100696", "RK-H045013", "RK-H096209", "RK-F059276", "RK-E115389", "RK-H068933", "RK-B095818", "RK-G055934", "RK-K102776", "RK-J096771", "RK-C100834", "RK-D067324", "RK-E053649", "RK-E062736", "RK-F064949", "RK-D102788", "RK-B195356", "RK-E036460", "RK-B002793", "RK-D066117", "RK-E096442", "RK-J005965", "RK-C101596", "RK-E025226", "RK-C064035", "RK-K091620", "RK-K004814", "RK-A066774", "RK-E031889")
 
 if(include.only.heterosexual.pairs){
   cat('Keep only heterosexual pairs\n')
@@ -95,28 +123,41 @@ if(remove.inconsistent.infection.dates){
 }
 if(remove.young.individuals){
   # exclude young indivis
-  cat('\nExcluding very young individuals')
+  cat('\nExcluding very young individuals\n')
   cat('Removing ', nrow(pairs.all[age_infection.SOURCE < 11 | age_infection.RECIPIENT < 11]), ' pairs\n')
   pairs.all <- pairs.all[age_infection.SOURCE >= 11 & age_infection.RECIPIENT >= 11]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
+if(only.inland){
+  cat('\nExcluding recipients from fishing\n')
+  cat('Removing ', nrow(pairs.all[comm.RECIPIENT == 'fishing']), ' pairs\n')
+  pairs.all <- pairs.all[comm.RECIPIENT == 'inland']
+}
+if(only.transmission.after.start.observational.period){
+  cat('\nExcluding recipients infected before ', as.character(start_observational_period), '\n')
+  cat('Removing ', nrow(pairs.all[date_infection.RECIPIENT < start_observational_period]), ' pairs\n')
+  pairs.all <- pairs.all[date_infection.RECIPIENT >= start_observational_period]
+}
+if(remove.missing.community.recipient){
+  cat('\nExcluding recipients without community \n')
+  cat('Removing ', nrow(pairs.all[is.na(comm.RECIPIENT)]), ' pairs\n')
+  pairs.all <- pairs.all[!is.na(comm.RECIPIENT)]
+}
 
 print.which.NA(pairs.all)
-print.statements.about.pairs(copy(pairs.all), outdir.lab)
+print.statements.about.pairs(copy(pairs.all))
 
 # which base frequency files we have on the HPC
 # atm gives error: maybe TODO when I understand more about PHSC pipeline
 # missing_bff <- print.statements.about.basefreq.files(pairs.all)
-
 
 # keep only pairs with source-recipient with proxy for the time of infection
 pairs <- pairs.all[!is.na(age_infection.SOURCE) & !is.na(age_infection.RECIPIENT)]
 pairs[, date_infection_before_cutoff.RECIPIENT := date_infection.RECIPIENT < cutoff_date]
 
 
-
 #
-# MAKE EXPLANATORY PLOTS
+# PREPARE MAPS
 #
 
 # prepare age map
@@ -125,27 +166,25 @@ df_age <- get.age.map(pairs, age_bands_reduced = 4)
 # prepare group map
 df_group <- get.group.map()
 
-# Purely for the sake of making plots:
-pairs[, cohort_round.SOURCE := "R15-18"]
-pairs[, cohort_round.RECIPIENT := "R15-18"]
 
-# make some explanatory plots
-plot_hist_age_infection(copy(pairs), outdir.lab)
-plot_hist_time_infection(copy(pairs), cutoff_date, outdir.lab)
-plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF', outdir.lab)
-plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outdir.lab)
-plot_CI_age_infection(pairs, outdir.lab)
-plot_CI_age_transmission(pairs, outdir.lab)
-phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outdir.lab, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
+#
+# MAKE EXPLANATORY PLOTS
+#
 
+if(1){
+  plot_hist_age_infection(copy(pairs), outfile.figures)
+  plot_hist_time_infection(copy(pairs), cutoff_date, outfile.figures)
+  plot_age_infection_source_recipient(pairs[sex.SOURCE == 'M' & sex.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)
+  plot_age_infection_source_recipient(pairs[sex.SOURCE == 'F' & sex.RECIPIENT == 'M'], 'Female -> Male', 'FM', outfile.figures)
+  plot_CI_age_infection(pairs, outfile.figures)
+  plot_CI_age_transmission(pairs, outfile.figures)
+  # phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outfile, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
+}
 
 
 #
 # PREPARE STAN DATA
 #
-
-# extract incidence rate in rakai from https://www.rhsp.org/research/rccs/explore-rccs-data
-incidence <- find_incidence_rate(range(df_age$age_infection.RECIPIENT))
 
 # prepare stan data
 stan_data <- prepare_stan_data(pairs, df_age, df_group)
@@ -153,11 +192,12 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 8, n_knots_columns = 8, 
                                       X = unique(df_age$age_transmission.SOURCE),
                                       Y = unique(df_age$age_infection.RECIPIENT))
-stan_data <- add_prior_gp_mean(stan_data, df_age, outdir.lab)
+stan_data <- add_prior_gp_mean(stan_data, df_age, use.diagonal.prior, outfile.figures)
+
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)
 tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
-save(list=tmp, file=file.path(outdir.lab, paste0("stanin_",lab,".RData")) )
+save(list=tmp, file=paste0(outfile, "-stanin_",jobname,".RData")) 
 
 
