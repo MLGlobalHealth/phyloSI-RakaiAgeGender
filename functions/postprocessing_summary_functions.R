@@ -608,8 +608,8 @@ find_sex_source <- function(samples, df_group, df_age, incidence){
   
   # keep same age that standardised
   tmp1 <- merge(tmp1, df_age, by = 'index_age')
-  tmp1 <- tmp1[age_transmission.SOURCE %in% range(incidence$AGEYRS)]
-  tmp1 <- tmp1[age_infection.RECIPIENT %in% range(incidence$AGEYRS)]
+  tmp1 <- tmp1[age_transmission.SOURCE %in% min(incidence$AGEYRS):max(incidence$AGEYRS)]
+  tmp1 <- tmp1[age_infection.RECIPIENT %in% min(incidence$AGEYRS):max(incidence$AGEYRS)]
   
   # sum across ages
   tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group')]
@@ -650,7 +650,7 @@ find_sex_source_standardised <- function(samples, df_group, df_age, incidence){
   di <- di[, list(INFECTIONS = runif(10, mean(INFECTIONS_LB), mean(INFECTIONS_UB)),
                   idx_draw = 1:10), by = c("is_mf", 'is_before_cutoff_date', 'age_infection.RECIPIENT')]
   tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT'), allow.cartesian=TRUE)
-  tmp1 <- tmp1[age_transmission.SOURCE %in% range(incidence$AGEYRS)]
+  tmp1 <- tmp1[age_transmission.SOURCE %in% min(incidence$AGEYRS):max(incidence$AGEYRS)]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT', 'idx_draw')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT', 'idx_draw'))
