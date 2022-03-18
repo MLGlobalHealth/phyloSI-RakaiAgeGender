@@ -48,7 +48,9 @@ outfile.figures <- .outfile.figures
 outdir.table <- .outdir.table
 
 # maps
-range_age_observed <- find_range_age_observed(copy(pairs), df_group)
+range_age_observed_cat <- find_range_age_observed(copy(pairs), df_group)
+range_age_observed <- range_age_observed_cat[, list(min_age = min(c(min_age_infection.RECIPIENT, min_age_transmission.SOURCE)), 
+                                                 max_age = max(c(max_age_infection.RECIPIENT, max_age_transmission.SOURCE)))]
 df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'), incidence)
 
 # samples 
@@ -70,10 +72,10 @@ cat("\nPlot transmission intensity\n")
 
 intensity_PP <- summarise_var_by_age_group(samples, 'log_lambda', df_group, df_age, transform = 'exp')
 count_data <- prepare_count_data(stan_data, df_age, df_group)
-plot_intensity_PP(intensity_PP, count_data, outfile.figures)
+plot_intensity_PP(intensity_PP, count_data, range_age_observed, outfile.figures)
 
 transmission_flows <- find_transmission_flows(samples, df_group, df_age)
-plot_transmission_flows(transmission_flows, outfile.figures)
+plot_transmission_flows(transmission_flows = transmission_flows, count_data = count_data, range_age_observed = range_age_observed, outdir = outfile.figures)
 
 transmission_flows_aggregated <- find_transmission_flows_aggregated(samples, df_group, df_age, df_age_aggregated)
 transmission_flows_aggregated2 <- find_transmission_flows_aggregated2(samples, df_group, df_age, df_age_aggregated)
@@ -86,7 +88,7 @@ transmission_flows_aggregated2 <- find_transmission_flows_aggregated2(samples, d
 cat("\nPlot Standardised transmission flows\n")
 
 standardised_transmission_flows <- find_standardised_transmission_flows(samples, df_group, df_age, incidence)
-plot_transmission_flows(standardised_transmission_flows, outfile.figures, lab = 'Standardised')
+plot_transmission_flows(transmission_flows = standardised_transmission_flows, lab = 'Standardised', range_age_observed=range_age_observed,outdir = outfile.figures)
 
 standardised_transmission_flows_aggregated <- find_standardised_transmission_flows_aggregated(samples, df_group, df_age, df_age_aggregated, incidence)
 standardised_transmission_flows_aggregated2 <- find_standardised_transmission_flows_aggregated2(samples, df_group, df_age, df_age_aggregated, incidence)
