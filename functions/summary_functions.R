@@ -105,7 +105,7 @@ make_date_first_positive <- function(allhiv)
   allhiv[, (cols):=lapply(.SD, .remove.spaces), .SDcols = cols]
   
   # Format dates
-  cols <- c('date_coll', 'firstpos_diagnosis_dt')
+  cols <- c('date_coll', 'firstpos_diagnosis_dt', 'lastnegvd')
   allhiv[, (cols) := lapply(.SD, .dates), .SDcols=cols, by = seq_len(nrow(allhiv))]
   allhiv[,  (cols) := lapply(.SD, function(x){as.Date(x, format='%d-%b-%Y')}), .SDcols=cols]
   
@@ -117,8 +117,11 @@ make_date_first_positive <- function(allhiv)
   cat("There are ", length(tmp), " study_ids without date of first positive\n")
   cat("- these had visit rounds in ", allhiv[study_id %in% tmp, paste0(unique(visitno), collapse = ', ')], '\n')
 
+  tmp <- allhiv[is.na(lastnegvd), unique(study_id)]
+  cat("There are ", length(tmp), " study_ids without date of last negative\n")
+
   # rename
-  setnames(allhiv, c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis'), c('date_first_positive', 'visit_first_positive'))
+  setnames(allhiv, c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis', 'lastnegvd'), c('date_first_positive', 'visit_first_positive', 'date_last_negative'))
   
   # NAs in each col
   print.which.NA(allhiv, 'allhiv')
@@ -197,7 +200,7 @@ process.hiv <- function(hiv)
 compare.hiv.allhiv.firstpositivedates <- function(hiv, allhiv)
 {
   hiv1 <- hiv[!is.na(date_first_positive),.(date_first_positive, visit_first_positive),by=study_id]
-  allhiv1 <- allhiv[!is.na(date_first_positive),.(date_first_positive, visit_first_positive),by=study_id]
+  allhiv1 <- allhiv[!is.na(date_first_positive),.(date_first_positive, visit_first_positive, date_last_negative),by=study_id]
   hiv1 <- unique(hiv1)
   allhiv1 <- unique(allhiv1)
   
@@ -227,7 +230,8 @@ compare.hiv.allhiv.firstpositivedates <- function(hiv, allhiv)
   tmp[, date_first_positive := date_first_positive.y]
   tmp[is.na(date_first_positive), date_first_positive := date_first_positive.x]
   set(tmp, NULL, c('date_first_positive.x', 'date_first_positive.y'), NULL)
-  
+
+
   return(tmp)
 }
 
@@ -689,18 +693,17 @@ fill_non_na <- function(x){
   return(x)
 }
 
-print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
-{
-  cols <- colnames(dt); cols <- grep(regex, cols, value=T)
-  .f <- function(x){sum(is.na(x))}
-  tmp <- dt[, lapply(.SD, .f), .SDcols=cols]
-  cols <- cols[which(tmp[1,] != 0)]
-  tmp <- tmp[,
-             {
-               n <- names(.SD);
-               cat('\n-------------------------------------- \nColumns with NA entries : # NA entries \n-------------------------------------- \n')
-               lapply(seq_along(.SD),
-                      FUN=function(i){ cat(n[[i]], ': ', .SD[[i]], '\n'); 0})
-             }
-  , .SDcols=cols]
-}
+# print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
+# {
+#   cols <- colnames(dt); cols <- grep(regex, cols, value=T)
+#   .f <- function(x){sum(is.na(x))}
+#   tmp <- dt[, lapply(.SD, .f), .SDcols=cols]
+#   cols <- cols[which(tmp[1,] != 0)]
+#   tmp <- tmp[,
+#              {
+#                n <- names(.SD);
+#                cat('\n-------------------------------------- \nColumns with NA entries : # NA entries \n-------------------------------------- \n')
+#                lapply(seq_along(.SD),
+#                       FUN=function(i){ cat(n[[i]], ': ', .SD[[i]], '\n'); 0})
+#              }
+# }
