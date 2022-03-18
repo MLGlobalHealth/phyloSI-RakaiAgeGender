@@ -286,6 +286,7 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
   tmp[, index_group_without_community := 1:nrow(tmp)]
   df_group <- merge(df_group, tmp, by = 'temp')
   set(df_group, NULL, 'temp', NULL)
+  df_group <- df_group[order(index_group)]
   stan_data[['index_group_without_community']] = df_group[, index_group_without_community]
   
   # save count in each entry

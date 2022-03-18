@@ -94,11 +94,26 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
     scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
-  
+
   p <- ggarrange(p1, p2, ncol = 2)
   if(!is.null(outdir))
-    ggsave(p, filename = paste0(outdir, '-AgeInfection_CommunityRecipient_', plotlab, '.png'), w = 9, h = 7)
+    ggsave(p, filename = paste0(outdir, '-AgeInfection_CommunitySourceRecipient_', plotlab, '.png'), w = 9, h = 7)
   plots = c(plots, list(p))
+  
+  data[, date_infection_before_cutoff_name.RECIPIENT := 'After 2014']
+  data[date_infection_before_cutoff.RECIPIENT == T, date_infection_before_cutoff_name.RECIPIENT := 'Before 2014']
+  p2 <- ggplot(data, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+    geom_point(aes(col =`Community recipient`)) + 
+    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    theme_bw() + 
+    coord_fixed() +
+    scale_x_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT)))+
+    scale_y_continuous(limits = range(c(data$age_transmission.SOURCE, data$age_infection.RECIPIENT))) +
+    ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
+    theme(legend.position = 'bottom') + 
+    facet_grid(.~date_infection_before_cutoff_name.RECIPIENT)
+  ggsave(p2, filename = paste0(outdir, '-AgeInfection_CommunityRecipient_', plotlab, '.png'), w = 5, h = 5)
   
   return(plots)
 }
