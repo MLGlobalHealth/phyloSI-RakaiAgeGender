@@ -112,7 +112,7 @@ plot_transmission_flows <- function(transmission_flows, outdir, lab=NULL){
       theme_bw() + 
       labs(x = 'Age at infection recipient', fill = paste0(lab, ' Transmission flow'), 
            y= 'Age at transmission source',size='Pairs\ncount') +
-      geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
       facet_grid(label_direction~label_time) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
