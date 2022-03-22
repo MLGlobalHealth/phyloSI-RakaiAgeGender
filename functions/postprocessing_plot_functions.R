@@ -67,7 +67,10 @@
 #   
 # }
 
-plot_intensity_PP <- function(intensity_PP, count_data, outdir){
+plot_intensity_PP <- function(intensity_PP, count_data, range_age_observed, outdir){
+  
+  intensity_PP <- intensity_PP[age_transmission.SOURCE >= range_age_observed[, min_age] & age_transmission.SOURCE <= range_age_observed[, max_age]]
+  intensity_PP <- intensity_PP[age_infection.RECIPIENT >= range_age_observed[, min_age] & age_infection.RECIPIENT <= range_age_observed[, max_age]]
   
   communities <- intensity_PP[, unique(comm)]
   for(i in seq_along(communities)){
@@ -80,7 +83,7 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
       theme_bw() + 
       labs(x = 'Age at infection recipient', fill = 'Estimated median\ntransmission rate', 
            y= 'Age at transmission source',size='Pairs\ncount') +
-      geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
       facet_grid(label_direction~label_time) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
@@ -100,9 +103,13 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
 } 
 
 
-plot_transmission_flows <- function(transmission_flows, outdir, lab=NULL){
+plot_transmission_flows <- function(transmission_flows, range_age_observed, outdir, lab=NULL, count_data = NULL){
+  
+  transmission_flows <- transmission_flows[age_transmission.SOURCE >= range_age_observed[, min_age] & age_transmission.SOURCE <= range_age_observed[, max_age]]
+  transmission_flows <- transmission_flows[age_infection.RECIPIENT >= range_age_observed[, min_age] & age_infection.RECIPIENT <= range_age_observed[, max_age]]
   
   communities <- transmission_flows[, unique(comm)]
+  
   for(i in seq_along(communities)){
     tmp <- transmission_flows[ comm == communities[i]]
     
@@ -123,6 +130,12 @@ plot_transmission_flows <- function(transmission_flows, outdir, lab=NULL){
       guides(fill = guide_colorbar(order = 1), 
              shape = guide_legend(order = 2)) + 
       ggtitle(tmp[,unique(label_community)])
+    
+    if(!is.null(count_data)){
+      tmp1 <- count_data[ comm == communities[i]]
+      p <- p + 
+        geom_point(data = tmp1[count > 0], aes(size = count), col = 'grey50')
+    }
     
     ggsave(p, file = paste0(outdir, '-transmission_flows', lab, '_', communities[i], '.png'), w = 7, h = 7)
   }
