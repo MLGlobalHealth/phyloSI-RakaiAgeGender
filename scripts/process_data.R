@@ -73,6 +73,7 @@ only.inland <- F
 only.transmission.after.start.observational.period <- T
 use.diagonal.prior <- T
 remove.missing.community.recipient <- T
+remove.neuro.individuals <- T
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -142,16 +143,25 @@ if(only.inland){
   cat('\nExcluding recipients from fishing\n')
   cat('Removing ', nrow(pairs.all[comm.RECIPIENT == 'fishing']), ' pairs\n')
   pairs.all <- pairs.all[comm.RECIPIENT == 'inland']
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(only.transmission.after.start.observational.period){
   cat('\nExcluding recipients infected before ', as.character(start_observational_period), '\n')
   cat('Removing ', nrow(pairs.all[date_infection.RECIPIENT < start_observational_period]), ' pairs\n')
   pairs.all <- pairs.all[date_infection.RECIPIENT >= start_observational_period]
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(remove.missing.community.recipient){
   cat('\nExcluding recipients without community \n')
   cat('Removing ', nrow(pairs.all[is.na(comm.RECIPIENT)]), ' pairs\n')
   pairs.all <- pairs.all[!is.na(comm.RECIPIENT)]
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
+}
+if(remove.neuro.individuals){
+  cat('\nExcluding individuals from the neuro cohort \n')
+  cat('Removing ', nrow(pairs.all[round.SOURCE == 'neuro' | round.RECIPIENT == 'neuro']), ' pairs\n')
+  pairs.all <- pairs.all[round.SOURCE != 'neuro' & round.RECIPIENT != 'neuro']
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 
 print.which.NA(pairs.all)

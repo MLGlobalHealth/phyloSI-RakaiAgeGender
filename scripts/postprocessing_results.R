@@ -49,8 +49,8 @@ outdir.table <- .outdir.table
 
 # maps
 range_age_observed_cat <- find_range_age_observed(copy(pairs), df_group)
-range_age_observed <- range_age_observed_cat[, list(min_age = min(c(min_age_infection.RECIPIENT, min_age_transmission.SOURCE)), 
-                                                 max_age = max(c(max_age_infection.RECIPIENT, max_age_transmission.SOURCE)))]
+range_age_observed <- pairs[, list(min_age = min(c(age_infection.RECIPIENT, age_transmission.SOURCE)), 
+                                                 max_age = max(c(age_infection.RECIPIENT, age_transmission.SOURCE)))]
 df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'), incidence)
 
 # samples 
@@ -75,7 +75,8 @@ count_data <- prepare_count_data(stan_data, df_age, df_group)
 plot_intensity_PP(intensity_PP, count_data, range_age_observed, outfile.figures)
 
 transmission_flows <- find_transmission_flows(samples, df_group, df_age)
-plot_transmission_flows(transmission_flows = transmission_flows, count_data = count_data, range_age_observed = range_age_observed, outdir = outfile.figures)
+plot_transmission_flows(transmission_flows = transmission_flows, count_data = count_data, range_age_observed = range_age_observed, 
+                        with_contour = T, outdir = outfile.figures)
 
 transmission_flows_aggregated <- find_transmission_flows_aggregated(samples, df_group, df_age, df_age_aggregated)
 transmission_flows_aggregated2 <- find_transmission_flows_aggregated2(samples, df_group, df_age, df_age_aggregated)
@@ -114,8 +115,8 @@ plot_sex_source_standardised(sex_source, sex_source_standardised, outfile.figure
 cat("\nPlot age-specific transmission dynamics\n")
 
 # median age of source
-# age_source <- find_age_source_by_age_group(samples, df_group, df_age)
-# plot_median_age_source(age_source, outfile.figures)
+age_source <- find_age_source_by_age_group(samples, df_group, df_age)
+plot_median_age_source(age_source, outfile.figures)
 # 
 # age_source_difference <- find_age_source_difference_by_age_group(samples, df_group, df_age)
 # plot_median_age_source_difference(age_source_difference, outfile.figures)
@@ -123,6 +124,7 @@ cat("\nPlot age-specific transmission dynamics\n")
 # age_source_overall <- find_age_source_by_group(samples, df_group, df_age, incidence, range_age_observed)
 # plot_median_age_source_overall(age_source_overall, outfile.figures)
 
+# median age of recipient
 
 
 

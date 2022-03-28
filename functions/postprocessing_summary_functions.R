@@ -186,6 +186,10 @@ find_transmission_flows <- function(samples, df_group, df_age){
   tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
   setnames(tmp1, 2:3, c('index_group', 'index_age'))
   
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- tmp1[age_transmission.SOURCE >= (range_age_observed[, min_age] - 1) & age_transmission.SOURCE <= (range_age_observed[, max_age] + 1)]
+  tmp1 <- tmp1[age_infection.RECIPIENT >= (range_age_observed[, min_age] - 1) & age_infection.RECIPIENT <= (range_age_observed[, max_age] + 1)]
+  
   tmp1[, value := exp(value)]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group')]
@@ -201,6 +205,7 @@ find_transmission_flows <- function(samples, df_group, df_age){
   
   return(tmp1)
 }
+
 
 find_transmission_flows_aggregated <- function(samples, df_group, df_age, df_age_aggregated){
   
@@ -404,10 +409,12 @@ find_age_source_by_age_group <- function(samples, df_group, df_age){
   
   tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
   setnames(tmp1, 2:3, c('index_group', 'index_age'))
-  
+
   tmp1[, value := exp(value)]
   
   tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- tmp1[age_transmission.SOURCE >= (range_age_observed[, min_age] - 1) & age_transmission.SOURCE <= (range_age_observed[, max_age] + 1)]
+  tmp1 <- tmp1[age_infection.RECIPIENT >= (range_age_observed[, min_age] - 1) & age_infection.RECIPIENT <= (range_age_observed[, max_age] + 1)]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
