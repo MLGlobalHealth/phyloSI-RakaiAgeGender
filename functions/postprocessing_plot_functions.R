@@ -372,7 +372,7 @@ plot_median_age_source <- function(age_source, outdir){
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = c(0,0)) + 
       coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +
-      facet_grid(label_time~label_direction) + 
+      facet_grid(label_direction~label_time) + 
       ggtitle(tmp[, unique(label_community)])
     
     ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeRecipient_', communities[i], '.png'), w = 7, h = 6)
@@ -446,14 +446,14 @@ plot_median_age_recipient <- function(age_recipient, age_recipient_standardised,
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
       theme_bw() + 
       labs(x = 'Age at transmission source', y = 'Median age at infection recipient',
-           col = 'Date infection recipient', fill = 'Date infection recipient') +
+           col = '', fill = '') +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = c(0,0)) + 
       coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +    
-      facet_grid(label_time~label_direction) + 
+      facet_grid(label_direction~label_time) + 
       ggtitle(tmp1[, unique(label_community)])
     
     ggsave(p, file = paste0(outdir, '-MedianAgeRecipient_ByAgeSource_', communities[i], '.png'), w = 7, h = 5)
