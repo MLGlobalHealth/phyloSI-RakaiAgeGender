@@ -117,6 +117,12 @@ cat("\nPlot age-specific transmission dynamics\n")
 # median age of source
 age_source <- find_age_source_by_age_group(samples, df_group, df_age)
 plot_median_age_source(age_source, outfile.figures)
+
+# median age of recipient
+age_recipient <- find_age_recipient_by_age_group(samples, df_group, df_age)
+age_recipient_standardised <- find_age_recipient_by_age_group_standardised(samples, df_group, df_age, incidence)
+plot_median_age_recipient(age_recipient, age_recipient_standardised, outfile.figures)
+
 # 
 # age_source_difference <- find_age_source_difference_by_age_group(samples, df_group, df_age)
 # plot_median_age_source_difference(age_source_difference, outfile.figures)
