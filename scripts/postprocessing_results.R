@@ -30,6 +30,7 @@ if(length(args_line) > 0)
 }
 
 # load functions
+source(file.path(indir, 'functions', 'utils.R'))
 source(file.path(indir, 'functions', 'summary_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
@@ -51,11 +52,15 @@ outdir.table <- .outdir.table
 range_age_observed_cat <- find_range_age_observed(copy(pairs), df_group)
 range_age_observed <- pairs[, list(min_age = min(c(age_infection.RECIPIENT, age_transmission.SOURCE)), 
                                                  max_age = max(c(age_infection.RECIPIENT, age_transmission.SOURCE)))]
-df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'), incidence)
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'), di)
+
+# temporary
+incidence <- process.incidence(incidence, df_round)
 
 # samples 
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
+
 
 #
 ## convergence diagnostics 
@@ -89,7 +94,8 @@ transmission_flows_aggregated2 <- find_transmission_flows_aggregated2(samples, d
 cat("\nPlot Standardised transmission flows\n")
 
 standardised_transmission_flows <- find_standardised_transmission_flows(samples, df_group, df_age, incidence)
-plot_transmission_flows(transmission_flows = standardised_transmission_flows, lab = 'Standardised', range_age_observed=range_age_observed,outdir = outfile.figures)
+plot_transmission_flows(transmission_flows = standardised_transmission_flows, lab = 'Standardised', 
+                        range_age_observed=range_age_observed,outdir = outfile.figures, with_contour = T)
 
 standardised_transmission_flows_aggregated <- find_standardised_transmission_flows_aggregated(samples, df_group, df_age, df_age_aggregated, incidence)
 standardised_transmission_flows_aggregated2 <- find_standardised_transmission_flows_aggregated2(samples, df_group, df_age, df_age_aggregated, incidence)
@@ -107,7 +113,6 @@ sex_source_standardised <- find_sex_source_standardised(samples, df_group, df_ag
 plot_sex_source_standardised(sex_source, sex_source_standardised, outfile.figures)
 
 
-
 #
 ## shift in age-specific transmission dynamics
 #
@@ -117,17 +122,21 @@ cat("\nPlot age-specific transmission dynamics\n")
 # median age of source
 age_source <- find_age_source_by_age_group(samples, df_group, df_age)
 plot_median_age_source(age_source, outfile.figures)
+plot_median_age_source_with_empirical_data(age_source, pairs, outfile.figures)
 
 # median age of recipient
 age_recipient <- find_age_recipient_by_age_group(samples, df_group, df_age)
+plot_median_age_recipient_with_empirical_data(age_recipient, pairs, outfile.figures)
+
 age_recipient_standardised <- find_age_recipient_by_age_group_standardised(samples, df_group, df_age, incidence)
 plot_median_age_recipient(age_recipient, age_recipient_standardised, outfile.figures)
+
 
 # 
 # age_source_difference <- find_age_source_difference_by_age_group(samples, df_group, df_age)
 # plot_median_age_source_difference(age_source_difference, outfile.figures)
 # 
-# age_source_overall <- find_age_source_by_group(samples, df_group, df_age, incidence, range_age_observed)
+# age_source_overall <- find_age_source_by_group(samples, df_group, df_age, di, range_age_observed)
 # plot_median_age_source_overall(age_source_overall, outfile.figures)
 
 # median age of recipient

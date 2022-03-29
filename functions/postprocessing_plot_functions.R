@@ -352,7 +352,7 @@ plot_sex_source_standardised <- function(sex_source, sex_source_standardised, ou
 
 plot_median_age_source <- function(age_source, outdir){
   
-  cat("\nPlot mean age at transmission of the source by age at infection of recipient\n")
+  cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
   
   communities <- age_source[, unique(comm)]
   
@@ -378,6 +378,55 @@ plot_median_age_source <- function(age_source, outdir){
     ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeRecipient_', communities[i], '.png'), w = 7, h = 6)
   }
 
+  
+}
+
+plot_median_age_source_with_empirical_data <- function(age_source, pairs, outdir){
+  
+  # prepare data
+  data <- copy(pairs)
+  data[, age_transmission.SOURCE := floor(age_transmission.SOURCE)]
+  data[, age_infection.RECIPIENT := floor(age_infection.RECIPIENT)]
+  data <- merge(data, df_age, by = c('age_infection.RECIPIENT', 'age_transmission.SOURCE'))
+  
+  ps <- c(0.5, 0.2, 0.8)
+  p_labs <- c('M','CL','CU')
+  data = data[, list(q= quantile(age_transmission.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
+             by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT', 'age_infection_reduced.RECIPIENT', 'comm.RECIPIENT')]	
+  data = dcast(data, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT + age_infection_reduced.RECIPIENT + comm.RECIPIENT ~ q_label, value.var = "q")
+  
+  data[, is_mf := 1]
+  data[sex.SOURCE == 'F' & sex.RECIPIENT == 'M', is_mf := 0]
+  data[, is_before_cutoff_date := as.numeric(date_infection_before_cutoff.RECIPIENT)]
+  data <- merge(df_group, data, by.x = c('is_mf', 'is_before_cutoff_date', 'comm'), by.y = c('is_mf', 'is_before_cutoff_date', 'comm.RECIPIENT'))
+  
+  communities <- age_source[, unique(comm)]
+  
+  for(i in seq_along(communities)){
+    
+    tmp <- age_source[comm == communities[i]]
+    tmp1 <- data[comm == communities[i]]
+    
+    p <- ggplot(tmp) + 
+      geom_line(aes(x = age_infection.RECIPIENT, y = M)) + 
+      geom_ribbon(aes(x = age_infection.RECIPIENT, ymin= CL, ymax = CU), alpha = 0.15) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+      geom_point(data = tmp1, aes(x = age_infection_reduced.RECIPIENT, y = M), position = position_dodge(1.5), col = 'darkred') + 
+      geom_errorbar(data = tmp1, aes(x = age_infection_reduced.RECIPIENT, ymin = CL, ymax = CU), position = position_dodge(1.5), width = 0.2, col = 'darkred') +
+      theme_bw() + 
+      labs(x = 'Age at infection recipient', y = 'Median age at transmission source',
+           col = 'Date infection recipient', fill = 'Date infection recipient') +
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      scale_x_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0)) + 
+      coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +
+      facet_grid(label_direction~label_time) + 
+      ggtitle(tmp[, unique(label_community)])
+    
+    ggsave(p, file = paste0(outdir, '-MedianAgeSourceWithEmpirical_ByAgeRecipient_', communities[i], '.png'), w = 7, h = 6)
+  }
   
 }
 
@@ -428,7 +477,7 @@ plot_median_age_source_overall <- function(age_source_overall, outdir){
 
 plot_median_age_recipient <- function(age_recipient, age_recipient_standardised, outdir){
   
-  cat("\nPlot mean age at infection of the recipient by age at transmission of source\n")
+  cat("\nPlot median age at infection of the recipient by age at transmission of source\n")
   
   age_recipient[, type := 'Unstandardised']
   age_recipient_standardised[, type := 'Standardised']
@@ -461,6 +510,58 @@ plot_median_age_recipient <- function(age_recipient, age_recipient_standardised,
   }
 
 }
+
+plot_median_age_recipient_with_empirical_data <- function(age_recipient, pairs, outdir){
+  
+  # prepare data
+  data <- copy(pairs)
+  data[, age_transmission.SOURCE := floor(age_transmission.SOURCE)]
+  data[, age_infection.RECIPIENT := floor(age_infection.RECIPIENT)]
+  data <- merge(data, df_age, by = c('age_infection.RECIPIENT', 'age_transmission.SOURCE'))
+  
+  ps <- c(0.5, 0.2, 0.8)
+  p_labs <- c('M','CL','CU')
+  data = data[, list(q= quantile(age_infection.RECIPIENT, prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT', 'age_transmission_reduced.SOURCE', 'comm.RECIPIENT')]	
+  data = dcast(data, sex.SOURCE + sex.RECIPIENT + date_infection_before_cutoff.RECIPIENT + age_transmission_reduced.SOURCE + comm.RECIPIENT ~ q_label, value.var = "q")
+  
+  data[, is_mf := 1]
+  data[sex.SOURCE == 'F' & sex.RECIPIENT == 'M', is_mf := 0]
+  data[, is_before_cutoff_date := as.numeric(date_infection_before_cutoff.RECIPIENT)]
+  data <- merge(df_group, data, by.x = c('is_mf', 'is_before_cutoff_date', 'comm'), by.y = c('is_mf', 'is_before_cutoff_date', 'comm.RECIPIENT'))
+  
+  
+  communities <- age_recipient[, unique(comm)]
+  
+  for(i in seq_along(communities)){
+    
+    tmp <- age_recipient[comm == communities[i]]
+    tmp1 <- data[comm == communities[i]]
+    
+    p <- ggplot(tmp) + 
+      geom_line(aes(x = age_transmission.SOURCE, y = M)) + 
+      geom_ribbon(aes(x = age_transmission.SOURCE, ymin= CL, ymax = CU), alpha = 0.15) + 
+      geom_point(data = tmp1, aes(x = age_transmission_reduced.SOURCE, y = M), position = position_dodge(1.5), col = 'darkred') + 
+      geom_errorbar(data = tmp1, aes(x = age_transmission_reduced.SOURCE, ymin = CL, ymax = CU), position = position_dodge(1.5), width = 0.2, col = 'darkred') +
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+      theme_bw() + 
+      labs(x = 'Age at transmission source', y = 'Median age at infection recipient',
+           col = '', fill = '') +
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      scale_x_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0)) + 
+      coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +    
+      facet_grid(label_direction~label_time) + 
+      ggtitle(tmp1[, unique(label_community)])
+    
+    ggsave(p, file = paste0(outdir, '-MedianAgeRecipientWithEmpirical_ByAgeSource_', communities[i], '.png'), w = 7, h = 5)
+    
+  }
+  
+}
+
 
 plot_median_age_recipient_difference <- function(age_recipient_difference, outdir){
   

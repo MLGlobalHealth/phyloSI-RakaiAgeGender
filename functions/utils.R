@@ -65,6 +65,13 @@ print.which.NA <- function(dt,regex='', name='dt')
   round(lubridate::time_length(difftime(x, y),"years"),1)
 }
 
+.month.diff <- function(x, y)
+{
+  if (!is.Date(x)) {x <- as.Date(x, format = '%Y-%m-%d')}
+  if (!is.Date(y)) {y <- as.Date(y, format = '%Y-%m-%d')}
+  lubridate::time_length(difftime(x, y),"months")
+}
+
 .f <- function(x){round(x, 1)}
 
 print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')

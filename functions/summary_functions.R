@@ -279,6 +279,22 @@ get.age.aggregated.map <- function(age_aggregated, incidence){
   return(df_age_aggregated)
 }
 
+process.incidence <- function(incidence, df_round){
 
+  di <- as.data.table(merge(incidence, df_round, by.x = 'ROUND', by.y = 'round'))
+  
+  di[, months_diff := .month.diff(max_sample_date, min_sample_date)]
+  
+  di <- di[min_sample_date >= start_observational_period]
+  di[, is_before_cutoff_date := ifelse(max_sample_date < cutoff_date, 1, 0)]
+  di[, is_mf := ifelse(SEX == 'F', 1, 0)]
+  
+  di[, ELIGIBLE := round(ELIGIBLE * months_diff/12)]
+  
+  di[, INFECTIONS := INCIDENCE * ELIGIBLE]
+  di[, INFECTIONS_UB := UB * ELIGIBLE]
+  di[, INFECTIONS_LB := LB * ELIGIBLE]
+  di
+}
 
 

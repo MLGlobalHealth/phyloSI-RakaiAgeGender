@@ -109,6 +109,8 @@ aik <- .read(file.anonymisation.keys); aik$X <- NULL
 # TRANSFORM AND MERGE DATA
 #
 
+# get incidence rate adjusted for time period of round
+incidence <- process.incidence(incidence, df_round)
 
 # get time of infection (using Tanya's estimate if use.tsi.estimates == T)
 meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
