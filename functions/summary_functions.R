@@ -78,6 +78,10 @@ pairs.get.meta.data <- function(chain, meta, aik){
   # stopifnot(unique(dchain$RECIPIENT) %in% unique(meta_data$aid))
   meta <- copy(meta_data); 
   
+  # find first roung 
+  meta[, first_round := substr(round, 1, 4)]
+  meta[round == 'neur', round := 'neuro']
+
   # merge by source, then recipient
   tmp <- copy(meta)
   names(tmp) = paste0(names(tmp), '.SOURCE')
@@ -124,6 +128,12 @@ print.statements.about.pairs <- function(pairs){
   tab <- pairs[, list(count = .N), by = c('comm.SOURCE', 'comm.RECIPIENT')]
   print_table(tab)
   
+  cat('\nPairs by round')
+  tab <- pairs[, list(count = .N), by = c('first_round.SOURCE')]
+  print_table(tab[order(first_round.SOURCE)])
+  
+  tab <- pairs[, list(count = .N), by = c('first_round.RECIPIENT')]
+  print_table(tab[order(first_round.RECIPIENT)])
 }
 
 # Want to see how many aids in potential pairs have an associated prefix and base frequency file 
@@ -225,9 +235,11 @@ get.group.map <- function(){
   df_direction[, label_direction := ifelse(is_mf == 1, 'Male -> Female', 'Female -> Male')]
   
   df_time <- data.table(index_time = 1:2, is_before_cutoff_date = c(1, 0))
-  label_cutoff_date <- format(cutoff_date, '%Y')
-  df_time[, label_time := paste0(ifelse(is_before_cutoff_date == 1, 'Before', 'After'), ' ', label_cutoff_date)]
-  df_time[, label_time := factor(label_time, levels = paste0(c('Before', 'After'), ' ', label_cutoff_date))]
+  label_cutoff_date <- as.numeric(format(cutoff_date, '%Y'))
+  label_start_observational_period <- format(start_observational_period, '%Y')
+  df_time[, label_time := ifelse(is_before_cutoff_date == 1, paste0(label_start_observational_period,'-',label_cutoff_date-1), paste0(label_cutoff_date,'-2019'))]
+  df_time[, label_time := factor(label_time, levels = c(paste0(label_start_observational_period,'-',label_cutoff_date-1), 
+                                                        paste0(label_cutoff_date,'-2019')))]
   
   df_community <- data.table(index_community = 1:2, comm = c('fishing','inland'))
   df_community[, label_community := ifelse(comm == 'inland', 'Inland communities', 'Fishing communities')]
@@ -265,4 +277,22 @@ get.age.aggregated.map <- function(age_aggregated, incidence){
   df_age_aggregated <- merge(df_age_aggregated, tmp1, by = 'age_group_transmission.SOURCE', allow.cartesian=TRUE)
   
   return(df_age_aggregated)
+}
+
+process.incidence <- function(incidence, df_round){
+
+  di <- as.data.table(merge(incidence, df_round, by.x = 'ROUND', by.y = 'round'))
+  
+  di[, months_diff := .month.diff(max_sample_date, min_sample_date)]
+  
+  di <- di[min_sample_date >= start_observational_period]
+  di[, is_before_cutoff_date := ifelse(max_sample_date < cutoff_date, 1, 0)]
+  di[, is_mf := ifelse(SEX == 'F', 1, 0)]
+  
+  di[, ELIGIBLE := round(ELIGIBLE * months_diff/12)]
+  
+  di[, INFECTIONS := INCIDENCE * ELIGIBLE]
+  di[, INFECTIONS_UB := UB * ELIGIBLE]
+  di[, INFECTIONS_LB := LB * ELIGIBLE]
+  di
 }

@@ -1,8 +1,8 @@
 library(rstan)
 library(data.table)	
 
-jobname <- '2014_IpriorGP'
-stan_model <- 'gp_220108'
+jobname <- 'diagonalprior'
+stan_model <- 'gp_220317'
 DEBUG <- F
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
@@ -11,6 +11,7 @@ outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan
 if(0)
 {
   indir <- '~/git/phyloflows'
+  outdir <- file.path('~/Box\ Sync/2021/phyloflows/', paste0(stan_model, '-', jobname))
 }
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
