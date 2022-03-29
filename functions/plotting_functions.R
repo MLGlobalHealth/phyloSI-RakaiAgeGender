@@ -140,7 +140,7 @@ plot_hist_age_infection <- function(pairs, outdir = NULL){
   
   if(!is.null(outdir)){
     file = paste0(outdir, '-hist_age_infection.png')
-    cat('saving', file)
+    cat('saving', file, '\n')
     ggsave(p, file = file, w = 6, h = 6)
   }
   
@@ -172,7 +172,7 @@ plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
   
   if(!is.null(outdir)){
     file = paste0(outdir, '-hist_date_infection.png')
-    cat('saving', file)
+    cat('saving', file, '\n')
     ggsave(p, file = file, w = 6, h = 6)
   }
 
