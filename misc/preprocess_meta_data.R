@@ -47,7 +47,6 @@ file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'P
 source(file.path(indir.repository, 'functions', 'utils.R'))
 source(file.path(indir.repository, 'misc', 'functions', 'preprocess_meta_data-functions.R'))
 
-
 #
 # LOAD DATA
 #
@@ -83,8 +82,8 @@ invisible(lapply(list(hiv, allhiv, quest, raw_metadata, raw_neuro_metadata),
 # process quest and make date.birth
 quest <- process.quest(quest)
 
-# pmake date of first positive test with all hiv
-date.first.positive <- make_date_first_positive(allhiv)
+# make date of first positive and last negative test with allhiv
+date.first.positive <- make.date.first.positive(allhiv)
 
 # process hiv and find date first and last visit 
 hiv <- process.hiv(hiv)
@@ -101,7 +100,6 @@ meta_data_2 <- process.meta.data(raw_metadata, aik, community.keys)
 
 # process Neuro's meta data
 meta_data_neuro <- process.neuro.meta.data(raw_neuro_metadata, aik)
-
 
 #
 # MAKE META DATA
@@ -143,10 +141,7 @@ if(0){
 }
 
 
-
 #
 # SAVE META DATA
 #
-
-save(meta_data, df_round, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220317.RData'), row.names = F)
-
+save(meta_data, df_round, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData'), row.names = F)

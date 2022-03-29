@@ -29,7 +29,7 @@ process.quest <- function(quest)
   return(quest)
 }
 
-make_date_first_positive <- function(allhiv)
+make.date.first.positive <- function(allhiv)
 {
   
   # Check whether there are hidden NAs 
@@ -40,7 +40,7 @@ make_date_first_positive <- function(allhiv)
   allhiv[, (cols):=lapply(.SD, .remove.spaces), .SDcols = cols]
   
   # Format dates
-  cols <- c('date_coll', 'firstpos_diagnosis_dt')
+  cols <- c('date_coll', 'firstpos_diagnosis_dt', 'lastnegvd')
   allhiv[, (cols) := lapply(.SD, .dates), .SDcols=cols, by = seq_len(nrow(allhiv))]
   allhiv[,  (cols) := lapply(.SD, function(x){as.Date(x, format='%d-%b-%Y')}), .SDcols=cols]
   
@@ -53,7 +53,7 @@ make_date_first_positive <- function(allhiv)
   cat("- these had visit rounds in ", allhiv[study_id %in% tmp, paste0(unique(visitno), collapse = ', ')], '\n')
   
   # rename
-  setnames(allhiv, c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis'), c('date_first_positive', 'visit_first_positive'))
+  setnames(allhiv, c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis', 'lastnegvd'), c('date_first_positive', 'visit_first_positive', 'date_last_negative'))
   
   # NAs in each col
   print.which.NA(allhiv, 'allhiv')
@@ -131,6 +131,9 @@ process.hiv <- function(hiv)
 
 compare.hiv.allhiv.firstpositivedates <- function(hiv, allhiv)
 {
+  # store date_last_negative to join it at the end
+  dlastneg <- unique(allhiv[,.(study_id, date_last_negative)])
+
   hiv1 <- hiv[!is.na(date_first_positive),.(date_first_positive, visit_first_positive),by=study_id]
   allhiv1 <- allhiv[!is.na(date_first_positive),.(date_first_positive, visit_first_positive),by=study_id]
   hiv1 <- unique(hiv1)
@@ -162,6 +165,7 @@ compare.hiv.allhiv.firstpositivedates <- function(hiv, allhiv)
   tmp[, date_first_positive := date_first_positive.y]
   tmp[is.na(date_first_positive), date_first_positive := date_first_positive.x]
   set(tmp, NULL, c('date_first_positive.x', 'date_first_positive.y'), NULL)
+  tmp <- merge(tmp, dlastneg, all.x=TRUE, by='study_id')
   
   return(tmp)
 }
@@ -197,9 +201,13 @@ get.meta.data <- function(quest, date.first.positive, date.first.last.visit, aik
   meta <- unique(meta)
   
   # list rounds
+  # TODO: ? We have multiple rows for study id's living in multiple communities.
+  # It is also unclear in which comm they were at a spec round.
+  # Maybe do something like: comm = inland_fishing?
   tmp <- meta[, list(round = paste0(round, collapse = "_")), by ='study_id' ]
   meta <- merge(unique(select(meta, -round)), tmp, by ='study_id')
-  stopifnot(meta[, .lu(study_id) == .N])
+  #   anyDuplicated(meta, by=c('study_id', 'round'))
+  #   stopifnot(meta[, .lu(study_id) == .N])
   
   # get dates of first and last visit
   meta <- merge(meta,date.first.last.visit, by='study_id')
@@ -207,9 +215,9 @@ get.meta.data <- function(quest, date.first.positive, date.first.last.visit, aik
   # Get anonymised ID
   meta <- merge(meta, aik, by.x='study_id', by.y='pt_id', all.x=T)
   
-  # Add times first positive
+  # Add times first positive and last negative
   # stopifnot(meta[!study_id %in%  hiv$study_id, .N==0])
-  meta <- merge(meta, date.first.positive[, .(study_id, date_first_positive)], by='study_id')
+  meta <- merge(meta, date.first.positive[, .(study_id, date_last_negative, date_first_positive)], by='study_id')
   
   # compute ages:
   meta[ , `:=` (age_first_positive = .year.diff(date_first_positive, birthdat))]
@@ -217,7 +225,8 @@ get.meta.data <- function(quest, date.first.positive, date.first.last.visit, aik
   
   setnames(meta, c('aid', 'birthdat'), c('aid', 'date_birth'))
   setcolorder(meta, c('study_id', 'aid','sex', 'comm', 'date_birth','round', 'age_first_positive'))
-  stopifnot(meta[, .lu(study_id) == .N, ])
+  #   stopifnot(meta[, .lu(study_id) == .N, ])
+  meta[, uniqueN(study_id)]
   
   return(meta)
 }
@@ -227,6 +236,7 @@ process.meta.data <- function(raw_metadata, aik, community.keys){
   # make date format
   raw_metadata[, sample_date := as.Date(sample_date, format = '%Y-%m-%d')]
   raw_metadata[, firstposvd := as.Date(firstposvd, format = '%Y-%m-%d')]
+  raw_metadata[, lastnegvd := as.Date(lastnegvd, format = '%Y-%m-%d')]
   
   # remove id with no information
   raw_metadata[is.na(sample_date), sample_date := firstposvd]
@@ -249,7 +259,7 @@ process.meta.data <- function(raw_metadata, aik, community.keys){
   raw_metadata[, date_birth := as.Date(paste0(birthyr, '-', birthmo, '-', '01'), format = '%Y-%m-%d')]
   
   # get age first positive
-  setnames(raw_metadata, c('firstposvd'), c('date_first_positive'))
+  setnames(raw_metadata, c('firstposvd', 'lastnegvd' ), c('date_first_positive', 'date_last_negative'))
   
   # find date first, last visit and round
   tmp <- raw_metadata[, list(date_first_visit = min(sample_date), 
@@ -267,7 +277,7 @@ process.meta.data <- function(raw_metadata, aik, community.keys){
   
   # keep variable of interest
   raw_metadata[, .(study_id, aid, sex, comm, date_birth, round, age_first_positive, is_migrant, 
-                   date_first_visit, date_last_visit, date_first_positive, age_first_visit)]
+                   date_first_visit, date_last_visit, date_last_negative, date_first_positive, age_first_visit)]
   
 }
 
@@ -295,7 +305,10 @@ process.neuro.meta.data <- function(raw_neuro_metadata, aik){
   neuro_metadata <- merge(neuro_metadata, aik, by.x='study_id', by.y='pt_id', all.x=T)
   
   # keep variable of interest
-  neuro_metadata[, .(study_id, aid, sex, date_birth, round, date_first_visit, date_last_visit, age_first_visit)]
+  neuro_metadata <- neuro_metadata[, .(study_id, aid, sex, date_birth, round, date_first_visit, date_last_visit, age_first_visit)]
+
+  # two rows are duplicated: remove them
+  unique(neuro_metadata)
   
   
 }
