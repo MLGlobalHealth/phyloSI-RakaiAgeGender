@@ -29,17 +29,12 @@ if(dir.exists('/home/andrea'))
   indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
   outdir <- '~/Documents/Box/2021/phyloflows'
+  file.path(indir.deepsequencedata,'RCCS_R15_R18')
 
-  jobname <- 'cutoff_2014'
+  jobname <- 'test'
   stan_model <- 'gp_220108'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
-}
-
-# hpc
-if(dir.exists('/rds/general/project/ratmann_pangea_deepsequencedata/')){
-  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 }
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
@@ -77,7 +72,7 @@ remove.neuro.individuals <- T
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
-file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220317.RData')
+file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220411.csv')

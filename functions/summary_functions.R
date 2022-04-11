@@ -292,5 +292,3 @@ process.incidence <- function(incidence, df_round){
   
   di
 }
-
-
