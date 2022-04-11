@@ -103,14 +103,14 @@ plot_intensity_PP <- function(intensity_PP, count_data, range_age_observed, outd
 } 
 
 
-plot_transmission_flows <- function(transmission_flows, range_age_observed, outdir, lab=NULL, count_data = NULL, with_contour = F){
+plot_transmission_flows_by_round <- function(transmission_flows, range_age_observed, outdir, lab=NULL, count_data = NULL, with_contour = F){
   
   communities <- transmission_flows[, unique(comm)]
   
   for(i in seq_along(communities)){
     
     tmp <- transmission_flows[ comm == communities[i]]
-    
+    tmp[, label_round := paste0('Round R0', ROUND)]
     index_groups <- tmp[, sort(unique(index_group))]
     
     levels <- tmp[, {
@@ -129,7 +129,7 @@ plot_transmission_flows <- function(transmission_flows, range_age_observed, outd
         theme_bw() + 
         labs(fill = paste0(lab, '\nTransmission\nflows'), 
              size='Pairs\ncount') +
-        facet_grid(label_direction~label_time) + 
+        facet_grid(label_direction~label_round) + 
         theme(strip.background = element_rect(colour="white", fill="white"),
               strip.text = element_text(size = rel(1)),
               legend.position = 'right', 
@@ -198,7 +198,7 @@ plot_transmission_flows <- function(transmission_flows, range_age_observed, outd
                   left = 'Age at transmission source',
                   top = tmp[,unique(label_community)])
 
-    ggsave(pf, file = paste0(outdir, '-transmission_flows', lab, '_', communities[i], '.png'), w = 8, h = 6)
+    ggsave(pf, file = paste0(outdir, '-transmission_flows', lab, '_', communities[i], '_by_round.png'), w = 10, h = 8)
   }
   
 } 
@@ -260,6 +260,40 @@ plot_transmission_flows_aggregated <- function(transmission_flows_aggregated, st
   }
 }
 
+plot_transmission_flows_aggregated_by_round <- function(standardised_transmission_flows_aggregated, df_age_aggregated, outdir)
+{
+  
+  standardised_transmission_flows_aggregated[, type := 'Standardised']
+  
+  tmp <- copy(standardised_transmission_flows_aggregated)
+  
+  tmp[, `Age Recipient` := age_group_infection.RECIPIENT]
+  tmp[, `Age Source` := age_group_transmission.SOURCE]
+  tmp[, label_round := paste0('Round R0', ROUND)]
+  
+  tmp[, Direction :=label_direction]
+  
+  communities <- tmp[, unique(comm)]
+  for(i in seq_along(communities)){
+    tmp1 <- tmp[ comm == communities[i]]
+    
+    p <- ggplot(tmp1[type == 'Standardised'], aes(x = `Age Source`)) + 
+      geom_bar(aes(y = M, fill = label_round), stat = 'identity', position = "dodge") + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = label_round), position = "dodge") + 
+      labs(x = 'Age source', y = 'Transmission flows', fill = '') + 
+      theme_bw() +
+      facet_grid(Direction~`Age Recipient`, scale = 'free', label = 'label_both')+
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom', 
+            axis.text.x = element_text(angle = 70,hjust =1)) +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = tmp[, range(c(CU, 0))]) +
+      scale_fill_viridis_d() +
+      ggtitle(tmp1[,unique(label_community)])
+    ggsave(p, file = paste0(outdir, '-transmission_flows_aggregated_',  communities[i], '_by_round.png'), w = 7, h = 5.5)
+  }
+}
+
 plot_transmission_flows_aggregated2 <- function(transmission_flows_aggregated, standardised_transmission_flows_aggregated, df_age_aggregated, outdir)
 {
   
@@ -308,6 +342,40 @@ plot_transmission_flows_aggregated2 <- function(transmission_flows_aggregated, s
   }
 }
 
+plot_transmission_flows_aggregated2_by_round <- function(standardised_transmission_flows_aggregated, df_age_aggregated, outdir)
+{
+  
+  standardised_transmission_flows_aggregated[, type := 'Standardised']
+  
+  tmp <- copy(standardised_transmission_flows_aggregated)
+  
+  tmp[, `Age Recipient` := age_group_infection.RECIPIENT]
+  tmp[, `Age Source` := factor(age_classification.SOURCE, levels = c('Younger', 'Same age', 'Older'))]
+  tmp[, label_round := paste0('Round R0', ROUND)]
+  
+  tmp[, Direction := label_direction]
+  
+  communities <- tmp[, unique(comm)]
+  for(i in seq_along(communities)){
+    tmp1 <- tmp[ comm == communities[i]]
+    
+    p <- ggplot(tmp1[type == 'Standardised'], aes(x = `Age Source`)) + 
+      geom_bar(aes(y = M, fill = label_round), stat = 'identity', position = "dodge") + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = label_round), position = "dodge") + 
+      labs(x = 'Age source', y = 'Transmission flows', fill = '') + 
+      theme_bw() +
+      facet_grid(Direction~`Age Recipient`, scale = 'free', label = 'label_both')+
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom', 
+            axis.text.x = element_text(angle = 70,hjust =1)) +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = tmp[, range(c(CU, 0))]) +
+      scale_fill_viridis_d()+
+      ggtitle(tmp1[,unique(label_community)])
+    ggsave(p, file = paste0(outdir, '-transmission_flows_aggregated2_', communities[i], '_by_round.png'), w = 7, h = 5.75)
+  }
+}
+
 plot_sex_source_standardised <- function(sex_source, sex_source_standardised, outdir){
   
   sex_source[, type := 'Unstandardised']
@@ -350,6 +418,36 @@ plot_sex_source_standardised <- function(sex_source, sex_source_standardised, ou
   
 }
 
+plot_sex_source_standardised_by_round <- function(sex_source_standardised, outdir){
+  
+  sex_source_standardised[, type := 'Standardised']
+  
+  tmp <- copy(sex_source_standardised)
+  tmp[is_mf == 1, sex_source := 'Male']
+  tmp[is_mf == 0, sex_source := 'Female']
+  tmp[, label_round := paste0('Round R0', ROUND)]
+  
+  communities <- tmp[, unique(comm)]
+  for(i in seq_along(communities)){
+    tmp1 <- tmp[comm == communities[i]]
+    p <- ggplot(tmp1[type == 'Standardised'], aes(x = sex_source)) + 
+      geom_bar(aes(y = M, fill = label_round), stat = 'identity', position = position_dodge()) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = label_round), position = position_dodge()) + 
+      theme_bw() + 
+      labs(x = 'Sex source', y = 'Transmission flows', fill = '') + 
+      scale_y_continuous(expand = expansion(mult = c(0, 0.05)))  + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') + 
+      scale_fill_viridis_d() + 
+      ggtitle(tmp1[, unique(label_community)])
+    ggsave(p, file = paste0(outdir, '-sex_source_standardised_', communities[i], '_by_round.png'), w = 6, h = 4)
+  }
+  
+  
+}
+
+
 plot_median_age_source <- function(age_source, outdir){
   
   cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
@@ -389,7 +487,7 @@ plot_median_age_source_with_empirical_data <- function(age_source, pairs, outdir
   data[, age_infection.RECIPIENT := floor(age_infection.RECIPIENT)]
   data <- merge(data, df_age, by = c('age_infection.RECIPIENT', 'age_transmission.SOURCE'))
   
-  ps <- c(0.5, 0.2, 0.8)
+  ps <- c(0.5, 0.1, 0.9)
   p_labs <- c('M','CL','CU')
   data = data[, list(q= quantile(age_transmission.SOURCE, prob=ps, na.rm = T), q_label=p_labs), 
              by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT', 'age_infection_reduced.RECIPIENT', 'comm.RECIPIENT')]	
@@ -519,7 +617,7 @@ plot_median_age_recipient_with_empirical_data <- function(age_recipient, pairs, 
   data[, age_infection.RECIPIENT := floor(age_infection.RECIPIENT)]
   data <- merge(data, df_age, by = c('age_infection.RECIPIENT', 'age_transmission.SOURCE'))
   
-  ps <- c(0.5, 0.2, 0.8)
+  ps <- c(0.5, 0.1, 0.9)
   p_labs <- c('M','CL','CU')
   data = data[, list(q= quantile(age_infection.RECIPIENT, prob=ps, na.rm = T), q_label=p_labs), 
               by=c('sex.SOURCE', 'sex.RECIPIENT', 'date_infection_before_cutoff.RECIPIENT', 'age_transmission_reduced.SOURCE', 'comm.RECIPIENT')]	

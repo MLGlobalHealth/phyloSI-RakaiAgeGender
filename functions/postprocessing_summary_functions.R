@@ -285,25 +285,67 @@ find_standardised_transmission_flows_aggregated <- function(samples, df_group, d
   # find incident cases 
   di <- copy(as.data.table(incidence))
   setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
-  di <- di[, list(INFECTIONS = sum(INFECTIONS)), by = c("is_mf", 'is_before_cutoff_date', 'age_infection.RECIPIENT')]
-  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT'), allow.cartesian=TRUE)
+  di <- di[, list(INCIDENT_CASES = sum(INCIDENT_CASES)), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
   tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
   tmp1[, delta := value / total_value]
   
-  tmp1[, value := INFECTIONS * delta]
+  tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group'))
   tmp1[, value := value / total_value]
   
   tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_group_transmission.SOURCE', 'age_group_infection.RECIPIENT')]
-
+  
   tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'age_group_transmission.SOURCE', 'age_group_infection.RECIPIENT')]	
   tmp1 = dcast(tmp1, index_group + age_group_transmission.SOURCE + age_group_infection.RECIPIENT ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
+
+find_standardised_transmission_flows_aggregated_by_round <- function(samples, df_group, df_age, df_age_aggregated, incidence){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_age_aggregated, by = c('age_infection.RECIPIENT', 'age_transmission.SOURCE'))
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  # find incident cases 
+  di <- copy(as.data.table(incidence))
+  setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
+  di <- di[, list(INCIDENT_CASES = sum(INCIDENT_CASES)), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT', 'ROUND')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
+  tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, delta := value / total_value]
+  
+  tmp1[, value := INCIDENT_CASES * delta]
+  tmp1 <- select(tmp1, - total_value)
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'ROUND')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'ROUND'))
+  tmp1[, value := value / total_value]
+  
+  tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_group_transmission.SOURCE', 'age_group_infection.RECIPIENT', 'ROUND')]
+
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'age_group_transmission.SOURCE', 'age_group_infection.RECIPIENT', 'ROUND')]	
+  tmp1 = dcast(tmp1, ROUND + index_group + age_group_transmission.SOURCE + age_group_infection.RECIPIENT ~ q_label, value.var = "q")
   
   tmp1 <- merge(tmp1, df_group, by = 'index_group')
   
@@ -326,15 +368,15 @@ find_standardised_transmission_flows <- function(samples, df_group, df_age, inci
   # find incident cases 
   di <- copy(as.data.table(incidence))
   setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
-  di <- di[, list(INFECTIONS = sum(INFECTIONS)), by = c("is_mf", 'is_before_cutoff_date', 'age_infection.RECIPIENT')]
-  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT'), allow.cartesian=TRUE)
+  di <- di[, list(INCIDENT_CASES = sum(INCIDENT_CASES)), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
   tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
   tmp1[, delta := value / total_value]
   
-  tmp1[, value := INFECTIONS * delta]
+  tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group')]
@@ -343,6 +385,85 @@ find_standardised_transmission_flows <- function(samples, df_group, df_age, inci
   
   tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'index_age')]	
   tmp1 = dcast(tmp1, index_group + index_age ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  
+  return(tmp1)
+}
+find_standardised_transmission_flows <- function(samples, df_group, df_age, incidence){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  # find incident cases 
+  di <- copy(as.data.table(incidence))
+  setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
+  di <- di[, list(INCIDENT_CASES = sum(INCIDENT_CASES)), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
+  tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, delta := value / total_value]
+  
+  tmp1[, value := INCIDENT_CASES * delta]
+  tmp1 <- select(tmp1, - total_value)
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group'))
+  tmp1[, value := value / total_value]
+  
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'index_age')]	
+  tmp1 = dcast(tmp1, index_group + index_age ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  
+  return(tmp1)
+}
+
+find_standardised_transmission_flows_by_round <- function(samples, df_group, df_age, incidence){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  # find incident cases 
+  di <- copy(as.data.table(incidence))
+  setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
+  di <- di[, list(INCIDENT_CASES = sum(INCIDENT_CASES)), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT', 'ROUND')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
+  tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, delta := value / total_value]
+  
+  tmp1[, value := INCIDENT_CASES * delta]
+  tmp1 <- select(tmp1, - total_value)
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'ROUND')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'ROUND'))
+  tmp1[, value := value / total_value]
+  
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'index_age', 'ROUND')]	
+  tmp1 = dcast(tmp1, ROUND + index_group + index_age ~ q_label, value.var = "q")
   
   tmp1 <- merge(tmp1, df_group, by = 'index_group')
   tmp1 <- merge(tmp1, df_age, by = 'index_age')
@@ -367,19 +488,19 @@ find_standardised_transmission_flows_aggregated2 <- function(samples, df_group, 
   # find incident cases 
   di <- copy(as.data.table(incidence))
   setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
-  di <- di[, list(INFECTIONS = sum(INFECTIONS)), by = c("is_mf", 'is_before_cutoff_date', 'age_infection.RECIPIENT')]
-  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT'), allow.cartesian=TRUE)
+  di <- di[, list(INCIDENT_CASES = sum(INCIDENT_CASES)), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
   tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
   tmp1[, delta := value / total_value]
   
-  tmp1[, value := INFECTIONS * delta]
+  tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group'))
   tmp1[, value := value / total_value]
   
   tmp1[, age_classification.SOURCE := 'Same age']
@@ -395,6 +516,53 @@ find_standardised_transmission_flows_aggregated2 <- function(samples, df_group, 
   
   return(tmp1)
 }
+
+find_standardised_transmission_flows_aggregated2_by_round <- function(samples, df_group, df_age, df_age_aggregated, incidence){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_age_aggregated, by = c('age_infection.RECIPIENT', 'age_transmission.SOURCE'))
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  # find incident cases 
+  di <- copy(as.data.table(incidence))
+  setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
+  di <- di[, list(INCIDENT_CASES = sum(INCIDENT_CASES)), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT', 'ROUND')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
+  tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, delta := value / total_value]
+  
+  tmp1[, value := INCIDENT_CASES * delta]
+  tmp1 <- select(tmp1, - total_value)
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'ROUND')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'ROUND'))
+  tmp1[, value := value / total_value]
+  
+  tmp1[, age_classification.SOURCE := 'Same age']
+  tmp1[age_infection.RECIPIENT < (age_transmission.SOURCE - 3), age_classification.SOURCE := 'Older']
+  tmp1[age_infection.RECIPIENT > (age_transmission.SOURCE + 3), age_classification.SOURCE := 'Younger']
+  
+  tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_classification.SOURCE', 'age_group_infection.RECIPIENT', 'ROUND')]
+  
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'age_classification.SOURCE', 'age_group_infection.RECIPIENT', 'ROUND')]	
+  tmp1 = dcast(tmp1, ROUND + index_group + age_classification.SOURCE + age_group_infection.RECIPIENT ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
+
 
 find_age_source_by_age_group <- function(samples, df_group, df_age){
   
@@ -543,15 +711,15 @@ find_age_recipient_by_age_group_standardised <- function(samples, df_group, df_a
   # find incident cases 
   di <- copy(as.data.table(incidence))
   setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
-  di <- di[, list(INFECTIONS = runif(10, sum(INFECTIONS_LB), sum(INFECTIONS_UB)),
-                  idx_draw = 1:10), by = c("is_mf", 'is_before_cutoff_date', 'age_infection.RECIPIENT')]
-  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT'), allow.cartesian=TRUE)
+  di <- di[, list(INCIDENT_CASES = runif(10, sum(INCIDENT_CASES_LB), sum(INCIDENT_CASES_UB)),
+                  idx_draw = 1:10), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT'), allow.cartesian=TRUE)
   tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT', 'idx_draw')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT', 'idx_draw'))
   tmp1[, delta := value / total_value]
-  tmp1[, value := INFECTIONS * delta]
+  tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_transmission.SOURCE', 'idx_draw')]
@@ -690,16 +858,16 @@ find_sex_source_standardised <- function(samples, df_group, df_age, incidence){
   # find incident cases 
   di <- copy(as.data.table(incidence))
   setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
-  di <- di[, list(INFECTIONS = runif(10, sum(INFECTIONS_LB), sum(INFECTIONS_UB)),
-                  idx_draw = 1:10), by = c("is_mf", 'is_before_cutoff_date', 'age_infection.RECIPIENT')]
-  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT'), allow.cartesian=TRUE)
+  di <- di[, list(INCIDENT_CASES = runif(10, sum(INCIDENT_CASES_LB), sum(INCIDENT_CASES_UB)),
+                  idx_draw = 1:10), by = c("is_mf", 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
   tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
   
   tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT', 'idx_draw')]
   tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT', 'idx_draw'))
   tmp1[, delta := value / total_value]
   
-  tmp1[, value := INFECTIONS * delta]
+  tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
   # sum across ages
@@ -718,6 +886,52 @@ find_sex_source_standardised <- function(samples, df_group, df_age, incidence){
   
   return(tmp1)
 }
+
+find_sex_source_standardised_by_round <- function(samples, df_group, df_age, incidence){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  # find incident cases 
+  di <- copy(as.data.table(incidence))
+  setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
+  di <- di[, list(INCIDENT_CASES = runif(10, sum(INCIDENT_CASES_LB), sum(INCIDENT_CASES_UB)),
+                  idx_draw = 1:10), by = c("is_mf", 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm', 'ROUND')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
+  tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT', 'idx_draw')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT', 'idx_draw'))
+  tmp1[, delta := value / total_value]
+  
+  tmp1[, value := INCIDENT_CASES * delta]
+  tmp1 <- select(tmp1, - total_value)
+  
+  # sum across ages
+  tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'idx_draw', 'ROUND')]
+  
+  # take proportion across sex
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community', 'idx_draw', 'ROUND')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community', 'idx_draw', 'ROUND'))
+  tmp1[, value := value / total_value]
+  
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'ROUND')]	
+  tmp1 = dcast(tmp1, ROUND + index_group ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
+
 
 prepare_count_data <- function(stan_data, df_age, df_group){
 

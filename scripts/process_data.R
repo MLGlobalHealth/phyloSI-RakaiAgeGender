@@ -18,7 +18,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
   
   jobname <- 'test'
-  stan_model <- 'gp_220108'
+  stan_model <- 'gp_220317'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -80,7 +80,7 @@ file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phsc
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220317.RData')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
-file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220311.csv')
+file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220411.csv')
 
 # load functions
 source(file.path(indir, 'functions', 'utils.R'))
@@ -99,8 +99,8 @@ load(file.path.meta)
 # load Tanya's estimate time since infection using phylogenetic data
 time.since.infection <- make.time.since.infection(as.data.table(read.csv(file.path.tsiestimates)))
 
-# load incidence from adam
-incidence <- read.csv(file.incidence)
+# load incidence rate from adam
+incidence.raw <- read.csv(file.incidence)
 
 # load anonymous aid
 aik <- .read(file.anonymisation.keys); aik$X <- NULL
@@ -109,8 +109,8 @@ aik <- .read(file.anonymisation.keys); aik$X <- NULL
 # TRANSFORM AND MERGE DATA
 #
 
-# get incidence rate adjusted for time period of round
-incidence <- process.incidence(incidence, df_round)
+# find incidence cases adjusted for time period of round
+incidence <- process.incidence(incidence.raw, df_round)
 
 # get time of infection (using Tanya's estimate if use.tsi.estimates == T)
 meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
@@ -137,8 +137,8 @@ if(remove.inconsistent.infection.dates){
 if(remove.young.individuals){
   # exclude young indivis
   cat('\nExcluding very young individuals\n')
-  cat('Removing ', nrow(pairs.all[age_infection.SOURCE < 11 | age_infection.RECIPIENT < 11]), ' pairs\n')
-  pairs.all <- pairs.all[age_infection.SOURCE >= 11 & age_infection.RECIPIENT >= 11]
+  cat('Removing ', nrow(pairs.all[age_infection.SOURCE < 15 | age_infection.RECIPIENT < 15]), ' pairs\n')
+  pairs.all <- pairs.all[age_infection.SOURCE >= 15 & age_infection.RECIPIENT >= 15]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(only.inland){

@@ -7,6 +7,7 @@ library(ggpubr)
 library(gridExtra)
 library(matrixStats)
 library(dplyr)
+library(lubridate)
 
 jobname <- 'onlyinland_cutoff2014'
 stan_model <- 'gp_220108'
@@ -52,10 +53,14 @@ outdir.table <- .outdir.table
 range_age_observed_cat <- find_range_age_observed(copy(pairs), df_group)
 range_age_observed <- pairs[, list(min_age = min(c(age_infection.RECIPIENT, age_transmission.SOURCE)), 
                                                  max_age = max(c(age_infection.RECIPIENT, age_transmission.SOURCE)))]
-df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'), di)
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'), incidence)
 
 # temporary
-incidence <- process.incidence(incidence, df_round)
+file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220411.csv')
+incidence.raw <- read.csv(file.incidence)
+if(!'is_before_cutoff_date' %in% colnames(incidence.raw)){
+  incidence <- process.incidence(incidence.raw, df_round)
+}
 
 # samples 
 fit <- readRDS(path.to.stan.output)
@@ -88,7 +93,7 @@ transmission_flows_aggregated2 <- find_transmission_flows_aggregated2(samples, d
 
 
 #
-## Standardised transmission flows
+## Standardised transmission flows startified by time period
 #
 
 cat("\nPlot Standardised transmission flows\n")
@@ -105,6 +110,23 @@ plot_transmission_flows_aggregated2(transmission_flows_aggregated2, standardised
 
 
 #
+## Standardised transmission flows statified by round
+#
+
+cat("\nPlot Standardised transmission flows\n")
+
+standardised_transmission_flows_by_round <- find_standardised_transmission_flows_by_round(samples, df_group, df_age, incidence)
+plot_transmission_flows_by_round(transmission_flows = standardised_transmission_flows_by_round, lab = 'Standardised', 
+                        range_age_observed=range_age_observed,outdir = outfile.figures, with_contour = T)
+
+standardised_transmission_flows_aggregated_by_round <- find_standardised_transmission_flows_aggregated_by_round(samples, df_group, df_age, df_age_aggregated, incidence)
+standardised_transmission_flows_aggregated2_by_round <- find_standardised_transmission_flows_aggregated2_by_round(samples, df_group, df_age, df_age_aggregated, incidence)
+
+plot_transmission_flows_aggregated_by_round(standardised_transmission_flows_aggregated_by_round, df_age_aggregated, outfile.figures)
+plot_transmission_flows_aggregated2_by_round(standardised_transmission_flows_aggregated2_by_round, df_age_aggregated, outfile.figures)
+
+
+#
 ## shift in sex-specific transmission dynamics
 #
 
@@ -112,6 +134,8 @@ sex_source <- find_sex_source(samples, df_group, df_age, incidence)
 sex_source_standardised <- find_sex_source_standardised(samples, df_group, df_age, incidence)
 plot_sex_source_standardised(sex_source, sex_source_standardised, outfile.figures)
 
+sex_source_standardised_by_round <- find_sex_source_standardised_by_round(samples, df_group, df_age, incidence)
+plot_sex_source_standardised_by_round(sex_source_standardised_by_round, outfile.figures)
 
 #
 ## shift in age-specific transmission dynamics
