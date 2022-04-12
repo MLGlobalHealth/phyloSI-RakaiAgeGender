@@ -475,37 +475,97 @@ bsplines = function(data, knots, degree)
   return(m)
 }
 
-add_prior_gp_mean <- function(stan_data, df_age, use.diagonal.prior, outdir = NULL){
+add_informative_prior_gp_mean <- function(stan_data, df_age, file.partnership.rate, outfile.figures){
+  
+  # load estimated partnership.rate in misc/
+  partnership.rate <- as.data.table(read.csv(file.partnership.rate))
+  
+  # choose partnership reported by male
+  partnership.rate <- partnership.rate[sex == 'M']
+
+  # format
+  partnership.rate <- partnership.rate[, .(part.age, cont.age, c)]
+  setnames(partnership.rate, 'c', 'rate')
   
   tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
-  tmp[, mu := - (abs(age_infection.RECIPIENT - age_transmission.SOURCE) / 3)]
-  mu <- as.matrix(dcast(tmp, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
+  tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), index_group = 1:stan_data$N_group), 
+                                 by = character()))
+  tmp <- merge(tmp, partnership.rate, by.x = c('age_transmission.SOURCE', 'age_infection.RECIPIENT'), by.y = c('part.age', 'cont.age'), all.x = T)
+
+  tmp[, total_rate := sum(rate), by = 'index_group']
+  tmp[, relative_rate := rate / total_rate]
+  
+  tmp[, Elambda := relative_rate * count_per_group]
+  tmp[, mu := log(Elambda)]
+  
+  stopifnot(nrow(tmp[is.na(mu)]) == 0)
+  
+  tmp <- tmp[order(index_group)]
+  theta <- vector(mode = 'list', length = stan_data$N_group)
+  for(i in 1:stan_data$N_group){
+    tmp1 <- tmp[index_group == i]
+    
+    mu <- as.matrix(dcast(tmp1, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
+    theta[[i]] <- find_spectral_projection_gp_mean(mu, outfile.figures)
+  }
+  
+  stan_data[['theta']] <- theta
+  
+  return(stan_data)
+}
+
+add_diagonal_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
+  
+  tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
+  tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), index_group = 1:stan_data$N_group), 
+                                 by = character()))
+  
+  tmp[, rate := 1 / abs( age_infection.RECIPIENT - age_transmission.SOURCE)]
+  tmp[age_infection.RECIPIENT == age_transmission.SOURCE, rate := 2]
+  
+  tmp[, total_rate := sum(rate), by = 'index_group']
+  tmp[, relative_rate := rate / total_rate]
+  
+  tmp[, Elambda := relative_rate * count_per_group]
+  tmp[, mu := log(Elambda)]
+
+  tmp <- tmp[order(index_group)]
+  theta <- vector(mode = 'list', length = stan_data$N_group)
+  for(i in 1:stan_data$N_group){
+    tmp1 <- tmp[index_group == i]
+    
+    mu <- as.matrix(dcast(tmp1, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
+    theta[[i]] <- find_spectral_projection_gp_mean(mu, outfile.figures)
+  }
+
+  stan_data[['theta']] <- theta
+  
+  return(stan_data)
+}
+
+add_flat_prior_gp_mean <- function(stan_data){
+  
+  theta <- matrix(nrow = stan_data[['num_basis_rows']], ncol = stan_data[['num_basis_columns']], 0)
+  stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
+  
+  return(stan_data)
+}
+
+find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
   
   A = t(stan_data[['BASIS_ROWS']])
   B = stan_data[['BASIS_COLUMNS']]
   theta <- MASS::ginv(A) %*% mu %*% MASS::ginv(B)
-  
-  if(use.diagonal.prior){
-    stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
-  } else{
-    theta <- matrix(nrow = stan_data[['num_basis_rows']], ncol = stan_data[['num_basis_columns']], 0)
-    stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
-  }
 
   # plot
   if(!is.null(outdir)){
     
-    mu <- tmp$mu
     mu_pred <- A %*% theta %*% B
     tmp1 = as.data.table(reshape2::melt(mu_pred))
     setkey(tmp1, Var1, Var2)
     
     tmp <- copy(df_age)
-    if(use.diagonal.prior){
-      tmp[, transmission_rate := exp(tmp1$value)]
-    } else{
-      tmp[, transmission_rate := exp(0)]
-    }
+    tmp[, transmission_rate := exp(tmp1$value)]
     
     ggplot(tmp, aes(x =age_infection.RECIPIENT, y = age_transmission.SOURCE)) + 
       geom_raster(aes(fill = transmission_rate)) + 
@@ -560,6 +620,6 @@ add_prior_gp_mean <- function(stan_data, df_age, use.diagonal.prior, outdir = NU
     
   }
   
-  return(stan_data)
+  return(theta)
 }
 

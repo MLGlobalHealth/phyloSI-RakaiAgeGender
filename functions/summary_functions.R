@@ -195,7 +195,7 @@ print.statements.about.basefreq.files <- function(chain)
 
 get.age.map <- function(pairs, age_bands_reduced = 4){
   
-  extended_age_length <- 5
+  extended_age_length <- 0
   
   ages_source <- pairs[, {
     min_age = floor(min(c(age_transmission.SOURCE,age_infection.RECIPIENT))) - extended_age_length

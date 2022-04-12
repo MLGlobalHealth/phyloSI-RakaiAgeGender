@@ -64,9 +64,9 @@ threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
-only.inland <- F
 only.transmission.after.start.observational.period <- T
-use.diagonal.prior <- T
+use.diagonal.prior <- F
+use.informative.prior <- T 
 remove.missing.community.recipient <- T
 remove.neuro.individuals <- T
 
@@ -76,6 +76,7 @@ file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pange
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220411.csv')
+file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220412.csv')
 
 # load functions
 source(file.path(indir, 'functions', 'utils.R'))
@@ -99,6 +100,7 @@ incidence.raw <- read.csv(file.incidence)
 
 # load anonymous aid
 aik <- .read(file.anonymisation.keys); aik$X <- NULL
+
 
 #
 # TRANSFORM AND MERGE DATA
@@ -132,14 +134,8 @@ if(remove.inconsistent.infection.dates){
 if(remove.young.individuals){
   # exclude young indivis
   cat('\nExcluding very young individuals\n')
-  cat('Removing ', nrow(pairs.all[age_infection.SOURCE < 15 | age_infection.RECIPIENT < 15]), ' pairs\n')
-  pairs.all <- pairs.all[age_infection.SOURCE >= 15 & age_infection.RECIPIENT >= 15]
-  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
-}
-if(only.inland){
-  cat('\nExcluding recipients from fishing\n')
-  cat('Removing ', nrow(pairs.all[comm.RECIPIENT == 'fishing']), ' pairs\n')
-  pairs.all <- pairs.all[comm.RECIPIENT == 'inland']
+  cat('Removing ', nrow(pairs.all[age_transmission.SOURCE < 15 | age_infection.RECIPIENT < 15]), ' pairs\n')
+  pairs.all <- pairs.all[age_transmission.SOURCE >= 15 & age_infection.RECIPIENT >= 15]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(only.transmission.after.start.observational.period){
@@ -209,8 +205,13 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 8, n_knots_columns = 8, 
                                       X = unique(df_age$age_transmission.SOURCE),
                                       Y = unique(df_age$age_infection.RECIPIENT))
-stan_data <- add_prior_gp_mean(stan_data, df_age, use.diagonal.prior, outfile.figures)
-
+if(use.informative.prior){
+  stan_data <- add_informative_prior_gp_mean(stan_data, df_age, file.partnership.rate, outfile.figures)
+} else if(use.diagonal.prior){
+  stan_data <- add_diagonal_prior_gp_mean(stan_data, df_age, outfile.figures)
+} else{
+  stan_data <- add_flat_prior_gp_mean(stan_data)
+}
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)
