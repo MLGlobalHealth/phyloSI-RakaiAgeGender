@@ -296,8 +296,8 @@ find_standardised_transmission_flows_aggregated <- function(samples, df_group, d
   tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community'))
   tmp1[, value := value / total_value]
   
   tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_group_transmission.SOURCE', 'age_group_infection.RECIPIENT')]
@@ -338,8 +338,8 @@ find_standardised_transmission_flows_aggregated_by_round <- function(samples, df
   tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'ROUND')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'ROUND'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community', 'ROUND')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community', 'ROUND'))
   tmp1[, value := value / total_value]
   
   tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_group_transmission.SOURCE', 'age_group_infection.RECIPIENT', 'ROUND')]
@@ -499,8 +499,8 @@ find_standardised_transmission_flows_aggregated2 <- function(samples, df_group, 
   tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community'))
   tmp1[, value := value / total_value]
   
   tmp1[, age_classification.SOURCE := 'Same age']
@@ -545,8 +545,8 @@ find_standardised_transmission_flows_aggregated2_by_round <- function(samples, d
   tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'ROUND')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'ROUND'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community', 'ROUND')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community', 'ROUND'))
   tmp1[, value := value / total_value]
   
   tmp1[, age_classification.SOURCE := 'Same age']
