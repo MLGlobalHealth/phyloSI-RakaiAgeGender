@@ -543,10 +543,32 @@ add_diagonal_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
   return(stan_data)
 }
 
-add_flat_prior_gp_mean <- function(stan_data){
+add_flat_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
   
-  theta <- matrix(nrow = stan_data[['num_basis_rows']], ncol = stan_data[['num_basis_columns']], 0)
-  stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
+  tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
+  tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), index_group = 1:stan_data$N_group), 
+                                 by = character()))
+  
+  tmp[, rate := 1 ]
+  tmp[, total_rate := sum(rate), by = 'index_group']
+  tmp[, relative_rate := rate / total_rate]
+  
+  tmp[, Elambda := relative_rate * count_per_group]
+  tmp[, mu := log(Elambda)]
+  
+  tmp <- tmp[order(index_group)]
+  theta <- vector(mode = 'list', length = stan_data$N_group)
+  for(i in 1:stan_data$N_group){
+    tmp1 <- tmp[index_group == i]
+    
+    mu <- as.matrix(dcast(tmp1, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
+    theta[[i]] <- find_spectral_projection_gp_mean(mu, outfile.figures)
+  }
+  
+  stan_data[['theta']] <- theta
+  
+  # theta <- matrix(nrow = stan_data[['num_basis_rows']], ncol = stan_data[['num_basis_columns']], 0)
+  # stan_data[['theta']] <- rep(list(theta), stan_data[['N_group']])
   
   return(stan_data)
 }

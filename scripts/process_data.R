@@ -215,7 +215,7 @@ if(use.informative.prior){
 } else if(use.diagonal.prior){
   stan_data <- add_diagonal_prior_gp_mean(stan_data, df_age, outfile.figures)
 } else{
-  stan_data <- add_flat_prior_gp_mean(stan_data)
+  stan_data <- add_flat_prior_gp_mean(stan_data, df_age, outfile.figures)
 }
 
 ## save image before running Stan
