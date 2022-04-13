@@ -29,12 +29,17 @@ if(dir.exists('/home/andrea'))
   indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
   outdir <- '~/Documents/Box/2021/phyloflows'
-  file.path(indir.deepsequencedata,'RCCS_R15_R18')
 
   jobname <- 'test'
   stan_model <- 'gp_220108'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
+}
+
+if(dir.exists('/rds/general'))
+{
+  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 }
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))

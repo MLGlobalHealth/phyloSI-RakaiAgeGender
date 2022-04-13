@@ -45,7 +45,7 @@ cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME-postprocessing.pbs <<EOF
   
 #!/bin/sh
 #PBS -l walltime=24:00:00
-#PBS -l select=1:ncpus=1:ompthreads=1:mem=480gb
+#PBS -l select=1:ncpus=10:ompthreads=1:mem=480gb
 #PBS -j oe
 module load anaconda3/personal
 
