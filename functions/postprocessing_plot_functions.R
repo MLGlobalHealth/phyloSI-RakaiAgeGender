@@ -102,15 +102,14 @@ plot_intensity_PP <- function(intensity_PP, count_data, range_age_observed, outd
 
 } 
 
-
-plot_transmission_flows_by_round <- function(transmission_flows, range_age_observed, outdir, lab=NULL, count_data = NULL, with_contour = F){
+plot_transmission_flows <- function(transmission_flows, range_age_observed, outdir, lab=NULL, count_data = NULL, with_contour = F){
   
   communities <- transmission_flows[, unique(comm)]
   
   for(i in seq_along(communities)){
     
     tmp <- transmission_flows[ comm == communities[i]]
-    tmp[, label_round := paste0('Round R0', ROUND)]
+    
     index_groups <- tmp[, sort(unique(index_group))]
     
     levels <- tmp[, {
@@ -129,7 +128,7 @@ plot_transmission_flows_by_round <- function(transmission_flows, range_age_obser
         theme_bw() + 
         labs(fill = paste0(lab, '\nTransmission\nflows'), 
              size='Pairs\ncount') +
-        facet_grid(label_direction~label_round) + 
+        facet_grid(label_direction~label_time) + 
         theme(strip.background = element_rect(colour="white", fill="white"),
               strip.text = element_text(size = rel(1)),
               legend.position = 'right', 
@@ -167,18 +166,18 @@ plot_transmission_flows_by_round <- function(transmission_flows, range_age_obser
       }
       
       if(with_contour){
-
+        
         tmp1 <- merge(levels[index_group == index_groups[j]], tmp, by = 'index_group', allow.cartesian=TRUE)
         tmp1[, diff := abs(M - level)]
         mindiff <- tmp1[, list(diff = min(diff)), by = 'prob']
         tmp1 <- merge(tmp1, mindiff, by = c('prob', 'diff'))
         tmp1[, prob_label := paste0(prob * 100, '%')]
-
+        
         p <- p +
           geom_contour(aes(z=M, col = ..level..), breaks = tmp1[, level]) +
           geom_text(data = tmp1, aes(label = prob_label, col = level), size = 4) + 
-            scale_color_gradient(low = 'darkred', high = 'lightpink2') + 
-            guides(col="none")
+          scale_color_gradient(low = 'darkred', high = 'lightpink2') + 
+          guides(col="none")
       }
       
       if(!is.null(count_data)){
@@ -192,8 +191,117 @@ plot_transmission_flows_by_round <- function(transmission_flows, range_age_obser
       plots[[j]] <- p
       
     }
+    
+    p <- ggarrange(plotlist = plots[c(1,3,2,4)], common.legend = T, legend = 'right')
+    pf <- grid.arrange(p, bottom = 'Age at infection recipient                     ', 
+                       left = 'Age at transmission source',
+                       top = tmp[,unique(label_community)])
+    
+    ggsave(pf, file = paste0(outdir, '-transmission_flows', lab, '_', communities[i], '.png'), w = 8, h = 6)
+  }
+  
+} 
 
-     p <- ggarrange(plotlist = plots[c(1,3,2,4)], common.legend = T, legend = 'right')
+plot_transmission_flows_by_round <- function(transmission_flows, range_age_observed, outdir, lab=NULL, count_data = NULL, with_contour = F){
+  
+  communities <- transmission_flows[, unique(comm)]
+  
+  for(i in seq_along(communities)){
+    
+    tmp <- transmission_flows[ comm == communities[i]]
+    tmp[, label_round := paste0('Round R0', ROUND)]
+    
+    index_groups <- tmp[, sort(unique(index_group))]
+    ROUNDS <- tmp[, sort(unique(ROUND))]
+    
+    levels <- tmp[, {
+      prob = c(0.5, 0.8, 0.9)
+      level = getLevel(age_infection.RECIPIENT, age_transmission.SOURCE, M, prob)
+      list(prob = prob, level = level)
+    }, by = c('index_group', 'ROUND')]
+    
+    
+    plots <- list()
+    
+    for(j in seq_along(index_groups)){
+      for(k in seq_along(ROUNDS)){
+        tmp1 <- tmp[index_group == index_groups[j] & ROUND == ROUNDS[k]]
+        
+        if(nrow(tmp1) < 1) next
+        
+        p <- ggplot(tmp1, aes(y = age_transmission.SOURCE, x = age_infection.RECIPIENT)) + 
+          geom_raster(aes(fill = M)) + 
+          geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+          theme_bw() + 
+          labs(fill = paste0(lab, '\nTransmission\nflows'), 
+               size='Pairs\ncount') +
+          facet_grid(label_direction~label_round) + 
+          theme(strip.background = element_rect(colour="white", fill="white"),
+                strip.text = element_text(size = rel(1)),
+                legend.position = 'right', 
+                axis.title.y= element_blank(), 
+                axis.title.x= element_blank()) +
+          scale_fill_viridis_c() + 
+          scale_x_continuous(expand = c(0,0)) + 
+          scale_y_continuous(expand = c(0,0)) + 
+          guides(fill = guide_colorbar(order = 1), 
+                 shape = guide_legend(order = 2)) 
+        
+        
+        if(tmp[index_group == index_groups[j] & ROUND == ROUNDS[k], unique(is_mf)]){
+          p <- p + 
+            theme(strip.text.x = element_blank())
+        }
+        
+        if(tmp[index_group == index_groups[j] & ROUND == ROUNDS[k], unique(ROUND) != max(ROUNDS)]){
+          p <- p + 
+            theme(strip.text.y = element_blank())
+        }
+        
+        if(!tmp[index_group == index_groups[j] & ROUND == ROUNDS[k], unique(is_mf)]){
+          p <- p + 
+            theme(axis.text.x  = element_blank(), 
+                  axis.title.x = element_blank(), 
+                  axis.ticks.x = element_blank())
+        }
+        
+        if(!tmp[index_group == index_groups[j] & ROUND == ROUNDS[k], unique(ROUND) == min(ROUNDS)]){
+          p <- p + 
+            theme(axis.text.y = element_blank(), 
+                  axis.title.y = element_blank(), 
+                  axis.ticks.y = element_blank())
+        }
+        
+        if(with_contour){
+          
+          tmp1 <- merge(levels[index_group == index_groups[j] & ROUND == ROUNDS[k]], tmp, 
+                        by = c('index_group', 'ROUND'), allow.cartesian=TRUE)
+          tmp1[, diff := abs(M - level)]
+          mindiff <- tmp1[, list(diff = min(diff)), by = 'prob']
+          tmp1 <- merge(tmp1, mindiff, by = c('prob', 'diff'))
+          tmp1[, prob_label := paste0(prob * 100, '%')]
+          
+          p <- p +
+            geom_contour(aes(z=M, col = ..level..), breaks = tmp1[, level]) +
+            geom_text(data = tmp1, aes(label = prob_label, col = level), size = 4) + 
+            scale_color_gradient(low = 'darkred', high = 'lightpink2') + 
+            guides(col="none")
+        }
+        
+        if(!is.null(count_data)){
+          tmp1 <- count_data[ comm == communities[i] & index_group == index_groups[j] & ROUND == ROUNDS[k]]
+          p <- p + 
+            geom_point(data = tmp1[count > 0], aes(size = count), col = 'grey50', alpha = 0.5) + 
+            scale_size_continuous(limits = count_data[  count > 0, range(count)], 
+                                  breaks = count_data[  count > 0, sort(unique(count))])
+        }
+        
+        plots[[length(plots) + 1L]] <- p
+      }
+      
+    }
+
+     p <- ggarrange(plotlist = plots[c(1,3,4, 2,5,6)], common.legend = T, legend = 'right', widths = c(0.9,0.9,1))
      pf <- grid.arrange(p, bottom = 'Age at infection recipient                     ', 
                   left = 'Age at transmission source',
                   top = tmp[,unique(label_community)])
@@ -201,7 +309,7 @@ plot_transmission_flows_by_round <- function(transmission_flows, range_age_obser
     ggsave(pf, file = paste0(outdir, '-transmission_flows', lab, '_', communities[i], '_by_round.png'), w = 10, h = 8)
   }
   
-} 
+}  
 
 getLevel <- function(x,y,z,prob=0.95) {
   dx <- diff(unique(x)[1:2])
@@ -224,7 +332,7 @@ plot_transmission_flows_aggregated <- function(transmission_flows_aggregated, st
   
   tmp[, Direction :=label_direction]
   
-  communities <- tmp[, unique(comm)]
+  communities <- tmp[type == 'Standardised', unique(comm)]
   for(i in seq_along(communities)){
     tmp1 <- tmp[ comm == communities[i]]
     
@@ -307,7 +415,7 @@ plot_transmission_flows_aggregated2 <- function(transmission_flows_aggregated, s
   
   tmp[, Direction := label_direction]
   
-  communities <- tmp[, unique(comm)]
+  communities <- tmp[type == 'Standardised', unique(comm)]
   for(i in seq_along(communities)){
     tmp1 <- tmp[ comm == communities[i]]
     
