@@ -254,8 +254,8 @@ find_transmission_flows_aggregated2 <- function(samples, df_group, df_age, df_ag
   tmp1[, value := value / total_value]
   
   tmp1[, age_classification.SOURCE := 'Same age']
-  tmp1[age_infection.RECIPIENT < (age_transmission.SOURCE - 3), age_classification.SOURCE := 'Older']
-  tmp1[age_infection.RECIPIENT > (age_transmission.SOURCE + 3), age_classification.SOURCE := 'Younger']
+  tmp1[age_infection.RECIPIENT < (age_transmission.SOURCE - 5), age_classification.SOURCE := 'Older']
+  tmp1[age_infection.RECIPIENT > (age_transmission.SOURCE + 5), age_classification.SOURCE := 'Younger']
   
   tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_classification.SOURCE', 'age_group_infection.RECIPIENT')]
   
@@ -504,8 +504,8 @@ find_standardised_transmission_flows_aggregated2 <- function(samples, df_group, 
   tmp1[, value := value / total_value]
   
   tmp1[, age_classification.SOURCE := 'Same age']
-  tmp1[age_infection.RECIPIENT < (age_transmission.SOURCE - 3), age_classification.SOURCE := 'Older']
-  tmp1[age_infection.RECIPIENT > (age_transmission.SOURCE + 3), age_classification.SOURCE := 'Younger']
+  tmp1[age_infection.RECIPIENT < (age_transmission.SOURCE - 5), age_classification.SOURCE := 'Older']
+  tmp1[age_infection.RECIPIENT > (age_transmission.SOURCE + 5), age_classification.SOURCE := 'Younger']
   
   tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_classification.SOURCE', 'age_group_infection.RECIPIENT')]
   
@@ -550,8 +550,8 @@ find_standardised_transmission_flows_aggregated2_by_round <- function(samples, d
   tmp1[, value := value / total_value]
   
   tmp1[, age_classification.SOURCE := 'Same age']
-  tmp1[age_infection.RECIPIENT < (age_transmission.SOURCE - 3), age_classification.SOURCE := 'Older']
-  tmp1[age_infection.RECIPIENT > (age_transmission.SOURCE + 3), age_classification.SOURCE := 'Younger']
+  tmp1[age_infection.RECIPIENT < (age_transmission.SOURCE - 5), age_classification.SOURCE := 'Older']
+  tmp1[age_infection.RECIPIENT > (age_transmission.SOURCE + 5), age_classification.SOURCE := 'Younger']
   
   tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_classification.SOURCE', 'age_group_infection.RECIPIENT', 'ROUND')]
   

@@ -55,13 +55,6 @@ range_age_observed <- pairs[, list(min_age = min(c(age_infection.RECIPIENT, age_
                                                  max_age = max(c(age_infection.RECIPIENT, age_transmission.SOURCE)))]
 df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'), incidence)
 
-# temporary
-file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220411.csv')
-incidence.raw <- read.csv(file.incidence)
-if(!'is_before_cutoff_date' %in% colnames(incidence.raw)){
-  incidence <- process.incidence(incidence.raw, df_round)
-}
-
 # samples 
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
@@ -86,6 +79,8 @@ plot_intensity_PP(intensity_PP, count_data, range_age_observed, outfile.figures)
 
 transmission_flows <- find_transmission_flows(samples, df_group, df_age)
 plot_transmission_flows(transmission_flows = transmission_flows, count_data = count_data, range_age_observed = range_age_observed, 
+                        with_contour = T, outdir = outfile.figures)
+plot_transmission_flows_vertical(transmission_flows = transmission_flows, count_data = count_data, range_age_observed = range_age_observed, 
                         with_contour = T, outdir = outfile.figures)
 
 transmission_flows_aggregated <- find_transmission_flows_aggregated(samples, df_group, df_age, df_age_aggregated)
@@ -113,7 +108,7 @@ plot_transmission_flows_aggregated2(transmission_flows_aggregated2, standardised
 ## Standardised transmission flows statified by round
 #
 
-cat("\nPlot Standardised transmission flows\n")
+cat("\nPlot Standardised transmission flows by round\n")
 
 standardised_transmission_flows_by_round <- find_standardised_transmission_flows_by_round(samples, df_group, df_age, incidence)
 plot_transmission_flows_by_round(transmission_flows = standardised_transmission_flows_by_round, lab = 'Standardised', 
