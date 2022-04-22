@@ -511,7 +511,7 @@ add_informative_prior_gp_mean <- function(stan_data, df_age, file.partnership.ra
     sex <- tmp1[, unique(part.sex)]
     
     mu <- as.matrix(dcast(tmp1, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
-    theta[[i]] <- find_spectral_projection_gp_mean(mu,  paste0(outfile.figures, '_sex_', sex)))
+    theta[[i]] <- find_spectral_projection_gp_mean(mu,  paste0(outfile.figures, '_sex_', sex))
   }
   
   stan_data[['theta']] <- theta
