@@ -7,8 +7,8 @@ obtain.contact.matrix = function(dataset, age)
   
   # Add node and record IDs to polymod.tab.list
   polymod.tab <- within(polymod.tab, {
-    record.id <- with(construct.recordID(n = n.age), c( rec ))
-    node.id   <- with(construct.nodeID  (n = n.age), c(node))
+    record.id <- with(construct.recordID(n = n.age, sex = TRUE), c( rec.MM,  rec.FM,  rec.MF,  rec.FF))
+    node.id   <- with(construct.nodeID  (n = n.age, sex = TRUE), c(node.MM, node.FM, node.MF, node.FF))
   })
   
   # Construct structure matrix R
@@ -67,7 +67,21 @@ obtain.contact.matrix = function(dataset, age)
 }
 
 # Function to construct node IDs in matrix form
-construct.nodeID <- function(n) {
+construct.nodeID <- function(n, sex = TRUE) {
+  if (sex) {
+    # Sex specific
+    nn1 <- n*(n + 1)/2 # Number of nodes in MM and FF
+    nn2 <- n^2         # Number of nodes in FM and MF
+    node.MM <- node.FF <- matrix(0, nrow = n, ncol = n) # Empty matrix
+    LT <- lower.tri(node.MM, diag = TRUE) # Lower tri of MM and FF with diag
+    node.MM[ LT] <- 1:nn1           # Fill lower tri with node IDs
+    node.MM[!LT] <- t(node.MM)[!LT] # Fill upper tri with transposed
+    node.FM      <- matrix(nn1 + 1:nn2, nrow = n, ncol = n) # Fill entire matrix
+    node.MF      <- t(node.FM)                              # Transposed
+    node.FF[ LT] <- nn1 + nn2 + 1:nn1 # As node.MM
+    node.FF[!LT] <- t(node.FF)[!LT]
+    return(list(node.MM = node.MM, node.FM = node.FM, node.MF = node.MF, node.FF = node.FF))
+  } else {
     # Not sex specific
     nn <- n*(n + 1)/2
     node <- matrix(0, nrow = n, ncol = n)
@@ -75,14 +89,23 @@ construct.nodeID <- function(n) {
     node[ LT] <- 1:nn
     node[!LT] <- t(node)[!LT]
     return(list(node = node))
+  }
 }
 
 # Function to construct record IDs in matrix form
-construct.recordID <- function(n) {
+construct.recordID <- function(n, sex = TRUE) {
+  if (sex) {
+    # Sex specific
+    rec.MM <- matrix(        1:n^2, nrow = n, ncol = n)
+    rec.FM <- matrix(  n^2 + 1:n^2, nrow = n, ncol = n)
+    rec.MF <- matrix(2*n^2 + 1:n^2, nrow = n, ncol = n)
+    rec.FF <- matrix(3*n^2 + 1:n^2, nrow = n, ncol = n)
+    return(list(rec.MM = rec.MM, rec.FM = rec.FM, rec.MF = rec.MF, rec.FF = rec.FF))
+  } else {
     # Not sex specific
     rec <- matrix(1:n^2, nrow = n, ncol = n)
     return(list(rec = rec))
-  
+  }
 }
 
 # Function to construct R-matrix
@@ -128,7 +151,48 @@ construct.Dmat <- function(n, order, tri = FALSE) {
   }
 }
 
-plot_crude_estimate <- function(data, age){
+
+plot_crude_estimate <- function(data){
+  
+  ggplot(data, aes(y = cont.age, x = part.age)) +  
+    labs(y = "Partner", x = "Participant") +
+    geom_raster(aes(fill = y / U)) + 
+    scale_x_continuous(expand = c(0,0))+ 
+    scale_y_continuous(expand = c(0,0)) + 
+    scale_fill_gradient(low = 'beige', high='firebrick3') +
+    labs(fill = 'crude\nestimate') + 
+    facet_grid(`Partner sex`~`Participant sex`, label = 'label_both') + 
+    theme_bw()
+
+}
+
+plot_smooth_estimate <- function(data){
+  
+  ggplot(data, aes(y = cont.age, x = part.age)) +  
+    labs(y = "Partner", x = "Participant") +
+    geom_raster(aes(fill = c*1e6)) + 
+    scale_x_continuous(expand = c(0,0))+ 
+    scale_y_continuous(expand = c(0,0)) + 
+    scale_fill_gradient(low = 'beige', high='firebrick3') +
+    labs(fill = 'Smooth\nestimate') + 
+    facet_grid(`Partner sex`~`Participant sex`, label = 'label_both') + 
+    theme_bw()
+  
+}
+
+plot_age_profile <- function(age_profile){
+  ggplot(age_profile, aes(y = M, x = part.age)) + 
+    geom_line(aes(y = M)) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
+    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col= 'darkred')+
+    facet_wrap(~`Participant sex`, label='label_both') + 
+    theme_bw() + 
+    labs(x = 'Participant age', y = 'Partner age (median and 80% IQR)')
+}
+
+
+
+plot_crude_estimate_old <- function(data, age){
   
   # Get ages and number of age classes
   n.age <- length(age)
@@ -161,7 +225,7 @@ plot_crude_estimate <- function(data, age){
   
 }
 
-plot_smooth_estimate <- function(fit, age){
+plot_smooth_estimate_old <- function(fit, age){
   
   # Get ages and number of age classes
   n.age <- length(age)

@@ -141,44 +141,55 @@ tmp <- census_eligible_count[, list(T = sum(ELIGIBLE)), by = c('AGEYRS', 'SEX')]
 ragea <- merge(ragea, tmp, by.x = c('cont.age', 'sex'), by.y = c('AGEYRS', 'SEX'))
 ragea[, U := T * N]
 
+# find sex of participant and partner
+ragea[, part.sex := ifelse(sex == 'M', 'M', 'F')]
+ragea[, cont.sex := ifelse(part.sex == 'M', 'F', 'M')]
+set(ragea, NULL, 'sex', NULL)
 
-# smooth estimate
+# input data without observation 
+tmp <- ragea[part.sex == 'F']
+tmp[, `:=`(part.sex = 'M', y = 0, N = NULL)]
+tmp <- merge(tmp, unique(ragea[part.sex == 'M', .(part.age, N)]), by = 'part.age')
+
+tmp1 <- ragea[part.sex == 'M']
+tmp1[, `:=`(part.sex = 'F', y = 0, N = NULL)]
+tmp1 <- merge(tmp1, unique(ragea[part.sex == 'F', .(part.age, N)]), by = 'part.age')
+
+ragea <- rbind(ragea, rbind(tmp, tmp1))
+ragea <- ragea[order(cont.sex, part.sex, cont.age, part.age)]
+
+# get smooth estimate using both female and male reporting
 AGEYRS <- 15:49
-ragea <- ragea[, {
-  fit <- obtain.contact.matrix(data.frame(part.age, cont.age, part.sex = 'any', cont.sex = 'any', y, N, T, U), 
-                               AGEYRS)
-  results <- fit[[2]]
-  list(part.age = part.age, cont.age = cont.age, y = y, N = N, T = T, U = U, 
-       c = results$c, m = results$m, c.u95 = results$c.u95, c.l95 = results$c.l95, c.sd = results$c.sd, 
-       node.id = results$node.id, record.id = results$record.id)
-}, by = 'sex']
-
+contact.matrix <- obtain.contact.matrix(ragea,  AGEYRS)
+sragea <- contact.matrix[[2]]
 
 # plot
-cols <- colorRampPalette(brewer.pal(name = "YlOrRd", n = 9))(n = 100) # Colors
-euro.levs <- as.vector(outer(c(1, 2, 5), 10^(-12:10)))                  # "euro" levels for contour lines
-ticks <- seq(from = 15, to = 49, by = 5)     
+sragea[, `Participant sex` := ifelse(part.sex == 'M', 'Male', 'Female')]
+sragea[, `Partner sex` := ifelse(cont.sex == 'M', 'Male', 'Female')]
+sragea[, `Participant sex` := factor(`Participant sex`, levels = c('Male', 'Female'))]
+sragea[, `Partner sex` := factor(`Partner sex`, levels = c('Female', 'Male'))]
 
-# reported by male participants
-ragea <- ragea[order(cont.age, part.age)]
-png(file = paste0(outdir, 'CrudeEstimates_Male_220412.png'), w= 600, h = 600)
-plot_crude_estimate(ragea[sex == 'M'], AGEYRS)
-dev.off()
-png(file = paste0(outdir, 'SmoothEstimates_Male_220412.png'), w= 600, h = 600)
-plot_smooth_estimate(ragea[sex == 'M'], AGEYRS)
-dev.off()
+plot_crude_estimate(sragea)
+ggsave(file = paste0(outdir, 'CrudeEstimates_220422.png'), w = 7, h = 6)
+plot_smooth_estimate(sragea)
+ggsave(file = paste0(outdir, 'SmoothEstimates_220422.png'), w = 7, h = 6)
 
-# reported by female participants
-ragea <- ragea[order(part.age, cont.age)]
-png(file = paste0(outdir, 'CrudeEstimates_Female_220412.png'), w= 600, h = 600)
-plot_crude_estimate(ragea[sex == 'F'], AGEYRS)
-dev.off()
-png(file = paste0(outdir, 'SmoothEstimates_Female_220412.png'), w= 600, h = 600)
-plot_smooth_estimate(ragea[sex == 'F'], AGEYRS)
-dev.off()
+# age profile of the partner
+age_profile <- sragea[part.sex!=cont.sex]
+age_profile[, total_c := sum(c), by = c('part.age', 'part.sex')]
+age_profile[, prop := c / total_c]
+age_profile <- age_profile[, list(M = as.numeric(matrixStats::weightedMedian(cont.age, prop)), 
+                                  CL = as.numeric(modi::weighted.quantile(cont.age, prop, 0.1)), 
+                                  CU = as.numeric(modi::weighted.quantile(cont.age, prop, 0.9))), by = c('part.age', 'part.sex')]
+age_profile[, `Participant sex` := ifelse(part.sex == 'M', 'Male', 'Female')]
+age_profile[, `Participant sex` := factor(`Participant sex`, levels = c('Male', 'Female'))]
+
+plot_age_profile(age_profile)
+ggsave(file = paste0(outdir, 'AgeProfile_220422.png'), w = 7, h = 4)
 
 # save
-write.csv(ragea, file.path(dirname(dirname(outdir)), 'RCCS_partnership_rate_220412.csv'), row.names = F)
+write.csv(sragea, file.path(dirname(dirname(outdir)), 'RCCS_partnership_rate_220422.csv'), row.names = F)
+# ragea <- as.data.table(read.csv(file.path(dirname(dirname(outdir)), 'RCCS_partnership_rate_220412.csv')))
 
 # plot ratio
 rageas <- copy(ragea)
