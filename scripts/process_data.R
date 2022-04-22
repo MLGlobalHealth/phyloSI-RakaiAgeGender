@@ -17,7 +17,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
   
-  jobname <- 'test'
+  jobname <- 'test_new'
   stan_model <- 'gp_220317'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
@@ -81,7 +81,7 @@ file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pange
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220411.csv')
-file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220412.csv')
+file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
 
 # load functions
 source(file.path(indir, 'functions', 'utils.R'))
@@ -207,7 +207,7 @@ if(1){
 # prepare stan data
 stan_data <- prepare_stan_data(pairs, df_age, df_group)
 stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3, 
-                                      n_knots_rows = 8, n_knots_columns = 8, 
+                                      n_knots_rows = 6, n_knots_columns = 6, 
                                       X = unique(df_age$age_transmission.SOURCE),
                                       Y = unique(df_age$age_infection.RECIPIENT))
 if(use.informative.prior){

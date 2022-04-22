@@ -480,17 +480,21 @@ add_informative_prior_gp_mean <- function(stan_data, df_age, file.partnership.ra
   # load estimated partnership.rate in misc/
   partnership.rate <- as.data.table(read.csv(file.partnership.rate))
   
-  # choose partnership reported by male
-  partnership.rate <- partnership.rate[sex == 'M']
-
+  # keep heterosexuals partnerships
+  partnership.rate <- partnership.rate[part.sex!=cont.sex]
+  
   # format
-  partnership.rate <- partnership.rate[, .(part.age, cont.age, c)]
+  partnership.rate <- partnership.rate[, .(part.sex, part.age, cont.age, c)]
   setnames(partnership.rate, 'c', 'rate')
   
   tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
-  tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), index_group = 1:stan_data$N_group), 
+  tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), 
+                                                 index_group = 1:stan_data$N_group), 
                                  by = character()))
-  tmp <- merge(tmp, partnership.rate, by.x = c('age_transmission.SOURCE', 'age_infection.RECIPIENT'), by.y = c('part.age', 'cont.age'), all.x = T)
+  tmp <- merge(tmp, df_group[, .(is_mf, index_group)], by = 'index_group')
+  tmp[, part.sex := ifelse(is_mf == T, 'M', 'F')]
+  
+  tmp <- merge(tmp, partnership.rate, by.x = c('age_transmission.SOURCE', 'age_infection.RECIPIENT', 'part.sex'), by.y = c('part.age', 'cont.age', 'part.sex'), all.x = T)
 
   tmp[, total_rate := sum(rate), by = 'index_group']
   tmp[, relative_rate := rate / total_rate]
@@ -504,9 +508,10 @@ add_informative_prior_gp_mean <- function(stan_data, df_age, file.partnership.ra
   theta <- vector(mode = 'list', length = stan_data$N_group)
   for(i in 1:stan_data$N_group){
     tmp1 <- tmp[index_group == i]
+    sex <- tmp1[, unique(part.sex)]
     
     mu <- as.matrix(dcast(tmp1, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
-    theta[[i]] <- find_spectral_projection_gp_mean(mu, outfile.figures)
+    theta[[i]] <- find_spectral_projection_gp_mean(mu,  paste0(outfile.figures, '_sex_', sex)))
   }
   
   stan_data[['theta']] <- theta
@@ -520,8 +525,12 @@ add_diagonal_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
   tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), index_group = 1:stan_data$N_group), 
                                  by = character()))
   
-  tmp[, rate := 1 / abs( age_infection.RECIPIENT - age_transmission.SOURCE)]
-  tmp[age_infection.RECIPIENT == age_transmission.SOURCE, rate := 2]
+  # tmp[, rate := (max(age_infection.RECIPIENT) - min(age_infection.RECIPIENT))*4 +
+  #       max(age_infection.RECIPIENT) - abs( age_infection.RECIPIENT - age_transmission.SOURCE)*4 ]
+  # tmp[, rate := 1 / log(2 + abs( age_infection.RECIPIENT - age_transmission.SOURCE)) ]
+  tmp[, rate := max(age_infection.RECIPIENT) - abs( age_infection.RECIPIENT - age_transmission.SOURCE) ]
+  
+  # tmp[age_infection.RECIPIENT == age_transmission.SOURCE, rate := 2]
   
   tmp[, total_rate := sum(rate), by = 'index_group']
   tmp[, relative_rate := rate / total_rate]
@@ -588,57 +597,58 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
     
     tmp <- copy(df_age)
     tmp[, transmission_rate := exp(tmp1$value)]
+    tmp[, total_transmission_rate := sum(transmission_rate)]
+    tmp[, transmission_flow := transmission_rate / total_transmission_rate]
     
     ggplot(tmp, aes(x =age_infection.RECIPIENT, y = age_transmission.SOURCE)) + 
-      geom_raster(aes(fill = transmission_rate)) + 
-      labs(x = 'age infection recipient', y = 'age transmission source', fill = 'prior median\ntransmission rate') + 
+      geom_raster(aes(fill = transmission_flow)) + 
+      labs(x = 'age infection recipient', y = 'age transmission source', fill = 'prior median\ntransmission flow') + 
       scale_fill_viridis_c() + 
       scale_y_continuous(expand = c(0,0)) + 
       scale_x_continuous(expand = c(0,0)) + 
       coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +
       theme(legend.position = 'bottom') +
       geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'white') 
-    ggsave(paste0(outdir, '-Prior_transmissionRate.png'), w = 5, h = 5)
+    ggsave(paste0(outdir, '-Prior_transmissionFlow.png'), w = 5, h = 5)
     
-    tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_infection.RECIPIENT']
+    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'age_infection.RECIPIENT']
     tmp1 <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
-    tmp1[, pi := transmission_rate / total_transmission]
+    tmp1[, delta := transmission_flow / total_flow]
     
-    tmp2 <- tmp1[, list(estimator_age = sum(age_transmission.SOURCE * pi)), by = 'age_infection.RECIPIENT']
-    tmp2[, type := 'mean']
-    tmp1 <- tmp1[, list(estimator_age = matrixStats::weightedMedian(age_transmission.SOURCE, pi )), by = 'age_infection.RECIPIENT']
-    tmp1[, type := 'median']
+    tmp1 <- tmp1[, list(M = matrixStats::weightedMedian(age_transmission.SOURCE, delta), 
+                        CL = as.numeric(modi::weighted.quantile(age_transmission.SOURCE, delta, 0.1)), 
+                        CU = as.numeric(modi::weighted.quantile(age_transmission.SOURCE, delta, 0.9))), by = 'age_infection.RECIPIENT']
     
-    tmp1 <- rbind(tmp1, tmp2)
-    
-    ggplot(tmp1[type == 'median'], aes(x =age_infection.RECIPIENT, y = estimator_age, col = type)) + 
-      geom_line() + 
-      geom_abline(intercept = 0, slope = 1, linetype= 'dashed') + 
-      labs(x = 'age infection recipient', y = 'Median age transmission source', color = 'prior median') + 
+    ggplot(tmp1, aes(x = age_infection.RECIPIENT)) + 
+      geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'darkred') + 
+      geom_line(aes(y = M)) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
+      labs(x = 'Age infection recipient', y = 'Age transmission source (median and 80% IQR)', color = 'prior median') + 
       theme(legend.position = 'bottom') +
+      theme_bw() +
       scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
       scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
     ggsave(paste0(outdir, '-Prior_Agetransmission.png'), w = 5, h = 5)
     
-    tmp1 <- tmp[, list(total_transmission = sum(transmission_rate)), by = 'age_transmission.SOURCE']
+    #
+    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'age_transmission.SOURCE']
     tmp1 <- merge(tmp, tmp1, by = 'age_transmission.SOURCE')
-    tmp1[, pi := transmission_rate / total_transmission]
+    tmp1[, delta := transmission_flow / total_flow]
     
-    tmp2 <- tmp1[, list(estimator_age = sum(age_transmission.SOURCE * pi)), by = 'age_transmission.SOURCE']
-    tmp2[, type := 'mean']
-    tmp1 <- tmp1[, list(estimator_age = matrixStats::weightedMedian(age_infection.RECIPIENT, pi )), by = 'age_transmission.SOURCE']
-    tmp1[, type := 'median']
+    tmp1 <- tmp1[, list(M = matrixStats::weightedMedian(age_infection.RECIPIENT, delta), 
+                        CL = as.numeric(modi::weighted.quantile(age_infection.RECIPIENT, delta, 0.1)), 
+                        CU = as.numeric(modi::weighted.quantile(age_infection.RECIPIENT, delta, 0.9))), by = 'age_transmission.SOURCE']
     
-    tmp1 <- rbind(tmp1, tmp2)
-    
-    ggplot(tmp1[type == 'median'], aes(x =age_transmission.SOURCE, y = estimator_age, col = type)) + 
-      geom_line() + 
-      geom_abline(intercept = 0, slope = 1, linetype= 'dashed') + 
-      labs(x = 'age transmission source', y = 'Median age infection recipient', color = 'prior median') + 
-      theme(legend.position = 'bottom') + 
+    ggplot(tmp1, aes(x = age_transmission.SOURCE)) + 
+      geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'darkred') + 
+      geom_line(aes(y = M)) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
+      labs(x = 'Age transmission source', y = 'Age infection recipient (median and 80% IQR)', color = 'prior median') + 
+      theme(legend.position = 'bottom') +
+      theme_bw() +
       scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
       scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
-    ggsave(file = paste0(outdir, '-Prior_AgeInfection.png'), w = 5, h = 5)
+    ggsave(paste0(outdir, '-Prior_AgeInfection.png'), w = 5, h = 5)
     
   }
   
