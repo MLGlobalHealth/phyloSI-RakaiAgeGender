@@ -246,7 +246,7 @@ plot_transmission_flows_vertical <- function(transmission_flows, range_age_obser
                shape = guide_legend(order = 2)) 
       
       
-      if(j != max(index_groups)){
+      if(j != length(index_groups)){
         p <- p + 
           theme(strip.text.y = element_blank())
       }
