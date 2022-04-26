@@ -229,7 +229,7 @@ get.age.map <- function(pairs, age_bands_reduced = 4){
   return(df_age)
 }
 
-get.group.map <- function(){
+get.group.map <- function(stratify.by.community.recipient){
   
   df_direction <- data.table(index_direction = 1:2, is_mf = c(0, 1))
   df_direction[, label_direction := ifelse(is_mf == 1, 'Male -> Female', 'Female -> Male')]
@@ -241,9 +241,13 @@ get.group.map <- function(){
   df_time[, label_time := factor(label_time, levels = c(paste0(label_start_observational_period,'-',label_cutoff_date-1), 
                                                         paste0(label_cutoff_date,'-2019')))]
   
-  df_community <- data.table(index_community = 1:2, comm = c('fishing','inland'))
-  df_community[, label_community := ifelse(comm == 'inland', 'Inland communities', 'Fishing communities')]
-  
+  if(stratify.by.community.recipient){
+    df_community <- data.table(index_community = 1:2, comm = c('fishing','inland'))
+    df_community[, label_community := ifelse(comm == 'inland', 'Inland communities', 'Fishing communities')]
+  } else{
+    df_community <- data.table(index_community = 1, comm = c('all'), label_community = 'All communities')
+  }
+
   df_group <- data.table(expand.grid(index_direction = df_direction[, index_direction],
                          index_time = df_time[, index_time], 
                          index_community = df_community[, index_community]))

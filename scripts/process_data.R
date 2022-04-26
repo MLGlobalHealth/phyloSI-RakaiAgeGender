@@ -69,11 +69,12 @@ threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
+remove.missing.community.recipient <- T
+remove.neuro.individuals <- T
 only.transmission.after.start.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- T 
-remove.missing.community.recipient <- T
-remove.neuro.individuals <- T
+stratify.by.community.recipient <- T
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -182,7 +183,7 @@ pairs[, date_infection_before_cutoff.RECIPIENT := date_infection.RECIPIENT < cut
 df_age <- get.age.map(pairs, age_bands_reduced = 4)
 
 # prepare group map
-df_group <- get.group.map()
+df_group <- get.group.map(stratify.by.community.recipient)
 
 
 #
@@ -203,6 +204,13 @@ if(1){
 #
 # PREPARE STAN DATA
 #
+
+# commynity of the recipient
+if(!stratify.by.community.recipient){
+  pairs[, comm.RECIPIENT := 'all']
+  incidence[, comm := 'all']
+}
+
 
 # prepare stan data
 stan_data <- prepare_stan_data(pairs, df_age, df_group)
