@@ -271,19 +271,9 @@ if(0){
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-IncidentCases.png'), w = 7, h = 6)
 
-  di <- copy(dir)
-  di[, is_before_cutoff_date := T]
-  di[ROUND > 15, is_before_cutoff_date := F]
-
-  di <- di[, list(INCIDENT_CASES = SUSCEPTIBLE * mean(INCIDENCE),
-                  INCIDENT_CASES_UB = SUSCEPTIBLE * mean(UB),
-                  INCIDENT_CASES_LB = SUSCEPTIBLE * mean(LB)), by = c('is_before_cutoff_date', 'MODEL', 'SEX', 'AGEYRS')]
-  di[, PERIOD := ifelse(is_before_cutoff_date, '2010-2013', '2013-2016')]
-  di[, PERIOD := factor(PERIOD, levels = c('2010-2013', '2013-2016'))]
-
-  tmp <- di[, list(INCIDENT_CASES = round(sum(INCIDENT_CASES), digits = 1),
+  tmp <- dir[, list(INCIDENT_CASES = round(sum(INCIDENT_CASES), digits = 1),
                    INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1),
-                   INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('PERIOD', 'SEX', 'MODEL')]
+                   INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('ROUND', 'SEX', 'MODEL')]
   knitr::kable(subset(tmp, select = - c(MODEL)))
 
 }
