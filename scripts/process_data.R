@@ -6,7 +6,7 @@ library(ggpubr)
 library(knitr)
 library(grid)
 library(ggtree)
-library(ggnet) 
+library(ggnet)
 require(lubridate)
 
 # laptop
@@ -16,7 +16,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
-  
+
   jobname <- 'test_new'
   stan_model <- 'gp_220317'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
@@ -60,7 +60,7 @@ outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
 if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
 
-# indicators 
+# indicators
 cutoff_date <- as.Date('2014-01-01')
 start_observational_period <- as.Date('2010-01-01')
 
@@ -73,7 +73,7 @@ remove.missing.community.recipient <- T
 remove.neuro.individuals <- T
 only.transmission.after.start.observational.period <- T
 use.diagonal.prior <- F
-use.informative.prior <- T 
+use.informative.prior <- T
 stratify.by.community.recipient <- T
 
 # file paths
@@ -81,7 +81,7 @@ file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phsc
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
-file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220411.csv')
+file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220427.csv')
 file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
 
 # load functions
@@ -214,8 +214,8 @@ if(!stratify.by.community.recipient){
 
 # prepare stan data
 stan_data <- prepare_stan_data(pairs, df_age, df_group)
-stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3, 
-                                      n_knots_rows = 6, n_knots_columns = 6, 
+stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
+                                      n_knots_rows = 6, n_knots_columns = 6,
                                       X = unique(df_age$age_transmission.SOURCE),
                                       Y = unique(df_age$age_infection.RECIPIENT))
 if(use.informative.prior){
@@ -229,6 +229,6 @@ if(use.informative.prior){
 ## save image before running Stan
 tmp <- names(.GlobalEnv)
 tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
-save(list=tmp, file=paste0(outfile, "-stanin_",jobname,".RData")) 
+save(list=tmp, file=paste0(outfile, "-stanin_",jobname,".RData"))
 
 
