@@ -289,6 +289,13 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
   df_group <- df_group[order(index_group)]
   stan_data[['index_group_without_community']] = df_group[, index_group_without_community]
   
+  # community to index group
+  community_to_index_group = matrix(nrow = stan_data[['N_group_without_community']], ncol = 2, 0)
+  for(i in 1:stan_data[['N_group_without_community']]){
+    community_to_index_group[i, ] = which(stan_data[['index_group_without_community']] == i)
+  }
+  stan_data[['community_to_index_group']] = community_to_index_group
+  
   # save count in each entry
   y = vector(mode = 'list', length = nrow(df_group))
   for(i in 1:nrow(df_group)){
@@ -324,7 +331,6 @@ prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
     y[[i]] = matrix(tmp$count, ncol = 1)
     
   }
-  
   
   # save stan data
   stan_data[['N_per_group']] = nrow(df_age)
