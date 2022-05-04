@@ -49,8 +49,7 @@ data
 
   vector[Nmf] log_participants_mf; // the offset terms
   vector[Nfm] log_participants_fm;
-
-  vector[Nmf] log_pop_mf; // the offset terms
+  vector[Nmf] log_pop_mf;
   vector[Nfm] log_pop_fm;
 
   // B spline basis function
@@ -78,9 +77,10 @@ parameters
 {
   vector[2] log_random_effect_baseline;
 
-  vector<lower=0> gp_rho_age1; // GP hyperparameters
-  vector<lower=0> gp_rho_age2;
-  vector<lower=0> gp_alpha;
+  real<lower=0> gp_rho_age1; // GP hyperparameters
+  real<lower=0> gp_rho_age2;
+  real<lower=0> gp_alpha;
+  real<lower=0> overdispersion;
 
   matrix[M_age1, M_age2] z; // GP variables
 }
@@ -123,8 +123,8 @@ model
   // model in local scope
   {
     vector[N] log_mu =
-      append_row(log_random_effect_baseline[MF] + f_mf[ymf_rowmajor_matrix_index] + log_offset_mf,
-      log_random_effect_baseline[FM] + f_mf[yfm_rowmajor_matrix_index] + log_offset_fm
+      append_row(log_random_effect_baseline[MF] + f_mf[ymf_rowmajor_matrix_index] + log_pop_mf + log_participants_mf,
+      log_random_effect_baseline[FM] + f_mf[yfm_rowmajor_matrix_index] + log_pop_fm + log_participants_fm
       );
     target += poisson_lpmf( y | exp(log_mu));
   }
@@ -139,8 +139,8 @@ generated quantities
 
     //pointwise log likelihood
     vector[N] log_mu =
-      append_row(log_random_effect_baseline[MF] + f_mf[ymf_rowmajor_matrix_index] + log_offset_mf,
-      log_random_effect_baseline[FM] + f_mf[yfm_rowmajor_matrix_index] + log_offset_fm
+      append_row(log_random_effect_baseline[MF] + f_mf[ymf_rowmajor_matrix_index] + log_pop_mf + log_participants_mf,
+      log_random_effect_baseline[FM] + f_mf[yfm_rowmajor_matrix_index] + log_pop_fm + log_participants_fm
       );
     for(i in 1:N)
     {
