@@ -180,6 +180,20 @@ plot_smooth_estimate <- function(data){
   
 }
 
+plot_smooth_estimate_sd <- function(data){
+  
+  ggplot(data, aes(y = cont.age, x = part.age)) +  
+    labs(y = "Partner", x = "Participant") +
+    geom_raster(aes(fill = c.sd*1e6)) + 
+    scale_x_continuous(expand = c(0,0))+ 
+    scale_y_continuous(expand = c(0,0)) + 
+    scale_fill_gradient(low = 'beige', high='firebrick3') +
+    labs(fill = 'Smooth\nestimate\nSD') + 
+    facet_grid(`Partner sex`~`Participant sex`, label = 'label_both') + 
+    theme_bw()
+  
+}
+
 plot_age_profile <- function(age_profile){
   ggplot(age_profile, aes(y = M, x = part.age)) + 
     geom_line(aes(y = M)) + 
