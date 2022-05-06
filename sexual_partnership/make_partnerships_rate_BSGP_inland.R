@@ -13,24 +13,25 @@ args$seed <- 18L
 tmp <- Sys.info()
 if (tmp["user"] == "yc2819" & grepl("hpc.ic.ac.uk",tmp["nodename"])) # outdir yu
 {
-  args$out.dir <- "/rds/general/user/yc2819/home/github/phyloflows"
-  args$prj.dir <- "/rds/general/user/yc2819/home/github/phyloflows"
+  args$out.dir <- "/rds/general/user/yc2819/home/github/phyloflows/sexual_partnership"
+  args$prj.dir <- "/rds/general/user/yc2819/home/github/phyloflows/sexual_partnership"
 }else
 {
   args$prj.dir <- here::here()
   args$out.dir <- here::here()
 }
-args$indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-
+args$indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+args$community <- 'inland'
+args$n_knots <- 30
+args$spline_degree <- 3
 args$infile.reported.partnerships <- file.path(args$indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_reported_partnership_220426.csv')
-args$stan_model <- file.path('sexual_partnership','stan_models','Bspline_gp.stan')
-args$outfile.prefix <- 'BSGP-inland'
-
+args$stan_model <- file.path('stan_models','BSGP.stan')
+args$outfile.prefix <- paste0('BSGP-inland-knots-', args$n_knots)
 # Source functions
-source( file.path(args$prj.dir,'sexual_partnership','functions','GP-functions.R') )
+source( file.path(args$prj.dir,'functions','GP-functions.R') )
 
 # load data----
-reported.partnerships <- as.data.table(read.csv(file.path(args$prj.dir, args$infile.reported.partnerships)))
+reported.partnerships <- as.data.table(read.csv(file.path(args$infile.reported.partnerships)))
 
 # cont.age: contacted age
 # part.age: participant age
@@ -46,14 +47,14 @@ reported.partnerships <- as.data.table(read.csv(file.path(args$prj.dir, args$inf
 
 # Generate Stan data----
 cat("\n Generating stan data ...")
-reported.partnerships <- reported.partnerships[comm == 'inland']
+reported.partnerships <- reported.partnerships[part.comm == args$community]
 setkey(reported.partnerships, cont.sex, part.sex, cont.age, part.age)
 reported.partnerships[, index := 1:nrow(reported.partnerships)]
 
 # We only interesting in heterosexuals partnerships
 # make obs_2_MF_matrix index
 tmp <- subset(reported.partnerships,
-              cont.sex == 'Female' & part.sex == 'Male',
+              cont.sex == 'F' & part.sex == 'M',
               select = c(cont.sex, part.sex, cont.age, part.age)
 )
 setkey(tmp, cont.sex, part.sex, cont.age, part.age)
@@ -69,16 +70,18 @@ stan_data$age1 <- unique(reported.partnerships$part.age)
 stan_data$age2 <- unique(reported.partnerships$cont.age)
 
 # contact data
-stan_data$Nmf <- nrow(reported.partnerships[part.sex == 'Male' & cont.sex == 'Female' & N > 0L,])
-stan_data$Nfm <- nrow(reported.partnerships[part.sex == 'Female' & cont.sex == 'Male' & N > 0L,])
-stan_data$ymf <- reported.partnerships[part.sex == 'Male' & cont.sex == 'Female' & N > 0L, cntcts_data]
-stan_data$yfm <- reported.partnerships[part.sex == 'Female' & cont.sex == 'Male' & N > 0L, cntcts_data]
-stan_data$ymf_rowmajor_matrix_index <- reported.partnerships[part.sex == 'Male' & cont.sex == 'Female' & N > 0L, mf_mat_idx]
-stan_data$yfm_rowmajor_matrix_index <- reported.partnerships[part.sex == 'Female' & cont.sex == 'Male' & N > 0L, mf_mat_idx]
+stan_data$Nmf <- nrow(reported.partnerships[part.sex == 'M' & cont.sex == 'F' & N > 0L,])
+stan_data$Nfm <- nrow(reported.partnerships[part.sex == 'F' & cont.sex == 'M' & N > 0L,])
+stan_data$ymf <- reported.partnerships[part.sex == 'M' & cont.sex == 'F' & N > 0L, y]
+stan_data$yfm <- reported.partnerships[part.sex == 'F' & cont.sex == 'M' & N > 0L, y]
+stan_data$ymf_rowmajor_matrix_index <- reported.partnerships[part.sex == 'M' & cont.sex == 'F' & N > 0L, mf_mat_idx]
+stan_data$yfm_rowmajor_matrix_index <- reported.partnerships[part.sex == 'F' & cont.sex == 'M' & N > 0L, mf_mat_idx]
 
 # offsets
-stan_data$log_offset_mf <- reported.partnerships[part.sex == 'Male' & cont.sex == 'Female' & N > 0L, log(U)]
-stan_data$log_offset_fm <- reported.partnerships[part.sex == 'Female' & cont.sex == 'Male' & N > 0L, log(U)]
+stan_data$log_pop_mf <- reported.partnerships[part.sex == 'M' & cont.sex == 'F' & N > 0L, log(T)]
+stan_data$log_pop_fm <- reported.partnerships[part.sex == 'F' & cont.sex == 'M' & N > 0L, log(T)]
+stan_data$log_participants_mf <- reported.partnerships[part.sex == 'M' & cont.sex == 'F' & N > 0L, log(N)]
+stan_data$log_participants_fm <- reported.partnerships[part.sex == 'F' & cont.sex == 'M' & N > 0L, log(N)]
 
 # B-splines projected GP parameters
 tmp <- stan_data$age1[seq(1, stan_data$A, length.out = args$n_knots)]
