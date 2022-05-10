@@ -120,6 +120,13 @@ standardised_transmission_flows_aggregated2_by_round <- find_standardised_transm
 plot_transmission_flows_aggregated_by_round(standardised_transmission_flows_aggregated_by_round, df_age_aggregated, outfile.figures)
 plot_transmission_flows_aggregated2_by_round(standardised_transmission_flows_aggregated2_by_round, df_age_aggregated, outfile.figures)
 
+# transmission flow from age and sex 
+standardised_transmission_flows_across_age_by_round <- find_standardised_transmission_flows_across_age_by_round(samples, df_group, df_age, incidence)
+plot_standardised_transmission_flows_across_age_by_round(standardised_transmission_flows_across_age_by_round, outfile.figures)
+  
+
+
+
 
 #
 ## shift in sex-specific transmission dynamics
@@ -142,6 +149,7 @@ cat("\nPlot age-specific transmission dynamics\n")
 age_source <- find_age_source_by_age_group(samples, df_group, df_age)
 plot_median_age_source(age_source, outfile.figures)
 plot_median_age_source_with_empirical_data(age_source, pairs, outfile.figures)
+
 
 # median age of recipient
 age_recipient <- find_age_recipient_by_age_group(samples, df_group, df_age)
