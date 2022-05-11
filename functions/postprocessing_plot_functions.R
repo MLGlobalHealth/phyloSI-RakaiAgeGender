@@ -517,7 +517,7 @@ plot_standardised_transmission_flows_across_age_by_round <- function(standardise
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
       scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = tmp[, range(c(CU, 0))]) +
-      scale_fill_viridis_d(option = 'C') +
+      ggsci::scale_fill_npg() +
       ggtitle(tmp1[,unique(label_community)])
     ggsave(p, file = paste0(outdir, '-transmission_flows_across_age_',  communities[i], '_by_round.png'), w = 6, h = 7)
   }
