@@ -606,8 +606,25 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
     tmp[, total_transmission_rate := sum(transmission_rate)]
     tmp[, transmission_flow := transmission_rate / total_transmission_rate]
     
-    ggplot(tmp, aes(x =age_infection.RECIPIENT, y = age_transmission.SOURCE)) + 
-      geom_raster(aes(fill = transmission_flow)) + 
+    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'age_infection.RECIPIENT']
+    tmp1 <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
+    tmp1[, delta := transmission_flow / total_flow]
+    tmp1 <- tmp1[, list(Median = matrixStats::weightedMedian(age_transmission.SOURCE, delta), 
+                        FirstQuartile = as.numeric(modi::weighted.quantile(age_transmission.SOURCE, delta, 0.25)), 
+                        ThirdQuartile = as.numeric(modi::weighted.quantile(age_transmission.SOURCE, delta, 0.75))), by = 'age_infection.RECIPIENT']
+    tmp1[, IQR := ThirdQuartile - FirstQuartile]
+    
+    ggplot(tmp, aes(x =age_infection.RECIPIENT)) + 
+      geom_raster(aes(fill = transmission_flow, y = age_transmission.SOURCE)) + 
+      geom_boxplot(data = tmp1, col = 'brown3', alpha= 0, width = 0.5,
+        stat = "identity",
+        aes(lower  = FirstQuartile,
+            upper  = ThirdQuartile,
+            middle = Median,
+            ymin   = FirstQuartile - 1.5 * IQR, # optional
+            ymax   = ThirdQuartile + 1.5 * IQR, 
+            group = age_infection.RECIPIENT) # optional
+      ) +
       labs(x = 'age infection recipient', y = 'age transmission source', fill = 'prior median\ntransmission flow') + 
       scale_fill_viridis_c() + 
       scale_y_continuous(expand = c(0,0)) + 
@@ -617,24 +634,6 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
       geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'white') 
     ggsave(paste0(outdir, '-Prior_transmissionFlow.png'), w = 5, h = 5)
     
-    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'age_infection.RECIPIENT']
-    tmp1 <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
-    tmp1[, delta := transmission_flow / total_flow]
-    
-    tmp1 <- tmp1[, list(M = matrixStats::weightedMedian(age_transmission.SOURCE, delta), 
-                        CL = as.numeric(modi::weighted.quantile(age_transmission.SOURCE, delta, 0.1)), 
-                        CU = as.numeric(modi::weighted.quantile(age_transmission.SOURCE, delta, 0.9))), by = 'age_infection.RECIPIENT']
-    
-    ggplot(tmp1, aes(x = age_infection.RECIPIENT)) + 
-      geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'darkred') + 
-      geom_line(aes(y = M)) + 
-      geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
-      labs(x = 'Age infection recipient', y = 'Age transmission source (median and 80% IQR)', color = 'prior median') + 
-      theme(legend.position = 'bottom') +
-      theme_bw() +
-      scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
-      scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
-    ggsave(paste0(outdir, '-Prior_Agetransmission.png'), w = 5, h = 5)
     
     #
     tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'age_transmission.SOURCE']

@@ -493,6 +493,37 @@ plot_transmission_flows_aggregated_by_round <- function(standardised_transmissio
   }
 }
 
+plot_standardised_transmission_flows_across_age_by_round <- function(standardised_transmission_flows_across_age_by_round, outdir){
+  standardised_transmission_flows_across_age_by_round[, type := 'Standardised']
+  
+  tmp <- copy(standardised_transmission_flows_across_age_by_round)
+  
+  tmp[, `Age Source` := age_transmission.SOURCE]
+  tmp[, label_round := paste0('Round R0', ROUND)]
+  
+  tmp[, Direction :=label_direction]
+  
+  communities <- tmp[, unique(comm)]
+  for(i in seq_along(communities)){
+    tmp1 <- tmp[ comm == communities[i]]
+    
+    p <- ggplot(tmp1[type == 'Standardised'], aes(x = `Age Source`)) + 
+      geom_bar(aes(y = M, fill = Direction), stat = 'identity', position = "dodge") + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = Direction), position = "dodge") + 
+      labs(x = 'Age source', y = 'Standardised\ntransmission flows', fill = '') + 
+      theme_bw() +
+      facet_grid(label_round~., scale = 'free')+
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      scale_y_continuous(expand = expansion(mult = c(0, 0.05)), limits = tmp[, range(c(CU, 0))]) +
+      ggsci::scale_fill_npg() +
+      ggtitle(tmp1[,unique(label_community)])
+    ggsave(p, file = paste0(outdir, '-transmission_flows_across_age_',  communities[i], '_by_round.png'), w = 6, h = 7)
+  }
+}
+
+
 plot_transmission_flows_aggregated2 <- function(transmission_flows_aggregated, standardised_transmission_flows_aggregated, df_age_aggregated, outdir)
 {
   
