@@ -94,32 +94,55 @@ age_preference[age_partner_classification == 'same', age_partner := age_index ]
 tmp <- age_preference[, list(count = .N), by = c('pt_id', 'round')]
 stopifnot(all(tmp[, count <= 4]))
 
+# keep age index within census eligible age
+rag <- age_preference[!is.na(age_index)]
+rag <- rag[age_index >= 15 & age_index < 50]
+
+# remove participant who did not say wether or not they had sexual intercourse in the last year
+rag <- rag[sexyear %in% 1:2]
+rag[, table(sexyear)]
+
+# change coding of sexyear if one relationship ended within a year
+tmp1 <- rag[!is.na(time_since_date_stop), list(sexyear_fix = as.numeric(ifelse(any(time_since_date_stop <= 1), 1, unique(sexyear)))), by = c('pt_id', 'round')]
+rag <- merge(rag, tmp1, by = c('pt_id', 'round'), all.x = T)
+rag[!is.na(sexyear_fix), sexyear := sexyear_fix]
+rag[, table(sexyear)]
+
+rag[, table(sexp1yr)]
+rag[, sexyear := ifelse(any(sexp1yr == 0), 2, sexyear), by = c('pt_id', 'round')]
+rag[, sexp1yr := ifelse(all(sexyear == 2), 0, sexp1yr), by = c('pt_id', 'round')]
+rag[, table(sexp1yr)]
+
+
+## prepare partnerhsip data by age
+# remove missing variables for partnership data
+rager <- rag[!(sexyear == 1 & is.na(date_stop))] # remove participant who had sex in the last year and who did not report the stop data of any of their relations
+rager <- rager[!(sexyear == 1 & !rltnag %in% 1:3)]  # remove participant who ever had sex in the last year and who did not report the age clasification of any of their relations
+rager <- rager[!(sexyear == 1 & rltnag %in% 1:2 & rltnyr %in% code_na)]  # remove participant who ever had sex in the last year and who did not report the age diff of any of their relations (if the classification was not same)
+# ragem <- ragem[!(is.na(rltnag) & is.na(rltnyr))]  # remove participant who were not asked age of any of their relations
+rager <- rager[!(round %in% c('R016', 'R017', 'R018'))] # same as above
+
+# keep age partner within census eligible age
+tmp_rm <- rager[(sexyear == 1 & (age_partner < 15 | age_partner >= 50))]
+ragem <- as.data.table(anti_join(rager, tmp_rm))
+
+## prepare partnership data
 # total number of relationships reported in the last 12 months
-ra <- merge(age_preference, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
+ra <- merge(rag, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
 ra[, part.comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 setnames(ra, 'sex', 'part.sex')
 ra[, part.age := floor(age_index)]
-ra <- ra[sexyear == 1, list(count = length(unique(pt_id))), by = c('sexp1yr', 'round', 'part.comm', 'part.age', 'part.sex')]
-tmp <- ra[round == 'R015']
-tmp[sexp1yr == 93, sum(count)]
-tmp[sexp1yr == 0, sum(count)]
-
-# remove missing variables
-ragem <- age_preference[sexyear %in% 1:2] # remove participant who did not say wether or not they had sexual intercourse in the last year
-ragem <- ragem[!(sexyear == 1 & is.na(date_stop))] # remove participant who had sex in the last year and who did not report the stop data of any of their relations
-ragem <- ragem[!(sexyear == 1 & !rltnag %in% 1:3)]  # remove participant who ever had sex in the last year and who did not report the age clasification of any of their relations
-ragem <- ragem[!(sexyear == 1 & rltnag %in% 1:2 & rltnyr %in% code_na)]  # remove participant who ever had sex in the last year and who did not report the age diff of any of their relations (if the classification was not same)
-# ragem <- ragem[!(is.na(rltnag) & is.na(rltnyr))]  # remove participant who were not asked age of any of their relations
-ragem <- ragem[!(round %in% c('R016', 'R017', 'R018'))] # same as above
-
-# change coding of sexyear if one relationship ended within a year
-ragem[sexyear == 2 & time_since_date_stop <= 1, sexyear := 1]
-
-# keep age index within census eligible age
-ragem <- ragem[!is.na(age_index)]
-ragem <- ragem[age_index >= 15 & age_index < 50]
-ragem <- ragem[!(sexyear == 1 &  is.na(age_partner))]
-ragem <- ragem[!(sexyear == 1 & (age_partner < 15 | age_partner >= 50))]
+ra <- as.data.table(anti_join(ra, tmp_rm))
+# tmp <- ra[round == 'R015']
+# tmp[sexp1yr == 93, sum(count)]
+# tmp[sexp1yr == 0, sum(count)]
+ra[, missing_values := !(sexyear %in% 1:2)] # remove participant who did not say wether or not they had sexual intercourse in the last year
+ra[missing_values == F, missing_values := sexyear == 1 & is.na(date_stop)] # remove participant who had sex in the last year and who did not report the stop data of any of their relations
+ra[missing_values == F, missing_values := sexyear == 1 & !rltnag %in% 1:3]  # remove participant who ever had sex in the last year and who did not report the age clasification of any of their relations
+ra[missing_values == F, missing_values := sexyear == 1 & rltnag %in% 1:2 & rltnyr %in% code_na] 
+# ra[, with_missing_value_age_partner := !(sum(!missing_values) >= unique(sexp1yr)), by = c('pt_id', 'part.age', 'part.sex', 'part.comm', 'round')]
+ra[, with_missing_value_age_partner := sum(!missing_values) == 0, by = c('pt_id', 'part.age', 'part.sex', 'part.comm', 'round')]
+ra <- ra[, list(count = length(unique(pt_id))), by = c('sexp1yr', 'round', 'part.comm', 'part.age', 'part.sex', 'with_missing_value_age_partner')]
 
 # plot
 if(0){
@@ -161,27 +184,19 @@ if(0){
     coord_cartesian(xlim = c(0, 15))
   ggsave('~/Downloads/number_sexual_partners_12months_short.png', w = 9, h = 5)
   
-  tmp <- age_preference[round == 'R015']
-  tmp[, part.age := floor(age_index)]
-  tmp[, missing_values := !(sexyear %in% 1:2)] # remove participant who did not say wether or not they had sexual intercourse in the last year
-  tmp[missing_values == F, missing_values := sexyear == 1 & is.na(date_stop)] # remove participant who had sex in the last year and who did not report the stop data of any of their relations
-  tmp[missing_values == F, missing_values := sexyear == 1 & !rltnag %in% 1:3]  # remove participant who ever had sex in the last year and who did not report the age clasification of any of their relations
-  tmp[missing_values == F, missing_values := sexyear == 1 & rltnag %in% 1:2 & rltnyr %in% code_na] 
-  tmp[sexyear == 2, sexp1yr := 0]
-  tmp1 <- tmp[, missing_values := !(sum(!missing_values) >= unique(sexp1yr)), by = c('pt_id', 'part.age', 'sex')]
-  tmp1 <- tmp1[, list(count = length(unique(pt_id))), by = c('missing_values', 'part.age', 'sex')]
-  tmp1[, missing_values_label := 'Missing values in age partner questions']
-  tmp1[missing_values == F,  missing_values_label := 'No missing values in age partner questions']
-  tmp1[, total_count := sum(count), by = c('part.age', 'sex')]
-  tmp1[, proportion_count := count / total_count]
-  ggplot(tmp1, aes(x = part.age, y = count))+ 
+  tmp <- ra[round == 'R015']
+  tmp[, missing_values_label := 'Missing values in age partner questions']
+  tmp[with_missing_value_age_partner == F,  missing_values_label := 'No missing values in age partner questions']
+  tmp[, total_count := sum(count), by = c('part.age', 'part.sex')]
+  tmp[, proportion_count := count / total_count]
+  ggplot(tmp, aes(x = part.age, y = count))+ 
     geom_bar(stat = 'identity') + 
-    facet_grid(missing_values_label~sex, scale = 'free') + 
+    facet_grid(missing_values_label~part.sex, scale = 'free') + 
     labs(x='Age participant', y = 'count participants')
   ggsave('~/Downloads/missing_values_age_sex.png', w = 9, h = 5)
-  ggplot(tmp1[missing_values == T], aes(x = part.age, y = proportion_count))+ 
+  ggplot(tmp[with_missing_value_age_partner == T], aes(x = part.age, y = proportion_count))+ 
     geom_bar(stat = 'identity') + 
-    facet_grid( .~sex, scale = 'free') + 
+    facet_grid( .~part.sex, scale = 'free') + 
     labs(x='Age participant', y = 'Proprotion of participants with missing values')
   ggsave('~/Downloads/prop_missing_values_age_sex.png', w = 9, h = 5)
   
@@ -210,14 +225,11 @@ if(0){
   ggsave('~/Downloads/count_time_since_date_stop.png', w = 6, h = 5)
 }
 
-# keep relationship that happened within a year for individuals who had sex within a year
-rage <- ragem[!(sexyear == 1 & time_since_date_stop > 1)]
-
 # keep one relationship (for one count) for individuals who did not have sex within a year
-tmp <- rage[sexyear == 2, list(relation = min(relation)), by = c('pt_id', 'round')]
-tmp <- merge(tmp, rage[sexyear == 2], by = c('pt_id', 'round', 'relation'))
+tmp <- ragem[sexyear == 2, list(relation = min(relation)), by = c('pt_id', 'round')]
+tmp <- merge(tmp, ragem[sexyear == 2], by = c('pt_id', 'round', 'relation'))
 tmp[, age_partner := NA]
-rage <- rbind(rage[sexyear == 1], tmp)
+ragem <- rbind(ragem[sexyear == 1], tmp)
 
 
 ###############
@@ -226,7 +238,7 @@ rage <- rbind(rage[sexyear == 1], tmp)
 
 # create community variable
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
-rage <- merge(rage, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
+rage <- merge(ragem, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
 rage[, `Community index` := comm]
 
 # aggregate by 1 year age band
@@ -368,8 +380,8 @@ if(0){
 
 # save
 tmp <- ragea[part.round == 'R015']
-write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_reported_partnership_220505.csv'), row.names = F)
+write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_reported_partnership_220516.csv'), row.names = F)
 
 tmp <- ra[round == 'R015']
-write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_sexp1yr_220514.csv'), row.names = F)
+write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_sexp1yr_220516.csv'), row.names = F)
 
