@@ -80,6 +80,7 @@ parameters
   real<lower=0> gp_rho_age1; // GP hyperparameters
   real<lower=0> gp_rho_age2;
   real<lower=0> gp_alpha;
+  real<lower=0> overdispersion;
 
   matrix[M_age1, M_age2] z; // GP variables
 }
@@ -113,6 +114,9 @@ model
   target += cauchy_lpdf(gp_alpha | 0, 1);
   target += std_normal_lpdf( to_vector(z) );
 
+  // overdispersion
+  target += exponential_lpdf(overdispersion | 1);
+
   // baseline
   target += normal_lpdf(log_random_effect_baseline | 0, 10);
 
@@ -122,7 +126,7 @@ model
       append_row(log_random_effect_baseline[MF] + f_mf[ymf_rowmajor_matrix_index] + log_pop_mf + log_participants_mf,
       log_random_effect_baseline[FM] + f_mf[yfm_rowmajor_matrix_index] + log_pop_fm + log_participants_fm
       );
-    target += poisson_lpmf( y | exp(log_mu));
+    target += neg_binomial_lpmf( y | exp(log_mu) / overdispersion, inv(overdispersion));
   }
 }
 
@@ -140,7 +144,7 @@ generated quantities
       );
     for(i in 1:N)
     {
-      log_lik[i] = poisson_lpmf( y[i] | exp(log_mu[i]) );
+      log_lik[i] = neg_binomial_lpmf( y | exp(log_mu) / overdispersion, inv(overdispersion));
     }
   }
 }
