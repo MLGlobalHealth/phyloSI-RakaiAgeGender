@@ -102,11 +102,13 @@ rag <- rag[age_index >= 15 & age_index < 50]
 rag <- rag[sexyear %in% 1:2]
 rag[, table(sexyear)]
 
+# remove relationships that did not end within the past yesr
+
 # change coding of sexyear if one relationship ended within a year
-tmp1 <- rag[!is.na(time_since_date_stop), list(sexyear_fix = as.numeric(ifelse(any(time_since_date_stop <= 1), 1, unique(sexyear)))), by = c('pt_id', 'round')]
-rag <- merge(rag, tmp1, by = c('pt_id', 'round'), all.x = T)
-rag[!is.na(sexyear_fix), sexyear := sexyear_fix]
-rag[, table(sexyear)]
+# tmp1 <- rag[!is.na(time_since_date_stop), list(sexyear_fix = as.numeric(ifelse(any(time_since_date_stop <= 1), 1, unique(sexyear)))), by = c('pt_id', 'round')]
+# rag <- merge(rag, tmp1, by = c('pt_id', 'round'), all.x = T)
+# rag[!is.na(sexyear_fix), sexyear := sexyear_fix]
+# rag[, table(sexyear)]
 
 rag[, table(sexp1yr)]
 rag[, sexyear := ifelse(any(sexp1yr == 0), 2, sexyear), by = c('pt_id', 'round')]
@@ -126,6 +128,10 @@ rager <- rager[!(round %in% c('R016', 'R017', 'R018'))] # same as above
 tmp_rm <- rager[(sexyear == 1 & (age_partner < 15 | age_partner >= 50))]
 ragem <- as.data.table(anti_join(rager, tmp_rm))
 
+# remove partnership that didn't end the past year
+tmp_rm2 <- ragem[(sexyear == 1 & time_since_date_stop > 1)]
+ragem <- as.data.table(anti_join(ragem, tmp_rm2))
+
 ## prepare partnership data
 # total number of relationships reported in the last 12 months
 ra <- merge(rag, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
@@ -133,6 +139,7 @@ ra[, part.comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 
 setnames(ra, 'sex', 'part.sex')
 ra[, part.age := floor(age_index)]
 ra <- as.data.table(anti_join(ra, tmp_rm))
+ra <- as.data.table(anti_join(ra, tmp_rm2))
 # tmp <- ra[round == 'R015']
 # tmp[sexp1yr == 93, sum(count)]
 # tmp[sexp1yr == 0, sum(count)]
@@ -159,6 +166,40 @@ if(0){
     labs(x = "Did the participant had sexual intercouse in the last 12 months", y = 'participants count') + 
     ggtitle('All participants')
   ggsave('~/Downloads/sexyear.png', w = 9, h = 5)
+  
+  tmp <- unique(ragem[, .(pt_id, round, sexyear)])
+  tmp <- tmp[, list(YES = sum(sexyear == 1), 
+                    NO = sum(sexyear == 2), 
+                    N = length(unique(pt_id))), by = c('round')]
+  tmp <- as.data.table(reshape2::melt(tmp, id.vars = c('N', 'round')))
+  tmp[, round_label := paste0('Round ', round, '\nN = ', N)]
+  ggplot(tmp, aes(x = variable, y = value)) + 
+    geom_bar(stat = 'identity') + 
+    facet_wrap(~round_label, nrow = 1) +
+    labs(x = "Did the participant had sexual intercouse in the last 12 months", y = 'participants count') + 
+    ggtitle('Participants without missing data')
+  ggsave('~/Downloads/sexyear_womissing.png', w = 5, h = 5)
+  
+  #####
+
+  ggplot(age_preference, aes(x = time_since_date_stop)) + 
+    geom_histogram(bins = 50) + 
+    facet_grid(round~., scale = 'free') + 
+    scale_y_log10() + 
+    geom_vline(xintercept = 1, linetype = 'dashed', col = 'darkred') + 
+    theme_bw() + 
+    labs(x = 'Time since end of the relationship (years)', y = 'relationships count') + 
+    ggtitle('Among all participants')
+  ggsave('~/Downloads/count_time_since_date_stop.png', w = 6, h = 5)
+  
+  ggplot(ragem[sexyear == 1], aes(x = time_since_date_stop)) + 
+    geom_histogram() + 
+    facet_grid(round~., scale = 'free') + 
+    geom_vline(xintercept = 1, linetype = 'dashed', col = 'darkred') + 
+    theme_bw() + 
+    labs(x = 'Time since end of the relationship (years)', y = 'relationships count') + 
+    ggtitle('Among participants who had a sexual intercourse in the past year')
+  ggsave('~/Downloads/count_time_since_date_stop_l1.png', w = 6, h = 5)
   
   #####
   
@@ -199,42 +240,19 @@ if(0){
     facet_grid( .~part.sex, scale = 'free') + 
     labs(x='Age participant', y = 'Proprotion of participants with missing values')
   ggsave('~/Downloads/prop_missing_values_age_sex.png', w = 9, h = 5)
-  
-  #####
-  
-  tmp <- unique(ragem[, .(pt_id, round, sexyear)])
-  tmp <- tmp[, list(YES = sum(sexyear == 1), 
-                    NO = sum(sexyear == 2), 
-                    N = length(unique(pt_id))), by = c('round')]
-  tmp <- as.data.table(reshape2::melt(tmp, id.vars = c('N', 'round')))
-  tmp[, round_label := paste0('Round ', round, '\nN = ', N)]
-  ggplot(tmp, aes(x = variable, y = value)) + 
-    geom_bar(stat = 'identity') + 
-    facet_wrap(~round_label, nrow = 1) +
-    labs(x = "Did the participant had sexual intercouse in the last 12 months", y = 'participants count') + 
-    ggtitle('Participants without missing data')
-  ggsave('~/Downloads/sexyear_womissing.png', w = 5, h = 5)
-  
-  ggplot(ragem, aes(x = time_since_date_stop)) + 
-    geom_histogram(bins = 50) + 
-    facet_grid(round~., scale = 'free') + 
-    scale_y_log10() + 
-    geom_vline(xintercept = 1, linetype = 'dashed', col = 'darkred') + 
-    theme_bw() + 
-    labs(x = 'Time since end of the relationghip (years)', y = 'relationships count')
-  ggsave('~/Downloads/count_time_since_date_stop.png', w = 6, h = 5)
+
 }
+
+
+###############
+# FORMAT DATA #
+###############
 
 # keep one relationship (for one count) for individuals who did not have sex within a year
 tmp <- ragem[sexyear == 2, list(relation = min(relation)), by = c('pt_id', 'round')]
 tmp <- merge(tmp, ragem[sexyear == 2], by = c('pt_id', 'round', 'relation'))
 tmp[, age_partner := NA]
 ragem <- rbind(ragem[sexyear == 1], tmp)
-
-
-###############
-# FORMAT DATA #
-###############
 
 # create community variable
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
@@ -299,7 +317,6 @@ ragea <- ragea[order(part.round, part.comm, part.sex, cont.sex, part.age, cont.a
 # check that the number of participants is correct
 tmp <- unique(ragea[, .(part.comm, part.sex, part.round, part.age, N)])
 tmp[, list(total_N = sum(N)), by = c('part.comm', 'part.sex', 'part.round')]
-rage[part.comm == 'fishing' & part.round == 'R015' & sex == 'F', length(unique(pt_id))]
 
 # plot
 if(0){
