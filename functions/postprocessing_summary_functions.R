@@ -563,7 +563,7 @@ find_standardised_transmission_flows_aggregated2_by_round <- function(samples, d
   return(tmp1)
 }
 
-find_standardised_transmission_flows_across_age_by_round <- function(samples, df_group, df_age, incidence){
+find_standardised_transmission_flows_across_age_across_sex_by_round <- function(samples, df_group, df_age, incidence){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -590,8 +590,8 @@ find_standardised_transmission_flows_across_age_by_round <- function(samples, df
   tmp1[, value := INCIDENT_CASES * delta]
   tmp1 <- select(tmp1, - total_value)
   
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community', 'ROUND')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community', 'ROUND'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'ROUND')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'ROUND'))
   tmp1[, value := value / total_value]
   
   tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_transmission.SOURCE', 'ROUND')]

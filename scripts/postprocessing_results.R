@@ -124,8 +124,14 @@ plot_transmission_flows_aggregated2_by_round(standardised_transmission_flows_agg
 standardised_transmission_flows_across_age_by_round <- find_standardised_transmission_flows_across_age_by_round(samples, df_group, df_age, incidence)
 plot_standardised_transmission_flows_across_age_by_round(standardised_transmission_flows_across_age_by_round, outfile.figures)
   
+standardised_transmission_flows_across_age_across_sex_by_round <- find_standardised_transmission_flows_across_age_across_sex_by_round(samples, df_group, df_age, incidence)
+plot_standardised_transmission_flows_across_age_across_sex_by_round(standardised_transmission_flows_across_age_across_sex_by_round, outfile.figures)
 
+standardised_transmission_flows_across_age_across_sex_by_round[, is_among_5 := M %in% sort(M, decreasing = T)[1:5], by = c('comm', 'ROUND', 'label_direction')]
 
+tmp <- standardised_transmission_flows_across_age_across_sex_by_round[is_among_5 == T, list(total_M = paste0(round(sum(M)*100, 2), '%'), 
+                                                                                     age_group = paste0(min(age_transmission.SOURCE), '-', max(age_transmission.SOURCE))), by = c('comm', 'ROUND', 'label_direction')]
+print(tmp[order(label_direction, ROUND)])
 
 
 #
@@ -149,7 +155,6 @@ cat("\nPlot age-specific transmission dynamics\n")
 age_source <- find_age_source_by_age_group(samples, df_group, df_age)
 plot_median_age_source(age_source, outfile.figures)
 plot_median_age_source_with_empirical_data(age_source, pairs, outfile.figures)
-
 
 # median age of recipient
 age_recipient <- find_age_recipient_by_age_group(samples, df_group, df_age)
