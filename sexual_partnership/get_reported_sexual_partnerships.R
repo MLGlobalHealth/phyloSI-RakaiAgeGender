@@ -75,7 +75,7 @@ age_preference[, age_stop := .year.diff(date_stop, birth_date) ]
 age_preference <- age_preference[(age_stop > age_start) | is.na(age_stop) | is.na(age_start)]
 
 # create time since end relationship
-age_preference[, time_since_date_stop := .year.diff(visit_date, date_stop)]
+age_preference[, yrs_since_date_stop := .year.diff(visit_date, date_stop)]
 
 # find age index
 age_preference[, age_index := .year.diff(visit_date, birth_date)]
@@ -94,6 +94,11 @@ age_preference[age_partner_classification == 'same', age_partner := age_index ]
 tmp <- age_preference[, list(count = .N), by = c('pt_id', 'round')]
 stopifnot(all(tmp[, count <= 4]))
 
+
+####################
+# apply conditions #
+####################
+
 # keep age index within census eligible age
 rag <- age_preference[!is.na(age_index)]
 rag <- rag[age_index >= 15 & age_index < 50]
@@ -102,54 +107,60 @@ rag <- rag[age_index >= 15 & age_index < 50]
 rag <- rag[sexyear %in% 1:2]
 rag[, table(sexyear)]
 
-# remove relationships that did not end within the past yesr
-
-# change coding of sexyear if one relationship ended within a year
-# tmp1 <- rag[!is.na(time_since_date_stop), list(sexyear_fix = as.numeric(ifelse(any(time_since_date_stop <= 1), 1, unique(sexyear)))), by = c('pt_id', 'round')]
-# rag <- merge(rag, tmp1, by = c('pt_id', 'round'), all.x = T)
-# rag[!is.na(sexyear_fix), sexyear := sexyear_fix]
-# rag[, table(sexyear)]
-
+# change coding of sexyear if not coherent with sexp1yr
 rag[, table(sexp1yr)]
 rag[, sexyear := ifelse(any(sexp1yr == 0), 2, sexyear), by = c('pt_id', 'round')]
 rag[, sexp1yr := ifelse(all(sexyear == 2), 0, sexp1yr), by = c('pt_id', 'round')]
 rag[, table(sexp1yr)]
 
-
-## prepare partnerhsip data by age
-# remove missing variables for partnership data
-rager <- rag[!(sexyear == 1 & is.na(date_stop))] # remove participant who had sex in the last year and who did not report the stop data of any of their relations
-rager <- rager[!(sexyear == 1 & !rltnag %in% 1:3)]  # remove participant who ever had sex in the last year and who did not report the age clasification of any of their relations
-rager <- rager[!(sexyear == 1 & rltnag %in% 1:2 & rltnyr %in% code_na)]  # remove participant who ever had sex in the last year and who did not report the age diff of any of their relations (if the classification was not same)
-# ragem <- ragem[!(is.na(rltnag) & is.na(rltnyr))]  # remove participant who were not asked age of any of their relations
-rager <- rager[!(round %in% c('R016', 'R017', 'R018'))] # same as above
-
-# keep age partner within census eligible age
-tmp_rm <- rager[(sexyear == 1 & (age_partner < 15 | age_partner >= 50))]
-ragem <- as.data.table(anti_join(rager, tmp_rm))
+# changing yrs since last sexual intercourse for individual who reported not having had sexual intercouse in the past year
+# rag[sexyear == 2 & yrs_since_date_stop < 1, yrs_since_date_stop := 1]
 
 # remove partnership that didn't end the past year
-tmp_rm2 <- ragem[(sexyear == 1 & time_since_date_stop > 1)]
-ragem <- as.data.table(anti_join(ragem, tmp_rm2))
+tmp_rm2 <- rag[(sexyear == 1 & yrs_since_date_stop > 1) | (sexyear == 1 & is.na(yrs_since_date_stop))]
+ragem <- as.data.table(anti_join(rag, tmp_rm2))
 
-## prepare partnership data
-# total number of relationships reported in the last 12 months
-ra <- merge(rag, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
-ra[, part.comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
-setnames(ra, 'sex', 'part.sex')
-ra[, part.age := floor(age_index)]
-ra <- as.data.table(anti_join(ra, tmp_rm))
-ra <- as.data.table(anti_join(ra, tmp_rm2))
-# tmp <- ra[round == 'R015']
-# tmp[sexp1yr == 93, sum(count)]
-# tmp[sexp1yr == 0, sum(count)]
-ra[, missing_values := !(sexyear %in% 1:2)] # remove participant who did not say wether or not they had sexual intercourse in the last year
-ra[missing_values == F, missing_values := sexyear == 1 & is.na(date_stop)] # remove participant who had sex in the last year and who did not report the stop data of any of their relations
-ra[missing_values == F, missing_values := sexyear == 1 & !rltnag %in% 1:3]  # remove participant who ever had sex in the last year and who did not report the age clasification of any of their relations
-ra[missing_values == F, missing_values := sexyear == 1 & rltnag %in% 1:2 & rltnyr %in% code_na] 
-# ra[, with_missing_value_age_partner := !(sum(!missing_values) >= unique(sexp1yr)), by = c('pt_id', 'part.age', 'part.sex', 'part.comm', 'round')]
-ra[, with_missing_value_age_partner := sum(!missing_values) == 0, by = c('pt_id', 'part.age', 'part.sex', 'part.comm', 'round')]
-ra <- ra[, list(count = length(unique(pt_id))), by = c('sexp1yr', 'round', 'part.comm', 'part.age', 'part.sex', 'with_missing_value_age_partner')]
+# keep age partner within census eligible age
+tmp_rm <- rag[(sexyear == 1 & (age_partner < 15 | age_partner >= 50))]
+ragem <- as.data.table(anti_join(ragem, tmp_rm))
+
+# keep age partner only within the last year
+ragem[sexyear == 2 & !is.na(age_partner), age_partner := NA]
+
+###############
+# format data #
+###############
+
+# create community variable
+community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
+rage <- merge(ragem, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
+rage[, `Community index` := comm]
+
+# aggregate by 1 year age band
+rage[, part.age := floor(age_index)]
+rage[, cont.age := floor(age_partner)]
+
+# rename comm and round
+setnames(rage, c('comm', 'round', 'sex'), c('part.comm', 'part.round', 'part.sex'))
+
+# dcast
+rage <- dcast.data.table(rage, part.comm + part.round + part.sex + pt_id + sexp1yr + part.age ~ relation, value.var = 'cont.age')
+setnames(rage, c('1', '2', '3', '4'), paste0('partner_age_', 1:4))
+
+# find census eligible count across round and communities by age and sex
+tmp <- census_eligible_count[, list(part.T = sum(ELIGIBLE)), by = c('AGEYRS', 'SEX', 'ROUND', 'COMM')]
+tmp[, ROUND := paste0('R0', ROUND)]
+rage <- merge(rage, tmp, by.x = c('part.age', 'part.sex', 'part.round', 'part.comm'), by.y = c('AGEYRS', 'SEX', 'ROUND', 'COMM'))
+
+# Z as a factor
+rage[, Z := as.character(sexp1yr)]
+rage[Z == '93', Z := '>3']
+set(rage, NULL, 'sexp1yr', NULL)
+
+# save
+tmp <- rage[part.round == 'R015']
+write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_reported_partnership_220519.csv'), row.names = F)
+
 
 # plot
 if(0){
@@ -167,22 +178,9 @@ if(0){
     ggtitle('All participants')
   ggsave('~/Downloads/sexyear.png', w = 9, h = 5)
   
-  tmp <- unique(ragem[, .(pt_id, round, sexyear)])
-  tmp <- tmp[, list(YES = sum(sexyear == 1), 
-                    NO = sum(sexyear == 2), 
-                    N = length(unique(pt_id))), by = c('round')]
-  tmp <- as.data.table(reshape2::melt(tmp, id.vars = c('N', 'round')))
-  tmp[, round_label := paste0('Round ', round, '\nN = ', N)]
-  ggplot(tmp, aes(x = variable, y = value)) + 
-    geom_bar(stat = 'identity') + 
-    facet_wrap(~round_label, nrow = 1) +
-    labs(x = "Did the participant had sexual intercouse in the last 12 months", y = 'participants count') + 
-    ggtitle('Participants without missing data')
-  ggsave('~/Downloads/sexyear_womissing.png', w = 5, h = 5)
-  
   #####
 
-  ggplot(age_preference, aes(x = time_since_date_stop)) + 
+  ggplot(age_preference, aes(x = yrs_since_date_stop)) + 
     geom_histogram(bins = 50) + 
     facet_grid(round~., scale = 'free') + 
     scale_y_log10() + 
@@ -190,191 +188,47 @@ if(0){
     theme_bw() + 
     labs(x = 'Time since end of the relationship (years)', y = 'relationships count') + 
     ggtitle('Among all participants')
-  ggsave('~/Downloads/count_time_since_date_stop.png', w = 6, h = 5)
-  
-  ggplot(ragem[sexyear == 1], aes(x = time_since_date_stop)) + 
-    geom_histogram() + 
-    facet_grid(round~., scale = 'free') + 
-    geom_vline(xintercept = 1, linetype = 'dashed', col = 'darkred') + 
-    theme_bw() + 
-    labs(x = 'Time since end of the relationship (years)', y = 'relationships count') + 
-    ggtitle('Among participants who had a sexual intercourse in the past year')
-  ggsave('~/Downloads/count_time_since_date_stop_l1.png', w = 6, h = 5)
+  ggsave('~/Downloads/count_yrs_since_date_stop.png', w = 6, h = 5)
   
   #####
   
-  tmp <- ra[round == 'R015']
+  tmp <- ragem[round == 'R015']
   tmp[, part.age.group := '35-49']
-  tmp[part.age < 35, part.age.group := '25-34']
-  tmp[part.age < 25, part.age.group := '15-24']
+  tmp[age_index < 35, part.age.group := '25-34']
+  tmp[age_index < 25, part.age.group := '15-24']
   
-  tmp1 <- tmp[, list(count = sum(count)), by = c('sexp1yr', 'part.age.group', 'part.sex')]
+  tmp1 <- tmp[, list(count = length(unique(pt_id))), by = c('sexp1yr', 'part.age.group', 'sex')]
   tmp1[sexp1yr == 93, sum(count)]
   tmp1[sexp1yr == 0, sum(count)]
   tmp1 <- tmp1[sexp1yr != 93]
   ggplot(tmp1, aes(x = sexp1yr, y = count))+ 
     geom_bar(stat = 'identity') + 
-    facet_grid(part.sex~part.age.group, scale = 'free_y') + 
+    facet_grid(sex~part.age.group, scale = 'free_y') + 
     labs(x='Number of different sexual partners in the last 12 months', y = 'count participants') 
   ggsave('~/Downloads/number_sexual_partners_12months_long.png', w = 9, h = 5)
   
   ggplot(tmp1, aes(x = sexp1yr, y = count))+ 
     geom_bar(stat = 'identity') + 
-    facet_grid(part.sex~part.age.group, scale = 'free_y') + 
+    facet_grid(sex~part.age.group, scale = 'free_y') + 
     labs(x='Number of different sexual partners in the last 12 months', y = 'count participants')+
     coord_cartesian(xlim = c(0, 15))
   ggsave('~/Downloads/number_sexual_partners_12months_short.png', w = 9, h = 5)
   
-  tmp <- ra[round == 'R015']
-  tmp[, missing_values_label := 'Missing values in age partner questions']
-  tmp[with_missing_value_age_partner == F,  missing_values_label := 'No missing values in age partner questions']
-  tmp[, total_count := sum(count), by = c('part.age', 'part.sex')]
-  tmp[, proportion_count := count / total_count]
-  ggplot(tmp, aes(x = part.age, y = count))+ 
-    geom_bar(stat = 'identity') + 
-    facet_grid(missing_values_label~part.sex, scale = 'free') + 
-    labs(x='Age participant', y = 'count participants')
-  ggsave('~/Downloads/missing_values_age_sex.png', w = 9, h = 5)
-  ggplot(tmp[with_missing_value_age_partner == T], aes(x = part.age, y = proportion_count))+ 
-    geom_bar(stat = 'identity') + 
-    facet_grid( .~part.sex, scale = 'free') + 
-    labs(x='Age participant', y = 'Proprotion of participants with missing values')
-  ggsave('~/Downloads/prop_missing_values_age_sex.png', w = 9, h = 5)
-
-}
-
-
-###############
-# FORMAT DATA #
-###############
-
-# keep one relationship (for one count) for individuals who did not have sex within a year
-tmp <- ragem[sexyear == 2, list(relation = min(relation)), by = c('pt_id', 'round')]
-tmp <- merge(tmp, ragem[sexyear == 2], by = c('pt_id', 'round', 'relation'))
-tmp[, age_partner := NA]
-ragem <- rbind(ragem[sexyear == 1], tmp)
-
-# create community variable
-community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
-rage <- merge(ragem, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
-rage[, `Community index` := comm]
-
-# aggregate by 1 year age band
-rage[, part.age := floor(age_index)]
-rage[, cont.age := floor(age_partner)]
-
-# rename comm and round
-setnames(rage, c('comm', 'round'), c('part.comm', 'part.round'))
-
-# find number of relationships reported in each age-age cat
-tmp <- as.data.table(expand.grid(part.age = rage[, sort(unique(part.age))],
-                                 cont.age = rage[, sort(unique(cont.age))],
-                                 sex = rage[, sort(unique(sex))],
-                                 part.comm = rage[, sort(unique(part.comm))],
-                                 part.round = rage[, sort(unique(part.round))]))
-ragea <- rage[, list(y = .N), by = c('part.age', 'cont.age', 'sex', 'part.comm', 'part.round')]
-
-stopifnot(ragea[!is.na(cont.age), sum(y)] == nrow(rage[sexyear == 1]))
-stopifnot(ragea[is.na(cont.age), sum(y)] == nrow(rage[sexyear == 2])) # they will be remove with the merge, ok
-
-ragea <- merge(ragea, tmp, by = c('part.age', 'cont.age', 'sex', 'part.comm', 'part.round'), all.y = T)
-ragea[is.na(y), y := 0]
-
-# find number of participants in each age category 
-tmp1 <- rage[, list(N = length(unique(pt_id))), by = c('part.age', 'sex', 'part.comm', 'part.round')]
-stopifnot(tmp1[part.round == 'R015', sum(N)] == rage[part.round == 'R015', length(unique(pt_id))])
-
-ragea <- merge(ragea, tmp1, by = c('part.age', 'sex', 'part.comm', 'part.round'), all.x = T)
-ragea[is.na(N), N := 0]
-
-# find census eligible count across round and communities by age and sex
-tmp <- census_eligible_count[, list(T = sum(ELIGIBLE)), by = c('AGEYRS', 'SEX', 'ROUND', 'COMM')]
-tmp[, ROUND := paste0('R0', ROUND)]
-ragea <- merge(ragea, tmp, by.x = c('cont.age', 'sex', 'part.round', 'part.comm'), by.y = c('AGEYRS', 'SEX', 'ROUND', 'COMM'))
-
-# find sex of participant and partner
-ragea[, part.sex := ifelse(sex == 'M', 'M', 'F')]
-ragea[, cont.sex := ifelse(part.sex == 'M', 'F', 'M')]
-set(ragea, NULL, 'sex', NULL)
-
-# input homosexual partnership with  0
-tmp <- ragea[part.sex == 'F']
-tmp[, `:=`(part.sex = 'M', y = 0, N = NULL)]
-tmp <- merge(tmp, unique(ragea[part.sex == 'M', .(part.age, part.round, part.comm, N)]), by = c('part.age', 'part.round', 'part.comm'))
-
-tmp1 <- ragea[part.sex == 'M']
-tmp1[, `:=`(part.sex = 'F', y = 0, N = NULL)]
-tmp1 <- merge(tmp1, unique(ragea[part.sex == 'F', .(part.age, part.round, part.comm, N)]), by = c('part.age', 'part.round', 'part.comm'))
-
-ragea <- rbind(ragea, rbind(tmp, tmp1))
-
-# find offset
-ragea[, U := T * N]
-
-# order
-ragea <- ragea[order(part.round, part.comm, part.sex, cont.sex, part.age, cont.age)]
-
-# check that the number of participants is correct
-tmp <- unique(ragea[, .(part.comm, part.sex, part.round, part.age, N)])
-tmp[, list(total_N = sum(N)), by = c('part.comm', 'part.sex', 'part.round')]
-
-# plot
-if(0){
-  tmp <- ragea[part.round == 'R015']
-  tmp[, part.sex := factor(part.sex, levels = c('M', 'F'))]
-  tmp[, cont.sex := factor(cont.sex, levels = c('F', 'M'))]
-
-  ggplot(tmp[y > 0 & part.comm == 'inland'], aes(y = cont.age, x = part.age)) +
-    geom_point(aes(alpha = y)) +
-    theme_bw() +
-    labs(x = 'Participant age', y='Partner age') +
-    facet_grid(cont.sex~part.sex, label = 'label_both')+
-    ggtitle('Participant from inland communities')
-  ggsave('~/Downloads/reported_relationships_inland.png', w = 6, h = 5.5)
   
-  ggplot(tmp[y > 0 & part.comm == 'fishing'], aes(y = cont.age, x = part.age)) +
-    geom_point(aes(alpha = y)) +
-    theme_bw() +
-    labs(x = 'Participant age', y='Partner age') +
-    facet_grid(cont.sex~part.sex, label = 'label_both')+
-    ggtitle('Participant from fishing communities')
-  ggsave('~/Downloads/reported_relationships_fishing.png', w = 6, h = 5.5)
-
-  tmp <- unique(ragea[, .(part.comm, part.sex, part.round, part.age, N)])
-  tmp[, list(total_N = sum(N)), by = c('part.round', 'part.comm', 'part.sex')][order(part.round, part.comm, part.sex)]
-  ggplot(tmp, aes(y = N, x = part.age, col = part.sex)) +
+  ####
+  tmp <- rage[part.round == 'R015' & Z != '>3']
+  tmp[, y := as.numeric(!is.na(partner_age_1)) + as.numeric(!is.na(partner_age_2)) + as.numeric(!is.na(partner_age_3)) + as.numeric(!is.na(partner_age_4)) ]
+  tmp <- tmp[, list(age_specific_relationship_reported = sum(y), relationship_reported = sum(as.numeric(Z))), by = c('part.comm', 'part.sex', 'part.age')]
+  tmp[, list(age_specific_relationship_reported = sum(age_specific_relationship_reported)), by = c( 'part.comm', 'part.sex')]
+  tmp <- melt.data.table(tmp, id.vars = c('part.comm', 'part.sex', 'part.age'))
+  ggplot(tmp, aes(y = value, x = part.age, col = variable)) +
     geom_line() +
     theme_bw() +
-    facet_grid(part.round~part.comm) +
-    labs(x = 'Participant age', y = 'Number of participant')
-  ggsave('~/Downloads/number_participant.png', w = 6, h = 5.5)
-  
-  tmp <- ragea[, list(total_y = sum(y)), by = c('part.comm', 'part.sex', 'part.round', 'part.age')]
-  tmp[, list(total_y = sum(total_y)), by = c('part.round', 'part.comm', 'part.sex')]
-  ggplot(tmp, aes(y = total_y, x = part.age, col = part.sex)) +
-    geom_line() +
-    theme_bw() +
-    facet_grid(part.round~part.comm)  +
+    facet_grid(part.sex~part.comm)  +
     labs(x = 'Participant age', y = 'Number of relationships reported')
   ggsave('~/Downloads/number_relationships.png', w = 6, h = 5.5)
   
-  tmp <- ragea[, list(total_intensity = sum(y / N)), by = c('part.comm', 'part.sex', 'part.round', 'part.age')]
-  tmp[, list(total_intensity = sum(total_intensity)), by = c('part.comm', 'part.sex', 'part.round')]
-  ggplot(tmp, aes(y = total_intensity, x = part.age, col = part.sex)) +
-    geom_line() +
-    theme_bw() +
-    facet_grid(part.round~part.comm)  +
-    labs(x = 'Participant age', y = 'Number of relationships reported / Number of participants')
-  ggsave('~/Downloads/number_relationships_by_N.png', w = 6, h = 5.5)
-  
-  tmp <- ragea[, list(total_intensity = sum(y / U)), by = c('part.comm', 'part.sex', 'part.round', 'part.age')]
-  tmp[, list(total_intensity = sum(total_intensity)), by = c('part.comm', 'part.sex', 'part.round')]
-  ggplot(tmp, aes(y = total_intensity, x = part.age, col = part.sex)) +
-    geom_line() +
-    theme_bw() +
-    facet_grid(part.round~part.comm)  +
-    labs(x = 'Participant age', y = 'Number of relationships reported / U')
-  ggsave('~/Downloads/number_relationships_by_U.png', w = 6, h = 5.5)
+  ####
   
   tmp <- census_eligible_count[, list(T = sum(ELIGIBLE)), by = c( 'SEX', 'ROUND', 'COMM')]
   tmp <- tmp[ROUND %in% c('15', '15S')]
@@ -394,11 +248,4 @@ if(0){
     labs(x = 'Age', y = 'Census eligible count')
   ggsave('~/Downloads/census_eligible_count_by_age.png', w = 6, h = 5.5)
 }
-
-# save
-tmp <- ragea[part.round == 'R015']
-write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_reported_partnership_220516.csv'), row.names = F)
-
-tmp <- ra[round == 'R015']
-write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_sexp1yr_220516.csv'), row.names = F)
 
