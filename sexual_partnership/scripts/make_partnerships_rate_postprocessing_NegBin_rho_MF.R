@@ -237,8 +237,10 @@ tmp3 <- merge(tmp3, tmp2, by = 'mf_mat_idx')
 pds <- rbind(pds, tmp, use.names = TRUE, fill = TRUE)
 pds.r <- rbind(pds.r, tmp3, use.names = TRUE, fill = TRUE)
 
-pds[, cntct_intensity_empirical := capped_cntcts/part/rho]
-pds.r[, cntct_rate_empirical := capped_cntcts/part/pop/rho]
+pds[, cntct_intensity_rho_scaled_empirical := capped_cntcts/part/rho]
+pds[, cntct_intensity_empirical := capped_cntcts/part]
+pds.r[, cntct_rate_rho_scaled_empirical := capped_cntcts/part/pop/rho]
+pds.r[, cntct_rate_empirical := capped_cntcts/part/pop]
 
 tmp <- file.path(paste0(outfile.base, "_contact-intensities.rds"))
 cat("\nWrite contact intensities to file ", tmp)
@@ -582,7 +584,8 @@ pds[, contact_intensity := exp(log_contact_intensity)]
 pds <- dcast.data.table(pds, part.sex+part.age~stat, value.var = 'contact_intensity')
 
 tmp <- dcm[part > 0,
-           list(cntct_intensity_empirical = sum(capped_cntcts / part)),
+           list(cntct_intensity_empirical = sum(capped_cntcts / part),
+                cntct_intensity_rho_scaled_empirical = sum(capped_cntcts / part/rho)),
            by = c('part.sex','part.age')
 ]
 pds <- merge(pds, tmp, by = c('part.sex','part.age'), all.x = TRUE)
@@ -599,14 +602,18 @@ if (args$if_save_fig)
     geom_step(aes(y = M, col = part.sex)) +
     pammtools:::geom_stepribbon(aes(ymin = CL, ymax = CU, fill = part.sex), linetype = "dotted",alpha = 0.2,
                                 colour = "transparent", show.legend = FALSE) +
+    geom_step(aes(y = cntct_intensity_rho_scaled_empirical), col = "purple", linetype = "dashed") +
 
     geom_step(aes(y = cntct_intensity_empirical), col = "black", linetype = "dashed") +
     facet_grid(~part.sex) +
     scale_x_continuous(expand = c(0,0)) +
-    labs(x = 'Age of contacting individual', y = 'Contact intensity') +
+    labs(x = 'Age of contacting individual', y = 'Marginal contact intensity') +
     theme_bw() +
     ggtitle(paste0('Posterior age marginal distribution using ', model_id  )) +
     theme(legend.position = "bottom", strip.background = element_rect(fill = "transparent"))
+  pm <- pm + scale_color_manual(name = 'empirical type',
+                                # breaks = c('empirical value', 'rho scaled empirical value'),
+                                values = c('empirical value' = 'black', 'rho scaled empirical value' = 'purple'))
   tmp <- file.path(paste0(outfile.base,"_age-marginal-contact-intensities.pdf"))
   cat("\nSave mariginal contact intensities to file ", tmp)
   ggsave(file = tmp, pm, width = 12, height = 10)

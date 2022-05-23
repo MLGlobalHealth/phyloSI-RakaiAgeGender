@@ -74,8 +74,6 @@ source( file.path(args$prj.dir,'functions','GP-functions.R') )
 
 # load data----
 cat("\n Loading the partnership data at individual level...")
-reported.partnerships <- as.data.table(read.csv(file.path(args$infile.reported.partnerships)))
-
 # part.age: participant age
 # part.sex: participant sex
 

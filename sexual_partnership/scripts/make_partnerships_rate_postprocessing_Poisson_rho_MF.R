@@ -216,8 +216,9 @@ tmp <- dcast.data.table(tmp, mf_mat_idx + sd~stat, value.var = 'value')
 tmp2 <- subset(reported.partnerships, part.sex == 'F' & cont.sex == 'M', select = c(part.sex, cont.sex, part.age, cont.age, mf_mat_idx, capped_cntcts, part, pop, rho))
 tmp <- merge(tmp, tmp2, by = 'mf_mat_idx')
 pds <- rbind(pds, tmp, use.names = TRUE, fill = TRUE)
+pds[, cntct_intensity_empirical := capped_cntcts/part]
 # here use the rho to adjust the detailed reports
-pds[, cntct_intensity_empirical := capped_cntcts/part/rho]
+pds[,  cntct_intensity_rho_scaled_empirical := capped_cntcts/part/rho]
 tmp <- file.path(paste0(outfile.base, "_contact-intensities.rds"))
 cat("\nWrite contact intensities to file ", tmp)
 saveRDS(pds, file = tmp)
@@ -230,6 +231,7 @@ if (args$if_save_fig)
   cat("\nPlot age posterior distribution ...")
   # we just visualize the contact intensities for male-female
   pm <- plot_age_contact_intensity_MF(pds)
+  # pm <- pm +  geom_step(aes(y = cntct_intensity_rho_scaled_empirical), col = "purple", linetype = "dashed")
   pm <- pm + ggtitle(paste0('Age dist using ', model_id, " - MF" ))
 
   tmp <- file.path(paste0(outfile.base,"_age-posterior-dist-contact-intensities-MF.pdf"))
@@ -376,6 +378,33 @@ if (args$if_save_fig)
   ggsave(file = tmp, pm, width = 12, height = 8)
 }
 
+if (0)
+{
+  pds_marg_inland$community = 'inland'
+  pds_marg_fishing$community = 'fishing'
+  d22 <- rbind(pds_marg_fishing, pds_marg_inland)
+  set(d22, NULL,"gender_label", d22[, paste0(part.sex,' (Participant)')])
+  set(d22, NULL,"alter_gender_label", d22[, paste0(cont.sex,' (Contacted)')])
+
+  pm  = ggplot(d22) +
+    geom_tile(aes(x = part.age, y = cont.age, fill = M)) +
+    labs(x = "Age of contacting individuals", y = "Age of contacted individuals", fill = "Estimated contact intensities" ) +
+
+    coord_equal() +
+    facet_grid(alter_gender_label ~ community + gender_label) +
+    scale_fill_continuous(type = "viridis", na.value = 'transparent') +
+    # scale_fill_gradient2(low = "darkblue", high = "darkgreen", guide = "colorbar", na.value = 'white'
+    # ) +
+    theme_bw() +
+    xlab("Age of contacting individuals") +
+    ylab("Age of contacted individuals") +
+    theme(legend.position = 'bottom')
+  pm <- pm +  ggtitle(paste0('Contact intensities patterns comparison using ', model_id  ))
+  tmp <- file.path(paste0("comparison.png"))
+  cat("\nSave posterior contact intensities with ground truth to file ", tmp)
+  ggsave(file = tmp, pm, width = 12, height = 8)
+
+}
 
 # Extract age and gender specific marginal contact intensities----
 #   here we will process the Monte Carlo output in batches to avoid handling tables with >100m rows
@@ -447,7 +476,8 @@ pds <- dcast.data.table(pds, part.sex+part.age~stat, value.var = 'contact_intens
 
 # TODO: THE cntct_intensity_empirical
 tmp <- dcm[part > 0,
-           list(cntct_intensity_empirical = sum( capped_cntcts/part/rho)),
+           list(cntct_intensity_empirical = sum( capped_cntcts/part),
+                cntct_intensity_rho_scaled_empirical = sum( capped_cntcts/part/rho)),
            by = c('part.sex','part.age')
 ]
 pds <- merge(pds, tmp, by = c('part.sex','part.age'), all.x = TRUE)
@@ -460,18 +490,23 @@ cat("\nVisualize marginal contact intensities ...\n")
 # Plot the marginal contact intensities ----
 if (args$if_save_fig)
 {
+  # TODO: THE COLOUR
   pm <- ggplot(pds, aes(x = part.age)) +
     geom_step(aes(y = M, col = part.sex)) +
     pammtools:::geom_stepribbon(aes(ymin = CL, ymax = CU, fill = part.sex), linetype = "dotted",alpha = 0.2,
                                 colour = "transparent", show.legend = FALSE) +
-
+    geom_step(aes(y = cntct_intensity_rho_scaled_empirical), col = "purple", linetype = "dashed") +
     geom_step(aes(y = cntct_intensity_empirical), col = "black", linetype = "dashed") +
     facet_grid(~part.sex) +
     scale_x_continuous(expand = c(0,0)) +
-    labs(x = 'Age of contacting individual', y = 'Contact intensity') +
+    labs(x = 'Age of contacting individual', y = 'Marginal contact intensity') +
     theme_bw() +
     ggtitle(paste0('Posterior age marginal distribution using ', model_id  )) +
     theme(legend.position = "bottom", strip.background = element_rect(fill = "transparent"))
+  pm <- pm + scale_color_manual(name = 'empirical type',
+                                # breaks = c('empirical value', 'rho scaled empirical value'),
+                                values = c('empirical value' = 'black', 'rho scaled empirical value' = 'purple'))
+
   tmp <- file.path(paste0(outfile.base,"_age-marginal-contact-intensities.pdf"))
   cat("\nSave mariginal contact intensities to file ", tmp)
   ggsave(file = tmp, pm, width = 12, height = 10)
@@ -480,6 +515,48 @@ if (args$if_save_fig)
   ggsave(file = tmp, pm, width = 12, height = 10)
 }
 
+# Comparison two communities
+if (0)
+{
+  pm <- ggplot(pds, aes(x = part.age)) +
+    geom_step(aes(y = M, col = part.sex)) +
+    pammtools:::geom_stepribbon(aes(ymin = CL, ymax = CU, fill = part.sex), linetype = "dotted",alpha = 0.2,
+                                colour = "transparent", show.legend = FALSE) +
+
+    geom_step(aes(y = cntct_intensity_empirical ), col = 'black',linetype = "dashed") +
+    facet_grid(community~part.sex) +
+    scale_x_continuous(expand = c(0,0)) +
+    labs(x = 'Age of contacting individual', y = 'Marginal contact intensity') +
+    theme_bw() +
+    ggtitle(paste0('Posterior age marginal distribution using ', model_id  )) +
+    theme(legend.position = "bottom", strip.background = element_rect(fill = "transparent"))
+
+
+  pds_estimated_marg_fishing$community = 'fishing'
+  pds_estimated_marg_inland$community = 'inland'
+  pds = rbind(pds_estimated_marg_fishing, pds_estimated_marg_inland)
+  model_id = 'BSGP_knots-30-comparison'
+  pm <- ggplot(pds, aes(x = part.age)) +
+    # scale_color_hue(h = c(180, 300)) +
+    geom_step(aes(y = M, col = community)) +
+    pammtools:::geom_stepribbon(aes(ymin = CL, ymax = CU, fill = community), linetype = "dotted",alpha = 0.2,
+                                colour = "transparent", show.legend = FALSE) +
+    scale_colour_brewer(palette = "Set1") +
+    scale_fill_brewer(palette = "Set1") +
+    # geom_step(aes(y = cntct_intensity_empirical, col = community), linetype = "dashed") +
+    facet_grid(~part.sex) +
+    scale_x_continuous(expand = c(0,0)) +
+    labs(x = 'Age of contacting individual', y = 'Marginal contact intensity') +
+    theme_bw() +
+    ggtitle(paste0('Posterior age marginal distribution using ', model_id  )) +
+    theme(legend.position = "bottom", strip.background = element_rect(fill = "transparent"))
+  tmp <- file.path(paste0(outfile.base,"_age-marginal-contact-intensities.pdf"))
+  cat("\nSave mariginal contact intensities to file ", tmp)
+  ggsave(file = tmp, pm, width = 12, height = 10)
+  tmp <- file.path(paste0("age-marginal-contact-intensities_comparison-poisson.png"))
+  cat("\nSave mariginal contact intensities to file ", tmp)
+  ggsave(file = tmp, pm, width = 12, height = 10)
+}
 # Posterior predictive check on age and gender specific contact intensities----
 #   here we will process the Monte Carlo output in batches to avoid handling tables with >100m rows
 cat("\nPosterior predictive check on age and gender specific contact intensities ...\n")
