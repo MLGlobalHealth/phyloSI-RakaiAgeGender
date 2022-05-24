@@ -15,7 +15,7 @@ file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
 file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv')
 file.community.keys <- file.path(indir.deepsequence_analyses,'community_names.csv')
-file.incidence	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220427.csv")
+file.incidence	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
 file.df_round <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
 
 hiv <- as.data.table(read.csv(file.path.hiv))
@@ -23,7 +23,7 @@ quest <- as.data.table(read.csv(file.path.quest))
 flow <- as.data.table(read.csv(file.path.flow))
 community.keys <- as.data.table(read.csv(file.community.keys))
 incidence <- as.data.table(read.csv(file.incidence))
-
+# 
 load(file.df_round)
 
 source(file.path(indir.repository, 'functions', 'utils.R'))
@@ -241,6 +241,7 @@ if(0){
     facet_grid(ROUND~SEX, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-IncidenceEstimate_220524.png'), w = 6, h = 7)
 }
 
 # merge to susceptible
@@ -258,7 +259,8 @@ dir[, INCIDENT_CASES_UB:= SUSCEPTIBLE * ROUND_SPANYRS * UB]
 dir[, INCIDENT_CASES_LB:= SUSCEPTIBLE * ROUND_SPANYRS * LB]
 
 # save
-write.csv(dir, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220427.csv'), row.names = F)
+write.csv(dir, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220524.csv'), row.names = F)
+# dir <- as.data.table(read.csv(file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220427.csv')))
 
 # plot
 if(0){
@@ -269,11 +271,11 @@ if(0){
     facet_grid(ROUND~SEX, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-IncidentCases.png'), w = 7, h = 6)
+  ggsave(paste0(outdir, '-IncidentCases_0524.png'), w = 7, h = 6)
 
   tmp <- dir[, list(INCIDENT_CASES = round(sum(INCIDENT_CASES), digits = 1),
                    INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1),
-                   INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('ROUND', 'SEX', 'MODEL')]
+                   INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('ROUND', 'MODEL')]
   knitr::kable(subset(tmp, select = - c(MODEL)))
 
 }

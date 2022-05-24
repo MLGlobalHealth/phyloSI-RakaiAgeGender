@@ -81,7 +81,7 @@ file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phsc
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
-file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220427.csv')
+file.incidence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_incident_cases_220524.csv')
 file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
 
 # load functions
