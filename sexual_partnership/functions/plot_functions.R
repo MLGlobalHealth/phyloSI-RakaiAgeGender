@@ -14,6 +14,9 @@ plot_contact_intensity_matrix = function(d22)
     # scale_fill_gradient2(low = "darkblue", high = "darkgreen", guide = "colorbar", na.value = 'white'
     # ) +
     theme_bw() +
+
+    xlab("Age of contacting individuals") +
+    ylab("Age of contacted individuals") +
     theme(legend.position = 'bottom')
 }
 plot_contact_intensity_sd_matrix = function(d22)
@@ -29,10 +32,12 @@ plot_contact_intensity_sd_matrix = function(d22)
     # scale_fill_gradient2(low = "darkblue", high = "darkgreen", guide = "colorbar", na.value = 'white'
     # ) +
     theme_bw() +
+    xlab("Age of contacting individuals") +
+    ylab("Age of contacted individuals") +
     theme(legend.position = 'bottom')
 }
 
-plot_contact_intensity_matrix_emprical = function(d22)
+plot_contact_intensity_matrix_empirical = function(d22)
 {
   set(d22, NULL,"gender_label", d22[, paste0(part.sex,' (Participant)')])
   set(d22, NULL,"alter_gender_label", d22[, paste0(cont.sex,' (Contacted)')])
@@ -45,6 +50,8 @@ plot_contact_intensity_matrix_emprical = function(d22)
     # scale_fill_gradient2(low = "darkblue", high = "darkgreen", guide = "colorbar", na.value = 'white'
     # ) +
     theme_bw() +
+    xlab("Age of contacting individuals") +
+    ylab("Age of contacted individuals") +
     theme(legend.position = 'bottom')
 }
 
@@ -80,7 +87,7 @@ plot_contact_rate_sd_matrix = function(d22)
     theme_bw() +
     theme(legend.position = 'bottom')
 }
-plot_contact_rate_matrix_emprical = function(d22)
+plot_contact_rate_matrix_empirical = function(d22)
 {
   set(d22, NULL,"gender_label", d22[, paste0(part.sex,' (Participant)')])
   set(d22, NULL,"alter_gender_label", d22[, paste0(cont.sex,' (Contacted)')])
