@@ -604,6 +604,46 @@ find_standardised_transmission_flows_across_age_across_sex_by_round <- function(
   return(tmp1)
 }
 
+find_standardised_transmission_flows_across_age_by_round <- function(samples, df_group, df_age, incidence){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
+  setnames(tmp1, 2:3, c('index_group', 'index_age'))
+  
+  tmp1[, value := exp(value)]
+  
+  tmp1 <- merge(tmp1, df_age, by = 'index_age')
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  # find incident cases 
+  di <- copy(as.data.table(incidence))
+  setnames(di, 'AGEYRS', 'age_infection.RECIPIENT')
+  di <- di[, list(INCIDENT_CASES = sum(INCIDENT_CASES)), by = c("is_mf", 'is_before_cutoff_date', 'comm', 'age_infection.RECIPIENT', 'ROUND')]
+  tmp1 <- merge(di, tmp1, by = c('is_mf', 'is_before_cutoff_date', 'age_infection.RECIPIENT', 'comm'), allow.cartesian=TRUE)
+  tmp1 <- tmp1[age_transmission.SOURCE %in% age_infection.RECIPIENT]
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_group', 'age_infection.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_group', 'age_infection.RECIPIENT'))
+  tmp1[, delta := value / total_value]
+  
+  tmp1[, value := INCIDENT_CASES * delta]
+  tmp1 <- select(tmp1, - total_value)
+  
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'index_time', 'index_community', 'ROUND')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'index_time', 'index_community', 'ROUND'))
+  tmp1[, value := value / total_value]
+  
+  tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'index_group', 'age_transmission.SOURCE', 'ROUND')]
+  
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('index_group', 'age_transmission.SOURCE', 'ROUND')]	
+  tmp1 = dcast(tmp1, ROUND + index_group + age_transmission.SOURCE ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_group, by = 'index_group')
+  
+  return(tmp1)
+}
 
 find_age_source_by_age_group <- function(samples, df_group, df_age){
   
