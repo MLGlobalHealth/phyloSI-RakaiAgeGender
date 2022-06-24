@@ -91,6 +91,21 @@ re[, ROUND := substring(ROUND, 3)]
 # save
 write.csv(re, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220411.csv'), row.names = F)
 
+# find count eligible comm num
+re <- flow[, list(count = .N), by = c('reason_ineligible', 'round', 'comm_num', 'ageyrs', 'sex')]
+re <- dcast.data.table(re, round + comm_num + ageyrs + sex ~ reason_ineligible, value.var = 'count')
+re[is.na(re)] = 0
+re[, ELIGIBLE := round(none + Out_migrated / 2)]
+re <- re[ELIGIBLE != 0]
+
+# additional variable
+colnames(re) <- toupper(colnames(re))
+re[, ROUND := substring(ROUND, 3)]
+
+# save
+write.csv(re, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220620.csv'), row.names = F)
+
+
 # table and plot
 tmp <- re[, list(count = sum(ELIGIBLE)), by = c('ROUND', 'COMM')]
 knitr::kable(tmp[order(COMM,ROUND)])

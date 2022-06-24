@@ -16,12 +16,15 @@ indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
 
 file.meta.R1518 <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
+file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
+
 file.community.keys <- file.path(indir.deepsequence_analyses,'community_names.csv')
-file.census.eligible.individuals.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220411.csv')
+file.census.eligible.individuals.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220620.csv')
 
 community.keys <- as.data.table(read.csv(file.community.keys))
 meta <- as.data.table(read.csv(file.meta.R1518))
 census_eligible_count <- as.data.table(read.csv(file.census.eligible.individuals.count))
+hiv <- as.data.table(read.csv(file.path.hiv))
 
 code_na = 97:99
 
@@ -40,19 +43,22 @@ tmp <- meta[, .(pt_id, birth_date, visit_date, sex, comm_num, round,
                 days2, weeks2, months2, years2,
                 days3, weeks3, months3, years3,
                 days4, weeks4, months4, years4,
-                sexyear, eversex, sexp1yr,
+                sexyear, sexp1yr, sexp1out,
+                cuarvmed, 
                 rldyslt1, rlwkslt1, rlmoslt1, rlyrslt1,
                 rldyslt2, rlwkslt2, rlmoslt2, rlyrslt2,
                 rldyslt3, rlwkslt3, rlmoslt3, rlyrslt3,
                 rldyslt4, rlwkslt4, rlmoslt4, rlyrslt4,
                 rltnage1, rltnage2, rltnage3, rltnage4,
-                rltnyrs1, rltnyrs2, rltnyrs3, rltnyrs4)]
+                rltnyrs1, rltnyrs2, rltnyrs3, rltnyrs4, 
+                rltnhh1, rltnhh2, rltnhh3, rltnhh4, 
+                rltncm1, rltncm2, rltncm3, rltncm4)]
 tmp <- unique(tmp)
 
-tmp <- as.data.table( reshape2::melt(tmp, id.vars = c('pt_id', 'birth_date', 'visit_date', 'sex', 'comm_num', 'round', 'sexyear', 'sexp1yr', 'eversex')) )
+tmp <- as.data.table( reshape2::melt(tmp, id.vars = c('pt_id', 'birth_date', 'visit_date', 'sex', 'comm_num', 'round', 'sexyear', 'sexp1yr', 'sexp1out', 'cuarvmed')) )
 tmp[, relation := as.numeric(sub('.*(?=.$)', '', variable, perl=T))]
 tmp[, variable := gsub('.{2}$', '', variable)]
-age_preference <- as.data.table(reshape2::dcast(tmp, pt_id + birth_date + visit_date + sex + comm_num + round + sexyear + sexp1yr + eversex + relation ~ variable, value.var = 'value'))
+age_preference <- as.data.table(reshape2::dcast(tmp, pt_id + birth_date + visit_date + sex + comm_num + round + sexyear + sexp1out + sexp1yr + cuarvmed + relation ~ variable, value.var = 'value'))
 
 # find start and end date of the relationship
 age_preference[, days_since_start := 0]
@@ -75,7 +81,7 @@ age_preference[, age_stop := .year.diff(date_stop, birth_date) ]
 age_preference <- age_preference[(age_stop > age_start) | is.na(age_stop) | is.na(age_start)]
 
 # create time since end relationship
-age_preference[, yrs_since_date_stop := .year.diff(visit_date, date_stop)]
+age_preference[, yrs_since_date_stop := days_since_stop / 365]
 
 # find age index
 age_preference[, age_index := .year.diff(visit_date, birth_date)]
@@ -96,14 +102,16 @@ stopifnot(all(tmp[, count <= 4]))
 
 
 ####################
-# apply conditions #
+# apply restrictions #
 ####################
 
-# keep age index within census eligible age
+# keep non-missing age index
 rag <- age_preference[!is.na(age_index)]
+
+# keep age index within census eligible age
 rag <- rag[age_index >= 15 & age_index < 50]
 
-# remove participant who did not say wether or not they had sexual intercourse in the last year
+# remove participant who did not say whether or not they had sexual intercourse in the last year
 rag <- rag[sexyear %in% 1:2]
 rag[, table(sexyear)]
 
@@ -113,53 +121,97 @@ rag[, sexyear := ifelse(any(sexp1yr == 0), 2, sexyear), by = c('pt_id', 'round')
 rag[, sexp1yr := ifelse(all(sexyear == 2), 0, sexp1yr), by = c('pt_id', 'round')]
 rag[, table(sexp1yr)]
 
-# changing yrs since last sexual intercourse for individual who reported not having had sexual intercouse in the past year
-# rag[sexyear == 2 & yrs_since_date_stop < 1, yrs_since_date_stop := 1]
+# if no sex with anyone then no sex with anyone outside of the community 
+rag[sexp1yr == 0, sexp1out := 0]
+rag[sexyear == 1 & sexp1yr > 0  & round == 'R015' & sexp1out == 98, sexp1out := 0]
 
-# remove partnership that didn't end the past year
-tmp_rm2 <- rag[(sexyear == 1 & yrs_since_date_stop > 1) | (sexyear == 1 & is.na(yrs_since_date_stop))]
-ragem <- as.data.table(anti_join(rag, tmp_rm2))
+# keep partnership only within the last year
+rag[sexyear == 2 & !is.na(age_partner), age_partner := NA]
+rag[(sexyear == 1 & yrs_since_date_stop > 1) | (sexyear == 1 & is.na(yrs_since_date_stop)), age_partner := NA]
 
 # keep age partner within census eligible age
-tmp_rm <- rag[(sexyear == 1 & (age_partner < 15 | age_partner >= 50))]
-ragem <- as.data.table(anti_join(ragem, tmp_rm))
+rag[(sexyear == 1 & (age_partner < 15)), age_partner := NA]
+rag[(sexyear == 1 & (age_partner > 69)), age_partner := NA]
 
-# keep age partner only within the last year
-ragem[sexyear == 2 & !is.na(age_partner), age_partner := NA]
+# aggregate by 1 year age band
+rag[, part.age := floor(age_index)]
+rag[, cont.age := floor(age_partner)]
 
-###############
-# format data #
-###############
+
+#####################################
+# find meta patner-specific variable #
+#####################################
+
+# dcast cont.age
+ragem <- dcast.data.table(rag, comm_num + round + sex + pt_id + sexp1yr + sexp1out + cuarvmed + part.age ~ relation, value.var = 'cont.age')
+setnames(ragem, c('1', '2', '3', '4'), paste0('partner_age_', 1:4))
+
+# dcast rltnh
+rag[, cont.same.household := NA_character_]
+rag[rltnh == 1, cont.same.household := 'YES']
+rag[rltnh == 2, cont.same.household := 'NO']
+tmp <- dcast.data.table(rag, comm_num + round + sex + pt_id + sexp1yr + sexp1out + cuarvmed + part.age ~ relation, value.var = 'cont.same.household')
+setnames(tmp, c('1', '2', '3', '4'), paste0('partner_living_same_household_', 1:4))
+ragem <- merge(ragem, tmp, by = c('comm_num', 'round', 'sex', 'pt_id', 'sexp1yr', 'sexp1out', 'cuarvmed', 'part.age'))
+
+# dcast rltnc
+rag[, cont.same.comm := NA_character_]
+rag[rltnc == 1, cont.same.comm := 'YES']
+rag[rltnc == 2, cont.same.comm := 'NO']
+rag[rltnc == 7, cont.same.comm := 'DK']
+tmp <- dcast.data.table(rag, comm_num + round + sex + pt_id + sexp1yr + sexp1out + cuarvmed + part.age ~ relation, value.var = 'cont.same.comm')
+setnames(tmp, c('1', '2', '3', '4'), paste0('partner_living_same_community_', 1:4))
+ragem <- merge(ragem, tmp, by = c('comm_num', 'round', 'sex', 'pt_id', 'sexp1yr', 'sexp1out', 'cuarvmed', 'part.age'))
+
+
+#####################################
+# find HIV patient-specific variable #
+#####################################
+
+# report ART
+# ragem[, part.report.art := NA_character_ ]
+# ragem[cuarvmed %in% c(0,2,8), part.report.art := 'NO']
+# ragem[cuarvmed == 1, part.report.art := 'YES']
+# set(ragem, NULL, 'cuarvmed', NULL)
+
+# get hiv status
+hiv[, pt_id := paste0('RK-', study_id)]
+rhiv <- hiv[, .(pt_id, round, hiv)]
+rhiv[, round := gsub(" ", '', round, fixed = T)]
+setnames(rhiv, 'hiv', 'part.hiv')
+ragem <- merge(ragem, rhiv, by = c('pt_id', 'round'), all.x = T)
+ragem[is.na(part.hiv) & round == 'R015',length(unique(pt_id))] #
+
+
+#########################################
+# Format meta patient-specific variable #
+#########################################
 
 # create community variable
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 rage <- merge(ragem, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
-rage[, `Community index` := comm]
-
-# aggregate by 1 year age band
-rage[, part.age := floor(age_index)]
-rage[, cont.age := floor(age_partner)]
+set(rage, NULL, 'COMM_NUM_A', NULL)
 
 # rename comm and round
-setnames(rage, c('comm', 'round', 'sex'), c('part.comm', 'part.round', 'part.sex'))
-
-# dcast
-rage <- dcast.data.table(rage, part.comm + part.round + part.sex + pt_id + sexp1yr + part.age ~ relation, value.var = 'cont.age')
-setnames(rage, c('1', '2', '3', '4'), paste0('partner_age_', 1:4))
+setnames(rage, c('comm', 'comm_num', 'round', 'sex'), c('part.comm', 'part.comm_num', 'part.round', 'part.sex'))
 
 # find census eligible count across round and communities by age and sex
-tmp <- census_eligible_count[, list(part.T = sum(ELIGIBLE)), by = c('AGEYRS', 'SEX', 'ROUND', 'COMM')]
+tmp <- census_eligible_count[, list(part.T = sum(ELIGIBLE)), by = c('AGEYRS', 'SEX', 'ROUND', 'COMM_NUM')]
 tmp[, ROUND := paste0('R0', ROUND)]
-rage <- merge(rage, tmp, by.x = c('part.age', 'part.sex', 'part.round', 'part.comm'), by.y = c('AGEYRS', 'SEX', 'ROUND', 'COMM'))
+rage <- merge(rage, tmp, by.x = c('part.age', 'part.sex', 'part.round', 'part.comm_num'), by.y = c('AGEYRS', 'SEX', 'ROUND', 'COMM_NUM'))
 
 # Z as a factor
 rage[, Z := as.character(sexp1yr)]
 rage[Z == '93', Z := '>3']
 set(rage, NULL, 'sexp1yr', NULL)
 
+# Z as a factor
+rage[, sexp1out := as.character(sexp1out)]
+rage[sexp1out == '93', sexp1out := '>3']
+
 # save
 tmp <- rage[part.round == 'R015']
-write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_reported_partnership_220519.csv'), row.names = F)
+write.csv(tmp, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_reported_partnership_220620.csv'), row.names = F)
 
 
 # plot
@@ -194,8 +246,8 @@ if(0){
   
   tmp <- ragem[round == 'R015']
   tmp[, part.age.group := '35-49']
-  tmp[age_index < 35, part.age.group := '25-34']
-  tmp[age_index < 25, part.age.group := '15-24']
+  tmp[part.age < 35, part.age.group := '25-34']
+  tmp[part.age < 25, part.age.group := '15-24']
   
   tmp1 <- tmp[, list(count = length(unique(pt_id))), by = c('sexp1yr', 'part.age.group', 'sex')]
   tmp1[sexp1yr == 93, sum(count)]
