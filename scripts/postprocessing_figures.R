@@ -82,7 +82,7 @@ plot_force_infection(force_infection, outfile.figures)
 ## shift in sex-specific transmission dynamics
 #
 
-force_infection_sex_source <- summarise_var_by_sex_source(samples, var, df_age, df_direction, df_community, df_period)
+force_infection_sex_source <- summarise_var_by_sex_source(samples, 'log_beta', df_age, df_direction, df_community, df_period)
 plot_force_infection_sex_source(force_infection_sex_source, outfile.figures)
 
 
