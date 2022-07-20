@@ -192,8 +192,8 @@ resusc <- merge(re, rprevfit, by = c('COMM', 'AGEYRS', 'SEX', 'ROUND'))
 resusc[, SUSCEPTIBLE := ELIGIBLE * (1 - PREVALENCE_PROPORTION)]
 
 # save
-write.csv(resusc, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_220411.csv'), row.names = F)
-# resusc <- as.data.table(read.csv(file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_220411.csv')))
+write.csv(resusc, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_count_220719.csv'), row.names = F) #previously RCCS_census_eligible_count_220411
+# resusc <- as.data.table(read.csv(file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_count_220411.csv')))
 
 # plot
 if(0){
