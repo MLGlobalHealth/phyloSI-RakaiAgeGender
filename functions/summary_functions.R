@@ -113,6 +113,9 @@ pairs.get.meta.data <- function(chain, meta, aik){
   cat('- ', length(missing_indiv), 'of which are in the Rakai Cohort.\n')
   cat(missing_indiv, '\n')
   
+  # upper column name
+  colnames(tmp1) <- toupper(colnames(tmp1))
+  
   return(tmp1)
 }
 
