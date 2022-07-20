@@ -165,55 +165,54 @@ pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
 
 if(include.only.heterosexual.pairs){
   cat('Keep only heterosexual pairs\n')
-  cat('Removing ', nrow(pairs.all[! ((sex.RECIPIENT == 'M' & sex.SOURCE == 'F') | (sex.RECIPIENT == 'F' & sex.SOURCE == 'M'))]), ' pairs\n')
-  pairs.all <- pairs.all[(sex.RECIPIENT == 'M' & sex.SOURCE == 'F') | (sex.RECIPIENT == 'F' & sex.SOURCE == 'M')]
+  cat('Removing ', nrow(pairs.all[! ((SEX.RECIPIENT == 'M' & SEX.SOURCE == 'F') | (SEX.RECIPIENT == 'F' & SEX.SOURCE == 'M'))]), ' pairs\n')
+  pairs.all <- pairs.all[(SEX.RECIPIENT == 'M' & SEX.SOURCE == 'F') | (SEX.RECIPIENT == 'F' & SEX.SOURCE == 'M')]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(remove.inconsistent.infection.dates){
   # plot_pairs_infection_dates(pairs.all)
   cat('Remove infections for which estimated date at infection of source is after the estimated date at infection of the recipient.\n ')
-  cat('Removing ', nrow(pairs.all[ date_infection.SOURCE >= date_infection.RECIPIENT ]), ' pairs\n')
-  pairs.all <- pairs.all[! date_infection.SOURCE >= date_infection.RECIPIENT ]
+  cat('Removing ', nrow(pairs.all[ DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]), ' pairs\n')
+  pairs.all <- pairs.all[! DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(remove.young.individuals){
   # exclude young indivis
   cat('\nExcluding very young individuals\n')
-  cat('Removing ', nrow(pairs.all[age_transmission.SOURCE < 15 | age_infection.RECIPIENT < 15]), ' pairs\n')
-  pairs.all <- pairs.all[age_transmission.SOURCE >= 15 & age_infection.RECIPIENT >= 15]
+  cat('Removing ', nrow(pairs.all[AGE_TRANSMISSION.SOURCE < 15 | AGE_INFECTION.RECIPIENT < 15]), ' pairs\n')
+  pairs.all <- pairs.all[AGE_TRANSMISSION.SOURCE >= 15 & AGE_INFECTION.RECIPIENT >= 15]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(only.transmission.after.start.observational.period){
   cat('\nExcluding recipients infected before ', as.character(start_observational_period), '\n')
-  cat('Removing ', nrow(pairs.all[date_infection.RECIPIENT < start_observational_period]), ' pairs\n')
-  pairs.all <- pairs.all[date_infection.RECIPIENT >= start_observational_period]
+  cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT < start_observational_period]), ' pairs\n')
+  pairs.all <- pairs.all[DATE_INFECTION.RECIPIENT >= start_observational_period]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(only.transmission.before.stop.observational.period){
   cat('\nExcluding recipients infected after ', as.character(stop_observational_period), '\n')
-  cat('Removing ', nrow(pairs.all[date_infection.RECIPIENT < stop_observational_period]), ' pairs\n')
-  pairs.all <- pairs.all[date_infection.RECIPIENT <= stop_observational_period]
+  cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT < stop_observational_period]), ' pairs\n')
+  pairs.all <- pairs.all[DATE_INFECTION.RECIPIENT <= stop_observational_period]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(remove.missing.community.recipient){
   cat('\nExcluding recipients without community \n')
-  cat('Removing ', nrow(pairs.all[is.na(comm.RECIPIENT)]), ' pairs\n')
-  pairs.all <- pairs.all[!is.na(comm.RECIPIENT)]
+  cat('Removing ', nrow(pairs.all[is.na(COMM.RECIPIENT)]), ' pairs\n')
+  pairs.all <- pairs.all[!is.na(COMM.RECIPIENT)]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(remove.neuro.individuals){
   cat('\nExcluding individuals from the neuro cohort \n')
-  cat('Removing ', nrow(pairs.all[round.SOURCE == 'neuro' | round.RECIPIENT == 'neuro']), ' pairs\n')
-  pairs.all <- pairs.all[round.SOURCE != 'neuro' & round.RECIPIENT != 'neuro']
+  cat('Removing ', nrow(pairs.all[ROUND.SOURCE == 'neuro' | ROUND.RECIPIENT == 'neuro']), ' pairs\n')
+  pairs.all <- pairs.all[ROUND.SOURCE != 'neuro' & ROUND.RECIPIENT != 'neuro']
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(only.transmission.same.community ){
   cat('\nExcluding transmission between communities \n')
-  cat('Removing ', nrow(pairs.all[comm.SOURCE != comm.RECIPIENT]), ' pairs\n')
-  pairs.all <- pairs.all[comm.SOURCE == comm.RECIPIENT]
+  cat('Removing ', nrow(pairs.all[COMM.SOURCE != COMM.RECIPIENT]), ' pairs\n')
+  pairs.all <- pairs.all[COMM.SOURCE == COMM.RECIPIENT]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
-colnames(pairs.all) <- toupper(colnames(pairs.all))
 
 print.which.NA(pairs.all)
 print.statements.about.pairs(copy(pairs.all))
