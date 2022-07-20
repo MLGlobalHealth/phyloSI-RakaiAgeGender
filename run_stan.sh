@@ -61,7 +61,8 @@ CWD=\$OUTDIR/\$STAN_MODEL-\$JOBNAME
 mkdir \$CWD/figures
 mkdir \$CWD/tables
 
-Rscript \$INDIR/scripts/postprocessing_results.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+Rscript \$INDIR/scripts/postprocessing_assess_mixing.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+Rscript \$INDIR/scripts/postprocessing_figures.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 
 EOF
   
