@@ -270,79 +270,76 @@ ageanalysis <- function(infile.inference=NULL,infile.prior.samples=NULL,opt=NULL
   return(data.fit)
 }
 
-prepare_stan_data <- function(pairs, df_age, df_group, cutoff_date){
+prepare_stan_data <- function(pairs, df_age, df_direction, df_community, df_period){
   
   stan_data = list()
   
   # number of groups
-  stan_data[['N_group']] = nrow(df_group)
+  stan_data[['N_DIRECTION']] = nrow(df_direction)
+  stan_data[['N_COMMUNITY']] = nrow(df_community)
+  stan_data[['N_PERIOD']] = nrow(df_period)
   
-  # number of groups without communities
-  stan_data[['N_group_without_community']] = stan_data[['N_group']] / df_group[, length(unique(label_community))]
+  # number of age 
+  stan_data[['N_PER_GROUP']] = nrow(df_age)
   
-  # index without community
-  df_group[, temp := paste0(index_time, '_', index_direction)]
-  tmp <- unique(df_group[, .(temp)])
-  tmp[, index_group_without_community := 1:nrow(tmp)]
-  df_group <- merge(df_group, tmp, by = 'temp')
-  set(df_group, NULL, 'temp', NULL)
-  df_group <- df_group[order(index_group)]
-  stan_data[['index_group_without_community']] = df_group[, index_group_without_community]
-  
-  # community to index group
-  community_to_index_group = matrix(nrow = stan_data[['N_group_without_community']], ncol = 2, 0)
-  for(i in 1:stan_data[['N_group_without_community']]){
-    community_to_index_group[i, ] = which(stan_data[['index_group_without_community']] == i)
-  }
-  stan_data[['community_to_index_group']] = community_to_index_group
+  # prepare pairs
+  pairs_round <- pairs[, list(AGE_TRANSMISSION.SOURCE = floor(AGE_TRANSMISSION.SOURCE), 
+                    AGE_INFECTION.RECIPIENT = floor(AGE_INFECTION.RECIPIENT), 
+                    DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT = DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, 
+                    COMM.RECIPIENT = COMM.RECIPIENT, 
+                    SEX.SOURCE = SEX.SOURCE)]
   
   # save count in each entry
-  y = vector(mode = 'list', length = nrow(df_group))
-  for(i in 1:nrow(df_group)){
-    
-    # direction group
-    directions = unlist(lapply(strsplit(c(gsub('(.+) ->.*', '\\1', df_group[i, label_direction]),
-                                          gsub('.* -> (.+)', '\\1', df_group[i, label_direction])), ''), function(x) x[1]))
-    
-    tmp <- pairs[sex.SOURCE == directions[1] & sex.RECIPIENT == directions[2]]
-    tmp <- tmp[, list(age_transmission.SOURCE = floor(age_transmission.SOURCE), 
-                      age_infection.RECIPIENT = floor(age_infection.RECIPIENT), 
-                      date_infection_before_cutoff.RECIPIENT = date_infection_before_cutoff.RECIPIENT, 
-                      comm.RECIPIENT = comm.RECIPIENT)]
-    
-    # time group
-    tmp <- tmp[date_infection_before_cutoff.RECIPIENT == df_group[i, is_before_cutoff_date]]
-    
-    # community group
-    tmp <- tmp[comm.RECIPIENT == df_group[i, comm]]
-    
-    # count number of observation
-    tmp <- tmp[, list(count = .N), by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT')]
-    tmp <- merge(df_age, tmp, 
-                 by = c('age_transmission.SOURCE', 'age_infection.RECIPIENT'), all.x = T)
-    tmp[is.na(count), count := 0]
-    
-    setkey(tmp, age_transmission.SOURCE, age_infection.RECIPIENT)
-    
-    tmp1 <- pairs[sex.SOURCE == directions[1] & sex.RECIPIENT == directions[2] & date_infection_before_cutoff.RECIPIENT == df_group[i, is_before_cutoff_date] & comm.RECIPIENT == df_group[i, comm]]
-    stopifnot(sum(tmp$count) == nrow(tmp1))
-
-    cat(nrow(tmp1), ' pairs with infection ', df_group[i, label_direction], as.character(df_group[i, label_time]), 'towards ', df_group[i, label_community], '\n')
-    y[[i]] = matrix(tmp$count, ncol = 1)
-    
+  y = array(NA, c(stan_data[['N_PER_GROUP']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']]))
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in 1:stan_data[['N_PERIOD']]){
+        
+        # direction group
+        .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+        tmp <- pairs_round[SEX.SOURCE == .SEX.SOURCE]
+        
+        # community group
+        tmp <- tmp[COMM.RECIPIENT == df_community[j, COMM]]
+        
+        # time group
+        tmp <- tmp[DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT == df_period[k, BEFORE_CUTOFF]]
+        
+        # count number of observation
+        tmp <- tmp[, list(count = .N), by = c('AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT')]
+        tmp <- merge(df_age, tmp, 
+                     by = c('AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'), all.x = T)
+        tmp[is.na(count), count := 0]
+        
+        setkey(tmp, AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)
+        
+        tmp1 <- pairs[SEX.SOURCE == .SEX.SOURCE  & COMM.RECIPIENT == df_community[j, COMM] & DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT == df_period[k, BEFORE_CUTOFF]]
+        stopifnot(sum(tmp$count) == nrow(tmp1))
+        
+        # check the order of ages is correct
+        tmp <- tmp[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
+        stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == tmp[, AGE_INFECTION.RECIPIENT])
+        stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == tmp[, AGE_TRANSMISSION.SOURCE])
+        
+        cat(nrow(tmp1), 'pairs with infection', df_direction[i, LABEL_DIRECTION], 'towards', df_community[j, COMM], 'in', df_period[k, PERIOD], '\n')
+        
+        y[, i, j, k] = matrix(tmp$count, ncol = 1)
+        
+        
+      }
+    }
   }
-  
+    
+    
   # save stan data
-  stan_data[['N_per_group']] = nrow(df_age)
-  stan_data[['y']] = do.call('cbind', y)
+  stan_data[['y']] = y
   
   return(stan_data)
 }
 
 
 
-add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows = 8, n_knots_columns = 8, 
-                                    X, Y)
+add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows = 8, n_knots_columns = 8, X, Y)
 {
   
   stan_data$number_rows <- length(X)
@@ -493,14 +490,14 @@ add_informative_prior_gp_mean <- function(stan_data, df_age, file.partnership.ra
   partnership.rate <- partnership.rate[, .(part.sex, part.age, cont.age, c)]
   setnames(partnership.rate, 'c', 'rate')
   
-  tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
+  tmp <- df_age[, .(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
   tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), 
                                                  index_group = 1:stan_data$N_group), 
                                  by = character()))
   tmp <- merge(tmp, df_group[, .(is_mf, index_group)], by = 'index_group')
   tmp[, part.sex := ifelse(is_mf == T, 'M', 'F')]
   
-  tmp <- merge(tmp, partnership.rate, by.x = c('age_transmission.SOURCE', 'age_infection.RECIPIENT', 'part.sex'), by.y = c('part.age', 'cont.age', 'part.sex'), all.x = T)
+  tmp <- merge(tmp, partnership.rate, by.x = c('AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'part.sex'), by.y = c('part.age', 'cont.age', 'part.sex'), all.x = T)
 
   tmp[, total_rate := sum(rate), by = 'index_group']
   tmp[, relative_rate := rate / total_rate]
@@ -516,7 +513,7 @@ add_informative_prior_gp_mean <- function(stan_data, df_age, file.partnership.ra
     tmp1 <- tmp[index_group == i]
     sex <- tmp1[, unique(part.sex)]
     
-    mu <- as.matrix(dcast(tmp1, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
+    mu <- as.matrix(dcast(tmp1, AGE_TRANSMISSION.SOURCE ~ AGE_INFECTION.RECIPIENT, value.var = 'mu')[,-1])
     theta[[i]] <- find_spectral_projection_gp_mean(mu,  paste0(outfile.figures, '_sex_', sex))
   }
   
@@ -527,16 +524,16 @@ add_informative_prior_gp_mean <- function(stan_data, df_age, file.partnership.ra
 
 add_diagonal_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
   
-  tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
+  tmp <- df_age[, .(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
   tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), index_group = 1:stan_data$N_group), 
                                  by = character()))
   
-  # tmp[, rate := (max(age_infection.RECIPIENT) - min(age_infection.RECIPIENT))*4 +
-  #       max(age_infection.RECIPIENT) - abs( age_infection.RECIPIENT - age_transmission.SOURCE)*4 ]
-  # tmp[, rate := 1 / log(2 + abs( age_infection.RECIPIENT - age_transmission.SOURCE)) ]
-  tmp[, rate := max(age_infection.RECIPIENT) - abs( age_infection.RECIPIENT - age_transmission.SOURCE) ]
+  # tmp[, rate := (max(AGE_INFECTION.RECIPIENT) - min(AGE_INFECTION.RECIPIENT))*4 +
+  #       max(AGE_INFECTION.RECIPIENT) - abs( AGE_INFECTION.RECIPIENT - AGE_TRANSMISSION.SOURCE)*4 ]
+  # tmp[, rate := 1 / log(2 + abs( AGE_INFECTION.RECIPIENT - AGE_TRANSMISSION.SOURCE)) ]
+  tmp[, rate := max(AGE_INFECTION.RECIPIENT) - abs( AGE_INFECTION.RECIPIENT - AGE_TRANSMISSION.SOURCE) ]
   
-  # tmp[age_infection.RECIPIENT == age_transmission.SOURCE, rate := 2]
+  # tmp[AGE_INFECTION.RECIPIENT == AGE_TRANSMISSION.SOURCE, rate := 2]
   
   tmp[, total_rate := sum(rate), by = 'index_group']
   tmp[, relative_rate := rate / total_rate]
@@ -549,7 +546,7 @@ add_diagonal_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
   for(i in 1:stan_data$N_group){
     tmp1 <- tmp[index_group == i]
     
-    mu <- as.matrix(dcast(tmp1, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
+    mu <- as.matrix(dcast(tmp1, AGE_TRANSMISSION.SOURCE ~ AGE_INFECTION.RECIPIENT, value.var = 'mu')[,-1])
     theta[[i]] <- find_spectral_projection_gp_mean(mu, outfile.figures)
   }
 
@@ -560,7 +557,7 @@ add_diagonal_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
 
 add_flat_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
   
-  tmp <- df_age[, .(age_transmission.SOURCE, age_infection.RECIPIENT)]
+  tmp <- df_age[, .(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
   tmp <- as.data.table(full_join(tmp, data.table(count_per_group = apply(stan_data$y, 2, sum), index_group = 1:stan_data$N_group), 
                                  by = character()))
   
@@ -576,7 +573,7 @@ add_flat_prior_gp_mean <- function(stan_data, df_age, outfile.figures){
   for(i in 1:stan_data$N_group){
     tmp1 <- tmp[index_group == i]
     
-    mu <- as.matrix(dcast(tmp1, age_transmission.SOURCE ~ age_infection.RECIPIENT, value.var = 'mu')[,-1])
+    mu <- as.matrix(dcast(tmp1, AGE_TRANSMISSION.SOURCE ~ AGE_INFECTION.RECIPIENT, value.var = 'mu')[,-1])
     theta[[i]] <- find_spectral_projection_gp_mean(mu, outfile.figures)
   }
   
@@ -606,16 +603,16 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
     tmp[, total_transmission_rate := sum(transmission_rate)]
     tmp[, transmission_flow := transmission_rate / total_transmission_rate]
     
-    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'age_infection.RECIPIENT']
-    tmp1 <- merge(tmp, tmp1, by = 'age_infection.RECIPIENT')
+    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'AGE_INFECTION.RECIPIENT']
+    tmp1 <- merge(tmp, tmp1, by = 'AGE_INFECTION.RECIPIENT')
     tmp1[, delta := transmission_flow / total_flow]
-    tmp1 <- tmp1[, list(Median = matrixStats::weightedMedian(age_transmission.SOURCE, delta), 
-                        FirstQuartile = as.numeric(modi::weighted.quantile(age_transmission.SOURCE, delta, 0.25)), 
-                        ThirdQuartile = as.numeric(modi::weighted.quantile(age_transmission.SOURCE, delta, 0.75))), by = 'age_infection.RECIPIENT']
+    tmp1 <- tmp1[, list(Median = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta), 
+                        FirstQuartile = as.numeric(modi::weighted.quantile(AGE_TRANSMISSION.SOURCE, delta, 0.25)), 
+                        ThirdQuartile = as.numeric(modi::weighted.quantile(AGE_TRANSMISSION.SOURCE, delta, 0.75))), by = 'AGE_INFECTION.RECIPIENT']
     tmp1[, IQR := ThirdQuartile - FirstQuartile]
     
-    ggplot(tmp, aes(x =age_infection.RECIPIENT)) + 
-      geom_raster(aes(fill = transmission_flow, y = age_transmission.SOURCE)) + 
+    ggplot(tmp, aes(x =AGE_INFECTION.RECIPIENT)) + 
+      geom_raster(aes(fill = transmission_flow, y = AGE_TRANSMISSION.SOURCE)) + 
       geom_boxplot(data = tmp1, col = 'brown3', alpha= 0, width = 0.5,
         stat = "identity",
         aes(lower  = FirstQuartile,
@@ -623,7 +620,7 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
             middle = Median,
             ymin   = FirstQuartile - 1.5 * IQR, # optional
             ymax   = ThirdQuartile + 1.5 * IQR, 
-            group = age_infection.RECIPIENT) # optional
+            group = AGE_INFECTION.RECIPIENT) # optional
       ) +
       labs(x = 'age infection recipient', y = 'age transmission source', fill = 'prior median\ntransmission flow') + 
       scale_fill_viridis_c() + 
@@ -636,15 +633,15 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
     
     
     #
-    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'age_transmission.SOURCE']
-    tmp1 <- merge(tmp, tmp1, by = 'age_transmission.SOURCE')
+    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'AGE_TRANSMISSION.SOURCE']
+    tmp1 <- merge(tmp, tmp1, by = 'AGE_TRANSMISSION.SOURCE')
     tmp1[, delta := transmission_flow / total_flow]
     
-    tmp1 <- tmp1[, list(M = matrixStats::weightedMedian(age_infection.RECIPIENT, delta), 
-                        CL = as.numeric(modi::weighted.quantile(age_infection.RECIPIENT, delta, 0.1)), 
-                        CU = as.numeric(modi::weighted.quantile(age_infection.RECIPIENT, delta, 0.9))), by = 'age_transmission.SOURCE']
+    tmp1 <- tmp1[, list(M = matrixStats::weightedMedian(AGE_INFECTION.RECIPIENT, delta), 
+                        CL = as.numeric(modi::weighted.quantile(AGE_INFECTION.RECIPIENT, delta, 0.1)), 
+                        CU = as.numeric(modi::weighted.quantile(AGE_INFECTION.RECIPIENT, delta, 0.9))), by = 'AGE_TRANSMISSION.SOURCE']
     
-    ggplot(tmp1, aes(x = age_transmission.SOURCE)) + 
+    ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
       geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'darkred') + 
       geom_line(aes(y = M)) + 
       geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
@@ -655,8 +652,90 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
       scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
     ggsave(paste0(outdir, '-Prior_AgeInfection.png'), w = 5, h = 5)
     
+    #
+    tmp1 <- tmp[, list(total_flow = sum(transmission_flow)), by = 'AGE_INFECTION.RECIPIENT']
+    tmp1 <- merge(tmp, tmp1, by = 'AGE_INFECTION.RECIPIENT')
+    tmp1[, delta := transmission_flow / total_flow]
+    
+    tmp1 <- tmp1[, list(M = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta), 
+                        CL = as.numeric(modi::weighted.quantile(AGE_TRANSMISSION.SOURCE, delta, 0.1)), 
+                        CU = as.numeric(modi::weighted.quantile(AGE_TRANSMISSION.SOURCE, delta, 0.9))), by = 'AGE_INFECTION.RECIPIENT']
+    
+    ggplot(tmp1, aes(x = AGE_INFECTION.RECIPIENT)) + 
+      geom_abline(intercept = 0, slope = 1, linetype= 'dashed', col = 'darkred') + 
+      geom_line(aes(y = M)) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
+      labs(y = 'Age transmission source (median and 80% IQR)', x = 'Age infection recipient', color = 'prior median') + 
+      theme(legend.position = 'bottom') +
+      theme_bw() +
+      scale_y_continuous(expand = c(0,0), limits = range_age_non_extended) + 
+      scale_x_continuous(expand = c(0,0), limits = range_age_non_extended) 
+    ggsave(paste0(outdir, '-Prior_Agetransmission.png'), w = 5, h = 5)
   }
   
   return(theta)
+}
+
+add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_age, df_direction, df_community, df_period){
+  
+  eligible_count_wide <- dcast.data.table(eligible_count, SEX + COMM + AGEYRS + BEFORE_CUTOFF + PERIOD ~ variable, value.var = 'count')
+  eligible_count_wide <- eligible_count_wide[order(SEX, COMM, BEFORE_CUTOFF, PERIOD, AGEYRS)]
+  eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
+  
+  proportion_sampling <- proportion_sampling[order(SEX, COMM, BEFORE_CUTOFF, PERIOD, AGEYRS)]
+  
+  log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
+  log_prop_sampling_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
+  
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in 1:stan_data[['N_PERIOD']]){
+          
+          log_offset = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
+
+          .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+          .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+          .COMM <- df_community[j, COMM]
+          .BEFORE_CUTOFF <- df_period[k, BEFORE_CUTOFF]
+          
+          # add proportion of susceptible in recipient
+          tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
+          log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
+
+          # add number of infected unsuppressed in source
+          tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
+          log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
+          
+          # add probability of sampling recipient
+          tmp <- proportion_sampling[SEX == .SEX.RECIPIENT & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
+          log_offset <- merge(log_offset, tmp[, .(AGEYRS, prop_sampling)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
+
+          # add period in year
+          log_offset[, PERIOD_SPAN := df_period[BEFORE_CUTOFF == .BEFORE_CUTOFF, PERIOD_SPAN]]
+          
+          # make log offset
+          if(1){
+            log_offset[prop_sampling == 0, prop_sampling := 0.0001]
+          }
+
+          log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(prop_sampling) + log(PERIOD_SPAN)]
+          log_offset[, LOG_PROP_SAMPLING := log(prop_sampling)]
+          
+          # check the order of ages is correct
+          log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
+          stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_offset[, AGE_INFECTION.RECIPIENT])
+          stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_offset[, AGE_TRANSMISSION.SOURCE])
+          
+          # add to array
+          log_offset_array[i, j, k,] = log_offset[, LOG_OFFSET]
+          log_prop_sampling_array[i, j, k,] = log_offset[, LOG_PROP_SAMPLING]
+      }
+    }
+  }
+  
+  stan_data[['log_offset']] = log_offset_array
+  stan_data[['log_prop_sampling']] = log_prop_sampling_array
+  
+  return(stan_data)
 }
 

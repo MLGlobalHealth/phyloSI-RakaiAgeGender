@@ -25,6 +25,17 @@ make.time.since.infection <- function(time.since.infection)
   return(time.since.infection)
 }
 
+make.df.period <- function(start_observational_period, cutoff_date, stop_observational_period){
+  data.table(PERIOD = c(paste0(format(start_observational_period, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
+                                     paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period, '%b %Y'))), 
+             BEFORE_CUTOFF = c(T, F), 
+             INDEX_TIME = 1:2, 
+             PERIOD_SPAN = c(.year.diff(cutoff_date-1, start_observational_period), 
+                             .year.diff(stop_observational_period, cutoff_date)))
+  
+  
+}
+
 find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate){
   
   # time.since.infection to produce age at infection and time.since.infection
@@ -67,7 +78,7 @@ find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate)
                date_last_visit = as.Date(date_last_visit),
                date_first_positive = as.Date(date_first_positive))]
   
-  meta[, date_infection := date_first_visit - age_infection]
+  meta[, date_infection := date_birth + 365*(age_infection), by = 'study_id']
   
   return(meta)
 }
@@ -92,7 +103,7 @@ pairs.get.meta.data <- function(chain, meta, aik){
   tmp1 <- merge(tmp1, tmp, by.x = 'RECIPIENT', by.y = 'aid.RECIPIENT')
   
   # find age transmission source
-  tmp1[, age_transmission.SOURCE := as.numeric(date_infection.RECIPIENT - date_birth.SOURCE)/365]
+  tmp1[, AGE_TRANSMISSION.SOURCE := as.numeric(date_infection.RECIPIENT - date_birth.SOURCE)/365]
   
   # individuals without meta data
   missing_indiv = unique(c(chain$SOURCE, chain$RECIPIENT)[!(c(chain$SOURCE, chain$RECIPIENT) %in% meta$aid)])
@@ -109,8 +120,8 @@ print.statements.about.pairs <- function(pairs){
   
   cat('\nThere is ', nrow(pairs), ' source-recipient pairs\n\n')
   
-  cat(nrow(pairs[!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT)]), ' pairs have a proxy for the age at infection of the source and recipient\n')
-  cat(nrow(pairs[((sex.SOURCE == 'F' & sex.RECIPIENT == 'M') | (sex.SOURCE == 'M' & sex.RECIPIENT == 'F')) & (!is.na(age_transmission.SOURCE) & !is.na(age_infection.RECIPIENT))]), ' pairs are heteroxuals have a proxy for the time of infection of the source and recipient\n\n')                
+  cat(nrow(pairs[!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPIENT)]), ' pairs have a proxy for the age at infection of the source and recipient\n')
+  cat(nrow(pairs[((SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M') | (SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F')) & (!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPIENT))]), ' pairs are heteroxuals have a proxy for the time of infection of the source and recipient\n\n')                
   
   #   cat('\nPairs by cohort')
   #   tab <- pairs[, list(count = .N), by = c('cohort.SOURCE', 'cohort.RECIPIENT')]
@@ -121,19 +132,19 @@ print.statements.about.pairs <- function(pairs){
   #   print_table(tab)
   
   cat('\nPairs by sex')
-  tab <- pairs[, list(count = .N), by = c('sex.SOURCE', 'sex.RECIPIENT')]
+  tab <- pairs[, list(count = .N), by = c('SEX.SOURCE', 'SEX.RECIPIENT')]
   print_table(tab)
   
   cat('\nPairs by community')
-  tab <- pairs[, list(count = .N), by = c('comm.SOURCE', 'comm.RECIPIENT')]
+  tab <- pairs[, list(count = .N), by = c('COMM.SOURCE', 'COMM.RECIPIENT')]
   print_table(tab)
   
   cat('\nPairs by round')
-  tab <- pairs[, list(count = .N), by = c('first_round.SOURCE')]
-  print_table(tab[order(first_round.SOURCE)])
+  tab <- pairs[, list(count = .N), by = c('FIRST_ROUND.SOURCE')]
+  print_table(tab[order(FIRST_ROUND.SOURCE)])
   
-  tab <- pairs[, list(count = .N), by = c('first_round.RECIPIENT')]
-  print_table(tab[order(first_round.RECIPIENT)])
+  tab <- pairs[, list(count = .N), by = c('FIRST_ROUND.RECIPIENT')]
+  print_table(tab[order(FIRST_ROUND.RECIPIENT)])
 }
 
 # Want to see how many aids in potential pairs have an associated prefix and base frequency file 
@@ -198,101 +209,236 @@ get.age.map <- function(pairs, age_bands_reduced = 4){
   extended_age_length <- 0
   
   ages_source <- pairs[, {
-    min_age = floor(min(c(age_transmission.SOURCE,age_infection.RECIPIENT))) - extended_age_length
-    max_age = floor(max(c(age_transmission.SOURCE,age_infection.RECIPIENT))) + extended_age_length
+    min_age = floor(min(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) - extended_age_length
+    max_age = floor(max(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) + extended_age_length
     list(age = min_age:max_age)}]
   
   ages_recipient <- ages_source
   
-  age_map <- data.table(expand.grid(age_transmission.SOURCE = ages_source$age, 
-                                    age_infection.RECIPIENT = ages_recipient$age))
-  df_age <- age_map[order(age_transmission.SOURCE, age_infection.RECIPIENT)]
+  age_map <- data.table(expand.grid(AGE_TRANSMISSION.SOURCE = ages_source$age, 
+                                    AGE_INFECTION.RECIPIENT = ages_recipient$age))
+  df_age <- age_map[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
 
-  ages <- sort(unique(df_age$age_transmission.SOURCE))
+  ages <- sort(unique(df_age$AGE_TRANSMISSION.SOURCE))
   ages <- data.table(age_infection = ages, 
-                     age_transmission_reduced.SOURCE = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
-  df_age <- merge(df_age, ages, by.x = 'age_transmission.SOURCE', by.y = 'age_infection')
+                     AGE_TRANSMISSION_REDUCED.SOURCE = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
+  df_age <- merge(df_age, ages, by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'age_infection')
   
-  
-  ages <- sort(unique(df_age$age_infection.RECIPIENT))
+  ages <- sort(unique(df_age$AGE_INFECTION.RECIPIENT))
   ages <- data.table(age_infection = ages, 
-                     age_infection_reduced.RECIPIENT = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
-  df_age <- merge(df_age, ages, by.x = 'age_infection.RECIPIENT', by.y = 'age_infection')
+                     AGE_INFECTION_REDUCED.RECIPIENT = rep(seq(min(ages), max(ages), age_bands_reduced), each = age_bands_reduced )[1:length(ages)])
+  df_age <- merge(df_age, ages, by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'age_infection')
 
-  setkey(df_age, age_transmission.SOURCE, age_infection.RECIPIENT)
+  setkey(df_age, AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)
   
   df_age[, index_age := 1:nrow(df_age)]
   
-  range_age_non_extended <<- c(min(df_age$age_infection.RECIPIENT) + extended_age_length, 
-                               max(df_age$age_infection.RECIPIENT) - extended_age_length)
+  range_age_non_extended <<- c(min(df_age$AGE_INFECTION.RECIPIENT) + extended_age_length, 
+                               max(df_age$AGE_INFECTION.RECIPIENT) - extended_age_length)
+  
+  colnames(df_age) <- toupper(colnames(df_age))
   
   return(df_age)
 }
 
-get.group.map <- function(stratify.by.community.recipient){
+get.df.direction <- function(){
+  df_direction <- data.table(INDEX_DIRECTION = 1:2, IS_MF = c(0, 1))
+  df_direction[, LABEL_DIRECTION := ifelse(IS_MF == 1, 'Male -> Female', 'Female -> Male')]
+  df_direction
+}
+
+get.df.community <- function(){
+    df_community <- data.table(INDEX_COMMUNITY = 1:2, COMM = c('fishing','inland'))
+    df_community[, LABEL_COMMUNITY := ifelse(COMM == 'inland', 'Inland communities', 'Fishing communities')]
+
+  df_community
+}
+
+get.group.map <- function(stratify.by.community.recipient, df_period){
   
-  df_direction <- data.table(index_direction = 1:2, is_mf = c(0, 1))
-  df_direction[, label_direction := ifelse(is_mf == 1, 'Male -> Female', 'Female -> Male')]
+  df_direction <- data.table(INDEX_DIRECTION = 1:2, IS_MF = c(0, 1))
+  df_direction[, LABEL_DIRECTION := ifelse(IS_MF == 1, 'Male -> Female', 'Female -> Male')]
   
-  df_time <- data.table(index_time = 1:2, is_before_cutoff_date = c(1, 0))
-  label_cutoff_date <- as.numeric(format(cutoff_date, '%Y'))
-  label_start_observational_period <- format(start_observational_period, '%Y')
-  df_time[, label_time := ifelse(is_before_cutoff_date == 1, paste0(label_start_observational_period,'-',label_cutoff_date-1), paste0(label_cutoff_date,'-2019'))]
-  df_time[, label_time := factor(label_time, levels = c(paste0(label_start_observational_period,'-',label_cutoff_date-1), 
-                                                        paste0(label_cutoff_date,'-2019')))]
+  tmp <- data.table(INDEX_TIME = 1:2, BEFORE_CUTOFF = c(T, F))
+  df_period <- merge(df_period, tmp, by = 'BEFORE_CUTOFF')
   
   if(stratify.by.community.recipient){
-    df_community <- data.table(index_community = 1:2, comm = c('fishing','inland'))
-    df_community[, label_community := ifelse(comm == 'inland', 'Inland communities', 'Fishing communities')]
+    df_community <- data.table(INDEX_COMMUNITY = 1:2, COMM = c('fishing','inland'))
+    df_community[, LABEL_COMMUNITY := ifelse(COMM == 'inland', 'Inland communities', 'Fishing communities')]
   } else{
-    df_community <- data.table(index_community = 1, comm = c('all'), label_community = 'All communities')
+    df_community <- data.table(INDEX_COMMUNITY = 1, COMM = c('all'), LABEL_COMMUNITY = 'All communities')
   }
 
-  df_group <- data.table(expand.grid(index_direction = df_direction[, index_direction],
-                         index_time = df_time[, index_time], 
-                         index_community = df_community[, index_community]))
+  df_group <- data.table(expand.grid(INDEX_DIRECTION = df_direction[, INDEX_DIRECTION],
+                                     INDEX_TIME = df_period[, INDEX_TIME], 
+                                     INDEX_COMMUNITY = df_community[, INDEX_COMMUNITY]))
   
   df_group[, index_group := 1:nrow(df_group)]
   
-  df_group <- merge(df_group, df_direction, by = 'index_direction')
-  df_group <- merge(df_group, df_time, by = 'index_time')
-  df_group <- merge(df_group, df_community, by = 'index_community')
+  df_group <- merge(df_group, df_direction, by = 'INDEX_DIRECTION')
+  df_group <- merge(df_group, df_period, by = 'INDEX_TIME')
+  df_group <- merge(df_group, df_community, by = 'INDEX_COMMUNITY')
   
   setkey(df_group, index_group)
   
   return(df_group)
 }
 
-get.age.aggregated.map <- function(age_aggregated, incidence){
+get.age.aggregated.map <- function(age_aggregated){
   
 
-  df_age_aggregated <- data.table(expand.grid(age_group_infection.RECIPIENT = age_aggregated, age_group_transmission.SOURCE = age_aggregated))
-  df_age_aggregated[, age_from.RECIPIENT := gsub('(.+)-.*', '\\1', age_group_infection.RECIPIENT)]
-  df_age_aggregated[, age_from.SOURCE := gsub('(.+)-.*', '\\1', age_group_transmission.SOURCE)]
-  df_age_aggregated[, age_to.RECIPIENT := gsub('.*-(.+)', '\\1', age_group_infection.RECIPIENT)]
-  df_age_aggregated[, age_to.SOURCE := gsub('.*-(.+)', '\\1', age_group_transmission.SOURCE)]
+  df_age_aggregated <- data.table(expand.grid(AGE_GROUP_INFECTION.RECIPIENT = age_aggregated, AGE_GROUP_TRANSMISSION.SOURCE = age_aggregated))
+  df_age_aggregated[, age_from.RECIPIENT := gsub('(.+)-.*', '\\1', AGE_GROUP_INFECTION.RECIPIENT)]
+  df_age_aggregated[, age_from.SOURCE := gsub('(.+)-.*', '\\1', AGE_GROUP_TRANSMISSION.SOURCE)]
+  df_age_aggregated[, age_to.RECIPIENT := gsub('.*-(.+)', '\\1', AGE_GROUP_INFECTION.RECIPIENT)]
+  df_age_aggregated[, age_to.SOURCE := gsub('.*-(.+)', '\\1', AGE_GROUP_TRANSMISSION.SOURCE)]
   
-  tmp <- df_age_aggregated[, list(age_infection.RECIPIENT = unique(age_from.RECIPIENT):unique(age_to.RECIPIENT)), by = c('age_group_infection.RECIPIENT')]
-  tmp1 <- df_age_aggregated[, list(age_transmission.SOURCE = unique(age_from.SOURCE):unique(age_to.SOURCE)), by = c('age_group_transmission.SOURCE')]
+  tmp <- df_age_aggregated[, list(AGE_INFECTION.RECIPIENT = unique(age_from.RECIPIENT):unique(age_to.RECIPIENT)), by = c('AGE_GROUP_INFECTION.RECIPIENT')]
+  tmp1 <- df_age_aggregated[, list(AGE_TRANSMISSION.SOURCE = unique(age_from.SOURCE):unique(age_to.SOURCE)), by = c('AGE_GROUP_TRANSMISSION.SOURCE')]
   
-  stopifnot(all(tmp1[, age_transmission.SOURCE] %in% incidence$AGEYRS))
   
-  df_age_aggregated <- merge(df_age_aggregated, tmp, by = 'age_group_infection.RECIPIENT', allow.cartesian=TRUE)
-  df_age_aggregated <- merge(df_age_aggregated, tmp1, by = 'age_group_transmission.SOURCE', allow.cartesian=TRUE)
+  df_age_aggregated <- merge(df_age_aggregated, tmp, by = 'AGE_GROUP_INFECTION.RECIPIENT', allow.cartesian=TRUE)
+  df_age_aggregated <- merge(df_age_aggregated, tmp1, by = 'AGE_GROUP_TRANSMISSION.SOURCE', allow.cartesian=TRUE)
   
   return(df_age_aggregated)
 }
 
-process.incidence <- function(incidence, df_round){
+add_infected_unsuppressed <- function(eligible_susceptible_count, proportion_non_suppressed, df_round, start_observational_period, stop_observational_period){
+  
+  # select variabel
+  di <- as.data.table(eligible_susceptible_count)
+  di <- di[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE, SUSCEPTIBLE)]
+  
+  # keep inside observational period
+  df_round[, round := as.character(round)]
+  df_round[round == '15.1', round := '15S']
+  di <- merge(di, df_round, by.x = 'ROUND', by.y = 'round')
+  di <- di[min_sample_date >= start_observational_period & max_sample_date <= stop_observational_period ]
+  
+  # get infected
+  di[, INFECTED := ELIGIBLE - SUSCEPTIBLE]
+  
+  # get infected non suppressed
+  di[, ROUND := paste0('R0', ROUND)]
+  df <- merge(di, proportion_non_suppressed, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  df[, INFECTED_NON_SUPPRESSED := INFECTED * M]
+  df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * CL]
+  df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * CU]
+  
+  # rm unecessary variable
+  df <- select(df, -c('M', "CL", "CU"))
+  
+  return(df)
+}
 
-  di <- as.data.table(merge(incidence, df_round, by.x = 'ROUND', by.y = 'round'))
+summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, df_period){
   
-  di[, months_diff := .month.diff(max_sample_date, min_sample_date)]
+  # find time intervals
+  eligible_count_round[, BEFORE_CUTOFF := max_sample_date < cutoff_date]
   
-  di <- di[min_sample_date >= start_observational_period]
-  di[, is_before_cutoff_date := ifelse(max_sample_date < cutoff_date, 1, 0)]
-  di[, is_mf := ifelse(SEX == 'F', 1, 0)]
-  di[, comm := COMM]
+  # summarise across time periods
+  df <- melt.data.table(eligible_count_round, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'min_sample_date', 'max_sample_date', 'BEFORE_CUTOFF'))
+  df <- df[, list(count = sum(value)), by = c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF', 'variable')]
+  
+  # merge to period
+  df <- merge(df, df_period, by = 'BEFORE_CUTOFF')
+  
+  return(df)
+}
+
+get_incidence_cases_round <- function(incidence, eligible_count_round){
+  
+  # prepare incidence
+  colnames(incidence) <- toupper(colnames(incidence))
+  setnames(incidence, 'AGE', 'AGEYRS')
+  incidence[, COMM := 'inland']
+  incidence[, SEX := substring(SEX, 1, 1)]
+  incidence <- incidence[ROUND >= 14]
+  incidence[, ROUND := paste0('R0', as.character(ROUND))]
+  
+  # for now set incidence in fishing to be the same as in inland
+  incidence2 <- copy(incidence)
+  incidence2[, COMM := 'fishing']
+  incidence <- rbind(incidence, incidence2)
+  
+  if(0){
+    ggplot(incidence, aes(x = AGEYRS)) +
+      geom_line(aes(y = INCIDENCE, col = SEX)) +
+      geom_ribbon(aes(ymin = LB, ymax = UB, fill = SEX),  alpha = 0.5) +
+      labs(y = 'Incidence rate per 1 PY in inland community', x = 'Age') +
+      facet_grid(ROUND~COMM, label = 'label_both') +
+      theme_bw() +
+      theme(legend.position = 'bottom')
+  }
+  
+  # merge to susceptible
+  dir <- merge(incidence, eligible_count_round, by = c('COMM', 'AGEYRS', 'SEX', 'ROUND'))
+  
+  # find length in years of each round
+  dir[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
+  
+  # find incident cases
+  dir[, INCIDENT_CASES:= SUSCEPTIBLE * ROUND_SPANYRS * INCIDENCE]
+  dir[, INCIDENT_CASES_UB:= SUSCEPTIBLE * ROUND_SPANYRS * UB]
+  dir[, INCIDENT_CASES_LB:= SUSCEPTIBLE * ROUND_SPANYRS * LB]
+  
+  # plot
+  if(0){
+    ggplot(dir, aes(x = AGEYRS)) +
+      geom_line(aes(y = INCIDENT_CASES, col = SEX)) +
+      geom_ribbon(aes(ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, fill = SEX), alpha = 0.5) +
+      labs(y = 'Expected number of incident cases', x = 'Age') +
+      facet_grid(ROUND~COMM, label = 'label_both') +
+      theme_bw() +
+      theme(legend.position = 'bottom')
+    
+    tmp <- dir[, list(INCIDENT_CASES = round(sum(INCIDENT_CASES), digits = 1),
+                      INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1),
+                      INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('ROUND', 'MODEL')]
+    knitr::kable(subset(tmp, select = - c(MODEL)))
+    
+  }
+  
+  return(dir)
+  
+}
+
+summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date, df_period){
+  
+  # find time intervals
+  incidence_cases_round[, BEFORE_CUTOFF := max_sample_date < cutoff_date]
+  
+  # summarise across time periods
+  incidence_cases <- incidence_cases_round[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
+                                                  INCIDENT_CASES_UB = sum(INCIDENT_CASES_UB), 
+                                                  INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB)), by = c('COMM', 'AGEYRS', 'SEX', 'BEFORE_CUTOFF')]
+  # make period
+  incidence_cases <- merge(incidence_cases, df_period, by = 'BEFORE_CUTOFF')
+  
+  return(incidence_cases)
+}
+
+get_proportion_sampling <- function(pairs, incidence_cases){
+  # find number of pair observed
+  dp <- copy(pairs)
+  setnames(dp, c('SEX.RECIPIENT', 'COMM.RECIPIENT', 'AGE_INFECTION.RECIPIENT', 'DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT'), 
+           c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF'))
+  dp[, AGEYRS := floor(AGEYRS)]
+  dp <- dp[, list(count = .N), by = c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF')]
+  
+  # merge to incidence cases
+  di <- merge(incidence_cases, dp, by = c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF'), all.x = T)
+  di[is.na(count), count := 0]
+  
+  # find proportion sampling
+  di[, prop_sampling := count / INCIDENT_CASES]
+  
+  if(0){
+    tmp <- di[COMM == 'inland']
+    ggplot(tmp, aes(x = AGEYRS, y = prop_sampling, col =SEX)) + 
+      geom_line() + 
+      facet_grid(PERIOD~COMM) 
+  }
   
   di
 }
