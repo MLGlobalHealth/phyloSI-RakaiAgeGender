@@ -31,7 +31,6 @@ CWD=\$PWD/\$STAN_MODEL-\$JOBNAME
 mkdir \$CWD
 mkdir \$CWD/figures
   
-Rscript \$INDIR/scripts/process_data.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
 Rscript \$INDIR/scripts/run_stan.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
   
 cp -R --no-preserve=mode,ownership \$PWD/* \$OUTDIR
