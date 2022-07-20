@@ -44,7 +44,7 @@ plot_force_infection <- function(force_infection, outdir){
   communities <- force_infection[, unique(COMM)]
   for(i in seq_along(communities)){
     
-    tmp <- force_transmission[ COMM == communities[i]]
+    tmp <- force_infection[ COMM == communities[i]]
 
     p <- ggplot(tmp, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
       geom_raster(aes(fill = M)) + 
