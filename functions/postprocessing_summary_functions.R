@@ -181,7 +181,7 @@ summarise_var_by_age_group <- function(samples, var, df_direction, df_community,
   return(tmp1)
 }
 
-summarise_var_by_age_recipient_group <- function(samples, var, df_direction, df_community, df_period, df_age, transform = NULL){
+summarise_var_wide_by_age_recipient <- function(samples, var, df_direction, df_community, df_period, df_age, transform = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -189,11 +189,14 @@ summarise_var_by_age_recipient_group <- function(samples, var, df_direction, df_
   tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
   setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
   
-  tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
-  
   if(!is.null(transform)){
     tmp1[, value := sapply(value, transform)]
   }
+  
+  tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  
+  #sum accrossage infection
+  tmp1 <- tmp1[, list(value = sum(value)), by=c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT')]
   
   tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), 
               by=c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT')]	
@@ -206,7 +209,35 @@ summarise_var_by_age_recipient_group <- function(samples, var, df_direction, df_
   return(tmp1)
 }
 
-summarise_var_by_aggregated_age_group <- function(samples, var, df_direction, df_community, df_age, df_period, df_age_aggregated){
+summarise_var_by_age_source <- function(samples, var, df_direction, df_community, df_period, df_age, transform = NULL){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
+  setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+  
+  tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  
+  if(!is.null(transform)){
+    tmp1[, value := sapply(value, transform)]
+  }
+   #sum accrossage infection
+  tmp1 <- tmp1[, list(value = sum(value)), by=c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE')]
+  
+  #summarise
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE')]	
+  tmp1 = dcast(tmp1, INDEX_DIRECTION + INDEX_COMMUNITY + INDEX_TIME + AGE_TRANSMISSION.SOURCE ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
+  tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
+  tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+  
+  return(tmp1)
+}
+
+summarise_var_wide_by_age_source <- function(samples, var, df_direction, df_community, df_period, df_age, transform = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -214,7 +245,39 @@ summarise_var_by_aggregated_age_group <- function(samples, var, df_direction, df
   tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
   setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
   
-  tmp1[, value := exp(value)]
+  if(!is.null(transform)){
+    tmp1[, value := sapply(value, transform)]
+  }
+  
+  tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+
+  #sum accrossage infection
+  tmp1 <- tmp1[, list(value = sum(value)), by=c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE')]
+  
+  #summarise
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), 
+              by=c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE')]	
+  tmp1 = dcast(tmp1, INDEX_DIRECTION + INDEX_COMMUNITY + INDEX_TIME + AGE_TRANSMISSION.SOURCE ~ q_label, value.var = "q")
+  
+  tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
+  tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
+  tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+  
+  return(tmp1)
+}
+
+
+summarise_var_by_aggregated_age_group <- function(samples, var, df_direction, df_community, df_age, df_period, df_age_aggregated, transform = NULL){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
+  setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+  
+  if(!is.null(transform)){
+    tmp1[, value := sapply(value, transform)]
+  }
   
   tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   
@@ -232,15 +295,17 @@ summarise_var_by_aggregated_age_group <- function(samples, var, df_direction, df
   return(tmp1)
 }
 
-summarise_var_by_aggregated_age_classification <- function(samples,  var, df_direction, df_community, df_age, df_period, df_age_aggregated){
+summarise_var_by_aggregated_age_classification <- function(samples,  var, df_direction, df_community, df_age, df_period, df_age_aggregated, transform = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
-  tmp1 = as.data.table( reshape2::melt(samples[['log_lambda']]) )
-  setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
+  tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
+  setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
   
-  tmp1[, value := exp(value)]
+  if(!is.null(transform)){
+    tmp1[, value := sapply(value, transform)]
+  }
   
   tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   
@@ -261,39 +326,18 @@ summarise_var_by_aggregated_age_classification <- function(samples,  var, df_dir
   return(tmp1)
 }
 
-summarise_var_by_age_source <- function(samples, var, df_age, df_direction, df_community, df_period){
+
+summarise_var_by_sex_source <- function(samples, var, df_direction, df_community, df_period, df_age, transform = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
-  setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
+  setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
   
-  tmp1[, value := exp(value)]
-
-  #  sum force of infection
-  tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
-  tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE')]
-  
-  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE')]	
-  tmp1 = dcast(tmp1,INDEX_DIRECTION + INDEX_COMMUNITY + INDEX_TIME + AGE_TRANSMISSION.SOURCE ~ q_label, value.var = "q")
-  
-  tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
-  tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
-  
-  return(tmp1)
-}
-
-summarise_var_by_sex_source <- function(samples, var, df_age, df_direction, df_community, df_period){
-  
-  ps <- c(0.5, 0.025, 0.975)
-  p_labs <- c('M','CL','CU')
-  
-  tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
-  setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
-  
-  tmp1[, value := exp(value)]
+  if(!is.null(transform)){
+    tmp1[, value := sapply(value, transform)]
+  }
   
   #  sum force of infection
   tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
@@ -349,3 +393,13 @@ prepare_count_data <- function(stan_data, df_direction, df_community, df_period,
   
   return(as.data.table(tmp))
 }
+
+prepare_incidence_cases <- function(incidence_cases){
+  tmp <- copy(incidence_cases)
+  setnames(tmp, 'AGEYRS', 'AGE_INFECTION.RECIPIENT')
+  tmp[, IS_MF := as.numeric(SEX == 'M')]
+  tmp <- merge(tmp, df_direction, by = 'IS_MF')
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  tmp
+}
+

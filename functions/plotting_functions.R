@@ -23,7 +23,7 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
     scale_y_continuous(limits = range(c(data$AGE_TRANSMISSION.SOURCE, data$AGE_INFECTION.RECIPIENT))) +
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) 
     if(!is.null(outdir))
-      ggsave(p, filename = paste0(outdir, '-AgeInfection_AllPairs_', plotlab, '.png'), w = 4, h = 4)
+      ggsave(p, filename = paste0(outdir, '-data-AgeInfection_AllPairs_', plotlab, '.png'), w = 4, h = 4)
   plots = c(plots, list(p))
   
   # by cohort round
@@ -53,7 +53,7 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
 
   p <- ggarrange(p1, p2, ncol = 2)
   if(!is.null(outdir))
-    ggsave(p, filename = paste0(outdir, '-AgeInfection_CohortRound_', plotlab, '.png'), w = 9, h = 7)
+    ggsave(p, filename = paste0(outdir, '-data-AgeInfection_CohortRound_', plotlab, '.png'), w = 9, h = 7)
   plots = c(plots, list(p))
   
   # by age infection round
@@ -69,7 +69,7 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom')
   if(!is.null(outdir))
-    ggsave(p, filename = paste0(outdir, '-AgeInfection_DateInfectionRecipient_', plotlab, '.png'), w = 4, h = 4)
+    ggsave(p, filename = paste0(outdir, '-data-AgeInfection_DateInfectionRecipient_', plotlab, '.png'), w = 4, h = 4)
   plots = c(plots, list(p))
   
   # by community
@@ -97,7 +97,7 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
 
   p <- ggarrange(p1, p2, ncol = 2)
   if(!is.null(outdir))
-    ggsave(p, filename = paste0(outdir, '-AgeInfection_CommunitySourceRecipient_', plotlab, '.png'), w = 9, h = 7)
+    ggsave(p, filename = paste0(outdir, '-data-AgeInfection_CommunitySourceRecipient_', plotlab, '.png'), w = 9, h = 7)
   plots = c(plots, list(p))
   
   data[, date_infection_before_cutoff_name.RECIPIENT := 'After 2014']
@@ -113,7 +113,7 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom') + 
     facet_grid(.~date_infection_before_cutoff_name.RECIPIENT)
-  ggsave(p2, filename = paste0(outdir, '-AgeInfection_CommunityRecipient_', plotlab, '.png'), w = 5, h = 5)
+  ggsave(p2, filename = paste0(outdir, '-data-AgeInfection_CommunityRecipient_', plotlab, '.png'), w = 5, h = 5)
   
   return(plots)
 }
@@ -139,7 +139,7 @@ plot_hist_age_infection <- function(pairs, outdir = NULL){
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
   
   if(!is.null(outdir)){
-    file = paste0(outdir, '-hist_age_infection.png')
+    file = paste0(outdir, '-data-hist_age_infection.png')
     cat('saving', file, '\n')
     ggsave(p, file = file, w = 6, h = 6)
   }
@@ -171,7 +171,7 @@ plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
   p <- ggarrange(p1, p2, ncol = 2)
   
   if(!is.null(outdir)){
-    file = paste0(outdir, '-hist_date_infection.png')
+    file = paste0(outdir, '-data-hist_date_infection.png')
     cat('saving', file, '\n')
     ggsave(p, file = file, w = 6, h = 6)
   }
@@ -222,7 +222,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = paste0(outdir, '-AgeTransmissionSource.png'), w = 8, h = 5)
+  ggsave(p, filename = paste0(outdir, '-data-AgeTransmissionSource.png'), w = 8, h = 5)
   
   
   ## not stratified by age of recipient
@@ -258,7 +258,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = paste0(outdir, '-AgeTransmissionSource_Unstratified.png'), w = 8, h = 5)
+  ggsave(p, filename = paste0(outdir, '-data-AgeTransmissionSource_Unstratified.png'), w = 8, h = 5)
   
 }
 
@@ -305,7 +305,7 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = paste0(outdir, '-AgeInfectionRecipient.png'), w = 8, h = 5)
+  ggsave(p, filename = paste0(outdir, '-data-AgeInfectionRecipient.png'), w = 8, h = 5)
   
   
   ## not stratified by age of recipient
@@ -341,10 +341,10 @@ plot_CI_age_transmission <- function(pairs, outdir = NULL){
     theme(legend.position = 'bottom') 
   
   p <- ggarrange(p1, p2, ncol = 2, common.legend = T, legend = 'bottom')
-  ggsave(p, filename = paste0(outdir, '-AgeInfectionRecipient_Unstratified.png'), w = 8, h = 5)
+  ggsave(p, filename = paste0(outdir, '-data-AgeInfectionRecipient_Unstratified.png'), w = 8, h = 5)
 }
 
-plot_pairs_infection_dates <- function(pairs.all)
+plot_pairs_infection_dates <- function(pairs.all, outdir)
 {
   
   tmp <- copy(pairs.all)
@@ -366,7 +366,7 @@ plot_pairs_infection_dates <- function(pairs.all)
     theme(axis.text.x = element_text(angle = 45, vjust = 0.5, hjust=1), legend.position = 'bottom') +
     labs(x='Estimated infection dates', y=" Source's date of first positive test", col='source-date relationship')
   
-  ggsave(p, filename = file.path(outdir, paste0('PairsInfectionDates.png')), w = 8, h = 10)
+  ggsave(p, filename = paste0(outdir, paste0('-data-PairsInfectionDates.png')), w = 8, h = 10)
 }
 
 # Tranmission Network plot from: https://github.com/olli0601/Phyloscanner.R.utilities/blob/7c58edac4812e53b0b67e69770f70e9d3826881d/R/phyloscan.fun.plotting.R
@@ -526,7 +526,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-census_eligible_count_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_count_round.png'), w = 7, h = 8)
   
   # Prevalence proportion
   ggplot(eligible_susceptible_count, aes(x = AGEYRS)) +
@@ -537,7 +537,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-prevalence_proportion_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-prevalence_proportion_round.png'), w = 7, h = 8)
   
   # Susceptible census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
@@ -546,7 +546,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-census_eligible_susceptible_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_susceptible_round.png'), w = 7, h = 8)
   
   # proportion of unsuppressed
   tmp1 <- as.data.table(proportion_unsuppressed)[ROUND != 'R015' & !(COMM == 'fishing' & ROUND == 'R016')]
@@ -558,7 +558,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-unsuppressed_proportion_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-unsuppressed_proportion_round.png'), w = 7, h = 8)
   
   #HIV+ unsupressed census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
@@ -568,7 +568,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-census_eligible_unsuppressed_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round.png'), w = 7, h = 8)
   
   # incidence rate per person per round
   ggplot(incidence_cases_round, aes(x = AGEYRS)) +
@@ -578,7 +578,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-incidence_rate_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 8)
   
   # incidence cases
   ggplot(incidence_cases_round, aes(x = AGEYRS)) +
@@ -588,7 +588,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-incidence_case_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 8)
 }
 
 plot_data_by_period <- function(eligible_count, incidence_cases, proportion_sampling, outdir){
@@ -602,7 +602,7 @@ plot_data_by_period <- function(eligible_count, incidence_cases, proportion_samp
     facet_grid(PERIOD~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-census_eligible_count_period.png'), w = 7, h = 6)
+  ggsave(paste0(outdir, '-data-census_eligible_count_period.png'), w = 7, h = 6)
   
   # Susceptible census eligible count
   ggplot(eligible_count_wide, aes(x = AGEYRS)) +
@@ -611,7 +611,7 @@ plot_data_by_period <- function(eligible_count, incidence_cases, proportion_samp
     facet_grid(PERIOD~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-census_eligible_susceptible_period.png'), w = 7, h = 6)
+  ggsave(paste0(outdir, '-data-census_eligible_susceptible_period.png'), w = 7, h = 6)
   
   #HIV+ unsupressed census eligible count
   ggplot(eligible_count_wide, aes(x = AGEYRS)) +
@@ -621,7 +621,7 @@ plot_data_by_period <- function(eligible_count, incidence_cases, proportion_samp
     facet_grid(PERIOD~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-census_eligible_unsuppressed_period.png'), w = 7, h = 6)
+  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_period.png'), w = 7, h = 6)
   
   # incidence cases
   ggplot(incidence_cases, aes(x = AGEYRS)) +
@@ -631,7 +631,7 @@ plot_data_by_period <- function(eligible_count, incidence_cases, proportion_samp
     facet_grid(PERIOD~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-incidence_case_period.png'), w = 7, h = 6)
+  ggsave(paste0(outdir, '-data-incidence_case_period.png'), w = 7, h = 6)
   
   ggplot(proportion_sampling, aes(x = AGEYRS)) +
     geom_line(aes(y = prop_sampling , col = SEX)) +
@@ -639,7 +639,7 @@ plot_data_by_period <- function(eligible_count, incidence_cases, proportion_samp
     facet_grid(PERIOD~COMM, label = 'label_both', scale = 'free_y') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-proportion_sampling_period.png'), w = 7, h = 6)
+  ggsave(paste0(outdir, '-data-proportion_sampling_period.png'), w = 7, h = 6)
 }
 
 plot_offset <- function(stan_data, outdir){
@@ -657,7 +657,7 @@ plot_offset <- function(stan_data, outdir){
     facet_grid( PERIOD~LABEL_DIRECTION + LABEL_COMMUNITY) + 
     theme_bw() +
     labs(x= 'Age at infection recipient', y = 'Age at transmission source', fill = 'offset') 
-  ggsave(paste0(outdir, '-offset_value.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-offset-value.png'), w = 7, h = 8)
   
   tmp <- as.data.table(reshape2::melt(stan_data[['y']]))
   setnames(tmp, 1:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
@@ -673,12 +673,12 @@ plot_offset <- function(stan_data, outdir){
     facet_grid( LABEL_COMMUNITY~LABEL_DIRECTION ) + 
     theme_bw() +
     labs(x=  'Age at infection recipient', y = 'total offset') 
-  ggsave(paste0(outdir, '-offset_aggregated.png'), w = 7, h = 5)
+  ggsave(paste0(outdir, '-offset-value_aggregated.png'), w = 7, h = 5)
   
   ggplot(tmp2, aes(x = AGE_INFECTION.RECIPIENT, y = (value), col = PERIOD)) + 
     geom_line() +
     facet_grid( LABEL_COMMUNITY~LABEL_DIRECTION ) + 
     theme_bw() +
     labs(x=  'Age at infection recipient', y = 'total transmission events') 
-  ggsave(paste0(outdir, '-offset_total_count.png'), w = 7, h = 5)
+  ggsave(paste0(outdir, '-offset-total_count.png'), w = 7, h = 5)
 }

@@ -63,21 +63,21 @@ make_convergence_diagnostics_stats(fit, outdir.table)
 # Trace plots
 #
 p <- bayesplot::mcmc_trace(fit, regex_pars = c('beta_baseline', 'beta_community', 'beta_period', 'rho_gp', 'alpha_gp')) + theme_bw()
-ggsave(p, file = paste0(outfile.figures, '-mcmc_trace_plots.png'), w  = 8, h = 8)
+ggsave(p, file = paste0(outfile.figures, '-mcmc-trace_plots.png'), w  = 8, h = 8)
 
 
 #
 # Interval plot
 #
 p <- bayesplot::mcmc_intervals(fit, regex_pars = c('beta_baseline', 'beta_community', 'beta_period', 'rho_gp', 'alpha_gp')) + theme_bw()
-ggsave(p, file = paste0(outfile.figures, '-mcmc_intervals_plots.png'), w  = 8, h = 8)
+ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots.png'), w  = 8, h = 8)
 
 
 #
 # Pairs plot
 #
 p <- bayesplot::mcmc_pairs(fit, regex_pars = c('beta_baseline', 'beta_community', 'beta_period', 'rho_gp', 'alpha_gp')) + theme_bw()
-ggsave(p, file = paste0(outfile.figures, '-mcmc_pairs_plots.png'), w  = 8, h = 8)
+ggsave(p, file = paste0(outfile.figures, '-mcmc-pairs_plots.png'), w  = 8, h = 8)
 
 
 cat("End of postprocessing_assess_mixing.R")
