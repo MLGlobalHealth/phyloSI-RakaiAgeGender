@@ -9,7 +9,7 @@ library(matrixStats)
 library(dplyr)
 library(lubridate)
 
-jobname <- 'firstrun'
+jobname <- 'secondrun'
 stan_model <- 'gp_220720'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"

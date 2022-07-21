@@ -397,7 +397,7 @@ prepare_count_data <- function(stan_data, df_direction, df_community, df_period,
 prepare_incidence_cases <- function(incidence_cases){
   tmp <- copy(incidence_cases)
   setnames(tmp, 'AGEYRS', 'AGE_INFECTION.RECIPIENT')
-  tmp[, IS_MF := as.numeric(SEX == 'M')]
+  tmp[, IS_MF := as.numeric(SEX == 'F')]
   tmp <- merge(tmp, df_direction, by = 'IS_MF')
   tmp <- merge(tmp, df_community, by = 'COMM')
   tmp
