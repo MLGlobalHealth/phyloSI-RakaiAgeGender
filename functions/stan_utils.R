@@ -739,3 +739,15 @@ add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_ag
   return(stan_data)
 }
 
+add_init <- function(stan_data){
+  stan_init <- list()
+  stan_init[['log_beta_baseline']] = 0
+  stan_init[['log_beta_community']] = 0
+  stan_init[['log_beta_period']] = 0
+  stan_init[['rho_gp1']] = rep(2, stan_data[['N_DIRECTION']])
+  stan_init[['rho_gp2']] = rep(2, stan_data[['N_DIRECTION']])
+  stan_init[['alpha_gp']] = rep(1, stan_data[['N_DIRECTION']])
+  
+  return(stan_init)
+}
+

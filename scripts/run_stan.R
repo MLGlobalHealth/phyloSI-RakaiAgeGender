@@ -86,6 +86,8 @@ file.eligible.susceptible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R
 file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_220719.csv")
 #file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
 
+path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
+
 # load functions
 source(file.path(indir, 'functions', 'utils.R'))
 source(file.path(indir, 'functions', 'summary_functions.R'))
@@ -170,7 +172,6 @@ if(include.only.heterosexual.pairs){
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(remove.inconsistent.infection.dates){
-  # plot_pairs_infection_dates(pairs.all)
   cat('Remove infections for which estimated date at infection of source is after the estimated date at infection of the recipient.\n ')
   cat('Removing ', nrow(pairs.all[ DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]), ' pairs\n')
   pairs.all <- pairs.all[! DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]
@@ -257,6 +258,7 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_data <- add_log_offset(stan_data, eligible_count, proportion_sampling, df_age, df_direction, df_community, df_period)
+stan_init <- add_init(stan_data)
 # if(use.informative.prior){
 #   stan_data <- add_informative_prior_gp_mean(stan_data, df_age, file.partnership.rate, outfile.figures)
 # } else if(use.diagonal.prior){
@@ -276,6 +278,8 @@ if(1){
   plot_data_by_period(eligible_count, incidence_cases, proportion_sampling, outfile.figures)
   
   # plot pair from chains
+  # plot_pairs_infection_dates(pairs.all, outfile.figures)
+  # phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outfile, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
   plot_hist_age_infection(copy(pairs), outfile.figures)
   plot_hist_time_infection(copy(pairs), cutoff_date, outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)
@@ -285,7 +289,6 @@ if(1){
   
   # plot offset
   plot_offset(stan_data, outfile.figures)
-  # phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outfile, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
 }
 
 
@@ -295,9 +298,9 @@ tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
 save(list=tmp, file=paste0(outfile, "-stanin_",jobname,".RData"))
 
 # for now ignore fishing
-if(0){
+if(1){
   stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
-  stan_data[['log_offset']][,1,,] =  stan_data[['y']][,2,,]
+  stan_data[['log_offset']][,1,,] =  stan_data[['log_offset']][,2,,]
 }
 
 #
@@ -305,18 +308,18 @@ if(0){
 #
 
 # make stan model
-path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 model = rstan::stan_model(path.to.stan.model)
 
 # sample
 if(0){
-  fit <- sampling(model, data = stan_data, iter = 10, warmup = 5, chains=1, thin=1)
+  fit <- sampling(model, data = stan_data, iter = 10, warmup = 5, chains=1, thin=1, init = rep(list(stan_init), 1))
 }else{
   options(mc.cores = parallel::detectCores())
   rstan_options(auto_write = TRUE)
   fit <- sampling(model, data = stan_data,
                   iter = 3000, warmup = 500, chains=4, thin=1, seed = 5,
-                  verbose = FALSE, control = list(adapt_delta = 0.99,max_treedepth=15))
+                  verbose = FALSE, control = list(adapt_delta = 0.99,max_treedepth=15), 
+                  init = rep(list(stan_init), 4))
 }
 
 file = paste0(outfile, "-stanout_", jobname, ".rds")
