@@ -146,8 +146,8 @@ plot_PPC_augmented_recipient <- function(predict_y, incidence_cases_recipient, o
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M)) + 
       geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
-      geom_point(data = tmp1, aes(y = INCIDENT_CASES), col = 'grey50') +
-      geom_errorbar(data = tmp1, aes(ymax = INCIDENT_CASES_UB, ymin = INCIDENT_CASES_LB), col = 'grey50', width = 0.2) +
+      geom_point(data = tmp1, aes(y = INCIDENT_CASES), col = 'darkred') +
+      geom_errorbar(data = tmp1, aes(ymax = INCIDENT_CASES_UB, ymin = INCIDENT_CASES_LB), col = 'darkred', width = 0.2) +
       theme_bw() + 
       labs(x = 'Age at infection recipient', y = 'Augmented transmission events (Z)') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
@@ -175,7 +175,7 @@ plot_PPC_observed_recipient <- function(predict_y, count_data, outdir){
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M)) + 
       geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
-      geom_point(data = tmp1, aes(y = count), col = 'grey50') +
+      geom_point(data = tmp1, aes(y = count), col = 'darkred') +
       theme_bw() + 
       labs(x = 'Age at infection', y = 'Observed transmission events (Y)') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
@@ -203,7 +203,7 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
     p <- ggplot(tmp, aes( x = AGE_TRANSMISSION.SOURCE)) + 
       geom_line(aes(y = M)) + 
       geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
-      geom_point(data = tmp1, aes(y = count), col = 'grey50') +
+      geom_point(data = tmp1, aes(y = count), col = 'darkred') +
       theme_bw() + 
       labs(x = 'Age at transmission', y = 'Observed transmission events (Y)') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
