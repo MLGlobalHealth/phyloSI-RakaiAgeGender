@@ -334,6 +334,11 @@ prepare_stan_data <- function(pairs, df_age, df_direction, df_community, df_peri
   # save stan data
   stan_data[['y']] = y
   
+  # add map age source and recipient
+  df_age <- df_age[order(INDEX_AGE)]
+  stan_data[['map_age_source']] = df_age[, AGE_TRANSMISSION.SOURCE - min(AGE_TRANSMISSION.SOURCE) + 1]
+  stan_data[['map_age_recipient']] = df_age[, AGE_INFECTION.RECIPIENT - min(AGE_INFECTION.RECIPIENT) + 1]
+  
   return(stan_data)
 }
 

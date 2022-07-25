@@ -29,6 +29,23 @@ functions {
 
     return(GP);
   }
+  
+  vector gp_1D(int N, real[] idx, 
+            real delta0,
+            real alpha_gp, 
+            real rho_gp, 
+            vector z)
+  {
+    
+    vector[N] GP;
+    
+    matrix[N, N] K = cov_exp_quad(idx, sqrt(alpha_gp), rho_gp) + diag_matrix(rep_vector(delta0, N));
+    matrix[N, N] L_K = cholesky_decompose(K);
+    
+    GP = L_K * z;
+
+    return(GP);
+  }
 }
 
 data {
@@ -39,6 +56,8 @@ data {
   int y[N_PER_GROUP, N_DIRECTION, N_COMMUNITY, N_PERIOD]; // count of transmissions for each age-age entry
   vector[N_PER_GROUP] log_offset[N_DIRECTION, N_COMMUNITY, N_PERIOD]; 
   vector[N_PER_GROUP] log_prop_sampling[N_DIRECTION, N_COMMUNITY, N_PERIOD]; 
+  int map_age_source[N_PER_GROUP];
+  int map_age_recipient[N_PER_GROUP];
   
 	//splines
 	int number_rows;
@@ -62,7 +81,13 @@ transformed data
 parameters {
   real log_beta_baseline;
   real log_beta_community;
+  
   real log_beta_period;
+  real<lower=0> rho_gp_period1;
+  real<lower=0> rho_gp_period2;
+  real<lower=0> alpha_gp_period;
+  matrix[num_basis_rows, num_basis_columns] z_period;
+  
   real<lower=0> rho_gp1[N_DIRECTION];
   real<lower=0> rho_gp2[N_DIRECTION];
   real<lower=0> alpha_gp[N_DIRECTION];
@@ -74,10 +99,14 @@ transformed parameters {
   vector[N_PER_GROUP] log_lambda[N_DIRECTION, N_COMMUNITY, N_PERIOD];  
   vector[N_PER_GROUP] log_lambda_latent[N_DIRECTION, N_COMMUNITY, N_PERIOD];  
   vector[N_PER_GROUP] log_beta_period_direction[N_DIRECTION];
+  vector[N_PER_GROUP] log_beta_period_source;
   matrix[num_basis_rows,num_basis_columns] low_rank_gp_direction[N_DIRECTION]; 
+  matrix[num_basis_rows,num_basis_columns] low_rank_gp_period;
 
   log_beta = rep_array(rep_vector(log_beta_baseline, N_PER_GROUP), N_DIRECTION, N_COMMUNITY, N_PERIOD);
-  
+  low_rank_gp_period = gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0, alpha_gp_period, rho_gp_period1, rho_gp_period2, z_period);
+  log_beta_period_source = to_vector(((BASIS_ROWS') * low_rank_gp_period * BASIS_COLUMNS)');
+
   // add direction contrast
   for(i in 1:N_DIRECTION){
     low_rank_gp_direction[i] = gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0,
@@ -86,11 +115,12 @@ transformed parameters {
     
     for(j in 1:N_COMMUNITY){
       for(k in 1:N_PERIOD){
+        
         log_beta[i,j,k] += log_beta_period_direction[i];
         
         // add community contrast
         if(j == 1){
-          log_beta[i,j,k] += rep_vector(log_beta_community, N_PER_GROUP); 
+          log_beta[i,j,k] += rep_vector(log_beta_community, N_PER_GROUP) + log_beta_period_source; 
         }
         
         // add period contrast
@@ -120,9 +150,14 @@ model {
   rho_gp1 ~ inv_gamma(2, 2);
   rho_gp2 ~ inv_gamma(2, 2);
   
+  alpha_gp_period ~ cauchy(0,1);
+  rho_gp_period1 ~ inv_gamma(2, 2);
+  rho_gp_period2 ~ inv_gamma(2, 2);
+  
   for(i in 1:num_basis_rows){
     for(j in 1:num_basis_columns){
       z1[:,i,j] ~ normal(0,1);
+      z_period[i,j] ~ normal(0,1);
     }
   }
 
@@ -152,8 +187,6 @@ generated quantities{
      }
   }
 }
-
-
 
 
 
