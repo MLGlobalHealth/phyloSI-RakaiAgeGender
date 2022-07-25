@@ -449,3 +449,12 @@ get_proportion_sampling <- function(pairs, incidence_cases){
   
   di
 }
+
+prepare_unsuppressed <- function(eligible_count){
+  tmp <- eligible_count[variable == 'INFECTED_NON_SUPPRESSED']
+  setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
+  tmp[, IS_MF := as.numeric(SEX == 'M')]
+  tmp <- merge(tmp, df_direction, by = 'IS_MF')
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  tmp
+}
