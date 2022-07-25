@@ -89,7 +89,7 @@ plot_force_infection_age_source <- function(force_infection_age_source, outdir, 
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
     ggsci::scale_fill_npg() 
-  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age.png'), w = 9, h = 7)
+  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age.png'), w = 12, h = 9)
   
 }
 
