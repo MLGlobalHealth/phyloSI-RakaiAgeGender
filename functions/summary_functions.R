@@ -213,7 +213,7 @@ get.age.map <- function(pairs, age_bands_reduced = 4){
   
   ages_source <- pairs[, {
     min_age = floor(min(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) - extended_age_length
-    max_age = floor(max(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) + extended_age_length
+    max_age = ceiling(max(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) + extended_age_length
     list(age = min_age:max_age)}]
   
   ages_recipient <- ages_source
@@ -299,9 +299,12 @@ get.age.aggregated.map <- function(age_aggregated){
   tmp <- df_age_aggregated[, list(AGE_INFECTION.RECIPIENT = unique(age_from.RECIPIENT):unique(age_to.RECIPIENT)), by = c('AGE_GROUP_INFECTION.RECIPIENT')]
   tmp1 <- df_age_aggregated[, list(AGE_TRANSMISSION.SOURCE = unique(age_from.SOURCE):unique(age_to.SOURCE)), by = c('AGE_GROUP_TRANSMISSION.SOURCE')]
   
-  
   df_age_aggregated <- merge(df_age_aggregated, tmp, by = 'AGE_GROUP_INFECTION.RECIPIENT', allow.cartesian=TRUE)
   df_age_aggregated <- merge(df_age_aggregated, tmp1, by = 'AGE_GROUP_TRANSMISSION.SOURCE', allow.cartesian=TRUE)
+  
+  df_age_aggregated[, AGE_CLASSIFICATION.SOURCE := 'Same age']
+  df_age_aggregated[AGE_INFECTION.RECIPIENT < (AGE_TRANSMISSION.SOURCE - 5), AGE_CLASSIFICATION.SOURCE := 'Older']
+  df_age_aggregated[AGE_INFECTION.RECIPIENT > (AGE_TRANSMISSION.SOURCE + 5), AGE_CLASSIFICATION.SOURCE := 'Younger']
   
   return(df_age_aggregated)
 }
