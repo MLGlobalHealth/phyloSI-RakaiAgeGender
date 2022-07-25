@@ -206,19 +206,6 @@ plot_PPC_observed_recipient <- function(predict_y, count_data, outdir){
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
     ggsave(p, file = paste0(outdir, '-output-PPC_observed_recipient_', communities[i], '.png'), w = 7, h = 7)
     
-    p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
-      geom_line(aes(y = M/PERIOD_SPAN)) + 
-      geom_ribbon(aes(ymin = CL/PERIOD_SPAN, ymax = CU/PERIOD_SPAN), alpha = 0.5) + 
-      geom_point(data = tmp1, aes(y = count/PERIOD_SPAN), col = 'darkred') +
-      theme_bw() + 
-      labs(x = 'Age at infection', y = 'Observed transmission events (Y) per year') +
-      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
-      facet_grid(LABEL_DIRECTION~PERIOD) + 
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-PPC_observed_peryear_recipient_', communities[i], '.png'), w = 7, h = 7)
   }
   
 }
@@ -248,21 +235,7 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
     
     ggsave(p, file = paste0(outdir, '-output-PPC_observed_source_', communities[i], '.png'), w = 7, h = 7)
     
-    p <- ggplot(tmp, aes( x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_line(aes(y = M/PERIOD_SPAN)) + 
-      geom_ribbon(aes(ymin = CL/PERIOD_SPAN, ymax = CU/PERIOD_SPAN), alpha = 0.5) + 
-      geom_point(data = tmp1, aes(y = count/PERIOD_SPAN), col = 'darkred') +
-      theme_bw() + 
-      labs(x = 'Age at transmission', y = 'Observed transmission events (Y) per year') +
-      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
-      facet_grid(LABEL_DIRECTION~PERIOD) + 
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    
-    ggsave(p, file = paste0(outdir, '-output-PPC_observed_peryear_source_', communities[i], '.png'), w = 7, h = 7)
-  }
+   }
   
 }
 
