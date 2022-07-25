@@ -417,7 +417,8 @@ summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date,
   # summarise across time periods
   incidence_cases <- incidence_cases_round[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
                                                   INCIDENT_CASES_UB = sum(INCIDENT_CASES_UB), 
-                                                  INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB)), by = c('COMM', 'AGEYRS', 'SEX', 'BEFORE_CUTOFF')]
+                                                  INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB), 
+                                                  SUSCEPTIBLE = sum(SUSCEPTIBLE)), by = c('COMM', 'AGEYRS', 'SEX', 'BEFORE_CUTOFF')]
   # make period
   incidence_cases <- merge(incidence_cases, df_period, by = 'BEFORE_CUTOFF')
   

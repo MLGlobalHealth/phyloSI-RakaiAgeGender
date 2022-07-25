@@ -55,6 +55,7 @@ samples <- rstan::extract(fit)
 # temporary
 source(file.path(indir, 'functions', 'summary_functions.R'))
 df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
+incidence_cases <- summarise_incidence_cases_period(incidence_cases_round, cutoff_date, df_period)
 
 
 #
@@ -80,7 +81,8 @@ plot_PPC_augmented_recipient(predict_z_recipient, incidence_cases_recipient, out
 # Total infected
 #
 
-plot_observed_to_augmented(predict_y_source, predict_z_source, outfile.figures)
+unsuppressed_count <- prepare_unsuppressed(eligible_count)
+plot_observed_to_augmented(predict_y_source, predict_z_source, unsuppressed_count, outfile.figures)
 
 
 #
