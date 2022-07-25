@@ -80,9 +80,9 @@ transformed data
 
 parameters {
   real log_beta_baseline;
-  real log_beta_community;
+  real log_beta_baseline_community;
+  real log_beta_baseline_period;
   
-  real log_beta_period;
   real<lower=0> rho_gp_period1;
   real<lower=0> rho_gp_period2;
   real<lower=0> alpha_gp_period;
@@ -95,37 +95,37 @@ parameters {
 }
 
 transformed parameters {
-  vector[N_PER_GROUP] log_beta[N_DIRECTION, N_COMMUNITY, N_PERIOD];  
   vector[N_PER_GROUP] log_lambda[N_DIRECTION, N_COMMUNITY, N_PERIOD];  
   vector[N_PER_GROUP] log_lambda_latent[N_DIRECTION, N_COMMUNITY, N_PERIOD];  
-  vector[N_PER_GROUP] log_beta_period_direction[N_DIRECTION];
-  vector[N_PER_GROUP] log_beta_period_source;
+  vector[N_PER_GROUP] log_beta[N_DIRECTION, N_COMMUNITY, N_PERIOD];  
+  vector[N_PER_GROUP] log_beta_direction[N_DIRECTION];
+  vector[N_PER_GROUP] log_beta_period;
   matrix[num_basis_rows,num_basis_columns] low_rank_gp_direction[N_DIRECTION]; 
   matrix[num_basis_rows,num_basis_columns] low_rank_gp_period;
 
   log_beta = rep_array(rep_vector(log_beta_baseline, N_PER_GROUP), N_DIRECTION, N_COMMUNITY, N_PERIOD);
   low_rank_gp_period = gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0, alpha_gp_period, rho_gp_period1, rho_gp_period2, z_period);
-  log_beta_period_source = to_vector(((BASIS_ROWS') * low_rank_gp_period * BASIS_COLUMNS)');
+  log_beta_period = to_vector(((BASIS_ROWS') * low_rank_gp_period * BASIS_COLUMNS)');
 
   // add direction contrast
   for(i in 1:N_DIRECTION){
     low_rank_gp_direction[i] = gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0,
               alpha_gp[i], rho_gp1[i], rho_gp2[i], z1[i]);
-    log_beta_period_direction[i] = to_vector(((BASIS_ROWS') * low_rank_gp_direction[i] * BASIS_COLUMNS)');
+    log_beta_direction[i] = to_vector(((BASIS_ROWS') * low_rank_gp_direction[i] * BASIS_COLUMNS)');
     
     for(j in 1:N_COMMUNITY){
       for(k in 1:N_PERIOD){
         
-        log_beta[i,j,k] += log_beta_period_direction[i];
+        log_beta[i,j,k] += log_beta_direction[i];
         
         // add community contrast
         if(j == 1){
-          log_beta[i,j,k] += rep_vector(log_beta_community, N_PER_GROUP) + log_beta_period_source; 
+          log_beta[i,j,k] += rep_vector(log_beta_baseline_community, N_PER_GROUP) + log_beta_period; 
         }
         
         // add period contrast
         if(k == 2){
-          log_beta[i,j,k] += rep_vector(log_beta_period, N_PER_GROUP); 
+          log_beta[i,j,k] += rep_vector(log_beta_baseline_period, N_PER_GROUP); 
         }
         
         // add offset
@@ -143,8 +143,8 @@ transformed parameters {
 
 model {
   log_beta_baseline ~ normal(0, 10);
-  log_beta_community ~ normal(0, 10);
-  log_beta_period ~ normal(0, 10);
+  log_beta_baseline_community ~ normal(0, 10);
+  log_beta_baseline_period ~ normal(0, 10);
   
   alpha_gp ~ cauchy(0,1);
   rho_gp1 ~ inv_gamma(2, 2);
