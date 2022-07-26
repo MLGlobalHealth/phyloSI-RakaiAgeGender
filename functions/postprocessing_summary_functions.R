@@ -256,3 +256,14 @@ prepare_incidence_cases <- function(incidence_cases){
   tmp
 }
 
+prepare_eligible_proportion <- function(eligible_count, vars, standardised.vars){
+  tmp1 <- eligible_count[variable == 'ELIGIBLE', list(count = sum(count)), by = vars]
+  tmp1[, M := count / sum(count), by = standardised.vars]
+  tmp1[, IS_MF := as.numeric(SEX == 'M')]
+  tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
+  tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+  tmp1[, type := 'Share in the census eligible individuals']
+}
+
+
