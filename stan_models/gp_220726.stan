@@ -149,7 +149,7 @@ transformed parameters {
         
         // add offset for latent
         log_lambda_latent[i,j,k] = log_lambda[i,j,k] - log_prop_sampling[i,j,k];
-        log_lambda_latent_recipient[i,j,k] = matrix_map_age_recipient * log_lambda_latent[i,j,k];
+        log_lambda_latent_recipient[i,j,k] = log(matrix_map_age_recipient * exp(log_lambda_latent[i,j,k]));
       }
     }
 
