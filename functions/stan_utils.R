@@ -342,7 +342,47 @@ prepare_stan_data <- function(pairs, df_age, df_direction, df_community, df_peri
   return(stan_data)
 }
 
-
+add_incidence_cases <- function(stan_data){
+  
+  # number of age group
+  stan_data[['N_AGE']] = df_age[, length(unique(AGE_INFECTION.RECIPIENT))]
+  
+  # save count in each entry
+  z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']]))
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in 1:stan_data[['N_PERIOD']]){
+        
+        # direction group
+        .SEX.RECIPIENT = substr(gsub('.* -> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        tmp <- incidence_cases[SEX == .SEX.RECIPIENT]
+        
+        # community group
+        tmp <- tmp[COMM == df_community[j, COMM]]
+        
+        # time group
+        tmp <- tmp[INDEX_TIME == df_period[k, INDEX_TIME]]
+        
+        # count number of observation
+        tmp <- tmp[order(AGEYRS)] 
+        
+        tmp1 <- incidence_cases[SEX == .SEX.RECIPIENT  & COMM == df_community[j, COMM] & INDEX_TIME == df_period[k, INDEX_TIME]]
+        stopifnot(sum(tmp$INCIDENT_CASES) == sum(tmp1$INCIDENT_CASES))
+        
+        cat(sum(tmp1$INCIDENT_CASES), 'incidence cases ', df_direction[i, LABEL_DIRECTION], 'towards', df_community[j, COMM], 'in', df_period[k, PERIOD], '\n')
+        
+        z[, i, j, k] = ceiling(tmp$INCIDENT_CASES)
+        
+        
+      }
+    }
+  }
+  
+  stan_data[['z']] = z
+  
+  return(stan_data)
+  
+}
 
 add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows = 8, n_knots_columns = 8, X, Y)
 {

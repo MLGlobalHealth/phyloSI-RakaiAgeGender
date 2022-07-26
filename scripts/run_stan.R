@@ -19,7 +19,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220720'
+  stan_model <- 'gp_220726'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -258,7 +258,9 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_data <- add_log_offset(stan_data, eligible_count, proportion_sampling, df_age, df_direction, df_community, df_period)
+stan_data <- add_incidence_cases(stan_data)
 stan_init <- add_init(stan_data)
+
 # if(use.informative.prior){
 #   stan_data <- add_informative_prior_gp_mean(stan_data, df_age, file.partnership.rate, outfile.figures)
 # } else if(use.diagonal.prior){
@@ -292,16 +294,17 @@ if(1){
 }
 
 
-## save image before running Stan
-tmp <- names(.GlobalEnv)
-tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
-save(list=tmp, file=paste0(outfile, "-stanin_",jobname,".RData"))
-
 # for now ignore fishing
 if(1){
   stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
   stan_data[['log_offset']][,1,,] =  stan_data[['log_offset']][,2,,]
+  stan_data[['log_prop_sampling']][,1,,] =  stan_data[['log_prop_sampling']][,2,,]
 }
+
+## save image before running Stan
+tmp <- names(.GlobalEnv)
+tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
+save(list=tmp, file=paste0(outfile, "-stanin_",jobname,".RData"))
 
 #
 # RUN STAN DATA
