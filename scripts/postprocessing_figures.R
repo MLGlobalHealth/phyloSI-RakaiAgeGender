@@ -52,11 +52,6 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-source(file.path(indir, 'functions', 'summary_functions.R'))
-df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
-incidence_cases <- summarise_incidence_cases_period(incidence_cases_round, cutoff_date, df_period)
-
 
 #
 ## PPC
