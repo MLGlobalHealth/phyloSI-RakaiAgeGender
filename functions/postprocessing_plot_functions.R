@@ -39,6 +39,65 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
 
 } 
 
+plot_2D_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
+  
+
+    p <- ggplot(tmp, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
+      geom_raster(aes(fill = M)) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+      theme_bw() + 
+      labs(x = 'Age at infection recipient', fill = lab, 
+           y= 'Age at transmission source',size='Pairs\ncount') +
+      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      scale_fill_viridis_c() + 
+      scale_x_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0)) + 
+      guides(fill = guide_colorbar(order = 1), 
+             shape = guide_legend(order = 2)) 
+    
+    ggsave(p, file = paste0(outdir, '-output-contrast_2D_', name, '.png'), w = 7, h = 7)
+  
+} 
+
+plot_source_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
+  
+  p <- ggplot(tmp, aes(x = AGE_TRANSMISSION.SOURCE)) + 
+    geom_line(aes(y = M)) + 
+    geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
+    theme_bw() + 
+    labs( y = lab, 
+         x= 'Age at transmission source') +
+    # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    scale_fill_viridis_c() 
+  
+  ggsave(p, file = paste0(outdir, '-output-contrast_source_', name, '.png'), w = 7, h = 7)
+  
+} 
+
+plot_recipient_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
+  
+  p <- ggplot(tmp, aes(x = AGE_INFECTION.RECIPIENT)) + 
+    geom_line(aes(y = M)) + 
+    geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
+    theme_bw() + 
+    labs( y = lab, 
+          x= 'Age at infection recipient') +
+    # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    scale_fill_viridis_c() 
+  
+  ggsave(p, file = paste0(outdir, '-output-contrast_recipient_', name, '.png'), w = 7, h = 7)
+  
+} 
+
 plot_force_infection <- function(force_infection, outdir, lab = NULL){
   
   communities <- force_infection[, unique(COMM)]

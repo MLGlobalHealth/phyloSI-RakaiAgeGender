@@ -1,4 +1,4 @@
-make_convergence_diagnostics_stats = function(fit, outdir)
+make_convergence_diagnostics_stats = function(fit, re, outdir)
 {
   
   stopifnot(!is.null(fit))
@@ -27,7 +27,6 @@ make_convergence_diagnostics_stats = function(fit, outdir)
   check_all_diagnostics(fit, outdir)
   
   # compute WAIC and LOO
-  re = rstan::extract(fit)
   tryCatch({
     
     if('log_lik' %in% names(re)){
@@ -156,37 +155,44 @@ check_rhat <- function(fit) {
     print('  Rhat above 1.1 indicates that the chains very likely have not mixed')
 }
 
-find_summary_output <- function(samples, output, vars, df_direction, df_community, df_period, df_age, transform = NULL, standardised.vars = NULL){
+find_summary_output <- function(samples, output, vars, df_direction, df_community, df_period, df_age, transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   tmp1 = as.data.table( reshape2::melt(samples[[output]]) )
-  if(tmp1[, max(Var2)] == df_age[, max(INDEX_AGE)]){
+  if(!is.null(names)){
+    setnames(tmp1, 2:(length(names) + 1), names)
+    }else if(tmp1[, max(Var2)] == df_age[, max(INDEX_AGE)]){
     setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
-  }else{
+    }else{
     setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
   }
 
   tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   tmp1 <- merge(tmp1, df_age_aggregated, by = c('AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'))
-  
+
   if(!is.null(transform)){
     tmp1[, value := sapply(value, transform)]
   }
   
   #  sum force of infection
-  tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
-  
+  if(is.null(operation)){
+    tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
+  } else{
+    tmp1 <- tmp1[, list(value = sapply(value, operation)), by = c('iterations', vars)]
+  }
+
   # standardised
   if(!is.null(standardised.vars)){
     tmp1[, total_value := sum(value), by = c('iterations', standardised.vars)]
     tmp1[, value := value / total_value]
   }
-  
+
   #summarise
   tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
   tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
+
   
   if('INDEX_DIRECTION' %in% vars)
     tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
