@@ -108,7 +108,7 @@ transformed parameters {
   // find period contrast
   low_rank_gp_period = gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0, alpha_gp_period, rho_gp_period1, rho_gp_period2, z_period);
   log_beta_period = to_vector(((BASIS_ROWS') * low_rank_gp_period * BASIS_COLUMNS)');
-  log_beta_period_contrast = rep_vector(log_beta_baseline_period, N_PER_GROUP) + log_beta_period[map_age_recipient];
+  log_beta_period_contrast = rep_vector(log_beta_baseline_period, N_PER_GROUP) + log_beta_period;
   
   // find community contrast
   log_beta_community_contrast = rep_vector(log_beta_baseline_community, N_PER_GROUP);
