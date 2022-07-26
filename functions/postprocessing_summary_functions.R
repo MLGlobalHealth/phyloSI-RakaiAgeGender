@@ -203,6 +203,13 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   
+  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')))
+  if(!is.null(standardised.vars)){
+    file = paste0(file, 'standardisedby_', tolower(paste0(gsub('INDEX_', '', standardised.vars), collapse = '_')))
+  }
+  file = paste0(file, '.rds')
+  saveRDS(tmp1, file)
+  
   return(tmp1)
 }
 

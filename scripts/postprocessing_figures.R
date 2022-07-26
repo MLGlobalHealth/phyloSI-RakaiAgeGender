@@ -9,8 +9,8 @@ library(matrixStats)
 library(dplyr)
 library(lubridate)
 
-jobname <- 'secondrun'
-stan_model <- 'gp_220720'
+jobname <- 'firstrun'
+stan_model <- 'gp_220721'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -51,6 +51,12 @@ outdir.table <- .outdir.table
 # samples 
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
+
+# temporary
+if(!all(stan_data[['y']][,,1,] == stan_data[['y']][,,2,])){
+  stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
+  stan_data[['log_offset']][,1,,] =  stan_data[['log_offset']][,2,,]
+}
 
 
 #
