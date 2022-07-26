@@ -297,6 +297,7 @@ if(1){
 # for now ignore fishing
 if(1){
   stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
+  stan_data[['z']][,,1,] =  stan_data[['z']][,,2,]
   stan_data[['log_offset']][,1,,] =  stan_data[['log_offset']][,2,,]
   stan_data[['log_prop_sampling']][,1,,] =  stan_data[['log_prop_sampling']][,2,,]
 }
