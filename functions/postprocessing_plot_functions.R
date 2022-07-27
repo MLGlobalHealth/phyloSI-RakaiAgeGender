@@ -307,7 +307,7 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir){
 plot_contribution_age_classification <- function(contribution_age_classification_source, outdir){
   
   communities <- contribution_age_classification_source[, unique(COMM)]
-  
+  contribution_age_classification_source[, AGE_CLASSIFICATION.SOURCE := factor(AGE_CLASSIFICATION.SOURCE, levels  = c('Younger', 'Same age', 'Older'))]
   for(i in seq_along(communities)){
     
     tmp <- contribution_age_classification_source[ COMM == communities[i]]
