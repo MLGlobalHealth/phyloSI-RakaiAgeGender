@@ -258,7 +258,7 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_data <- add_log_offset(stan_data, eligible_count, proportion_sampling, df_age, df_direction, df_community, df_period)
-stan_data <- add_incidence_cases(stan_data)
+stan_data <- add_incidence_cases(stan_data, incidence_cases)
 stan_init <- add_init(stan_data)
 
 # if(use.informative.prior){

@@ -342,13 +342,15 @@ prepare_stan_data <- function(pairs, df_age, df_direction, df_community, df_peri
   return(stan_data)
 }
 
-add_incidence_cases <- function(stan_data){
+add_incidence_cases <- function(stan_data, incidence_cases, proportion_sampling){
   
   # number of age group
   stan_data[['N_AGE']] = df_age[, length(unique(AGE_INFECTION.RECIPIENT))]
   
   # save count in each entry
   z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']]))
+  n_sampling_index_z = array(NA, c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']]))
+  sampling_index_z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']]))
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(j in 1:stan_data[['N_COMMUNITY']]){
       for(k in 1:stan_data[['N_PERIOD']]){
@@ -366,19 +368,27 @@ add_incidence_cases <- function(stan_data){
         # count number of observation
         tmp <- tmp[order(AGEYRS)] 
         
+        # sanity check
         tmp1 <- incidence_cases[SEX == .SEX.RECIPIENT  & COMM == df_community[j, COMM] & INDEX_TIME == df_period[k, INDEX_TIME]]
         stopifnot(sum(tmp$INCIDENT_CASES) == sum(tmp1$INCIDENT_CASES))
-        
         cat(sum(tmp1$INCIDENT_CASES), 'incidence cases ', df_direction[i, LABEL_DIRECTION], 'towards', df_community[j, COMM], 'in', df_period[k, PERIOD], '\n')
         
+        # fill
         z[, i, j, k] = ceiling(tmp$INCIDENT_CASES)
         
-        
+        # add probability of sampling
+        tmp <- proportion_sampling[SEX == .SEX.RECIPIENT & COMM ==df_community[j, COMM] & INDEX_TIME == df_period[k, INDEX_TIME]]
+        tmp <- tmp[order(AGEYRS)]
+        n_sampling_index_z[i, j, k] <- tmp[, sum(prop_sampling == 0)]
+        sampling_index_z[,i,j,k] <- rep(-1,nrow(tmp) )
+        sampling_index_z[1:n_sampling_index_z[i, j, k],i,j,k] <- tmp[, which(prop_sampling == 0)]
       }
     }
   }
   
   stan_data[['z']] = z
+  stan_data[['sampling_index_z']] = sampling_index_z
+  stan_data[['n_sampling_index_z']] = n_sampling_index_z
   
   return(stan_data)
   
@@ -731,7 +741,8 @@ add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_ag
   
   log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
   log_prop_sampling_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
-  
+  sampling_index=array(NA, c(c(stan_data[['N_PER_GROUP']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']])))
+  n_sampling_index=array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']])))
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(j in 1:stan_data[['N_COMMUNITY']]){
       for(k in 1:stan_data[['N_PERIOD']]){
@@ -760,9 +771,8 @@ add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_ag
           
           # make log offset
           if(1){
-            log_offset[prop_sampling == 0, prop_sampling := 0.0001]
-          }
-
+              log_offset[prop_sampling == 0, prop_sampling := 0.0001]
+           }
           log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(prop_sampling) + log(PERIOD_SPAN)]
           log_offset[, LOG_PROP_SAMPLING := log(prop_sampling)]
           
@@ -773,13 +783,22 @@ add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_ag
           
           # add to array
           log_offset_array[i, j, k,] = log_offset[, LOG_OFFSET]
+          
+          # prop sampling
           log_prop_sampling_array[i, j, k,] = log_offset[, LOG_PROP_SAMPLING]
+          
+          # was the recipient sampled
+          n_sampling_index[i, j, k] = log_offset[, sum(prop_sampling != 0.0001)]
+          sampling_index[,i, j, k] = rep(-1, nrow(log_offset))
+          sampling_index[1:n_sampling_index[i, j, k], i, j, k]  = log_offset[, which(prop_sampling != 0.0001)]
       }
     }
   }
   
   stan_data[['log_offset']] = log_offset_array
   stan_data[['log_prop_sampling']] = log_prop_sampling_array
+  stan_data[['n_sampling_index_y']] = n_sampling_index
+  stan_data[['sampling_index_y']] = sampling_index
   
   return(stan_data)
 }
