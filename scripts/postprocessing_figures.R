@@ -117,7 +117,6 @@ contribution_sex_source <-  find_summary_output(samples, 'z_predict', c('INDEX_D
 eligible_prop <- prepare_eligible_proportion(eligible_count, c('INDEX_TIME', 'COMM', 'SEX'), c('INDEX_TIME', 'COMM'))
 plot_contribution_sex_source(contribution_sex_source, eligible_prop, outfile.figures)
 
-
 # age-specific contribution to transmission
 contribution_age_source <-  find_summary_output(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
 eligible_prop <- prepare_eligible_proportion(eligible_count, c('INDEX_TIME', 'COMM', 'SEX', 'AGEYRS'), c('INDEX_TIME', 'COMM', 'SEX'))
@@ -134,6 +133,26 @@ plot_contribution_age_group(contribution_age_group_source, outfile.figures)
 # aggregated by agr group and classified
 contribution_age_classification_source <-  find_summary_output(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME'))
 plot_contribution_age_classification(contribution_age_classification_source, outfile.figures)
+
+#
+# Expected Contribution to transmission
+#
+
+# sex-specific contribution to transmission
+expected_contribution_sex_source <- find_summary_output(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'), df_direction, df_community, df_period, df_age,transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME'))
+plot_contribution_sex_source(expected_contribution_sex_source, eligible_prop, outfile.figures,'Expected contribution to infection')
+
+# age-specific contribution to transmission
+expected_contribution_age_source <-  find_summary_output(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, transform = 'exp', standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
+plot_contribution_age_source(expected_contribution_age_source, eligible_prop, outfile.figures,'Expected contribution to infection')
+
+# aggregated by agr group
+expected_contribution_age_group_source <-  find_summary_output(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age,transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME'))
+plot_contribution_age_group(expected_contribution_age_group_source, outfile.figures,'Expected contribution to infection')
+
+# aggregated by agr group and classified
+expected_contribution_age_classification_source <-  find_summary_output(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, transform = 'exp',standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME'))
+plot_contribution_age_classification(expected_contribution_age_classification_source, outfile.figures,'Expected contribution to infection')
 
 
 #
