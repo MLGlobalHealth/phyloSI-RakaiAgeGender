@@ -258,7 +258,7 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_data <- add_log_offset(stan_data, eligible_count, proportion_sampling, df_age, df_direction, df_community, df_period)
-stan_data <- add_incidence_cases(stan_data, incidence_cases)
+stan_data <- add_incidence_cases(stan_data, incidence_cases, proportion_sampling)
 stan_init <- add_init(stan_data)
 
 # if(use.informative.prior){
@@ -298,9 +298,14 @@ if(1){
 if(1){
   stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
   stan_data[['z']][,,1,] =  stan_data[['z']][,,2,]
+  stan_data[['sampling_index_y']][,,1,] =  stan_data[['sampling_index_y']][,,2,]
+  stan_data[['sampling_index_z']][,,1,] =  stan_data[['sampling_index_z']][,,2,]
   stan_data[['log_offset']][,1,,] =  stan_data[['log_offset']][,2,,]
   stan_data[['log_prop_sampling']][,1,,] =  stan_data[['log_prop_sampling']][,2,,]
+  stan_data[['n_sampling_index_y']][,1,] =stan_data[['n_sampling_index_y']][,2,] 
+  stan_data[['n_sampling_index_z']][,1,] =stan_data[['n_sampling_index_z']][,2,] 
 }
+
 
 ## save image before running Stan
 tmp <- names(.GlobalEnv)
