@@ -52,12 +52,6 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-if(!all(stan_data[['y']][,,1,] == stan_data[['y']][,,2,])){
-  stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
-  stan_data[['log_offset']][,1,,] =  stan_data[['log_offset']][,2,,]
-}
-
 
 #
 ## PPC
