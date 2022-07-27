@@ -58,6 +58,10 @@ plot_2D_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
       guides(fill = guide_colorbar(order = 1), 
              shape = guide_legend(order = 2)) 
     
+    if('LABEL_DIRECTION' %in% names(tmp)){
+      p <- p + facet_grid(LABEL_DIRECTION~.)
+    }
+    
     ggsave(p, file = paste0(outdir, '-output-contrast_2D_', name, '.png'), w = 7, h = 7)
   
 } 
@@ -76,6 +80,10 @@ plot_source_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
           legend.position = 'bottom') +
     scale_fill_viridis_c() 
   
+  if('LABEL_DIRECTION' %in% names(tmp)){
+    p <- p + facet_grid(LABEL_DIRECTION~.)
+  }
+  
   ggsave(p, file = paste0(outdir, '-output-contrast_source_', name, '.png'), w = 7, h = 7)
   
 } 
@@ -93,6 +101,10 @@ plot_recipient_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
     scale_fill_viridis_c() 
+  
+  if('LABEL_DIRECTION' %in% names(tmp)){
+    p <- p + facet_grid(LABEL_DIRECTION~.)
+  }
   
   ggsave(p, file = paste0(outdir, '-output-contrast_recipient_', name, '.png'), w = 7, h = 7)
   

@@ -76,13 +76,17 @@ p <- bayesplot::mcmc_intervals(fit, regex_pars = c('beta_baseline', 'rho_gp', 'a
 ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots.png'), w  = 8, h = 8)
 
 # period ontrast
-log_period_contrast <- find_summary_output(samples, 'log_beta_period_contrast', c('INDEX_AGE'), df_direction, df_community, df_period, df_age, names = c('INDEX_AGE'))
+add.vars = NULL
+if(length(dim(samples[['log_beta_period_contrast']])) > 2){
+  add.vars = c('INDEX_DIRECTION', add.vars)
+}
+log_period_contrast <- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'INDEX_AGE'), df_direction, df_community, df_period, df_age, names = c(add.vars, 'INDEX_AGE'))
 plot_2D_contrast(log_period_contrast, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
-log_period_contrast_source <- find_summary_output(samples, 'log_beta_period_contrast', c('AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, 
-                                                  names = c('INDEX_AGE'), operation = 'mean')
+log_period_contrast_source <- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, 
+                                                  names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
 plot_source_contrast(log_period_contrast_source, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
-log_period_contrast_recipient<- find_summary_output(samples, 'log_beta_period_contrast', c('AGE_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, 
-                                                  names = c('INDEX_AGE'), operation = 'mean')
+log_period_contrast_recipient<- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'AGE_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, 
+                                                  names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
 plot_recipient_contrast(log_period_contrast_recipient, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
 
 # community contrast
