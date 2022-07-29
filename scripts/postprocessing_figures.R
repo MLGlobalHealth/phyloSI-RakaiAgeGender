@@ -152,11 +152,15 @@ expected_contribution_age_source <-  find_summary_output(samples, 'log_lambda_la
 plot_contribution_age_source(expected_contribution_age_source, eligible_prop_age, outfile.figures,'Expected contribution to infection')
 
 # aggregated by agr group
-expected_contribution_age_group_source <-  find_summary_output(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age,transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME'))
+expected_contribution_age_group_source <-  find_summary_output(samples, 'log_lambda_latent',
+                                                               c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
+                                                               df_direction, df_community, df_period, df_age,transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_DIRECTION', 'AGE_GROUP_INFECTION.RECIPIENT'))
 plot_contribution_age_group(expected_contribution_age_group_source, outfile.figures,'Expected contribution to infection')
 
 # aggregated by agr group and classified
-expected_contribution_age_classification_source <-  find_summary_output(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, transform = 'exp',standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME'))
+expected_contribution_age_classification_source <-  find_summary_output(samples, 'log_lambda_latent',
+                                                                        c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
+                                                                        df_direction, df_community, df_period, df_age, transform = 'exp',standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_DIRECTION', 'AGE_GROUP_INFECTION.RECIPIENT'))
 plot_contribution_age_classification(expected_contribution_age_classification_source, outfile.figures,'Expected contribution to infection')
 
 
@@ -176,13 +180,12 @@ unsuppressed_prop_sex <- prepare_unsuppressed_proportion_by_round(eligible_count
 plot_contribution_sex_source_by_round(expected_contribution_sex_source_round, unsuppressed_prop_sex, outfile.figures, 'Expected contribution to infection')
 
 # age-specific contribution to transmission
-expected_contribution_age_source_round <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_TRANSMISSION.SOURCE'), 
+expected_contribution_age_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_TRANSMISSION.SOURCE'), 
                              df_direction, df_community, df_period, df_age, 
                              transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'ROUND', 'INDEX_DIRECTION'), 
                              log_offset_round = log_offset_round)
 unsuppressed_prop_age <- prepare_unsuppressed_proportion_by_round(eligible_count_round, c('ROUND', 'COMM', 'SEX', 'AGEYRS'), c('ROUND', 'COMM', 'SEX'))
 plot_contribution_age_source_by_round(expected_contribution_age_source_round, unsuppressed_prop_age, outfile.figures,'Expected contribution to infection')
-
 
 
 # aggregated by agr group
@@ -218,9 +221,11 @@ transmission_risk_round <- find_summary_output_by_round(samples, 'log_beta', c('
                                                         log_offset_round = log_offset_round, log_offset_name = 'log_INFECTED_NON_SUPPRESSED')
 plot_transmission_risk_age_source_by_round(transmission_risk_round, outfile.figures)
 
+
 #
 # median age of source
 #
+
 median_age_source <- find_median_age_source(samples, 'log_beta', df_age, df_direction, df_community, df_period)
 plot_median_age_source(median_age_source, outfile.figures)
 
