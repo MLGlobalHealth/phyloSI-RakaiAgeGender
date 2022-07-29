@@ -19,7 +19,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220726'
+  stan_model <- 'gp_220730a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -127,6 +127,7 @@ stop_observational_period <- df_round[round == 18, max_sample_date] #  "2019-05-
 cutoff_date <- df_round[round == 16, min_sample_date] #  "2013-07-08"
 stopifnot(start_observational_period <= cutoff_date & stop_observational_period >= cutoff_date)
 df_period <- make.df.period(start_observational_period, cutoff_date, stop_observational_period)
+df_round <- make.df.round(df_round, df_period)
 
 
 #

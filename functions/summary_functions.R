@@ -344,8 +344,10 @@ summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, d
   
   # summarise across time periods
   df <- melt.data.table(eligible_count_round, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'min_sample_date', 'max_sample_date', 'BEFORE_CUTOFF'))
-  df <- df[, list(count = sum(value)), by = c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF', 'variable')]
-  
+  df[, min.ROUND := min(ROUND), by ='BEFORE_CUTOFF' ]
+  df <- df[ROUND == min.ROUND]
+  setnames(df, 'value', 'count')
+
   # merge to period
   df <- merge(df, df_period, by = 'BEFORE_CUTOFF')
   
@@ -417,8 +419,7 @@ summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date,
   # summarise across time periods
   incidence_cases <- incidence_cases_round[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
                                                   INCIDENT_CASES_UB = sum(INCIDENT_CASES_UB), 
-                                                  INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB), 
-                                                  SUSCEPTIBLE = sum(SUSCEPTIBLE)), by = c('COMM', 'AGEYRS', 'SEX', 'BEFORE_CUTOFF')]
+                                                  INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB)), by = c('COMM', 'AGEYRS', 'SEX', 'BEFORE_CUTOFF')]
   # make period
   incidence_cases <- merge(incidence_cases, df_period, by = 'BEFORE_CUTOFF')
   
@@ -457,4 +458,13 @@ prepare_unsuppressed <- function(eligible_count){
   tmp <- merge(tmp, df_direction, by = 'IS_MF')
   tmp <- merge(tmp, df_community, by = 'COMM')
   tmp
+}
+
+make.df.round <- function(df_round, df_period){
+  
+  df_round[, INDEX_TIME := 0]
+  df_round[round == 15, INDEX_TIME := 1]
+  df_round[round %in% 16:18, INDEX_TIME := 2]
+  
+  return(df_round)
 }

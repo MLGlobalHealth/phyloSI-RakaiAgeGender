@@ -172,7 +172,10 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
   if('INDEX_AGE' %in% names(tmp1)){
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
     tmp1 <- merge(tmp1, df_age_aggregated, by = c('AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'))
-    
+  }
+  
+  if('INDEX_TIME' %in% names(tmp1)){
+    tmp1 <- merge(tmp1, df_round, by = 'INDEX_TIME')
   }
 
   if(!is.null(transform)){
