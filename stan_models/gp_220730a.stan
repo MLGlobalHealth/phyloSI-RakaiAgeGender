@@ -113,7 +113,6 @@ transformed parameters {
   vector[N_PER_GROUP] log_beta_direction[N_DIRECTION];
   vector[number_rows] log_beta_period[N_DIRECTION];
   vector[N_PER_GROUP] log_beta_period_contrast[N_DIRECTION];
-  vector[N_PER_GROUP] log_beta_direction_contrast;
   vector[N_PER_GROUP] log_beta_community_contrast;
   matrix[num_basis_rows,num_basis_columns] low_rank_gp_direction[N_DIRECTION]; 
   
@@ -129,7 +128,9 @@ transformed parameters {
     low_rank_gp_direction[i] = gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0,
               alpha_gp[i], rho_gp1[i], rho_gp2[i], z1[i]);
     log_beta_direction[i] = to_vector(((BASIS_ROWS') * low_rank_gp_direction[i] * BASIS_COLUMNS)');
-    log_beta_direction_contrast = rep_vector(log_beta_baseline_direction, N_PER_GROUP) + log_beta_direction[2];
+    if(i == 2){
+      log_beta_direction[i] = log_beta_direction[i] + rep_vector(log_beta_baseline_direction, N_PER_GROUP);
+    }
     
     // find period contrast
     log_beta_period[i] = BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]);
@@ -139,11 +140,7 @@ transformed parameters {
       for(k in 1:N_PERIOD){
         
         // add direction contrast
-        log_beta[i,j,k] += log_beta_direction[1];
-        
-        if(i ==2){
-          log_beta[i,j,k] += log_beta_direction_contrast;
-        }
+        log_beta[i,j,k] += log_beta_direction[i];
         
         // add community contrast
         if(j == 1){
