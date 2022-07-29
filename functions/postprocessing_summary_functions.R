@@ -173,10 +173,6 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
     tmp1 <- merge(tmp1, df_age_aggregated, by = c('AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'))
   }
-  
-  if('INDEX_TIME' %in% names(tmp1)){
-    tmp1 <- merge(tmp1, df_round, by = 'INDEX_TIME')
-  }
 
   if(!is.null(transform)){
     tmp1[, value := sapply(value, transform)]
@@ -218,6 +214,79 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
   
   return(tmp1)
 }
+
+find_summary_output_by_round <- function(samples, output, vars, df_direction, df_community, df_period, df_age, 
+                                         transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
+                                         log_offset_name = 'LOG_OFFSET'){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  tmp1 = as.data.table( reshape2::melt(samples[[output]]) )
+  if(!is.null(names)){
+    setnames(tmp1, 2:(length(names) + 1), names)
+  }else if(tmp1[, max(Var2)] == df_age[, max(INDEX_AGE)]){
+    setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
+  }else{
+    setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+  }
+  
+  if('INDEX_AGE' %in% names(tmp1)){
+    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+    tmp1 <- merge(tmp1, df_age_aggregated, by = c('AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'))
+  }
+  
+  if('INDEX_TIME' %in% names(tmp1)){
+    tmp1 <- merge(tmp1, df_round, by = 'INDEX_TIME', allow.cartesian=TRUE)
+    tmp1[, ROUND := paste0('R0', round)]
+  }
+  
+  if(!is.null(log_offset_round)){
+    tmp1 <- merge(tmp1, log_offset_round, by = c('ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY'))
+    tmp1[, value := value + get(log_offset_name)]
+  }
+  
+  if(!is.null(transform)){
+    tmp1[, value := sapply(value, transform)]
+  }
+  
+  #  sum force of infection
+  if(is.null(operation)){
+    tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
+  } else{
+    tmp1 <- tmp1[, list(value = sapply(value, operation)), by = c('iterations', vars)]
+  }
+  
+  # standardised
+  if(!is.null(standardised.vars)){
+    tmp1[, total_value := sum(value), by = c('iterations', standardised.vars)]
+    tmp1[, value := value / total_value]
+  }
+  
+  #summarise
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
+  tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
+  
+  
+  if('INDEX_DIRECTION' %in% vars)
+    tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
+  if('INDEX_COMMUNITY' %in% vars)
+    tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
+  if('INDEX_TIME' %in% vars)
+    tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+  if('INDEX_AGE' %in% vars)
+    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  
+  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')))
+  if(!is.null(standardised.vars)){
+    file = paste0(file, 'standardisedby_', tolower(paste0(gsub('INDEX_', '', standardised.vars), collapse = '_')))
+  }
+  file = paste0(file, '.rds')
+  saveRDS(tmp1, file)
+  
+  return(tmp1)
+}
+
 
 find_median_age_source <- function(samples, var, df_age, df_direction, df_community, df_period){
   
@@ -279,4 +348,12 @@ prepare_eligible_proportion <- function(eligible_count, vars, standardised.vars)
   tmp1[, type := 'Share in the census eligible individuals']
 }
 
+prepare_unsuppressed_proportion_by_round <- function(eligible_count_round, vars, standardised.vars){
+  tmp1 <- eligible_count_round[, list(count = sum(INFECTED_NON_SUPPRESSED)), by = vars]
+  tmp1[, M := count / sum(count), by = standardised.vars]
+  tmp1[, IS_MF := as.numeric(SEX == 'M')]
+  tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
+  tmp1 <- merge(tmp1, df_community, by = 'COMM')
 
+  tmp1[, type := 'Share in the unsuppressed HIV+ census eligible individuals']
+}

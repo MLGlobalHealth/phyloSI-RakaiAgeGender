@@ -539,6 +539,15 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-prevalence_proportion_round.png'), w = 7, h = 8)
   
+  # HIV+ census eligible count
+  ggplot(eligible_count_round, aes(x = AGEYRS)) +
+    geom_line(aes(y = INFECTED , col = SEX)) +
+    labs(y = 'Census eligible infected count', x = 'Age') +
+    facet_grid(ROUND~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_infected_round.png'), w = 7, h = 8)
+  
   # Susceptible census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
     geom_line(aes(y = SUSCEPTIBLE , col = SEX)) +
@@ -554,7 +563,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     geom_line(aes(y = M , col = SEX)) +
     geom_ribbon(aes(ymin = CL , ymax = CU , fill = SEX), alpha = 0.5) +
     geom_point(aes(y = PROP_NON_SUPPRESSED_EMPIRICAL , col = SEX), alpha = 0.5) +
-    labs(y = 'Number of incident cases', x = 'Age') +
+    labs(y = 'Proportion of unsupressed', x = 'Age') +
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')

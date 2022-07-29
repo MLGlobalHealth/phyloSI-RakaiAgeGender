@@ -468,3 +468,59 @@ make.df.round <- function(df_round, df_period){
   
   return(df_round)
 }
+
+find_log_offset_by_round <- function(stan_data, eligible_count_round, df_age, df_direction, df_community, df_period){
+  
+  eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
+  eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
+  
+  ROUNDS <- eligible_count_wide[, unique(ROUND)]
+  
+  res <- list(); index = 1
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in seq_along(ROUNDS)){
+        
+        .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+        .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM <- df_community[j, COMM]
+        .ROUND <- ROUNDS[k]
+        
+        log_offset = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
+        log_offset[, INDEX_DIRECTION := df_direction[i, INDEX_DIRECTION]]
+        log_offset[, INDEX_COMMUNITY := df_community[j, INDEX_COMMUNITY]]
+        log_offset[, ROUND := .ROUND]
+        
+        # add proportion of susceptible in recipient
+        tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & ROUND == .ROUND]
+        log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
+        
+        # add number of infected unsuppressed in source
+        tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & ROUND == .ROUND]
+        log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
+        
+        # add period in year
+        tmp <- df_round[paste0('R0', toupper(round)) == .ROUND]
+        log_offset[, PERIOD_SPAN := .year.diff(tmp[, max_sample_date], tmp[, min_sample_date])]
+        
+        # make log offset
+        log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
+        
+        # check the order of ages is correct
+        log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
+        stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_offset[, AGE_INFECTION.RECIPIENT])
+        stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_offset[, AGE_TRANSMISSION.SOURCE])
+        
+        # add to array
+        res[[index]] = log_offset
+        index = index + 1
+        
+      }
+    }
+  }
+  res <- do.call('rbind', res)
+  
+  res[, log_INFECTED_NON_SUPPRESSED := log(INFECTED_NON_SUPPRESSED)]
+  
+  return(res)
+}
