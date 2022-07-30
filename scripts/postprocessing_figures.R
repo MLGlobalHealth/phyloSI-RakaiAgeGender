@@ -77,6 +77,16 @@ susceptible_recipient <- prepare_susceptible_count(eligible_count)
 plot_PPC_augmented_recipient(predict_z_recipient, incidence_cases_recipient, susceptible_recipient, outfile.figures)
 
 
+# find log offset by round 
+log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, df_age, df_direction, df_community, df_period)
+predict_z_recipient_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'), 
+                                                           df_direction, df_community, df_period, df_age, 
+                                                           transform = 'exp', operation = function(x) rpois(1, sum(x)),
+                                                           log_offset_round = log_offset_round)
+incidence_cases_recipient_round <- prepare_incidence_cases(incidence_cases_round)
+susceptible_recipient_count <- prepare_susceptible_count(eligible_count_round)
+plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round, susceptible_recipient_count, outfile.figures)
+
 #
 # Total infected
 #
@@ -168,9 +178,6 @@ plot_contribution_age_classification(expected_contribution_age_classification_so
 #
 # Expected Contribution to transmission by round
 #
-
-# find log offset by round 
-log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, df_age, df_direction, df_community, df_period)
 
 # sex-specific contribution to transmission
 expected_contribution_sex_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND'), 

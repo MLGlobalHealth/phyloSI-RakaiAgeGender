@@ -254,6 +254,7 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
   if(is.null(operation)){
     tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
   } else{
+    tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
     tmp1 <- tmp1[, list(value = sapply(value, operation)), by = c('iterations', vars)]
   }
   
@@ -340,8 +341,13 @@ prepare_incidence_cases <- function(incidence_cases){
 
 prepare_susceptible_count <- function(eligible_count){
 
-  tmp <- copy(eligible_count[variable =='SUSCEPTIBLE'])
-  setnames(tmp, c('count', 'AGEYRS'), c('SUSCEPTIBLE', 'AGE_INFECTION.RECIPIENT'))
+  tmp <- copy(eligible_count)
+  if(!'SUSCEPTIBLE' %in%names(eligible_count)){
+    tmp <- tmp[variable =='SUSCEPTIBLE']
+    setnames(tmp, c('count'), c('SUSCEPTIBLE'))
+  }
+
+  setnames(tmp, c( 'AGEYRS'), c( 'AGE_INFECTION.RECIPIENT'))
   tmp[, IS_MF := as.numeric(SEX == 'F')]
   tmp <- merge(tmp, df_direction, by = 'IS_MF')
   tmp <- merge(tmp, df_community, by = 'COMM')
