@@ -557,6 +557,15 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_susceptible_round.png'), w = 7, h = 8)
   
+  eligible_count_round[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
+  ggplot(eligible_count_round, aes(x = AGEYRS)) +
+    geom_line(aes(y = PROP_SUSCEPTIBLE , col = ROUND)) +
+    labs(y = 'Proportion of susceptible among census eligible individuals', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_round.png'), w = 7, h = 8)
+  
   # proportion of unsuppressed
   tmp1 <- as.data.table(proportion_unsuppressed)[ROUND != 'R015' & !(COMM == 'fishing' & ROUND == 'R016')]
   ggplot(tmp1, aes(x = AGEYRS)) +
@@ -630,6 +639,15 @@ plot_data_by_period <- function(eligible_count, incidence_cases, proportion_samp
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_susceptible_period.png'), w = 7, h = 6)
+  
+  eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
+  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
+    geom_line(aes(y = PROP_SUSCEPTIBLE , col = PERIOD)) +
+    labs(y = 'Proportion of susceptible among census eligible individuals', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_period.png'), w = 7, h = 6)
   
   #HIV+ unsupressed census eligible count
   ggplot(eligible_count_wide, aes(x = AGEYRS)) +
