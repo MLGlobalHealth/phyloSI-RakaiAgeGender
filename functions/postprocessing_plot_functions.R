@@ -539,8 +539,7 @@ plot_median_age_source <- function(median_age_source, outdir){
     scale_x_continuous(expand = c(0,0)) + 
     scale_y_continuous(expand = c(0,0)) + 
     coord_cartesian(xlim = range_age_non_extended, ylim = range_age_non_extended) +
-    facet_grid(LABEL_DIRECTION~LABEL_COMMUNITY) +
-    ggtitle(contribution_age_classification_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])
+    facet_grid(LABEL_DIRECTION~LABEL_COMMUNITY) 
   
   ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeRecipient.png'), w = 7, h = 6)
   
