@@ -382,6 +382,18 @@ get_incidence_cases_round <- function(incidence, eligible_count_round){
   # merge to susceptible
   dir <- merge(incidence, eligible_count_round, by = c('COMM', 'AGEYRS', 'SEX', 'ROUND'))
   
+  # fill missing months
+  dir[ROUND == 'R015', max_sample_date := df_round[round == 16, min_sample_date -1]]
+  dir[ROUND == 'R016', max_sample_date := df_round[round == 17, min_sample_date -1]]
+  dir[ROUND == 'R017', max_sample_date := df_round[round == 18, min_sample_date -1]]
+  
+  # use same susceptible and incidene in round 14 than round 15
+  dir15 <- dir[ROUND == 'R015']
+  dir15[, ROUND := 'R014']
+  dir15[, min_sample_date := df_round[round == 14, min_sample_date]]
+  dir15[, max_sample_date := df_round[round == 15, min_sample_date - 1]]
+  dir <- rbind(dir, dir15)
+  
   # find length in years of each round
   dir[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
   
