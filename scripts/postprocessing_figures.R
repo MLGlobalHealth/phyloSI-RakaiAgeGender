@@ -122,7 +122,34 @@ plot_force_infection_age_group(force_infection_aggregated_age_group, outfile.fig
 force_infection_aggregated_age_classification <-  find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, transform = 'exp')
 plot_force_infection_age_classification(force_infection_aggregated_age_classification, outfile.figures)
 
+# compare to empirical
+force_infection_age_recipient <-  find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, transform = 'exp')
+force_infection_age_recipient_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'), 
+                                                          df_direction, df_community, df_period, df_age, transform = 'exp')
+crude_force_infection_age_recipient <- find_crude_force_infection_age_recipient(eligible_count, incidence_cases)
+crude_force_infection_age_recipient_round <- find_crude_force_infection_age_recipient_round(incidence_cases_round)
+plot_force_infection_age_recipient(force_infection_age_recipient, crude_force_infection_age_recipient, outfile.figures)
+plot_force_infection_age_recipient_by_round(force_infection_age_recipient_round, crude_force_infection_age_recipient_round, outfile.figures)
 
+# crude_force_infection_age_recipient_round[, INDEX_TIME := 0]
+# crude_force_infection_age_recipient_round[ROUND == 'R015', INDEX_TIME := 1]
+# crude_force_infection_age_recipient_round[ROUND == 'R016', INDEX_TIME := 2]
+# crude_force_infection_age_recipient_round[, type := 'byround']
+# crude_force_infection_age_recipient[, type := 'byperiod']
+# tmp <- rbind(crude_force_infection_age_recipient_round, crude_force_infection_age_recipient, fill=TRUE)
+# 
+# ggplot(tmp[COMM == 'inland'], aes(x = AGE_INFECTION.RECIPIENT)) + 
+#   geom_line(aes(y = INCIDENT_CASES/PERIOD_SPAN, col = type)) + 
+#   labs(x = 'Age', y = 'Force of infection received', fill = '') + 
+#   theme_bw() +
+#   facet_grid(INDEX_TIME~LABEL_DIRECTION) +
+#   theme(strip.background = element_rect(colour="white", fill="white"),
+#         strip.text = element_text(size = rel(1)),
+#         legend.position = 'bottom') +
+#   ggsci::scale_fill_npg() 
+# 
+# 
+# tmp[type == 'byround' & INDEX_TIME == 2]
 #
 # Contribution to transmission
 #
