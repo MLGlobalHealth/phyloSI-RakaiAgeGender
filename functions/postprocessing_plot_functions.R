@@ -548,21 +548,23 @@ plot_median_age_source <- function(median_age_source, outdir){
   
 }
 
-plot_PPC_augmented_recipient <- function(predict_z, incidence_cases_recipient, outdir){
+plot_PPC_augmented_recipient <- function(predict_z, incidence_cases_recipient, susceptible_recipient, outdir){
   
-  predict_z <- merge(predict_z, incidence_cases_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, INDEX_TIME, AGE_INFECTION.RECIPIENT, SUSCEPTIBLE)], 
+  predict_z <- merge(predict_z, incidence_cases_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, INDEX_TIME, AGE_INFECTION.RECIPIENT, INCIDENT_CASES, INCIDENT_CASES_UB, INCIDENT_CASES_LB)], 
                      by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'))
+  predict_z <- merge(predict_z, susceptible_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, INDEX_TIME, AGE_INFECTION.RECIPIENT, SUSCEPTIBLE)], 
+                     by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'))
+  
   communities <- predict_z[, unique(COMM)]
   for(i in seq_along(communities)){
     
     tmp <- predict_z[ COMM == communities[i]]
-    tmp1 <- incidence_cases_recipient[ LABEL_COMMUNITY == tmp[, unique(LABEL_COMMUNITY)]]
-    
+
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M)) + 
       geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
-      geom_point(data = tmp1, aes(y = INCIDENT_CASES), col = 'darkred') +
-      geom_errorbar(data = tmp1, aes(ymax = INCIDENT_CASES_UB, ymin = INCIDENT_CASES_LB), col = 'darkred', width = 0.2) +
+      geom_point(aes(y = INCIDENT_CASES), col = 'darkred') +
+      geom_errorbar(aes(ymax = INCIDENT_CASES_UB, ymin = INCIDENT_CASES_LB), col = 'darkred', width = 0.2) +
       theme_bw() + 
       labs(x = 'Age at infection recipient', y = 'Augmented transmission events (Z)') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
@@ -576,8 +578,8 @@ plot_PPC_augmented_recipient <- function(predict_z, incidence_cases_recipient, o
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M/(PERIOD_SPAN*SUSCEPTIBLE))) +
       geom_ribbon(aes(ymin = CL/(PERIOD_SPAN*SUSCEPTIBLE), ymax = CU/(PERIOD_SPAN*SUSCEPTIBLE)), alpha = 0.5) +
-      geom_point(data = tmp1, aes(y = INCIDENT_CASES/(PERIOD_SPAN*SUSCEPTIBLE)), col = 'darkred') +
-      geom_errorbar(data = tmp1, aes(ymax = INCIDENT_CASES_UB/(PERIOD_SPAN*SUSCEPTIBLE), ymin = INCIDENT_CASES_LB/(PERIOD_SPAN*SUSCEPTIBLE)), col = 'darkred', width = 0.2) +
+      geom_point(aes(y = INCIDENT_CASES/(PERIOD_SPAN*SUSCEPTIBLE)), col = 'darkred') +
+      geom_errorbar(aes(ymax = INCIDENT_CASES_UB/(PERIOD_SPAN*SUSCEPTIBLE), ymin = INCIDENT_CASES_LB/(PERIOD_SPAN*SUSCEPTIBLE)), col = 'darkred', width = 0.2) +
       theme_bw() + 
       labs(x = 'Age at infection recipient', y = 'Augmented transmission events (Z) per PY') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 

@@ -73,7 +73,8 @@ plot_PPC_observed_recipient(predict_y_recipient, count_data, outfile.figures)
 predict_z_source <- find_summary_output(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age)
 predict_z_recipient <- find_summary_output(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age)
 incidence_cases_recipient <- prepare_incidence_cases(incidence_cases)
-plot_PPC_augmented_recipient(predict_z_recipient, incidence_cases_recipient, outfile.figures)
+susceptible_recipient <- prepare_susceptible_count(eligible_count)
+plot_PPC_augmented_recipient(predict_z_recipient, incidence_cases_recipient, susceptible_recipient, outfile.figures)
 
 
 #

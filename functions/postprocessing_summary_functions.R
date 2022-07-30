@@ -338,6 +338,16 @@ prepare_incidence_cases <- function(incidence_cases){
   tmp
 }
 
+prepare_susceptible_count <- function(eligible_count){
+
+  tmp <- copy(eligible_count[variable =='SUSCEPTIBLE'])
+  setnames(tmp, c('count', 'AGEYRS'), c('SUSCEPTIBLE', 'AGE_INFECTION.RECIPIENT'))
+  tmp[, IS_MF := as.numeric(SEX == 'F')]
+  tmp <- merge(tmp, df_direction, by = 'IS_MF')
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  tmp
+}
+
 prepare_eligible_proportion <- function(eligible_count, vars, standardised.vars){
   tmp1 <- eligible_count[variable == 'ELIGIBLE', list(count = sum(count)), by = vars]
   tmp1[, M := count / sum(count), by = standardised.vars]
