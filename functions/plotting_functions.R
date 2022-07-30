@@ -579,6 +579,15 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round.png'), w = 7, h = 8)
   
+  ggplot(eligible_count_round, aes(x = AGEYRS)) +
+    geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = ROUND)) +
+    geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = ROUND), alpha = 0.5) +
+    labs(y = 'Number of HIV+ unsupressed census eligible', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round2.png'), w = 7, h = 5)
+  
   # incidence rate per person per round
   ggplot(incidence_cases_round, aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE* ROUND_SPANYRS, col = SEX)) +

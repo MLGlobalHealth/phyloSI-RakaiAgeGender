@@ -477,7 +477,7 @@ plot_transmission_risk_sex_source_by_round <- function(transmission_risk_sex_sou
   tmp[, SEX := substr(LABEL_DIRECTION, 1, 1) ]
   
   p <- ggplot(tmp, aes(x = ROUND)) + 
-    geom_bar(aes(y = M, alpha = M, fill = SEX), stat = 'identity', position = "identity") + 
+    geom_bar(aes(y = M, fill = SEX), stat = 'identity', position = "identity") + 
     geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.2, col = 'grey40') + 
     labs(x = '', y = 'Exerted transmission risk per year', 
          col = '', alpha = '', fill ='') + 
@@ -506,7 +506,7 @@ plot_transmission_risk_age_source_by_round <- function(transmission_risk_round, 
 
     p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
       geom_line(aes(y = M, col = SEX)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX), width = 0.2) + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX), alpha = 0.5 ) + 
       labs(x = 'Age source', y = 'Exerted transmission risk per year', 
            col = '',  fill ='') + 
       theme_bw() +
