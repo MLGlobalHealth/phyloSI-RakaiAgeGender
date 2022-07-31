@@ -153,6 +153,7 @@ incidence_cases_round <- get_incidence_cases_round(incidence, eligible_count_rou
 incidence_cases <- summarise_incidence_cases_period(incidence_cases_round, cutoff_date, df_period)
 
 
+
 #
 # Find number of infections by sex, age, time and community
 #
@@ -279,6 +280,11 @@ if(1){
   # plot count eligible susceptible / infected / infected unsuppressed and incident cases
   plot_data_by_round(eligible_susceptible_count, proportion_unsuppressed, eligible_count_round, incidence_cases_round, outfile.figures)
   plot_data_by_period(eligible_count, incidence_cases, proportion_sampling, outfile.figures)
+  
+  # plot crude force of infection 
+  crude_force_infection_age_recipient <- find_crude_force_infection_age_recipient(eligible_count, incidence_cases)
+  crude_force_infection_age_recipient_round <- find_crude_force_infection_age_recipient_round(incidence_cases_round)
+  plot_crude_force_infection(crude_force_infection_age_recipient, crude_force_infection_age_recipient_round, outfile.figures)
   
   # plot pair from chains
   # plot_pairs_infection_dates(pairs.all, outfile.figures)
