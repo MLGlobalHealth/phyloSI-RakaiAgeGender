@@ -526,10 +526,18 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_count_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_count_round_sex.png'), w = 7, h = 8)
+  
+  ggplot(eligible_count_round, aes(x = AGEYRS)) +
+    geom_line(aes(y = ELIGIBLE, col = ROUND)) +
+    labs(y = 'Census eligible count', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_count_round.png'), w = 7, h = 6)
   
   # Prevalence proportion
-  ggplot(eligible_susceptible_count, aes(x = AGEYRS)) +
+  ggplot(subset(eligible_susceptible_count, ROUND !='15S'), aes(x = AGEYRS)) +
     geom_point(aes(y =PREVALENCE_EMPIRICAL, col = SEX)) +
     geom_line(aes(y =PREVALENCE_PROPORTION, col = SEX)) +
     geom_ribbon(aes(ymin =PREVALENCE_PROPORTION_CL, ymax = PREVALENCE_PROPORTION_CU, fill = SEX), alpha = 0.5) +
@@ -537,7 +545,17 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-prevalence_proportion_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_prop_infected_round_sex.png'), w = 7, h = 8)
+  
+  ggplot(subset(eligible_susceptible_count, ROUND !='15S'), aes(x = AGEYRS)) +
+    # geom_point(aes(y =PREVALENCE_EMPIRICAL, col = SEX)) +
+    geom_line(aes(y =PREVALENCE_PROPORTION, col = ROUND)) +
+    # geom_ribbon(aes(ymin =PREVALENCE_PROPORTION_CL, ymax = PREVALENCE_PROPORTION_CU, fill = SEX), alpha = 0.5) +
+    labs(y = 'Prevlence among participant', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_prop_infected_round.png'), w = 7, h = 6)
   
   # HIV+ census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
@@ -546,7 +564,15 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_infected_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_infected_round_sex.png'), w = 7, h = 8)
+  
+  ggplot(eligible_count_round, aes(x = AGEYRS)) +
+    geom_line(aes(y = INFECTED , col = ROUND)) +
+    labs(y = 'Census eligible infected count', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_infected_round.png'), w = 7, h = 6)
   
   # Susceptible census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
@@ -555,7 +581,15 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_susceptible_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_susceptible_round_sex.png'), w = 7, h = 8)
+  
+  ggplot(eligible_count_round, aes(x = AGEYRS)) +
+    geom_line(aes(y = SUSCEPTIBLE , col = ROUND)) +
+    labs(y = 'Census eligible susceptible count', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_susceptible_round.png'), w = 7, h = 6)
   
   eligible_count_round[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
@@ -564,11 +598,11 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_round.png'), w = 7, h = 6)
   
   # proportion of unsuppressed
-  tmp1 <- as.data.table(proportion_unsuppressed)[ROUND != 'R015' & !(COMM == 'fishing' & ROUND == 'R016')]
-  ggplot(tmp1, aes(x = AGEYRS)) +
+  tmp <- proportion_unsuppressed[ROUND != 'R015' & !(ROUND == 'R016' & COMM == 'fishing')]
+  ggplot(proportion_unsuppressed, aes(x = AGEYRS)) +
     geom_line(aes(y = M , col = SEX)) +
     geom_ribbon(aes(ymin = CL , ymax = CU , fill = SEX), alpha = 0.5) +
     geom_point(aes(y = PROP_NON_SUPPRESSED_EMPIRICAL , col = SEX), alpha = 0.5) +
@@ -576,7 +610,16 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-unsuppressed_proportion_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_prop_unsuppressed_round_sex.png'), w = 7, h = 8)
+  
+  ggplot(proportion_unsuppressed, aes(x = AGEYRS)) +
+    geom_line(aes(y = M , col = ROUND)) +
+    # geom_ribbon(aes(ymin = CL , ymax = CU , fill = SEX), alpha = 0.5) +
+    labs(y = 'Proportion of unsupressed', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_prop_unsuppressed_round.png'), w = 7, h = 6)
   
   #HIV+ unsupressed census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
@@ -586,56 +629,80 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round_sex.png'), w = 7, h = 8)
   
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
     geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = ROUND)) +
-    geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = ROUND), alpha = 0.5) +
+    # geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = ROUND), alpha = 0.5) +
     labs(y = 'Number of HIV+ unsupressed census eligible', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round2.png'), w = 7, h = 5)
+  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round.png'), w = 7, h = 6)
   
   # incidence rate per person per round
-  ggplot(incidence_cases_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENCE* ROUND_SPANYRS, col = SEX)) +
-    geom_ribbon(aes(ymin = LB* ROUND_SPANYRS, ymax = UB* ROUND_SPANYRS, fill = SEX),  alpha = 0.5) +
+  tmpround <- copy(incidence_cases_round)
+  tmpround[, INCIDENCE := INCIDENCE* ROUND_SPANYRS]
+  tmpround[, type := 'per round']
+  tmp <- copy(incidence_cases_round)
+  tmp[, type := 'per year']
+  tmp <- rbind(tmp, tmpround)
+  ggplot(tmp, aes(x = AGEYRS)) +
+    geom_line(aes(y = INCIDENCE, col = ROUND, linetype = type)) +
+    # geom_ribbon(aes(ymin = LB * ROUND_SPANYRS, ymax = UB* ROUND_SPANYRS, fill = SEX),  alpha = 0.5) +
     labs(y = 'Incidence rate per 1 person per round', x = 'Age') +
-    facet_grid(ROUND~COMM, label = 'label_both') +
+    facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 6)
   
   # incidence cases
   ggplot(incidence_cases_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENT_CASES , col = SEX)) +
-    geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
-    labs(y = 'Number of incident cases', x = 'Age') +
-    facet_grid(ROUND~COMM, label = 'label_both') +
+    geom_line(aes(y = INCIDENT_CASES , col = ROUND)) +
+    # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
+    labs(y = 'Number of incident cases per round', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 8)
+  ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 6)
 }
 
 plot_data_by_period <- function(eligible_count, incidence_cases, proportion_sampling, outdir){
   
-  eligible_count_wide <- dcast.data.table(eligible_count, SEX + COMM + AGEYRS + BEFORE_CUTOFF + PERIOD ~ variable, value.var = 'count')
+  eligible_count_wide <- dcast.data.table(eligible_count, SEX + COMM + AGEYRS + BEFORE_CUTOFF + PERIOD + PERIOD_SPAN + INDEX_TIME ~ variable, value.var = 'count')
   
   # Census eligible count 
   ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = ELIGIBLE, col = SEX)) +
+    geom_line(aes(y = ELIGIBLE, col = PERIOD)) +
     labs(y = 'Census eligible count', x = 'Age') +
-    facet_grid(PERIOD~COMM, label = 'label_both') +
+    facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_count_period.png'), w = 7, h = 6)
   
+  # Infected 
+  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
+    geom_line(aes(y = INFECTED, col = PERIOD)) +
+    labs(y = 'Census eligible infected', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_infected_period.png'), w = 7, h = 6)
+  
+  eligible_count_wide[, PROP_INFECTED := INFECTED / ELIGIBLE]
+  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
+    geom_line(aes(y = PROP_INFECTED, col = PERIOD)) +
+    labs(y = 'Proportion of infected among census eligible', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_prop_infected_period.png'), w = 7, h = 6)
+  
   # Susceptible census eligible count
   ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = SUSCEPTIBLE , col = SEX)) +
+    geom_line(aes(y = SUSCEPTIBLE , col = PERIOD)) +
     labs(y = 'Census eligible susceptible count', x = 'Age') +
-    facet_grid(PERIOD~COMM, label = 'label_both') +
+    facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_susceptible_period.png'), w = 7, h = 6)
@@ -651,24 +718,34 @@ plot_data_by_period <- function(eligible_count, incidence_cases, proportion_samp
   
   #HIV+ unsupressed census eligible count
   ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = SEX)) +
-    geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX), alpha = 0.5) +
-    labs(y = 'Number of HIV+ unsupressed census eligible', x = 'Age') +
-    facet_grid(PERIOD~COMM, label = 'label_both') +
+    geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = PERIOD)) +
+    # geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX), alpha = 0.5) +
+    labs(y = 'Number of HIV+ unsupressed census eligible infected', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_period.png'), w = 7, h = 6)
   
+  eligible_count_wide[, PROP_UNSUPPRESSED := INFECTED_NON_SUPPRESSED / INFECTED]
+  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
+    geom_line(aes(y = PROP_UNSUPPRESSED , col = PERIOD)) +
+    labs(y = 'Proportion of unsuppressed among census eligible infected', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-data-census_eligible_prop_unsuppressed_period.png'), w = 7, h = 6)
+  
   # incidence cases
   ggplot(incidence_cases, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENT_CASES , col = SEX)) +
-    geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
+    geom_line(aes(y = INCIDENT_CASES , col = PERIOD)) +
+    # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
     labs(y = 'Number of incident cases', x = 'Age') +
-    facet_grid(PERIOD~COMM, label = 'label_both') +
+    facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-incidence_case_period.png'), w = 7, h = 6)
   
+  # proportion sampling
   ggplot(proportion_sampling, aes(x = AGEYRS)) +
     geom_line(aes(y = prop_sampling , col = SEX)) +
     labs(y = 'Probability of observing a transmission event', x = 'Age') +
@@ -718,3 +795,39 @@ plot_offset <- function(stan_data, outdir){
     labs(x=  'Age at infection recipient', y = 'total transmission events') 
   ggsave(paste0(outdir, '-offset-total_count.png'), w = 7, h = 5)
 }
+
+plot_crude_force_infection <- function(crude_force_infection_age_recipient, crude_force_infection_age_recipient_round, outdir){
+  
+  ggplot(crude_force_infection_age_recipient, aes(x = AGE_INFECTION.RECIPIENT)) +
+    geom_line(aes(y = CRUDE_FOI, col = PERIOD)) +
+    labs(x = 'Age of recipient', y = 'Crude force of infection received', fill = '') +
+    theme_bw() +
+    facet_grid(COMM~LABEL_DIRECTION) +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    ggsci::scale_fill_npg()
+  ggsave(paste0(outdir, '-data-crude_force_infection_period.png'), w = 7, h = 6)
+  
+  ggplot(crude_force_infection_age_recipient_round, aes(x = AGE_INFECTION.RECIPIENT)) +
+    geom_line(aes(y = CRUDE_FOI, col = ROUND)) +
+    labs(x = 'Age of recipient', y = 'Crude force of infection received', fill = '') +
+    theme_bw() +
+    facet_grid(COMM~LABEL_DIRECTION) +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'bottom') +
+    ggsci::scale_fill_npg()
+  ggsave(paste0(outdir, '-data-crude_force_infection_round.png'), w = 7, h = 6)
+  
+  
+}
+
+
+
+
+
+
+
+
+

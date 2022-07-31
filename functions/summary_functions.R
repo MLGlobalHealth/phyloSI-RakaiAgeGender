@@ -26,14 +26,15 @@ make.time.since.infection <- function(time.since.infection)
 }
 
 make.df.period <- function(start_observational_period, cutoff_date, stop_observational_period){
-  data.table(PERIOD = c(paste0(format(start_observational_period, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
+  tmp <- data.table(PERIOD = c(paste0(format(start_observational_period, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
                                      paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period, '%b %Y'))), 
              BEFORE_CUTOFF = c(T, F), 
              INDEX_TIME = 1:2, 
-             PERIOD_SPAN = c(.year.diff(cutoff_date-1, start_observational_period), 
+             PERIOD_SPAN = c(.year.diff(cutoff_date, start_observational_period), 
                              .year.diff(stop_observational_period, cutoff_date)))
   
-  
+  stopifnot(tmp[, sum(PERIOD_SPAN)] == .year.diff(stop_observational_period, start_observational_period))
+  return(tmp)
 }
 
 find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate){
@@ -309,10 +310,25 @@ get.age.aggregated.map <- function(age_aggregated){
   return(df_age_aggregated)
 }
 
-add_infected_unsuppressed <- function(eligible_susceptible_count, proportion_non_suppressed, df_round, start_observational_period, stop_observational_period){
+add_infected_unsuppressed <- function(eligible_susceptible_count, proportion_unsuppressed, df_round, start_observational_period, stop_observational_period){
   
-  # select variabel
+  # use round 15 for round 14 for eligible count
   di <- as.data.table(eligible_susceptible_count)
+  di15 <- di[ROUND == '15']
+  di15[, ROUND := '14']
+  di <- rbind(di15, di )
+  
+  #use round 17 for round 14:16 for proportion unsupressed
+  pu <- as.data.table(proportion_unsuppressed)
+  rounds_fill <- c('R014')
+  pu <- pu[!ROUND %in% rounds_fill]
+  for(round in rounds_fill){
+    pu15 <- pu[ROUND == 'R015']
+    pu15[, ROUND := round]
+    pu <- rbind(pu15, pu)
+  }
+    
+  # select variabel
   di <- di[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE, SUSCEPTIBLE)]
   
   # keep inside observational period
@@ -324,9 +340,11 @@ add_infected_unsuppressed <- function(eligible_susceptible_count, proportion_non
   # get infected
   di[, INFECTED := ELIGIBLE - SUSCEPTIBLE]
   
-  # get infected non suppressed
+  # find proportion of unsuppressed by round
   di[, ROUND := paste0('R0', ROUND)]
-  df <- merge(di, proportion_non_suppressed, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  df <- merge(di, pu, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  
+  # get infected non suppressed
   df[, INFECTED_NON_SUPPRESSED := INFECTED * M]
   df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * CL]
   df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * CU]
@@ -340,18 +358,55 @@ add_infected_unsuppressed <- function(eligible_susceptible_count, proportion_non
 summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, df_period){
   
   # find time intervals
-  eligible_count_round[, BEFORE_CUTOFF := max_sample_date < cutoff_date]
+  eligible_count_round[, BEFORE_CUTOFF := max_sample_date <= cutoff_date]
   
   # summarise across time periods
-  df <- melt.data.table(eligible_count_round, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'min_sample_date', 'max_sample_date', 'BEFORE_CUTOFF'))
-  df[, min.ROUND := min(ROUND), by ='BEFORE_CUTOFF' ]
-  df <- df[ROUND == min.ROUND]
-  setnames(df, 'value', 'count')
-
-  # merge to period
-  df <- merge(df, df_period, by = 'BEFORE_CUTOFF')
+  df <- melt.data.table(eligible_count_round, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'min_sample_date', 'max_sample_date', 'BEFORE_CUTOFF', 'INDEX_TIME'))
   
-  return(df)
+  # fill missing months
+  df[ROUND == 'R014', max_sample_date := df_round[round == 15, min_sample_date]]
+  df[ROUND == 'R015', max_sample_date := df_round[round == 16, min_sample_date]]
+  df[ROUND == 'R016', max_sample_date := df_round[round == 17, min_sample_date]]
+  df[ROUND == 'R017', max_sample_date := df_round[round == 18, min_sample_date]]
+  
+  # find length in years of each round
+  df[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
+  
+  # check that the lengh corresponds to the one of the period
+  tmp <- unique(df[, .(ROUND, min_sample_date, max_sample_date, ROUND_SPANYRS)][order(ROUND)])
+  tmp[, round := (gsub('R0(.+)', '\\1', ROUND))]
+  tmp <- merge(tmp, df_round, by = 'round')
+  tmp <- tmp[, list(PERIOD_SPAN_WITH_ROUND = sum(ROUND_SPANYRS)), by = 'INDEX_TIME']
+  tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
+  stopifnot(tmp[, all(PERIOD_SPAN == PERIOD_SPAN_WITH_ROUND)])
+  
+  # find weight of every round in the period 
+  tmp <- unique(df[, .(ROUND, ROUND_SPANYRS, BEFORE_CUTOFF)])
+  tmp <- tmp[, list(WEIGHT_ROUND = ROUND_SPANYRS / sum(ROUND_SPANYRS),
+                    ROUND = ROUND), by = 'BEFORE_CUTOFF']
+  df <- merge(df, tmp, by = c('BEFORE_CUTOFF', 'ROUND'))
+  
+  # find variable over period 
+  dfw <- df[, list(value = sum(value * WEIGHT_ROUND)), by = c('BEFORE_CUTOFF', 'SEX', 'COMM', 'AGEYRS', 'variable')]
+  
+  # plot
+  if(0){
+    tmp <- copy(dfw)
+    tmp[, ROUND := 'average']
+    tmp <- rbind(tmp, df, fill = T)
+    
+    tmp1 <- tmp[COMM == 'inland' & SEX == 'M' & variable %in% c('ELIGIBLE', 'SUSCEPTIBLE', 'INFECTED', 'INFECTED_NON_SUPPRESSED')]
+    ggplot(tmp1, aes(x = AGEYRS, y = value))  +
+      geom_line(aes(col = ROUND)) + 
+      facet_grid(BEFORE_CUTOFF~variable)
+  }
+  
+  setnames(dfw, 'value', 'count')
+  
+  # merge to period
+  dfw <- merge(dfw, df_period, by = 'BEFORE_CUTOFF')
+  
+  return(dfw)
 }
 
 get_incidence_cases_round <- function(incidence, eligible_count_round){
@@ -383,19 +438,21 @@ get_incidence_cases_round <- function(incidence, eligible_count_round){
   dir <- merge(incidence, eligible_count_round, by = c('COMM', 'AGEYRS', 'SEX', 'ROUND'))
   
   # fill missing months
-  dir[ROUND == 'R015', max_sample_date := df_round[round == 16, min_sample_date -1]]
-  dir[ROUND == 'R016', max_sample_date := df_round[round == 17, min_sample_date -1]]
-  dir[ROUND == 'R017', max_sample_date := df_round[round == 18, min_sample_date -1]]
-  
-  # use same susceptible and incidene in round 14 than round 15
-  dir15 <- dir[ROUND == 'R015']
-  dir15[, ROUND := 'R014']
-  dir15[, min_sample_date := df_round[round == 14, min_sample_date]]
-  dir15[, max_sample_date := df_round[round == 15, min_sample_date - 1]]
-  dir <- rbind(dir, dir15)
+  dir[ROUND == 'R014', max_sample_date := df_round[round == 15, min_sample_date]]
+  dir[ROUND == 'R015', max_sample_date := df_round[round == 16, min_sample_date]]
+  dir[ROUND == 'R016', max_sample_date := df_round[round == 17, min_sample_date]]
+  dir[ROUND == 'R017', max_sample_date := df_round[round == 18, min_sample_date]]
   
   # find length in years of each round
   dir[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
+  
+  # check that the lengh corresponds to the one of the period
+  tmp <- unique(dir[, .(ROUND, min_sample_date, max_sample_date, ROUND_SPANYRS)][order(ROUND)])
+  tmp[, round := (gsub('R0(.+)', '\\1', ROUND))]
+  tmp <- merge(tmp, df_round, by = 'round')
+  tmp <- tmp[, list(PERIOD_SPAN_WITH_ROUND = sum(ROUND_SPANYRS)), by = 'INDEX_TIME']
+  tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
+  stopifnot(tmp[, all(PERIOD_SPAN == PERIOD_SPAN_WITH_ROUND)])
   
   # find incident cases
   dir[, INCIDENT_CASES:= SUSCEPTIBLE * ROUND_SPANYRS * INCIDENCE]
@@ -426,7 +483,7 @@ get_incidence_cases_round <- function(incidence, eligible_count_round){
 summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date, df_period){
   
   # find time intervals
-  incidence_cases_round[, BEFORE_CUTOFF := max_sample_date < cutoff_date]
+  incidence_cases_round[, BEFORE_CUTOFF := max_sample_date <= cutoff_date]
   
   # summarise across time periods
   incidence_cases <- incidence_cases_round[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
@@ -475,7 +532,7 @@ prepare_unsuppressed <- function(eligible_count){
 make.df.round <- function(df_round, df_period){
   
   df_round[, INDEX_TIME := 0]
-  df_round[round == 15, INDEX_TIME := 1]
+  df_round[round%in%14:15, INDEX_TIME := 1]
   df_round[round %in% 16:18, INDEX_TIME := 2]
   
   return(df_round)
@@ -535,4 +592,59 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round, df_age, df
   res[, log_INFECTED_NON_SUPPRESSED := log(INFECTED_NON_SUPPRESSED)]
   
   return(res)
+}
+
+
+find_crude_force_infection_age_recipient <- function(eligible_count, incidence_cases){
+  
+  # find number of infector and prop susceptible
+  eligible_count_wide <- dcast.data.table(eligible_count, SEX + COMM + AGEYRS + BEFORE_CUTOFF + PERIOD + PERIOD_SPAN + INDEX_TIME ~ variable, value.var = 'count')
+  eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
+  tmp <- eligible_count_wide[, list(TOTAL_INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = c('SEX', 'COMM', 'PERIOD')]
+  tmp[, SEX1 := 'M']
+  tmp[SEX == 'M', SEX1 := 'F']
+  set(tmp, NULL, 'SEX', NULL)
+  setnames(tmp, 'SEX1', 'SEX')
+  tmp <- merge(eligible_count_wide, tmp, by = c('SEX', 'COMM', 'PERIOD'))
+  
+  # find incidence cases
+  tmp <- merge(tmp, incidence_cases, by = c('SEX', 'COMM', 'PERIOD', 'BEFORE_CUTOFF', 'AGEYRS', 'INDEX_TIME', 'PERIOD_SPAN'))
+  
+  # find crude foi
+  tmp[, CRUDE_FOI := INCIDENT_CASES / (PROP_SUSCEPTIBLE * TOTAL_INFECTED_NON_SUPPRESSED * PERIOD_SPAN)]
+  
+  # last add
+  setnames(tmp, c( 'AGEYRS'), c( 'AGE_INFECTION.RECIPIENT'))
+  tmp[, IS_MF := as.numeric(SEX == 'F')]
+  tmp <- merge(tmp, df_direction, by = 'IS_MF')
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  
+  return(tmp)
+}
+
+find_crude_force_infection_age_recipient_round <- function(incidence_cases_round){
+  
+  # find number of infector and prop susceptible
+  eligible_count_wide <- copy(incidence_cases_round)
+  eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
+  tmp <- eligible_count_wide[, list(TOTAL_INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = c('SEX', 'COMM', 'ROUND')]
+  tmp[, SEX1 := 'M']
+  tmp[SEX == 'M', SEX1 := 'F']
+  set(tmp, NULL, 'SEX', NULL)
+  setnames(tmp, 'SEX1', 'SEX')
+  tmp <- merge(eligible_count_wide, tmp, by = c('SEX', 'COMM', 'ROUND'))
+  
+  # find incidence cases
+  tmp[ , PERIOD_SPAN := .year.diff(max_sample_date, min_sample_date) ]
+  
+  # find crude foi
+  tmp[, CRUDE_FOI := INCIDENT_CASES / (PROP_SUSCEPTIBLE * TOTAL_INFECTED_NON_SUPPRESSED * PERIOD_SPAN)]
+  
+  # last add
+  setnames(tmp, c( 'AGEYRS'), c( 'AGE_INFECTION.RECIPIENT'))
+  tmp[, IS_MF := as.numeric(SEX == 'F')]
+  tmp <- merge(tmp, df_direction, by = 'IS_MF')
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  
+  return(tmp)
 }

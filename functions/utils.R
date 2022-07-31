@@ -62,7 +62,7 @@ print.which.NA <- function(dt,regex='', name='dt')
 {
   if (!is.Date(x)) {x <- as.Date(x, format = '%Y-%m-%d')}
   if (!is.Date(y)) {y <- as.Date(y, format = '%Y-%m-%d')}
-  round(lubridate::time_length(difftime(x, y),"years"),1)
+  lubridate::time_length(difftime(x, y),"years")
 }
 
 .month.diff <- function(x, y)
