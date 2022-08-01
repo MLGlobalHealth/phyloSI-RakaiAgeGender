@@ -601,7 +601,6 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
   ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_round.png'), w = 7, h = 6)
   
   # proportion of unsuppressed
-  tmp <- proportion_unsuppressed[ROUND != 'R015' & !(ROUND == 'R016' & COMM == 'fishing')]
   ggplot(proportion_unsuppressed, aes(x = AGEYRS)) +
     geom_line(aes(y = M , col = SEX)) +
     geom_ribbon(aes(ymin = CL , ymax = CU , fill = SEX), alpha = 0.5) +

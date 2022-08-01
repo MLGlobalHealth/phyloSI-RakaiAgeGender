@@ -648,3 +648,26 @@ find_crude_force_infection_age_recipient_round <- function(incidence_cases_round
   
   return(tmp)
 }
+
+prepare.proportion.unsuppresed <- function(proportion_unsuppressed){
+  
+  # use round 15 for round 16
+  proportion_unsuppressed <- proportion_unsuppressed[!ROUND %in% c('R016', 'R015S')]
+  proportion_unsuppressed15 <- proportion_unsuppressed[ROUND == 'R015']
+  proportion_unsuppressed15[, ROUND := 'R016']
+  proportion_unsuppressed <- rbind(proportion_unsuppressed, proportion_unsuppressed15)
+  proportion_unsuppressed <- proportion_unsuppressed[order(ROUND)]
+  
+  if(0){
+    # plot
+    ggplot(proportion_unsuppressed, aes(x = AGEYRS)) + 
+      geom_point(aes(y = PROP_NON_SUPPRESSED_EMPIRICAL, col = ROUND), alpha = 0.25) +
+      geom_line(aes(y = M, col = ROUND)) + 
+      # geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX), alpha = 0.5) + 
+      facet_grid(COMM~SEX)+
+      theme_bw() + 
+      theme(legend.position='bottom')
+  }
+  
+  return(proportion_unsuppressed)
+}
