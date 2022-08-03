@@ -640,27 +640,21 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
   ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round.png'), w = 7, h = 6)
   
   # incidence rate per person per round
-  tmpround <- copy(incidence_cases_round)
-  tmpround[, INCIDENCE := INCIDENCE* ROUND_SPANYRS]
-  tmpround[, type := 'per round']
-  tmp <- copy(incidence_cases_round)
-  tmp[, type := 'per year']
-  tmp <- rbind(tmp, tmpround)
-  ggplot(tmp, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENCE, col = ROUND, linetype = type)) +
+  ggplot(incidence_cases_round, aes(x = AGEYRS)) +
+    geom_line(aes(y = INCIDENCE, col = ROUND)) +
     # geom_ribbon(aes(ymin = LB * ROUND_SPANYRS, ymax = UB* ROUND_SPANYRS, fill = SEX),  alpha = 0.5) +
-    labs(y = 'Incidence rate per 1 person per round', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
+    labs(y = 'Incidence rate per 1 person per year', x = 'Age') +
+    facet_grid(COMM~SEX, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 6)
   
   # incidence cases
   ggplot(incidence_cases_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENT_CASES , col = ROUND)) +
+    geom_line(aes(y = INCIDENT_CASES /ROUND_SPANYRS, col = ROUND)) +
     # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
-    labs(y = 'Number of incident cases per round', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
+    labs(y = 'Number of incident cases per year', x = 'Age') +
+    facet_grid(COMM~SEX, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 6)
