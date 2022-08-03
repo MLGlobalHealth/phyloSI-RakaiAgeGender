@@ -533,7 +533,7 @@ plot_transmission_risk_sex_source_by_round <- function(transmission_risk_sex_sou
          col = '', alpha = '', fill ='') + 
     theme_bw() +
     facet_grid(LABEL_COMMUNITY~SEX, scale = 'free')+
-    scale_fill_manual(values = c('pink', 'blue')) + 
+    scale_fill_manual(values = c('M'='royalblue3','F'='deeppink2')) + 
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
@@ -541,6 +541,7 @@ plot_transmission_risk_sex_source_by_round <- function(transmission_risk_sex_sou
   ggsave(p, file = paste0(outdir, '-output-', 'transmisison_risk', '_sex_byround.png'), w = 6, h = 7)
   
 }
+
 
 plot_transmission_risk_age_source_by_round <- function(transmission_risk_round, outdir){
   
@@ -561,8 +562,8 @@ plot_transmission_risk_age_source_by_round <- function(transmission_risk_round, 
            col = '',  fill ='') + 
       theme_bw() +
       facet_grid(`Age recipient`~ROUND, scale = 'free', label = 'label_both')+
-      scale_fill_manual(values = c('pink', 'blue')) + 
-      scale_color_manual(values = c('pink', 'blue')) + 
+      scale_fill_manual(values = c('M'='royalblue3','F'='deeppink2')) + 
+      scale_color_manual(values = c('M'='royalblue3','F'='deeppink2')) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
