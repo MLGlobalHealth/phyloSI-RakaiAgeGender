@@ -83,7 +83,8 @@ file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anon
 
 file.incidence	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
 file.eligible.susceptible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_count_220719.csv')
-file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
+# file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
+file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_220803.csv")
 #file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
 
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
@@ -109,7 +110,8 @@ time.since.infection <- make.time.since.infection(as.data.table(read.csv(file.pa
 eligible_susceptible_count <- read.csv(file.eligible.susceptible.count)
 
 # load non-suppressed proportion 
-proportion_unsuppressed <- prepare.proportion.unsuppresed(as.data.table(read.csv(file.nonsuppressed.prop)))
+# proportion_unsuppressed <- prepare.proportion.unsuppresed(as.data.table(read.csv(file.nonsuppressed.prop)))
+proportion_unsuppressed <- as.data.table(read.csv(file.nonsuppressed.prop))
 
 # load anonymous aid
 aik <- .read(file.anonymisation.keys); aik$X <- NULL
