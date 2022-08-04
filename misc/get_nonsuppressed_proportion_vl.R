@@ -22,7 +22,7 @@ path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participant
 
 # tuning
 VL_DETECTABLE = 400
-VIREMIC_VIRAL_LOAD = 500
+VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 
 # Load data: exclude round 20 as incomplete
 dall <- fread(path.tests)
@@ -89,92 +89,135 @@ vla[, HIV_AND_VLNS := HIV_N-VLNS_N]
 vla[, EMPIRICAL_VLNS_IN_HIV := HIV_AND_VLNS / sum(HIV_N), by = c('ROUND', 'LOC', 'SEX', 'AGE')]# proportion of suppressed
 vla[, EMPIRICAL_NONVLNS_IN_HIV := 1 - EMPIRICAL_VLNS_IN_HIV]# proportion of unsuppressed
 
-# run for every round
 if(0){
-  round <- 15
-  # round <- 16
-  # round <- 17
-  # round <- 18
+  # gp
+
+  for(round in 16:18){
+    round <- 15
+    # round <- 16
+    # round <- 17
+    # round <- 18
+    
+    
+    DT <- copy(vla[ROUND == round] )
+    stopifnot(length(round) == 1)
+    cat('Fitting stan model for round ', round, '\n')
+    
+    # predicts age 
+    x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL)+1], 0.5)
+    
+    # make stan data
+    stan.data <- list(
+      x_predict = x_predict,
+      y_observed_00 = DT[SEX==0 & LOC==0, HIV_N-VLNS_N],
+      y_observed_10 = DT[SEX==1 & LOC==0, HIV_N-VLNS_N],
+      y_observed_01 = DT[SEX==0 & LOC==1, HIV_N-VLNS_N],
+      y_observed_11 = DT[SEX==1 & LOC==1, HIV_N-VLNS_N],
+      total_observed_00 = DT[SEX==0 & LOC==0, HIV_N],
+      total_observed_10 = DT[SEX==1 & LOC==0, HIV_N],
+      total_observed_01 = DT[SEX==0 & LOC==1, HIV_N],
+      total_observed_11 = DT[SEX==1 & LOC==1, HIV_N],
+      alpha_hyper_par_00 = 2,
+      alpha_hyper_par_10 = 2,
+      alpha_hyper_par_01 = 2,
+      alpha_hyper_par_11 = 2
+    )
+    stan.data$N_predict <- length(stan.data$x_predict)
+    stan.data$observed_idx <- which(stan.data$x_predict%%1==0.5)
+    stan.data$N_observed <- length(stan.data$observed_idx)
+    stan.data$rho_hyper_par_00 <- diff(range(stan.data$x_predict))/3
+    stan.data$rho_hyper_par_10 <- diff(range(stan.data$x_predict))/3
+    stan.data$rho_hyper_par_01 <- diff(range(stan.data$x_predict))/3
+    stan.data$rho_hyper_par_11 <- diff(range(stan.data$x_predict))/3
+    
+    # load stan model
+    stan.model <- stan_model(path.stan, model_name='gp_all')	
+    
+    # run and save model
+    fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
+    filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '.rds')
+    saveRDS(fit, file=file.path(outdir,filename))
+    # fit <- readRDS(file.path(outdir,filename))
+    
+  }
+    
+  # load results 
+  rounds <- 15:18
+  nsinf <- vector(mode = 'list', length = length(rounds))
+  for(i in seq_along(rounds)){
+    
+    round <- rounds[i]
+    DT <- copy(vla[ROUND == round] )
+    
+    # load samples
+    filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '.rds')
+    fit <- readRDS(file.path(outdir,filename))
+    re <- rstan::extract(fit)
+    
+    #	make prevalence plot by age
+    ps <- c(0.025,0.5,0.975)
+    qlab <- c('CL','M','CU')
+    tmp <- cbind(apply(1 - re$p_predict_00, 2, quantile, probs=ps),
+                 apply(1 - re$p_predict_10, 2, quantile, probs=ps),
+                 apply(1 - re$p_predict_01, 2, quantile, probs=ps),
+                 apply(1 - re$p_predict_11, 2, quantile, probs=ps))
+    rownames(tmp) <- qlab
+    tmp <- as.data.table(reshape2::melt(tmp))
+    nsinf.by.age <- dcast.data.table(tmp, Var2~Var1, value.var='value')
+    tmp <- as.data.table(expand.grid(AGE_LABEL=x_predict, SEX=c(0,1), LOC=c(0,1)))
+    nsinf.by.age <- cbind(tmp, nsinf.by.age) 
+    nsinf.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_NONVLNS_IN_HIV)), nsinf.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
+    
+    # load change of var name
+    set(nsinf.by.age, NULL, 'SEX', NULL)
+    set(nsinf.by.age, NULL, 'LOC', NULL)
+    set(nsinf.by.age, NULL, 'Var2', NULL)
+    setnames(nsinf.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'EMPIRICAL_NONVLNS_IN_HIV'), c('COMM', 'SEX', 'AGEYRS', 'PROP_NON_SUPPRESSED_EMPIRICAL'))
+    nsinf.by.age[, ROUND := paste0('R0', round)]
+    
+    # keep
+    nsinf[[i]] <- nsinf.by.age
+  }
+  nsinf <- do.call('rbind', nsinf)
+  file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_vl_', VIREMIC_VIRAL_LOAD, '_220803.csv'))
+  write.csv(nsinf, file = file.name, row.names = F)
   
-  DT <- copy(vla[ROUND == round] )
-  stopifnot(length(round) == 1)
-  cat('Fitting stan model for round ', round, '\n')
-  
-  # predicts age 
-  x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL)+1], 0.5)
-  
-  # make stan data
-  stan.data <- list(
-    x_predict = x_predict,
-    y_observed_00 = DT[SEX==0 & LOC==0, HIV_N-VLNS_N],
-    y_observed_10 = DT[SEX==1 & LOC==0, HIV_N-VLNS_N],
-    y_observed_01 = DT[SEX==0 & LOC==1, HIV_N-VLNS_N],
-    y_observed_11 = DT[SEX==1 & LOC==1, HIV_N-VLNS_N],
-    total_observed_00 = DT[SEX==0 & LOC==0, HIV_N],
-    total_observed_10 = DT[SEX==1 & LOC==0, HIV_N],
-    total_observed_01 = DT[SEX==0 & LOC==1, HIV_N],
-    total_observed_11 = DT[SEX==1 & LOC==1, HIV_N],
-    alpha_hyper_par_00 = 2,
-    alpha_hyper_par_10 = 2,
-    alpha_hyper_par_01 = 2,
-    alpha_hyper_par_11 = 2
-  )
-  stan.data$N_predict <- length(stan.data$x_predict)
-  stan.data$observed_idx <- which(stan.data$x_predict%%1==0.5)
-  stan.data$N_observed <- length(stan.data$observed_idx)
-  stan.data$rho_hyper_par_00 <- diff(range(stan.data$x_predict))/3
-  stan.data$rho_hyper_par_10 <- diff(range(stan.data$x_predict))/3
-  stan.data$rho_hyper_par_01 <- diff(range(stan.data$x_predict))/3
-  stan.data$rho_hyper_par_11 <- diff(range(stan.data$x_predict))/3
-  
-  # load stan model
-  stan.model <- stan_model(path.stan, model_name='gp_all')	
-  
-  # run and save model
-  fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'.rds')
-  saveRDS(fit, file=file.path(outdir,filename))
-  # fit <- readRDS(file.path(outdir,filename))
   
 }
 
-# load results 
-rounds <- 15:18
-nsinf <- vector(mode = 'list', length = length(rounds))
-for(i in seq_along(rounds)){
+if(0){
+  # loess Regression
+  DT <- copy(vla)
+  DT <- DT[order(ROUND, LOC_LABEL, SEX_LABEL, AGE_LABEL)]
   
-  round <- rounds[i]
-  DT <- copy(vla[ROUND == round] )
+  logit <- function(p) log(p / (1 - p))
+  inv_logit <- function(x) 1 / (1 + exp(-x))
   
-  # load samples
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'.rds')
-  fit <- readRDS(file.path(outdir,filename))
-  re <- rstan::extract(fit)
-  
-  #	make prevalence plot by age
-  ps <- c(0.025,0.5,0.975)
-  qlab <- c('CL','M','CU')
-  tmp <- cbind(apply(1 - re$p_predict_00, 2, quantile, probs=ps),
-               apply(1 - re$p_predict_10, 2, quantile, probs=ps),
-               apply(1 - re$p_predict_01, 2, quantile, probs=ps),
-               apply(1 - re$p_predict_11, 2, quantile, probs=ps))
-  rownames(tmp) <- qlab
-  tmp <- as.data.table(reshape2::melt(tmp))
-  nsinf.by.age <- dcast.data.table(tmp, Var2~Var1, value.var='value')
-  tmp <- as.data.table(expand.grid(AGE_LABEL=x_predict, SEX=c(0,1), LOC=c(0,1)))
-  nsinf.by.age <- cbind(tmp, nsinf.by.age) 
-  nsinf.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_NONVLNS_IN_HIV)), nsinf.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
+  DT <- DT[, {
+    .EMPIRICAL_NONVLNS_IN_HIV <- EMPIRICAL_NONVLNS_IN_HIV[!is.nan(EMPIRICAL_NONVLNS_IN_HIV)]
+    .EMPIRICAL_NONVLNS_IN_HIV[.EMPIRICAL_NONVLNS_IN_HIV == 0] = 0.001
+    .EMPIRICAL_NONVLNS_IN_HIV[.EMPIRICAL_NONVLNS_IN_HIV == 1] = 0.999
+    .LOGIT_EMPIRICAL_NONVLNS_IN_HIV = logit(.EMPIRICAL_NONVLNS_IN_HIV)
+    .AGE <- AGE[!is.nan(EMPIRICAL_NONVLNS_IN_HIV)]
+    loessMod50 <- loess(.LOGIT_EMPIRICAL_NONVLNS_IN_HIV ~ .AGE,  span=.5, control=loess.control(surface="direct"))
+    loessMod75 <- loess(.LOGIT_EMPIRICAL_NONVLNS_IN_HIV ~ .AGE,  span=.75, control=loess.control(surface="direct"))
+    loessMod90 <- loess(.LOGIT_EMPIRICAL_NONVLNS_IN_HIV ~ .AGE,  span=.9, control=loess.control(surface="direct"))
+    
+    smoothed50 <- inv_logit(predict(loessMod50, newdata = AGE) )
+    smoothed75 <- inv_logit(predict(loessMod75, newdata = AGE) )
+    smoothed90 <- inv_logit(predict(loessMod90, newdata = AGE) )
+    
+    list(AGE_LABEL = AGE_LABEL, N = N, HIV_N = HIV_N, VLNS_N = VLNS_N, ARV_N = ARV_N, AGE = AGE, 
+         HIV_AND_VLNS = HIV_AND_VLNS, ROW_ID = ROW_ID, EMPIRICAL_VLNS_IN_HIV = EMPIRICAL_VLNS_IN_HIV, 
+         EMPIRICAL_NONVLNS_IN_HIV = EMPIRICAL_NONVLNS_IN_HIV, 
+         SMOOTH.50 = smoothed50, SMOOTH.75 = smoothed75, SMOOTH.90 = smoothed90)
+  }, by = c('ROUND', 'LOC_LABEL', 'SEX_LABEL')]
   
   # load change of var name
-  set(nsinf.by.age, NULL, 'SEX', NULL)
-  set(nsinf.by.age, NULL, 'LOC', NULL)
-  set(nsinf.by.age, NULL, 'Var2', NULL)
-  setnames(nsinf.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'EMPIRICAL_NONVLNS_IN_HIV'), c('COMM', 'SEX', 'AGEYRS', 'PROP_NON_SUPPRESSED_EMPIRICAL'))
-  nsinf.by.age[, ROUND := paste0('R0', round)]
-           
-  # keep
-  nsinf[[i]] <- nsinf.by.age
+  setnames(DT, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'EMPIRICAL_NONVLNS_IN_HIV'), c('COMM', 'SEX', 'AGEYRS', 'PROP_NON_SUPPRESSED_EMPIRICAL'))
+  DT[, ROUND := paste0('R0', ROUND)]
+  file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_loess_vl_', VIREMIC_VIRAL_LOAD, '_220803.csv'))
+  write.csv(DT, file = file.name, row.names = F)
+  
 }
-nsinf <- do.call('rbind', nsinf)
-file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', 'RCCS_nonsuppressed_proportion_vl_220803.csv')
-write.csv(nsinf, file = file.name, row.names = F)
+

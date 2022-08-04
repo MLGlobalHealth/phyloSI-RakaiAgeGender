@@ -84,7 +84,7 @@ file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anon
 file.incidence	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
 file.eligible.susceptible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_count_220719.csv')
 # file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
-file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_220803.csv")
+file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_1000_220803.csv")
 #file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
 
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
@@ -284,9 +284,8 @@ if(1){
   plot_data_by_period(eligible_count, incidence_cases, proportion_sampling, outfile.figures)
   
   # plot crude force of infection 
-  crude_force_infection_age_recipient <- find_crude_force_infection_age_recipient(eligible_count, incidence_cases)
-  crude_force_infection_age_recipient_round <- find_crude_force_infection_age_recipient_round(incidence_cases_round)
-  plot_crude_force_infection(crude_force_infection_age_recipient, crude_force_infection_age_recipient_round, outfile.figures)
+  crude_force_infection <- find_crude_force_infection(stan_data)
+  plot_crude_force_infection(crude_force_infection, outfile.figures)
   
   # plot pair from chains
   # plot_pairs_infection_dates(pairs.all, outfile.figures)
