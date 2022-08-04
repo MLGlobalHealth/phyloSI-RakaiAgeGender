@@ -52,10 +52,9 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary 
+# temporary
 source(file.path(indir, 'functions', 'summary_functions.R'))
-df_round <- make.df.round(df_round, df_period)
-
+crude_force_infection <- find_crude_force_infection(stan_data)
 
 #
 ## PPC
@@ -99,68 +98,37 @@ plot_observed_to_augmented(predict_y_source, predict_z_source, unsuppressed_coun
 ## force of infection
 #
 
+# 2D for all categories
 force_infection <- find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'), df_direction, df_community, df_period, df_age, transform = 'exp')
 plot_force_infection(force_infection, outfile.figures)
 
-# shift in sex-specific transmission dynamics
+# shift in sex-specific transmission dynamics by period
 force_infection_sex_source <- find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'), df_direction, df_community, df_period, df_age, transform = 'exp')
 plot_force_infection_sex_source(force_infection_sex_source, outfile.figures)
 
-# shift in age-specific transmission dynamics
+# shift in age source by period
 force_infection_age_source <-  find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, transform = 'exp')
-plot_force_infection_age_source(force_infection_age_source, outfile.figures)
+plot_force_infection_age_source(force_infection_age_source, crude_force_infection, outfile.figures)
 
-force_infection_age_source[, is_among_5 := M %in% sort(M, decreasing = T)[1:5], by = c('LABEL_COMMUNITY', 'PERIOD', 'LABEL_DIRECTION')]
-tmp <- force_infection_age_source[is_among_5 == T, list(total_M = paste0(round(sum(M)*100, 2), '%'), age_group = paste0(min(AGE_TRANSMISSION.SOURCE), '-', max(AGE_TRANSMISSION.SOURCE))), by = c('LABEL_COMMUNITY', 'PERIOD', 'LABEL_DIRECTION')]
-print(tmp[order(LABEL_DIRECTION, PERIOD)])
-
-# aggregated by agr group
-force_infection_aggregated_age_group <-  find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, transform = 'exp')
-plot_force_infection_age_group(force_infection_aggregated_age_group, outfile.figures)
-  
-# aggregated by agr group and classified
-force_infection_aggregated_age_classification <-  find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, transform = 'exp')
-plot_force_infection_age_classification(force_infection_aggregated_age_classification, outfile.figures)
-
-# compare to empirical
+# shift in age source by round
 force_infection_age_recipient <-  find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, transform = 'exp')
-force_infection_age_recipient_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'), 
-                                                          df_direction, df_community, df_period, df_age, transform = 'exp')
-plot_force_infection_age_recipient(force_infection_age_recipient, crude_force_infection_age_recipient, outfile.figures)
-plot_force_infection_age_recipient_by_round(force_infection_age_recipient_round, crude_force_infection_age_recipient_round, outfile.figures)
-
-crude_force_infection_age_recipient_round[, INDEX_TIME := 0]
-crude_force_infection_age_recipient_round[ROUND == 'R015', INDEX_TIME := 1]
-crude_force_infection_age_recipient_round[ROUND == 'R016', INDEX_TIME := 2]
-crude_force_infection_age_recipient_round[, type := 'byround']
-crude_force_infection_age_recipient[, type := 'byperiod']
-tmp <- rbind(crude_force_infection_age_recipient_round, crude_force_infection_age_recipient, fill=TRUE)
-
-ggplot(tmp[COMM == 'inland'], aes(x = AGE_INFECTION.RECIPIENT)) +
-  geom_line(aes(y = INCIDENT_CASES/PERIOD_SPAN, col = type)) +
-  labs(x = 'Age', y = 'Force of infection received', fill = '') +
-  theme_bw() +
-  facet_grid(INDEX_TIME~LABEL_DIRECTION) +
-  theme(strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1)),
-        legend.position = 'bottom') +
-  ggsci::scale_fill_npg()
+plot_force_infection_age_recipient(force_infection_age_recipient, outfile.figures)
 
 
-tmp[type == 'byround' & INDEX_TIME == 2]
+
 #
 # Contribution to transmission
 #
 
 # sex-specific contribution to transmission
 contribution_sex_source <-  find_summary_output(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'), df_direction, df_community, df_period, df_age, standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME'))
-eligible_prop_sex <- prepare_eligible_proportion(eligible_count, c('INDEX_TIME', 'COMM', 'SEX'), c('INDEX_TIME', 'COMM'))
-plot_contribution_sex_source(contribution_sex_source, eligible_prop_sex, outfile.figures)
+unsuppressed_prop_sex <- prepare_unsuppressed_proportion(eligible_count, c('INDEX_TIME', 'COMM', 'SEX'), c('INDEX_TIME', 'COMM'))
+plot_contribution_sex_source(contribution_sex_source, unsuppressed_prop_sex, outfile.figures)
 
 # age-specific contribution to transmission
 contribution_age_source <-  find_summary_output(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
-eligible_prop_age <- prepare_eligible_proportion(eligible_count, c('INDEX_TIME', 'COMM', 'SEX', 'AGEYRS'), c('INDEX_TIME', 'COMM', 'SEX'))
-plot_contribution_age_source(contribution_age_source, eligible_prop_age, outfile.figures)
+unsuppressed_prop_age <- prepare_unsuppressed_proportion(eligible_count, c('INDEX_TIME', 'COMM', 'SEX', 'AGEYRS'), c('INDEX_TIME', 'COMM', 'SEX'))
+plot_contribution_age_source(contribution_age_source, unsuppressed_prop_age, outfile.figures)
 
 contribution_age_source[, is_among_5 := M %in% sort(M, decreasing = T)[1:5], by = c('LABEL_COMMUNITY', 'PERIOD', 'LABEL_DIRECTION')]
 tmp <- contribution_age_source[is_among_5 == T, list(total_M = paste0(round(sum(M)*100, 2), '%'), age_group = paste0(min(AGE_TRANSMISSION.SOURCE), '-', max(AGE_TRANSMISSION.SOURCE))), by = c('LABEL_COMMUNITY', 'PERIOD', 'LABEL_DIRECTION')]
@@ -181,23 +149,23 @@ plot_contribution_age_classification(contribution_age_classification_source, out
 
 # sex-specific contribution to transmission
 expected_contribution_sex_source <- find_summary_output(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'), df_direction, df_community, df_period, df_age,transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME'))
-plot_contribution_sex_source(expected_contribution_sex_source, eligible_prop_sex, outfile.figures,'Expected contribution to infection')
+plot_contribution_sex_source(expected_contribution_sex_source, unsuppressed_prop_sex, outfile.figures,'Expected contribution')
 
 # age-specific contribution to transmission
 expected_contribution_age_source <-  find_summary_output(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, transform = 'exp', standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
-plot_contribution_age_source(expected_contribution_age_source, eligible_prop_age, outfile.figures,'Expected contribution to infection')
+plot_contribution_age_source(expected_contribution_age_source, unsuppressed_prop_age, outfile.figures,'Expected contribution')
 
 # aggregated by agr group
 expected_contribution_age_group_source <-  find_summary_output(samples, 'log_lambda_latent',
                                                                c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                                                                df_direction, df_community, df_period, df_age,transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_DIRECTION', 'AGE_GROUP_INFECTION.RECIPIENT'))
-plot_contribution_age_group(expected_contribution_age_group_source, outfile.figures,'Expected contribution to infection')
+plot_contribution_age_group(expected_contribution_age_group_source, outfile.figures,'Expected contribution')
 
 # aggregated by agr group and classified
 expected_contribution_age_classification_source <-  find_summary_output(samples, 'log_lambda_latent',
                                                                         c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                                                                         df_direction, df_community, df_period, df_age, transform = 'exp',standardised.vars = c('INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_DIRECTION', 'AGE_GROUP_INFECTION.RECIPIENT'))
-plot_contribution_age_classification(expected_contribution_age_classification_source, outfile.figures,'Expected contribution to infection')
+plot_contribution_age_classification(expected_contribution_age_classification_source, outfile.figures,'Expected contribution')
 
 
 #
@@ -224,14 +192,14 @@ plot_contribution_age_source_by_round(expected_contribution_age_source_round, un
 # aggregated by agr group
 expected_contribution_age_group_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                                                                              df_direction, df_community, df_period, df_age, 
-                                                                             transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'ROUND'), 
+                                                                             transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_DIRECTION', 'ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                                                                              log_offset_round = log_offset_round)
 plot_contribution_age_group_by_round(expected_contribution_age_group_source_round, outfile.figures,'Expected contribution to infection')
 
 # aggregated by age group and classified
 expected_contribution_age_classification_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                              df_direction, df_community, df_period, df_age, 
-                             transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'ROUND'), 
+                             transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_DIRECTION', 'ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                              log_offset_round = log_offset_round)
 plot_contribution_age_classification_by_round(expected_contribution_age_classification_source_round, outfile.figures,'Expected contribution to infection')
 

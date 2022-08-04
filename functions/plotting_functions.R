@@ -789,9 +789,36 @@ plot_offset <- function(stan_data, outdir){
   ggsave(paste0(outdir, '-offset-total_count.png'), w = 7, h = 5)
 }
 
-plot_crude_force_infection <- function(crude_force_infection_age_recipient, crude_force_infection_age_recipient_round, outdir){
+plot_crude_force_infection <- function(crude_force_infection, outdir){
   
-  ggplot(crude_force_infection_age_recipient, aes(x = AGE_INFECTION.RECIPIENT)) +
+  communities <- crude_force_infection[, unique(COMM)]
+  for(i in seq_along(communities)){
+    
+    tmp <- crude_force_infection[ COMM == communities[i]]
+
+    p <- ggplot(tmp, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
+      geom_raster(aes(fill = CRUDE_FOI)) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+      theme_bw() + 
+      labs(x = 'Age at infection recipient', fill = 'Crude force of\ninfection', 
+           y= 'Age at transmission source') +
+      facet_grid(LABEL_DIRECTION~PERIOD) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      scale_fill_viridis_c() + 
+      scale_x_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0)) + 
+      guides(fill = guide_colorbar(order = 1), 
+             shape = guide_legend(order = 2)) + 
+      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
+    
+    ggsave(p, file = paste0(outdir, '-data-crude_FOI_',  communities[i], '.png'), w = 7, h = 7)
+  }
+  
+  # by age recipient
+  tmp <- crude_force_infection[, list(CRUDE_FOI = sum(CRUDE_FOI)), by= c('AGE_INFECTION.RECIPIENT', 'PERIOD', 'LABEL_DIRECTION', 'COMM')]
+  ggplot(tmp, aes(x = AGE_INFECTION.RECIPIENT)) +
     geom_line(aes(y = CRUDE_FOI, col = PERIOD)) +
     labs(x = 'Age of recipient', y = 'Crude force of infection received', fill = '') +
     theme_bw() +
@@ -800,19 +827,20 @@ plot_crude_force_infection <- function(crude_force_infection_age_recipient, crud
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
     ggsci::scale_fill_npg()
-  ggsave(paste0(outdir, '-data-crude_force_infection_period.png'), w = 7, h = 6)
+  ggsave(paste0(outdir, '-data-crude_FOI_age_recipient.png'), w = 7, h = 6)
   
-  ggplot(crude_force_infection_age_recipient_round, aes(x = AGE_INFECTION.RECIPIENT)) +
-    geom_line(aes(y = CRUDE_FOI, col = ROUND)) +
-    labs(x = 'Age of recipient', y = 'Crude force of infection received', fill = '') +
+  # by age source
+  tmp <- crude_force_infection[, list(CRUDE_FOI = sum(CRUDE_FOI)), by= c('AGE_TRANSMISSION.SOURCE', 'PERIOD', 'LABEL_DIRECTION', 'COMM')]
+  ggplot(tmp, aes(x = AGE_TRANSMISSION.SOURCE)) +
+    geom_line(aes(y = CRUDE_FOI, col = PERIOD)) +
+    labs(x = 'Age of recipient', y = 'Crude force of infection exerted', fill = '') +
     theme_bw() +
     facet_grid(COMM~LABEL_DIRECTION) +
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
     ggsci::scale_fill_npg()
-  ggsave(paste0(outdir, '-data-crude_force_infection_round.png'), w = 7, h = 6)
-  
+  ggsave(paste0(outdir, '-data-crude_FOI_age_source.png'), w = 7, h = 6)
   
 }
 
