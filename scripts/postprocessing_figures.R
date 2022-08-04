@@ -112,7 +112,7 @@ plot_force_infection_age_source(force_infection_age_source, crude_force_infectio
 
 # shift in age source by round
 force_infection_age_recipient <-  find_summary_output(samples, 'log_beta',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, transform = 'exp')
-plot_force_infection_age_recipient(force_infection_age_recipient, outfile.figures)
+plot_force_infection_age_recipient(force_infection_age_recipient, crude_force_infection, outfile.figures)
 
 
 
