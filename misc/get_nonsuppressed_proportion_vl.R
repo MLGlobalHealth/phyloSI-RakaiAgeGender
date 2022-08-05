@@ -11,10 +11,10 @@ library(rstan)
 indir.repository <-'~/git/phyloflows/misc'
 indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
-outdir <- file.path(indir.deepsequence.analyses, 'RCCS_R15_R20', 'vl_suppofinfected_by_gender_loc_age')
+outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
 
 # file
-path.stan <- file.path(indir.repository, 'stan_models', 'vl_suppofinfected_by_gender_loc_age_gp.stan')
+path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 
 # functions
@@ -90,9 +90,27 @@ vla[, EMPIRICAL_VLNS_IN_HIV := HIV_AND_VLNS / sum(HIV_N), by = c('ROUND', 'LOC',
 vla[, EMPIRICAL_NONVLNS_IN_HIV := 1 - EMPIRICAL_VLNS_IN_HIV]# proportion of unsuppressed
 
 if(0){
+  tmp <- vla[, .(ROUND, LOC_LABEL, SEX_LABEL, AGE_LABEL, HIV_N, VLNS_N)]
+  tmp[, Suppressed := HIV_N - VLNS_N] 
+  setnames(tmp, 'VLNS_N', 'Unsuppressed')
+  tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'HIV_N'))
+  
+  # plot
+  p <- ggplot(tmp, aes(x = AGE_LABEL, y = value)) +
+    geom_bar(aes(fill = variable), stat = 'identity') + 
+    labs(x = 'age at visit (years)', y = 'Count HIV+ individuals') +
+    theme_bw() + 
+    facet_grid(ROUND~SEX_LABEL+LOC_LABEL) 
+  ggsave(p, file=file.path(outdir, paste0('count_infected_by_gender_loc_age.png')), w=10, h=9)
+  
+}
+
+
+
+if(0){
   # gp
 
-  for(round in 16:18){
+  for(round in 15:18){
     round <- 15
     # round <- 16
     # round <- 17
@@ -154,7 +172,7 @@ if(0){
     fit <- readRDS(file.path(outdir,filename))
     re <- rstan::extract(fit)
     
-    #	make prevalence plot by age
+    #	summarise
     ps <- c(0.025,0.5,0.975)
     qlab <- c('CL','M','CU')
     tmp <- cbind(apply(1 - re$p_predict_00, 2, quantile, probs=ps),

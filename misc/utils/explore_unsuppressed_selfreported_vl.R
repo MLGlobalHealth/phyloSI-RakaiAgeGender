@@ -6,7 +6,7 @@ library(ggplot2)
 indir <- '~/git/phyloflows'
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
-outdir <- file.path(indir.deepsequence.analyses, 'RCCS_R15_R20', 'vl_suppofinfected_by_gender_loc_age')
+outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
 
 # file paths
 file.nonsuppressed.prop.self.reported <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
@@ -73,7 +73,7 @@ p <- ggplot(tmp) +
        y='HIV+ individuals with unsuppressed viral load\n(95% credibility interval)\n')
 ggsave(p, file=file.path(outdir, paste0('suppofinfected_by_gender_loc_age_loess_vs_gp_vl_', VIREMIC_VIRAL_LOAD, '.png')), w=10, h=9)
 
-
+#
 # plot
 proportion_unsuppressed <- proportion_unsuppressed[grepl(paste0('self|', VIREMIC_VIRAL_LOAD), type)]
 p <- ggplot(proportion_unsuppressed) + 		
@@ -89,7 +89,7 @@ p <- ggplot(proportion_unsuppressed) +
 ggsave(p, file=file.path(outdir, paste0('suppofinfected_by_gender_loc_age_vlvsselfreported_', VIREMIC_VIRAL_LOAD, '.png')), w=10, h=9)
 
 # plot vl col gender
-p <- ggplot(proportion_unsuppressed.vl) + 		
+p <- ggplot(proportion_unsuppressed.vl.1000) + 		
   geom_ribbon(aes(x=AGEYRS, ymin=CL, ymax=CU, group = SEX), alpha=0.2) +
   geom_line(aes(x=AGEYRS, y=M, colour=SEX)) +
   geom_point(aes(x=AGEYRS, y=PROP_NON_SUPPRESSED_EMPIRICAL, colour=SEX), alpha = 0.5) +
@@ -103,7 +103,7 @@ p <- ggplot(proportion_unsuppressed.vl) +
 ggsave(p, file=file.path(outdir, paste0('suppofinfected_by_gender_loc_age_vl_', VIREMIC_VIRAL_LOAD, '.png')), w=7, h=8)
 
 # plot vl col round
-p <- ggplot(proportion_unsuppressed.vl) + 		
+p <- ggplot(proportion_unsuppressed.vl.1000) + 		
   geom_ribbon(aes(x=AGEYRS, ymin=CL, ymax=CU, fill = ROUND), alpha=0.2) +
   geom_line(aes(x=AGEYRS, y=M, colour=ROUND)) +
   geom_point(aes(x=AGEYRS, y=PROP_NON_SUPPRESSED_EMPIRICAL, colour=ROUND), alpha = 0.5) +
