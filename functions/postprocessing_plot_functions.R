@@ -529,7 +529,7 @@ plot_contribution_age_group_by_round <- function(contribution_age_group_source, 
   
 }
 
-plot_contribution_age_source_by_round <- function(expected_contribution_round, outdir){
+plot_contribution_age_source_recipient_by_round <- function(expected_contribution_round, outdir){
   
   tmp <- copy(expected_contribution_round)
   tmp[, SEX := gsub('(.+) ->.*', '\\1', LABEL_DIRECTION)  ]
