@@ -686,7 +686,7 @@ plot_PPC_augmented_recipient <- function(predict_z, incidence_cases_recipient, s
       geom_point(aes(y = INCIDENT_CASES), col = 'darkred') +
       geom_errorbar(aes(ymax = INCIDENT_CASES_UB, ymin = INCIDENT_CASES_LB), col = 'darkred', width = 0.2) +
       theme_bw() + 
-      labs(x = 'Age at infection recipient', y = 'Augmented transmission events (Z)') +
+      labs(x = 'Age at infection recipient', y = 'Incidence data') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
       facet_grid(LABEL_DIRECTION~PERIOD) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
@@ -701,7 +701,7 @@ plot_PPC_augmented_recipient <- function(predict_z, incidence_cases_recipient, s
       geom_point(aes(y = INCIDENT_CASES/(PERIOD_SPAN*SUSCEPTIBLE)), col = 'darkred') +
       geom_errorbar(aes(ymax = INCIDENT_CASES_UB/(PERIOD_SPAN*SUSCEPTIBLE), ymin = INCIDENT_CASES_LB/(PERIOD_SPAN*SUSCEPTIBLE)), col = 'darkred', width = 0.2) +
       theme_bw() + 
-      labs(x = 'Age at infection recipient', y = 'Augmented transmission events (Z) per PY') +
+      labs(x = 'Age at infection recipient', y = 'Incidence data per PY') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
       facet_grid(LABEL_DIRECTION~PERIOD) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
