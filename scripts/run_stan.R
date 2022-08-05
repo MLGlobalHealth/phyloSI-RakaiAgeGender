@@ -82,11 +82,11 @@ file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 file.incidence	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
-file.eligible.susceptible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_count_220719.csv')
+file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220411.csv')
 # file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
 file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_1000_220803.csv")
 #file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
-
+file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220805.csv')
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
 # load functions
@@ -106,11 +106,13 @@ load(file.path.meta)
 # load Tanya's estimate time since infection using phylogenetic data
 time.since.infection <- make.time.since.infection(as.data.table(read.csv(file.path.tsiestimates)))
 
-# load eligible and susceptible count
-eligible_susceptible_count <- read.csv(file.eligible.susceptible.count)
+# load census eligible ount
+eligible_count <- as.data.table(read.csv(file.eligible.count))
+
+# load proportion prevalence
+proportion_prevalence <- as.data.table(read.csv(file.prevalence.prop))
 
 # load non-suppressed proportion 
-# proportion_unsuppressed <- prepare.proportion.unsuppresed(as.data.table(read.csv(file.nonsuppressed.prop)))
 proportion_unsuppressed <- as.data.table(read.csv(file.nonsuppressed.prop))
 
 # load anonymous aid
@@ -137,7 +139,8 @@ df_round <- make.df.round(df_round, df_period)
 # 
 
 # by round
-eligible_count_round <- add_infected_unsuppressed(eligible_susceptible_count, proportion_unsuppressed, df_round, start_observational_period, stop_observational_period)
+eligible_count_round <- add_susceptible_infected(eligible_count, proportion_prevalence)
+eligible_count_round <- add_infected_unsuppressed(eligible_count_round, proportion_unsuppressed, df_round, start_observational_period, stop_observational_period)
 
 # summarise by time period
 eligible_count <- summarise_eligible_count_period(eligible_count_round, cutoff_date, df_period)
@@ -280,7 +283,7 @@ stan_init <- add_init(stan_data)
 
 if(1){
   # plot count eligible susceptible / infected / infected unsuppressed and incident cases
-  plot_data_by_round(eligible_susceptible_count, proportion_unsuppressed, eligible_count_round, incidence_cases_round, outfile.figures)
+  plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outfile.figures)
   plot_data_by_period(eligible_count, incidence_cases, proportion_sampling, outfile.figures)
   
   # plot crude force of infection 

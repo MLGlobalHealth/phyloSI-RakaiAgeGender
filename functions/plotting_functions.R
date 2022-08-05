@@ -517,7 +517,9 @@ phsc.plot.transmission.network<- function(dchain, dc, pairs, outdir=NULL, point.
 }
 
 
-plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppressed, eligible_count_round, incidence_cases_round, outdir){
+plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outdir){
+  
+  level_rounds <- c('R014', 'R015', 'R016', 'R017', 'R018')
   
   # Census eligible count 
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
@@ -547,15 +549,33 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_prop_infected_round_sex.png'), w = 7, h = 8)
   
-  ggplot(subset(eligible_susceptible_count, ROUND !='15S'), aes(x = AGEYRS)) +
-    # geom_point(aes(y =PREVALENCE_EMPIRICAL, col = SEX)) +
-    geom_line(aes(y =PREVALENCE_PROPORTION, col = ROUND)) +
-    # geom_ribbon(aes(ymin =PREVALENCE_PROPORTION_CL, ymax = PREVALENCE_PROPORTION_CU, fill = SEX), alpha = 0.5) +
+  tmp <- as.data.table(proportion_prevalence)
+  tmp[, ROUND := factor( ROUND, levels = level_rounds)]
+  ggplot(subset(tmp, ROUND !='15S'), aes(x = AGEYRS)) +
+    geom_point(aes(y =EMPIRICAL_PREVALENCE, col = ROUND), alpha = 0.5) +
+    geom_line(aes(y =PREVALENCE_M, col = ROUND)) +
+    geom_ribbon(aes(ymin =PREVALENCE_CL, ymax = PREVALENCE_CU, fill = ROUND), alpha = 0.1) +
     labs(y = 'Prevlence among participant', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    theme(legend.position = 'bottom')+ 
+    scale_color_discrete(drop = FALSE) + 
+    scale_fill_discrete(drop = FALSE) +
+    scale_y_continuous(labels = scales::percent)
   ggsave(paste0(outdir, '-data-census_eligible_prop_infected_round.png'), w = 7, h = 6)
+  
+  ggplot(subset(tmp, ROUND !='R015S'), aes(x = AGEYRS)) +
+    geom_point(aes(y =1-EMPIRICAL_PREVALENCE, col = ROUND), alpha = 0.5) +
+    geom_line(aes(y =1-PREVALENCE_M, col = ROUND)) +
+    geom_ribbon(aes(ymin =1-PREVALENCE_CL, ymax = 1-PREVALENCE_CU, fill = ROUND), alpha = 0.1) +
+    labs(y = 'Prevlence among participant', x = 'Age') +
+    facet_grid(SEX~COMM, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')+ 
+    scale_color_discrete(drop = FALSE) + 
+    scale_fill_discrete(drop = FALSE) +
+    scale_y_continuous(labels = scales::percent)
+  ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_round.png'), w = 7, h = 6)
   
   # HIV+ census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
@@ -590,15 +610,6 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_susceptible_round.png'), w = 7, h = 6)
-  
-  eligible_count_round[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
-  ggplot(eligible_count_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = PROP_SUSCEPTIBLE , col = ROUND)) +
-    labs(y = 'Proportion of susceptible among census eligible individuals', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_round.png'), w = 7, h = 6)
   
   # proportion of unsuppressed
   ggplot(proportion_unsuppressed, aes(x = AGEYRS)) +
@@ -654,7 +665,7 @@ plot_data_by_round <- function(eligible_susceptible_count, proportion_unsuppress
     geom_line(aes(y = INCIDENT_CASES /ROUND_SPANYRS, col = ROUND)) +
     # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
     labs(y = 'Number of incident cases per year', x = 'Age') +
-    facet_grid(COMM~SEX, label = 'label_both') +
+    facet_grid(COMM~SEX, label = 'label_both', scale = 'free_y') +
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 6)

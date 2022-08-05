@@ -310,6 +310,22 @@ get.age.aggregated.map <- function(age_aggregated){
   return(df_age_aggregated)
 }
 
+add_susceptible_infected <- function(eligible_count, proportion_prevalence){
+  
+  df <- copy(proportion_prevalence)
+  df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
+  
+  df <- merge(eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
+
+  # find infected
+  df[, INFECTED := ELIGIBLE * PREVALENCE_M]
+  
+  # find susceptible
+  df[, SUSCEPTIBLE := ELIGIBLE - INFECTED]
+  
+  return(df)
+}
+
 add_infected_unsuppressed <- function(eligible_susceptible_count, proportion_unsuppressed, df_round, start_observational_period, stop_observational_period){
   
   # use round 15 for round 14 for eligible count

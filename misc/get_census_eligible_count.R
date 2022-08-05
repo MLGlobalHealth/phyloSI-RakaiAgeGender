@@ -3,49 +3,33 @@ library(dplyr)
 library(ggplot2)
 library(scales)
 library(lubridate)
-library(rstan)
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.repository <- '~/git/phyloflows'
 
-outdir <- file.path(indir.deepsequence_analyses, 'preliminary', 'IncidentCases')
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
 
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
 file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv')
-file.community.keys <- file.path(indir.deepsequence_analyses,'community_names.csv')
-file.df_round <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
+file.community.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 # load files
-hiv <- as.data.table(read.csv(file.path.hiv))
-quest <- as.data.table(read.csv(file.path.quest))
 flow <- as.data.table(read.csv(file.path.flow))
 community.keys <- as.data.table(read.csv(file.community.keys))
-load(file.df_round)
-
-# load function
-source(file.path(indir.repository, 'functions', 'utils.R'))
 
 # load a 1D smooth gp model
-file.stan.model <- file.path(indir.repository, 'misc', 'stan_models', 'one_dimensional_gp_binomial.stan')
+file.stan.model <- file.path(indir.repository, 'misc', 'stan_models', 'poisson_gp.stan')
 model = rstan::stan_model(file.stan.model)
-ps <- c(0.5, 0.025, 0.975)
-p_labs <- c('M','CL','CU')
 
-
-###############################
-
-# CENSUS ELIGIBLE INDIVIDUALS #
-
-###############################
+#
+# Find census eligible count
+#
 
 # find  community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 flow <- merge(flow, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
 
 # Code for ineligibility
-
 flow[, reason_ineligible := NA_character_]
 
 flow[locate1==10 & locate2==8, reason_ineligible := "Out_migrated"]
@@ -87,152 +71,125 @@ re <- re[ELIGIBLE != 0]
 colnames(re) <- toupper(colnames(re))
 re[, ROUND := substring(ROUND, 3)]
 
-# save
-write.csv(re, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220411.csv'), row.names = F)
+# find index sex and comm
+re <- re[order(ROUND, SEX, COMM, AGEYRS)]
+re[, SEX_INDEX := ifelse(SEX == 'M', 1, 0)]
+re[, COMM_INDEX := ifelse(COMM == 'fishing', 1, 0)]
 
-# find count eligible comm num
-# re <- flow[, list(count = .N), by = c('reason_ineligible', 'round', 'comm_num', 'ageyrs', 'sex')]
-# re <- dcast.data.table(re, round + comm_num + ageyrs + sex ~ reason_ineligible, value.var = 'count')
-# re[is.na(re)] = 0
-# re[, ELIGIBLE := round(none + Out_migrated / 2)]
-# re <- re[ELIGIBLE != 0]
-# 
-# # additional variable
-# colnames(re) <- toupper(colnames(re))
-# re[, ROUND := substring(ROUND, 3)]
-# 
-# # save
-# write.csv(re, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220620.csv'), row.names = F)
+# find smooth count census eligible
+if(0){
+  
+  rounds <- unique(re$ROUND)
+  AGEYRS <- re[, sort(unique(AGEYRS))]
+  
+   #find smooth count
+  for(round in rounds){
+    # round = 15
+    
+    DT <- re[ROUND == round]
+    DT <- DT[order(SEX_INDEX, COMM_INDEX,AGEYRS)]
+    
+    stan.data <- list(X = AGEYRS, 
+                      N = length(AGEYRS), 
+                      COUNT_00 = DT[SEX_INDEX == 0 & COMM_INDEX == 0, ELIGIBLE], 
+                      COUNT_01 = DT[SEX_INDEX == 0 & COMM_INDEX == 1, ELIGIBLE],
+                      COUNT_10 = DT[SEX_INDEX == 1 & COMM_INDEX == 0, ELIGIBLE], 
+                      COUNT_11 = DT[SEX_INDEX == 1 & COMM_INDEX == 1, ELIGIBLE])
+    stan.data[['rho_hyper_par_1']] <- 3.071524
+    stan.data[['rho_hyper_par_2']] <- 17.05327
+    stan.data[['TOTAL_COUNT_00']] = sum(stan.data[['COUNT_00']])
+    stan.data[['TOTAL_COUNT_01']] = sum(stan.data[['COUNT_01']])
+    stan.data[['TOTAL_COUNT_10']] = sum(stan.data[['COUNT_10']])
+    stan.data[['TOTAL_COUNT_11']] = sum(stan.data[['COUNT_11']])
+    
+    options(mc.cores = parallel::detectCores())
+    rstan_options(auto_write = TRUE)
+    fit <- sampling(model, data=stan.data, iter=2e3, warmup=2e2, chains=3, 
+                    control = list(max_treedepth = 15, adapt_delta= 0.99))
+    filename <- paste0( '220805_census_count_gp_stan_round',round,'.rds')
+    saveRDS(fit, file=file.path(outdir,filename))
+    
+  }
+}
+  
+# load results 
+ncen <- vector(mode = 'list', length = length(rounds))
+for(i in seq_along(rounds)){
+  
+  round <- rounds[i]
+  DT <- copy(re[ROUND == round] )
+  
+  # load samples
+  filename <- paste0( '220805_census_count_gp_stan_round',round,'.rds')
+  fit <- readRDS(file.path(outdir,filename))
+  samples <- rstan::extract(fit)
+  
+  #	summarise
+  ps <- c(0.025,0.5,0.975)
+  qlab <- c('CL','M','CU')
+  tmp <- cbind(apply(samples$lambda_00, 2, quantile, probs=ps),
+               apply(samples$lambda_10, 2, quantile, probs=ps),
+               apply(samples$lambda_01, 2, quantile, probs=ps),
+               apply(samples$lambda_11, 2, quantile, probs=ps))
+  tmp <- round(tmp)
+  rownames(tmp) <- qlab
+  tmp <- as.data.table(reshape2::melt(tmp))
+  ncen.by.age <- dcast.data.table(tmp, Var2~Var1, value.var='value')
+  tmp <- as.data.table(expand.grid(AGEYRS=AGEYRS, SEX_INDEX=c(0,1), COMM_INDEX=c(0,1)))
+  ncen.by.age <- cbind(tmp, ncen.by.age) 
+  ncen.by.age <- merge(DT, ncen.by.age, by=c('SEX_INDEX','COMM_INDEX', 'AGEYRS'))
+  
+  # set names
+  setnames(ncen.by.age, c('M', "CL", 'CU'), c('ELIGIBLE_SMOOTH', 'ELIGIBLE_SMOOTH_CL', 'ELIGIBLE_SMOOTH_CU'))
 
+  if(0){
+    summ <- summary(fit)$summary
+    summ[which(summ[, 9] < 100),]
+  }
+  
+  if(0){
+    ggplot(ncen.by.age, aes(x = AGEYRS)) +
+      geom_line(aes(y = ELIGIBLE_SMOOTH)) +
+      geom_ribbon(aes(ymin = ELIGIBLE_SMOOTH_CL, ymax = ELIGIBLE_SMOOTH_CU), alpha = 0.5) +
+      geom_point(aes(y = ELIGIBLE), col = 'darkred') +
+      labs(y = 'Census eligible individuals', x = 'Age') +
+      facet_grid(COMM~SEX, label = 'label_both') +
+      theme_bw() +
+      theme(legend.position = 'bottom')
+    
+    tmp <- ncen.by.age[, list(count = sum(ELIGIBLE), COUNT_SMOOTH = sum(ELIGIBLE_SMOOTH)), by = c('SEX', 'COMM')]
+    knitr::kable(tmp[order(SEX,COMM)])
+  }
+  
+  # keep
+  ncen[[i]] <- ncen.by.age
+}
+ncen <- do.call('rbind', ncen)
 
 # table and plot
-tmp <- re[, list(count = sum(ELIGIBLE)), by = c('ROUND', 'COMM')]
-knitr::kable(tmp[order(COMM,ROUND)])
+tmp <- ncen[, list(count = sum(ELIGIBLE), COUNT_SMOOTH = sum(ELIGIBLE_SMOOTH)), by = c('ROUND', 'SEX', 'COMM')]
+knitr::kable(tmp[order(COMM,SEX,ROUND)])
 
 if(1){
+  
+  ggplot(ncen.by.age[COMM == 'inland'], aes(x = AGEYRS)) +
+    geom_bar(aes(y = ELIGIBLE_SMOOTH), stat = 'identity') +
+    geom_line(aes(y = ELIGIBLE)) +
+    labs(y = 'Census eligible individuals', x = 'Age') +
+    facet_grid(ROUND~SEX, label = 'label_both') +
+    theme_bw() +
+    theme(legend.position = 'bottom')
+  ggsave(paste0(outdir, '-CensusEligibleIndividuals.png'), w = 7, h = 6)
+  
   ggplot(re[COMM == 'inland'], aes(x = AGEYRS, y = ELIGIBLE)) +
     geom_bar(stat = 'identity', position = "dodge") +
     labs(y = 'Census eligible individuals in round 16', x = 'Age') +
     facet_grid(ROUND~SEX, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-CensusEligibleIndividuals.png'), w = 7, h = 6)
 }
 
-
-
-####################################################
-
-# HIV PREVALENCE AND CENSUS ELIGIBLE SUSCEPTIBLES #
-
-###################################################
-
-# keep variable of interest
-rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, intdate)]
-
-# Set to date format
-rin[, intdate := as.Date(intdate, format = '%d-%b-%y')]
-
-# keep only first round
-rin <- rin[, list(intdate = min(intdate),
-                  round = round[intdate == min(intdate)][1],
-                  ageyrs = ageyrs[intdate == min(intdate)][1],
-                  comm_num = comm_num[intdate == min(intdate)][1]), by = c('study_id', 'sex')]
-
-# find  community
-community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
-rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
-
-# to upper
-colnames(rinc) <- toupper(colnames(rinc))
-
-# restric age
-rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
-
-# get hiv status
-rhiv <- hiv[, .(study_id, round, hiv)]
-rhiv[, round := gsub(" ", '', round, fixed = T)]
-colnames(rhiv) <- toupper(colnames(rhiv))
-hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
-
-# find HIV prevalence rate for participant
-rprev <- hivs[, list(COUNT = sum(HIV == 'P'),
-                     TOTAL_COUNT = length(HIV)), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
-
-# fit gaussian process
-AGEYRS_COVARIATE <- rprev[, sort(unique(AGEYRS))]
-rprev <- rprev[order(ROUND, SEX, COMM, AGEYRS)]
-rprevfit <- rprev[, {
-              fit = rstan::sampling(model,data=list(N = length(AGEYRS),
-                                                    x = sort(AGEYRS),
-                                                    x_hat = AGEYRS_COVARIATE,
-                                                    N_hat = length(AGEYRS_COVARIATE),
-                                                    COUNT = COUNT,
-                                                    TOTAL_COUNT = TOTAL_COUNT,
-                                                    x_in_x_hat = which(AGEYRS %in% AGEYRS_COVARIATE)),
-                                    iter=1000,warmup=500,chains=1,
-                                    control = list(max_treedepth = 15, adapt_delta = 0.99))
-              fit_samples = rstan::extract(fit)
-              tmp1 = as.data.table( reshape2::melt(fit_samples[['mu']]))
-              setnames(tmp1, 2, 'AGEYRS_INDEX')
-              tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('AGEYRS_INDEX')]
-              tmp1 = dcast(tmp1, AGEYRS_INDEX ~ q_label, value.var = "q")
-              tmp1[, .AGEYRS := AGEYRS_COVARIATE[AGEYRS_INDEX]]
-              tmp1[.AGEYRS %in% AGEYRS, EMPIRICAL := COUNT / TOTAL_COUNT]
-              
-              list(M = tmp1[, M], CL = tmp1[, CL], CU = tmp1[, CU], AGEYRS = tmp1[, .AGEYRS], EMPIRICAL = tmp1[, EMPIRICAL])
-              }, by = c('ROUND', 'SEX', 'COMM')]
-rprevfit <- merge(rprevfit, rprev, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'), all.x = T)
-
-# merge to census eligble and find susceptible
-setnames(rprevfit, c('M', 'CL', 'CU', 'EMPIRICAL'), c('PREVALENCE_PROPORTION', 'PREVALENCE_PROPORTION_CL', 'PREVALENCE_PROPORTION_CU', 'PREVALENCE_EMPIRICAL'))
-rprevfit[PREVALENCE_PROPORTION < 0 , PREVALENCE_PROPORTION := 0]
-rprevfit[, ROUND := substring(ROUND, 3)]
-resusc <- merge(re, rprevfit, by = c('COMM', 'AGEYRS', 'SEX', 'ROUND'))
-resusc[, SUSCEPTIBLE := ELIGIBLE * (1 - PREVALENCE_PROPORTION)]
 
 # save
-write.csv(resusc, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_count_220719.csv'), row.names = F) #previously RCCS_census_eligible_count_220411
-# resusc <- as.data.table(read.csv(file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_count_220411.csv')))
-
-# plot
-if(0){
-  tmp <- resusc[ROUND == '16']
-  tmp[, HIV_NEGATIVE := TOTAL_COUNT - COUNT]
-  setnames(tmp, 'COUNT', 'HIV_POSITIVE')
-  tmp <- melt.data.table(tmp[, .(SEX, COMM, AGEYRS, HIV_NEGATIVE, HIV_POSITIVE)], id.vars = c('SEX', 'COMM', 'AGEYRS'))
-  ggplot(tmp, aes(x = AGEYRS, y = value, fill = variable)) +
-    geom_bar(stat = 'identity', position = "stack") +
-    labs(y = 'Number of participants in round 16', x = 'Age', fill = '') +
-    facet_grid(COMM~SEX, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom') +
-    scale_y_continuous(expand = c(0,0))
-  ggsave(paste0(outdir, '-Participants.png'), w = 7, h = 6)
-
-  tmp <- resusc[COMM == 'inland']
-  ggplot(tmp, aes(x = AGEYRS)) +
-    geom_line(aes(y = PREVALENCE_PROPORTION)) +
-    geom_ribbon(aes(ymin = PREVALENCE_PROPORTION_CL, ymax = PREVALENCE_PROPORTION_CU), alpha = 0.5) +
-    geom_point(aes(y = COUNT / TOTAL_COUNT), col = 'darkred') +
-    labs(y = 'Prevalence proportion', x = 'Age') +
-    facet_grid(ROUND~SEX, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom') +
-    scale_y_continuous(labels = scales::percent_format())
-  ggsave(paste0(outdir, '-PrevalenceProportionGPFit.png'), w = 7, h = 6)
-
-  tmp <- resusc[COMM == 'fishing']
-  ggplot(tmp, aes(x = AGEYRS)) +
-    geom_line(aes(y = PREVALENCE_PROPORTION)) +
-    geom_ribbon(aes(ymin = PREVALENCE_PROPORTION_CL, ymax = PREVALENCE_PROPORTION_CU), alpha = 0.5) +
-    geom_point(aes(y = COUNT / TOTAL_COUNT), col = 'darkred') +
-    labs(y = 'Prevalence proportion', x = 'Age') +
-    facet_grid(ROUND~SEX, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom') +
-    scale_y_continuous(labels = scales::percent_format())
-}
-
-
+write.csv(re, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220411.csv'), row.names = F)
 
