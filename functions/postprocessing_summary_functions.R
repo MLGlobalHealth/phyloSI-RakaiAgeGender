@@ -217,7 +217,7 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
 
 find_summary_output_by_round <- function(samples, output, vars, df_direction, df_community, df_period, df_age, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
-                                         log_offset_name = 'LOG_OFFSET'){
+                                         log_offset_name = 'LOG_OFFSET', adjust_unsuppressed = F){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -256,6 +256,26 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
   } else{
     tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
     tmp1 <- tmp1[, list(value = sapply(value, operation)), by = c('iterations', vars)]
+  }
+  
+  if(adjust_unsuppressed){
+    tmp <- copy(eligible_count_round)
+    tmp[, IS_MF := as.numeric(SEX == 'M')]
+    setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
+    tmp <- merge(tmp, df_direction, by = 'IS_MF')
+    tmp <- merge(tmp, df_community, by = 'COMM')
+    
+    if(any(grepl('RECIPIENT', vars))){
+      tmp <- merge(tmp, df_age_aggregated, by = 'AGE_TRANSMISSION.SOURCE', allow.cartesian = T)
+    }else{
+      tmp <- merge(tmp, unique(df_age_aggregated[, .(AGE_TRANSMISSION.SOURCE, AGE_GROUP_TRANSMISSION.SOURCE)]), by = 'AGE_TRANSMISSION.SOURCE')
+    }
+    
+    tmp <- tmp[, list(count_unsuppressed = sum(INFECTED_NON_SUPPRESSED)), by = vars]
+    
+    tmp1 <- merge(tmp1, tmp, by = vars, allow.cartesian=TRUE)
+    tmp1[, value := value / count_unsuppressed]
+    
   }
   
   # standardised
