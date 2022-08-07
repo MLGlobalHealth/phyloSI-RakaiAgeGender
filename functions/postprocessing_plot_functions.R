@@ -487,7 +487,7 @@ plot_contribution_age_source_by_round <- function(contribution_age_source, outdi
     
     p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
       geom_bar(aes(y = M, fill = SEX), stat = 'identity', position = "identity") + 
-      geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.5, col = 'grey70') + 
+      geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.5, col = 'grey60') + 
       labs(x = 'Age', y = 'Contribution to infection', 
            fill = lab, col = '', alpha = '') + 
       theme_bw() +
@@ -502,7 +502,7 @@ plot_contribution_age_source_by_round <- function(contribution_age_source, outdi
     
     p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
       geom_line(aes(y = M, col = ROUND)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU, col = ROUND), alpha = 0.2) + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = ROUND), alpha = 0.2) + 
       labs(x = 'Age', y = 'Contribution to infection', 
            fill = '', col = '') + 
       theme_bw() +
@@ -510,11 +510,10 @@ plot_contribution_age_source_by_round <- function(contribution_age_source, outdi
       ggsci::scale_fill_npg() +
       ggsci::scale_color_npg() +
       theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            legend.position = 'none') + 
+            strip.text = element_text(size = rel(1))) + 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) +
       ggtitle(tmp1[, unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_by_round_', communities[i], '2.png'), w = 9, h = 9)
+    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_by_round_', communities[i], '2.png'), w = 7, h = 7)
     
   }
 }

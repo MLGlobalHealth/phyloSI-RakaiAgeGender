@@ -192,7 +192,7 @@ plot_contribution_sex_source_by_round(expected_contribution_sex_source_round, ou
 expected_contribution_age_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_TRANSMISSION.SOURCE'), 
                              df_direction, df_community, df_period, df_age, 
                              transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'ROUND', 'INDEX_DIRECTION'), 
-                             log_offset_round = log_offset_round)
+                             log_offset_round = log_offset_round, adjust_unsuppressed = T)
 plot_contribution_age_source_by_round(expected_contribution_age_source_round, outfile.figures,'Expected contribution to infection')
 
 # aggregated by age group
