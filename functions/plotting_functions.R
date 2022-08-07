@@ -539,10 +539,10 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   ggsave(paste0(outdir, '-data-census_eligible_count_round.png'), w = 7, h = 6)
   
   # Prevalence proportion
-  ggplot(subset(eligible_susceptible_count, ROUND !='15S'), aes(x = AGEYRS)) +
-    geom_point(aes(y =PREVALENCE_EMPIRICAL, col = SEX)) +
-    geom_line(aes(y =PREVALENCE_PROPORTION, col = SEX)) +
-    geom_ribbon(aes(ymin =PREVALENCE_PROPORTION_CL, ymax = PREVALENCE_PROPORTION_CU, fill = SEX), alpha = 0.5) +
+  ggplot(subset(proportion_prevalence, ROUND !='15S'), aes(x = AGEYRS)) +
+    geom_point(aes(y =EMPIRICAL_PREVALENCE, col = SEX)) +
+    geom_line(aes(y =PREVALENCE_M, col = SEX)) +
+    geom_ribbon(aes(ymin =PREVALENCE_CL, ymax = PREVALENCE_CU, fill = SEX), alpha = 0.5) +
     labs(y = 'Prevlence among participant', x = 'Age') +
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
@@ -624,7 +624,8 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   
   ggplot(proportion_unsuppressed, aes(x = AGEYRS)) +
     geom_line(aes(y = M , col = ROUND)) +
-    # geom_ribbon(aes(ymin = CL , ymax = CU , fill = SEX), alpha = 0.5) +
+    geom_ribbon(aes(ymin = CL , ymax = CU , fill = ROUND), alpha = 0.5) +
+    geom_point(aes(y = PROP_NON_SUPPRESSED_EMPIRICAL , col = ROUND), alpha = 0.5) +
     labs(y = 'Proportion of unsupressed', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
@@ -634,7 +635,7 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   #HIV+ unsupressed census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
     geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = SEX)) +
-    geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX), alpha = 0.5) +
+    # geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX), alpha = 0.5) +
     labs(y = 'Number of HIV+ unsupressed census eligible', x = 'Age') +
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
@@ -662,7 +663,7 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   
   # incidence cases
   ggplot(incidence_cases_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENT_CASES /ROUND_SPANYRS, col = ROUND)) +
+    geom_line(aes(y = INCIDENT_CASES / ROUND_SPANYRS, col = ROUND)) +
     # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
     labs(y = 'Number of incident cases per year', x = 'Age') +
     facet_grid(COMM~SEX, label = 'label_both', scale = 'free_y') +

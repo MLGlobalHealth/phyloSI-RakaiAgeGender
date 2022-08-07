@@ -442,10 +442,10 @@ get_incidence_cases_round <- function(incidence, eligible_count_round){
   
   if(0){
     ggplot(incidence, aes(x = AGEYRS)) +
-      geom_line(aes(y = INCIDENCE, col = SEX)) +
-      geom_ribbon(aes(ymin = LB, ymax = UB, fill = SEX),  alpha = 0.5) +
+      geom_line(aes(y = INCIDENCE, col = ROUND)) +
+      geom_ribbon(aes(ymin = LB, ymax = UB, fill = ROUND),  alpha = 0.1) +
       labs(y = 'Incidence rate per 1 PY in inland community', x = 'Age') +
-      facet_grid(ROUND~COMM, label = 'label_both') +
+      facet_grid(SEX~COMM, label = 'label_both') +
       theme_bw() +
       theme(legend.position = 'bottom')
   }
@@ -477,11 +477,12 @@ get_incidence_cases_round <- function(incidence, eligible_count_round){
   
   # plot
   if(0){
+    
     ggplot(dir, aes(x = AGEYRS)) +
-      geom_line(aes(y = INCIDENT_CASES, col = SEX)) +
-      geom_ribbon(aes(ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, fill = SEX), alpha = 0.5) +
+      geom_line(aes(y = INCIDENT_CASES, col = ROUND)) +
+      geom_ribbon(aes(ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, fill = ROUND), alpha = 0.1) +
       labs(y = 'Expected number of incident cases', x = 'Age') +
-      facet_grid(ROUND~COMM, label = 'label_both') +
+      facet_grid(COMM~SEX, label = 'label_both', scale = 'free') +
       theme_bw() +
       theme(legend.position = 'bottom')
     

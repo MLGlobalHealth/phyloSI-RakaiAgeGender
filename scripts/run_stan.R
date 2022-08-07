@@ -82,7 +82,7 @@ file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 file.incidence	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
-file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220411.csv')
+file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220807.csv')
 # file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
 file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_1000_220803.csv")
 #file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
@@ -107,7 +107,7 @@ load(file.path.meta)
 time.since.infection <- make.time.since.infection(as.data.table(read.csv(file.path.tsiestimates)))
 
 # load census eligible ount
-eligible_count <- as.data.table(read.csv(file.eligible.count))
+eligible_count_smooth <- as.data.table(read.csv(file.eligible.count))
 
 # load proportion prevalence
 proportion_prevalence <- as.data.table(read.csv(file.prevalence.prop))
@@ -139,7 +139,7 @@ df_round <- make.df.round(df_round, df_period)
 # 
 
 # by round
-eligible_count_round <- add_susceptible_infected(eligible_count, proportion_prevalence)
+eligible_count_round <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
 eligible_count_round <- add_infected_unsuppressed(eligible_count_round, proportion_unsuppressed, df_round, start_observational_period, stop_observational_period)
 
 # summarise by time period
