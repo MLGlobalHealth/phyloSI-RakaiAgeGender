@@ -557,7 +557,7 @@ plot_contribution_age_source_recipient_by_round <- function(expected_contributio
   
   for(i in seq_along(communities)){
     
-    tmp1 <- tmp[ COMM == communities[i] & AGE_INFECTION.RECIPIENT %in% c(25, 35, 45)]
+    tmp1 <- tmp[ COMM == communities[i] & AGE_INFECTION.RECIPIENT %in% c(20, 30, 40)]
     tmp1[, `Age recipient` := AGE_INFECTION.RECIPIENT]
     
     p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
