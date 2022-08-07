@@ -177,7 +177,7 @@ plot_contribution_age_classification(expected_contribution_age_classification_so
 # age source/recipient and sex-specific contribution to transmission
 expected_contribution_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'), 
                                                                        df_direction, df_community, df_period, df_age, 
-                                                                       transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT', 'INDEX_DIRECTION'), 
+                                                                       transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                        log_offset_round = log_offset_round, adjust_unsuppressed = T)
 plot_contribution_age_source_recipient_by_round(expected_contribution_round, outfile.figures)
 
