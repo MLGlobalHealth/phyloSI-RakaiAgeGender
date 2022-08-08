@@ -568,7 +568,7 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
     geom_point(aes(y =1-EMPIRICAL_PREVALENCE, col = ROUND), alpha = 0.5) +
     geom_line(aes(y =1-PREVALENCE_M, col = ROUND)) +
     geom_ribbon(aes(ymin =1-PREVALENCE_CL, ymax = 1-PREVALENCE_CU, fill = ROUND), alpha = 0.1) +
-    labs(y = 'Prevlence among participant', x = 'Age') +
+    labs(y = 'Proportion of susceptibile', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
     theme(legend.position = 'bottom')+ 
