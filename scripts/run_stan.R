@@ -73,7 +73,7 @@ only.transmission.after.start.observational.period <- T
 only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
-only.transmission.same.community <- T
+only.transmission.same.community <- F
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -184,6 +184,12 @@ if(remove.inconsistent.infection.dates){
   pairs.all <- pairs.all[! DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
+if(remove.neuro.individuals){
+  cat('\nExcluding individuals from the neuro cohort \n')
+  cat('Removing ', nrow(pairs.all[ROUND.SOURCE == 'neuro' | ROUND.RECIPIENT == 'neuro']), ' pairs\n')
+  pairs.all <- pairs.all[ROUND.SOURCE != 'neuro' & ROUND.RECIPIENT != 'neuro']
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
+}
 if(remove.young.individuals){
   # exclude young indivis
   cat('\nExcluding sources and recipients younger than 15\n')
@@ -208,13 +214,7 @@ if(remove.missing.community.recipient){
   cat('Removing ', nrow(pairs.all[is.na(COMM.RECIPIENT)]), ' pairs\n')
   pairs.all <- pairs.all[!is.na(COMM.RECIPIENT)]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
-}
-if(remove.neuro.individuals){
-  cat('\nExcluding individuals from the neuro cohort \n')
-  cat('Removing ', nrow(pairs.all[ROUND.SOURCE == 'neuro' | ROUND.RECIPIENT == 'neuro']), ' pairs\n')
-  pairs.all <- pairs.all[ROUND.SOURCE != 'neuro' & ROUND.RECIPIENT != 'neuro']
-  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
-}
+} 
 if(only.transmission.same.community ){
   cat('\nExcluding transmission events between communities (I->F or F->I) \n')
   cat('Removing ', nrow(pairs.all[COMM.SOURCE != COMM.RECIPIENT]), ' pairs\n')
