@@ -577,6 +577,17 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
     scale_y_continuous(labels = scales::percent)
   ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_round.png'), w = 7, h = 6)
   
+  tmp[, PROP_SUSCEPTIBLE:= 1-PREVALENCE_M]
+  tmp[, TOTAL_PROP_SUSCEPTIBLE := sum(PROP_SUSCEPTIBLE), by = c('ROUND', 'SEX', 'COMM')]
+  tmp[, distr := PROP_SUSCEPTIBLE / TOTAL_PROP_SUSCEPTIBLE]
+  ggplot(tmp, aes(x = AGEYRS, y = distr)) + 
+    geom_line(aes(col = ROUND)) + 
+    facet_grid(SEX~COMM) + 
+    theme_bw() + 
+    labs(x = 'Age', y = 'Probability distribution of the age composition of susceptible')
+  ggsave(paste0(outdir, '-data-distribution_function_age_composition_susceptible.png'), w = 7, h = 7)
+  
+  
   # HIV+ census eligible count
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
     geom_line(aes(y = INFECTED , col = SEX)) +
