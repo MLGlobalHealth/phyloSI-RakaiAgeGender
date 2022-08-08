@@ -52,9 +52,6 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-source(file.path(indir, 'functions', 'summary_functions.R'))
-crude_force_infection <- find_crude_force_infection(stan_data)
 
 #
 ## PPC
@@ -190,9 +187,9 @@ plot_contribution_sex_source_by_round(expected_contribution_sex_source_round, ou
 
 # age-specific contribution to transmission
 expected_contribution_age_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_TRANSMISSION.SOURCE'), 
-                             df_direction, df_community, df_period, df_age, 
-                             transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'ROUND', 'INDEX_DIRECTION'), 
-                             log_offset_round = log_offset_round, adjust_unsuppressed = T)
+                                                                       df_direction, df_community, df_period, df_age, 
+                                                                       transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'ROUND', 'INDEX_DIRECTION'), 
+                                                                       log_offset_round = log_offset_round, adjust_unsuppressed = T)
 plot_contribution_age_source_by_round(expected_contribution_age_source_round, outfile.figures,'Expected contribution to infection')
 
 # aggregated by age group
@@ -200,7 +197,8 @@ expected_contribution_age_group_source_round <- find_summary_output_by_round(sam
                                                                              df_direction, df_community, df_period, df_age, 
                                                                              transform = 'exp', 
                                                                              standardised.vars = c('INDEX_COMMUNITY', 'INDEX_DIRECTION', 'ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
-                                                                             log_offset_round = log_offset_round, adjust_unsuppressed = T)
+                                                                             log_offset_round = log_offset_round, adjust_unsuppressed = T
+
 plot_contribution_age_group_by_round(expected_contribution_age_group_source_round, outfile.figures,'Expected contribution to infection')
 
 # aggregated by age group and classified
@@ -217,18 +215,28 @@ plot_contribution_age_classification_by_round(expected_contribution_age_classifi
 #
 
 # by sex
-transmission_risk_sex_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND'), 
+transmission_risk_sex_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'PERIOD_SPAN'), 
                                                                        df_direction, df_community, df_period, df_age, 
                                                                        transform = 'exp', 
+                                                                        standardised.vars = 'PERIOD_SPAN',
                                                                        log_offset_round = log_offset_round, log_offset_name = 'log_INFECTED_NON_SUPPRESSED')
 plot_transmission_risk_sex_source_by_round(transmission_risk_sex_source_round, outfile.figures)
 
-# by age
-transmission_risk_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'INDEX_AGE'), 
+
+# age-specific contribution to transmission
+transmission_risk_age_source_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'PERIOD_SPAN', 'AGE_TRANSMISSION.SOURCE'), 
+                                                                       df_direction, df_community, df_period, df_age, 
+                                                                       transform = 'exp', standardised.vars = c('PERIOD_SPAN'), 
+                                                                       log_offset_round = log_offset_round)
+plot_transmission_risk_age_source_by_round(transmission_risk_age_source_round, outfile.figures)
+
+
+# by age source-recipient
+transmission_risk_age_source_recipient_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'INDEX_AGE', 'PERIOD_SPAN'), 
                                                         df_direction, df_community, df_period, df_age, 
                                                         transform = 'exp', 
-                                                        log_offset_round = log_offset_round, log_offset_name = 'log_INFECTED_NON_SUPPRESSED')
-plot_transmission_risk_age_source_by_round(transmission_risk_round, outfile.figures)
+                                                        log_offset_round = log_offset_round, standardised.vars = c('PERIOD_SPAN'))
+plot_transmission_risk_age_source_recipient_by_round(transmission_risk_age_source_recipient_round, outfile.figures)
 
 
 #
