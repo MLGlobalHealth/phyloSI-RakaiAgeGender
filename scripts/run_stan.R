@@ -186,7 +186,7 @@ if(remove.inconsistent.infection.dates){
 }
 if(remove.young.individuals){
   # exclude young indivis
-  cat('\nExcluding very young individuals\n')
+  cat('\nExcluding sources and recipients younger than 15\n')
   cat('Removing ', nrow(pairs.all[AGE_TRANSMISSION.SOURCE < 15 | AGE_INFECTION.RECIPIENT < 15]), ' pairs\n')
   pairs.all <- pairs.all[AGE_TRANSMISSION.SOURCE >= 15 & AGE_INFECTION.RECIPIENT >= 15]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
@@ -199,7 +199,7 @@ if(only.transmission.after.start.observational.period){
 }
 if(only.transmission.before.stop.observational.period){
   cat('\nExcluding recipients infected after ', as.character(stop_observational_period), '\n')
-  cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT < stop_observational_period]), ' pairs\n')
+  cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT > stop_observational_period]), ' pairs\n')
   pairs.all <- pairs.all[DATE_INFECTION.RECIPIENT <= stop_observational_period]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
@@ -216,7 +216,7 @@ if(remove.neuro.individuals){
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(only.transmission.same.community ){
-  cat('\nExcluding transmission between communities \n')
+  cat('\nExcluding transmission events between communities (I->F or F->I) \n')
   cat('Removing ', nrow(pairs.all[COMM.SOURCE != COMM.RECIPIENT]), ' pairs\n')
   pairs.all <- pairs.all[COMM.SOURCE == COMM.RECIPIENT]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
