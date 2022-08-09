@@ -217,7 +217,7 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
 
 find_summary_output_by_round <- function(samples, output, vars, df_direction, df_community, df_period, df_age, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
-                                         log_offset_name = 'LOG_OFFSET', adjust_unsuppressed = F){
+                                         log_offset_formula = 'LOG_OFFSET'){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -243,12 +243,7 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
   
   if(!is.null(log_offset_round)){
     tmp1 <- merge(tmp1, log_offset_round, by = c('ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY'))
-    tmp1[, value := value + get(log_offset_name)]
-    
-    if(adjust_unsuppressed){
-      tmp1[, value := value - log_INFECTED_NON_SUPPRESSED]
-    }
-
+    tmp1[, value := value + eval(rlang::parse_expr(log_offset_formula))]
   }
   
   if(!is.null(transform)){

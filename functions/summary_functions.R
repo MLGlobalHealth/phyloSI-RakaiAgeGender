@@ -622,6 +622,8 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round, df_age, df
   res <- do.call('rbind', res)
   
   res[, log_INFECTED_NON_SUPPRESSED := log(INFECTED_NON_SUPPRESSED)]
+  res[, log_PROP_SUSCEPTIBLE := log(PROP_SUSCEPTIBLE)]
+  res[, log_PERIOD_SPAN:= log(PERIOD_SPAN)]
   
   return(res)
 }
