@@ -681,6 +681,37 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 6)
+  
+  # empirical contribution
+  tmp <- copy(incidence_cases_round)
+  tmp <- tmp[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
+                    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = c('COMM', 'SEX', 'ROUND')]
+  tmp[, INFECTED_NON_SUPPRESSED_OPPOSITE_SEX := ifelse(SEX == 'F', INFECTED_NON_SUPPRESSED[SEX == 'M'], 
+                                                       INFECTED_NON_SUPPRESSED[SEX == 'F']), by = c('COMM', 'ROUND')]
+  tmp[, ADJ_INCIDENT_CASES := INCIDENT_CASES / INFECTED_NON_SUPPRESSED_OPPOSITE_SEX]
+  tmp[,TOTAL_ADJ_CASES := sum(ADJ_INCIDENT_CASES), by = c('COMM', 'ROUND')]
+  tmp[, PROP_ADJ_CASES := ADJ_INCIDENT_CASES / TOTAL_ADJ_CASES]
+  tmp[,TOTAL_CASES := sum(INCIDENT_CASES), by = c('COMM', 'ROUND')]
+  tmp[, PROP_CASES := INCIDENT_CASES / TOTAL_CASES]
+  
+  tmp <- melt.data.table(tmp, id.vars = c("COMM", 'SEX', 'ROUND'))
+  tmp <- tmp[variable %in% c('PROP_ADJ_CASES', 'PROP_CASES')]
+  tmp[, type := 'not adjusted by the number of HIV+ unsuppressed']
+  tmp[grepl("ADJ", variable), type := 'adjusted by the number of HIV+ unsuppressed']
+  
+  tmp[, SEX_SOURCE := 'Male']
+  tmp[SEX == 'M', SEX_SOURCE := 'Female']
+  
+  ggplot(tmp, aes(x = ROUND, y = value, col = type)) + 
+    geom_point() + 
+    facet_grid(COMM~SEX_SOURCE) + 
+    theme_bw() + 
+    labs(y = 'Empirical contribution to infection', col = '')  +
+    theme(legend.position = 'bottom') + 
+    guides(col = guide_legend(byrow = T, nrow = 2)) + 
+    scale_y_continuous(labels = scales::percent_format())
+  ggsave(paste0(outdir, '-data-empirical_contribution_infection.png'), w = 7, h = 6)
+  
 }
 
 plot_data_by_period <- function(eligible_count, incidence_cases, proportion_sampling, outdir){
