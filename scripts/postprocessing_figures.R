@@ -197,16 +197,15 @@ expected_contribution_age_group_source_round <- find_summary_output_by_round(sam
                                                                              df_direction, df_community, df_period, df_age, 
                                                                              transform = 'exp', 
                                                                              standardised.vars = c('INDEX_COMMUNITY', 'INDEX_DIRECTION', 'ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
-                                                                             log_offset_round = log_offset_round, adjust_unsuppressed = T
-
+                                                                             log_offset_round = log_offset_round, adjust_unsuppressed = T)
 plot_contribution_age_group_by_round(expected_contribution_age_group_source_round, outfile.figures,'Expected contribution to infection')
 
 # aggregated by age group and classified
 expected_contribution_age_classification_source_round <- find_summary_output_by_round(samples, 'log_beta', 
                                                                                       c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
-                             df_direction, df_community, df_period, df_age, 
-                             transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_DIRECTION', 'ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
-                             log_offset_round = log_offset_round, adjust_unsuppressed = T)
+                                                                                      df_direction, df_community, df_period, df_age, 
+                                                                                      transform = 'exp', standardised.vars = c('INDEX_COMMUNITY', 'INDEX_DIRECTION', 'ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
+                                                                                      log_offset_round = log_offset_round, adjust_unsuppressed = T)
 plot_contribution_age_classification_by_round(expected_contribution_age_classification_source_round, outfile.figures,'Expected contribution to infection')
 
 
