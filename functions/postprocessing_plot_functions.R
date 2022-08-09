@@ -549,7 +549,7 @@ plot_transmission_risk_age_source_by_round <- function(transmission_risk_age_sou
       geom_bar(aes(y = M, fill = SEX), stat = 'identity', position = "identity") + 
       geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.5, col = 'grey60') + 
       labs(x = 'Age', y = 'Transmission risk exerted per year', 
-           fill = lab, col = '', alpha = '') + 
+           col = '', alpha = '') + 
       theme_bw() +
       facet_grid(ROUND~SEX)+
       scale_fill_manual(values = c('Male'='royalblue3','Female'='deeppink2')) + 
