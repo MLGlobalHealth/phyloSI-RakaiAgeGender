@@ -377,11 +377,15 @@ add_incidence_cases <- function(stan_data, incidence_cases, proportion_sampling)
         z[, i, j, k] = ceiling(tmp$INCIDENT_CASES)
         
         # add probability of sampling
-        tmp <- proportion_sampling[SEX == .SEX.RECIPIENT & COMM ==df_community[j, COMM] & INDEX_TIME == df_period[k, INDEX_TIME]]
-        tmp <- tmp[order(AGEYRS)]
-        n_sampling_index_z[i, j, k] <- tmp[, sum(prop_sampling == 0)]
+        tmp <- proportion_sampling[SEX.RECIPIENT == .SEX.RECIPIENT & COMM == df_community[j, COMM] & BEFORE_CUTOFF == df_period[k, BEFORE_CUTOFF]]
+        tmp <- unique(tmp[, .(AGEYRS.RECIPIENT, prop_sampling.RECIPIENT)])
+        tmp <- tmp[order(AGEYRS.RECIPIENT)]
+        
+        n_sampling_index_z[i, j, k] <- tmp[, sum(prop_sampling.RECIPIENT == 0)]
         sampling_index_z[,i,j,k] <- rep(-1,nrow(tmp) )
-        sampling_index_z[1:n_sampling_index_z[i, j, k],i,j,k] <- tmp[, which(prop_sampling == 0)]
+        if(n_sampling_index_z[i, j, k] > 0){
+          sampling_index_z[1:n_sampling_index_z[i, j, k],i,j,k] <- tmp[, which(prop_sampling.RECIPIENT == 0)]
+        }
       }
     }
   }
@@ -737,7 +741,7 @@ add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_ag
   eligible_count_wide <- eligible_count_wide[order(SEX, COMM, BEFORE_CUTOFF, PERIOD, AGEYRS)]
   eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
   
-  proportion_sampling <- proportion_sampling[order(SEX, COMM, BEFORE_CUTOFF, PERIOD, AGEYRS)]
+  proportion_sampling <- proportion_sampling[order(SEX.RECIPIENT, COMM, BEFORE_CUTOFF, PERIOD)]
   
   log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
   log_prop_sampling_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
@@ -762,9 +766,10 @@ add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_ag
           tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
           log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
           
-          # add probability of sampling recipient
-          tmp <- proportion_sampling[SEX == .SEX.RECIPIENT & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
-          log_offset <- merge(log_offset, tmp[, .(AGEYRS, prop_sampling)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
+          # add probability of sampling recipient 
+          tmp <- proportion_sampling[SEX.RECIPIENT == .SEX.RECIPIENT & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
+          log_offset <- merge(log_offset, tmp[, .(AGEYRS.SOURCE, AGEYRS.RECIPIENT, prop_sampling)], by.x = c('AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'), 
+                              by.y = c('AGEYRS.SOURCE', 'AGEYRS.RECIPIENT'))
 
           # add period in year
           log_offset[, PERIOD_SPAN := df_period[BEFORE_CUTOFF == .BEFORE_CUTOFF, PERIOD_SPAN]]

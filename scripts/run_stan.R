@@ -19,7 +19,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220730a'
+  stan_model <- 'gp_220811a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -74,6 +74,8 @@ only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
+diff_proportion_sampling_source_age <- T
+smooth_proportion_sampling_probability <- T
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -239,7 +241,8 @@ print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SE
 # Find probability of observing a transmissing event
 #
 
-proportion_sampling <- get_proportion_sampling(pairs, incidence_cases)
+proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures,
+                                               diff_proportion_sampling_source_age,smooth_proportion_sampling_probability)
 
 
 #
@@ -284,7 +287,7 @@ stan_init <- add_init(stan_data)
 if(1){
   # plot count eligible susceptible / infected / infected unsuppressed and incident cases
   plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outfile.figures)
-  plot_data_by_period(eligible_count, incidence_cases, proportion_sampling, outfile.figures)
+  plot_data_by_period(eligible_count, incidence_cases, outfile.figures)
   
   # plot crude force of infection 
   crude_force_infection <- find_crude_force_infection(stan_data)
