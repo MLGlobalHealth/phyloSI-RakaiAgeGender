@@ -59,9 +59,7 @@ data {
   vector[N_PER_GROUP] log_offset[N_DIRECTION, N_COMMUNITY, N_PERIOD]; 
   vector[N_PER_GROUP] log_prop_sampling[N_DIRECTION, N_COMMUNITY, N_PERIOD]; 
   int sampling_index_y[N_PER_GROUP, N_DIRECTION, N_COMMUNITY, N_PERIOD]; 
-  int sampling_index_z[N_AGE, N_DIRECTION, N_COMMUNITY, N_PERIOD]; 
   int n_sampling_index_y[N_DIRECTION, N_COMMUNITY, N_PERIOD];
-  int n_sampling_index_z[N_DIRECTION, N_COMMUNITY, N_PERIOD]; 
   int map_age_source[N_PER_GROUP];
   int map_age_recipient[N_PER_GROUP];
   
