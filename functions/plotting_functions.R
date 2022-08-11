@@ -584,7 +584,7 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
     geom_line(aes(col = ROUND)) + 
     facet_grid(SEX~COMM) + 
     theme_bw() + 
-    labs(x = 'Age', y = 'Probability distribution of the age composition of susceptible')
+    labs(x = 'Age', y = 'Probability distribution of the age composition of proportion of susceptible')
   ggsave(paste0(outdir, '-data-distribution_function_age_composition_susceptible.png'), w = 7, h = 7)
   
   
@@ -685,24 +685,24 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   # empirical contribution
   tmp <- copy(incidence_cases_round)
   tmp <- tmp[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
-                    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = c('COMM', 'SEX', 'ROUND')]
+                    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = c('COMM', 'SEX', 'ROUND', 'ROUND_SPANYRS')]
   tmp[, INFECTED_NON_SUPPRESSED_OPPOSITE_SEX := ifelse(SEX == 'F', INFECTED_NON_SUPPRESSED[SEX == 'M'], 
-                                                       INFECTED_NON_SUPPRESSED[SEX == 'F']), by = c('COMM', 'ROUND')]
+                                                       INFECTED_NON_SUPPRESSED[SEX == 'F']), by = c('COMM', 'ROUND', 'ROUND_SPANYRS')]
   tmp[, ADJ_INCIDENT_CASES := INCIDENT_CASES / INFECTED_NON_SUPPRESSED_OPPOSITE_SEX]
   tmp[,TOTAL_ADJ_CASES := sum(ADJ_INCIDENT_CASES), by = c('COMM', 'ROUND')]
   tmp[, PROP_ADJ_CASES := ADJ_INCIDENT_CASES / TOTAL_ADJ_CASES]
   tmp[,TOTAL_CASES := sum(INCIDENT_CASES), by = c('COMM', 'ROUND')]
   tmp[, PROP_CASES := INCIDENT_CASES / TOTAL_CASES]
   
-  tmp <- melt.data.table(tmp, id.vars = c("COMM", 'SEX', 'ROUND'))
-  tmp <- tmp[variable %in% c('PROP_ADJ_CASES', 'PROP_CASES')]
-  tmp[, type := 'not adjusted by the number of HIV+ unsuppressed']
-  tmp[grepl("ADJ", variable), type := 'adjusted by the number of HIV+ unsuppressed']
+  tmp <- melt.data.table(tmp, id.vars = c("COMM", 'SEX', 'ROUND', 'ROUND_SPANYRS'))
+  tmp1 <- tmp[variable %in% c('PROP_ADJ_CASES', 'PROP_CASES')]
+  tmp1[, type := 'not adjusted by the number of HIV+ unsuppressed']
+  tmp1[grepl("ADJ", variable), type := 'adjusted by the number of HIV+ unsuppressed']
   
-  tmp[, SEX_SOURCE := 'Male']
-  tmp[SEX == 'M', SEX_SOURCE := 'Female']
+  tmp1[, SEX_SOURCE := 'Male']
+  tmp1[SEX == 'M', SEX_SOURCE := 'Female']
   
-  ggplot(tmp, aes(x = ROUND, y = value, col = type)) + 
+  ggplot(tmp1, aes(x = ROUND, y = value, col = type)) + 
     geom_point() + 
     facet_grid(COMM~SEX_SOURCE) + 
     theme_bw() + 
@@ -712,9 +712,25 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
     scale_y_continuous(labels = scales::percent_format())
   ggsave(paste0(outdir, '-data-empirical_contribution_infection.png'), w = 7, h = 6)
   
+  # empirical transmission risk
+  tmp1 <- tmp[variable == 'INCIDENT_CASES']
+  tmp1[, SEX_SOURCE := 'Male']
+  tmp1[SEX == 'M', SEX_SOURCE := 'Female']
+  
+  ggplot(tmp1, aes(x = ROUND, y = value / ROUND_SPANYRS, fill = SEX_SOURCE)) + 
+    geom_bar(stat = 'identity') + 
+    facet_grid(COMM~SEX_SOURCE, scale = 'free') + 
+    theme_bw() + 
+    scale_fill_manual(values = c('Male'='royalblue3','Female'='deeppink2')) + 
+    labs(y = 'Empirical transmission risk per year', col = '')  +
+    theme(legend.position = 'none') + 
+    guides(col = guide_legend(byrow = T, nrow = 2))  + 
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))
+  ggsave(paste0(outdir, '-data-empirical_transmission_risk_sex.png'), w = 7, h = 6)
+  
 }
 
-plot_data_by_period <- function(eligible_count, incidence_cases, proportion_sampling, outdir){
+plot_data_by_period <- function(eligible_count, incidence_cases, outdir){
   
   eligible_count_wide <- dcast.data.table(eligible_count, SEX + COMM + AGEYRS + BEFORE_CUTOFF + PERIOD + PERIOD_SPAN + INDEX_TIME ~ variable, value.var = 'count')
   
@@ -791,15 +807,6 @@ plot_data_by_period <- function(eligible_count, incidence_cases, proportion_samp
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-incidence_case_period.png'), w = 7, h = 6)
-  
-  # proportion sampling
-  ggplot(proportion_sampling, aes(x = AGEYRS)) +
-    geom_line(aes(y = prop_sampling , col = SEX)) +
-    labs(y = 'Probability of observing a transmission event', x = 'Age') +
-    facet_grid(PERIOD~COMM, label = 'label_both', scale = 'free_y') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-proportion_sampling_period.png'), w = 7, h = 6)
 }
 
 plot_offset <- function(stan_data, outdir){
