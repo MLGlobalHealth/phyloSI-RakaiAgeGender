@@ -530,7 +530,11 @@ summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date,
 inv_logit <- function(x) 1 / (1 + exp(-x))
 logit <- function(p) log(p / (1-p))
 
-get_proportion_sampling <- function(pairs, incidence_cases, outdir, diff_proportion_sampling_source_age = F, smooth_proportion_sampling_probability = F){
+get_proportion_sampling <- function(pairs, incidence_cases, outdir, 
+                                    diff_proportion_sampling_source_age_mirror = F, 
+                                    diff_proportion_sampling_source_age_pair = F, 
+                                    smooth_proportion_sampling_probability = F, 
+                                    smooth_proportion_sampling_source_age_pair = F){
   
   # find number of pair observed
   dp <- copy(pairs)
@@ -543,77 +547,107 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir, diff_proport
   di <- merge(incidence_cases, dp, by = c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF'), all.x = T)
   di[is.na(count), count := 0]
   
-  # find proportion sampling from a source of any age to a recipient aged j
+  # find empiriral proportion sampling from a source of any age to a recipient aged j
   di[, prop_sampling_empirical := count / INCIDENT_CASES]
   
-  # extend to find proportion from a source aged i to a recipient aged j
-  df <- di[, .(SEX, COMM, AGEYRS, BEFORE_CUTOFF, PERIOD, prop_sampling_empirical)]
-  setnames(df, c('SEX', 'AGEYRS'), c('SEX.RECIPIENT', 'AGEYRS.RECIPIENT'))
-  
+  # smooth proportion of sampling
   if(smooth_proportion_sampling_probability){
-    df[prop_sampling_empirical == 0, prop_sampling_empirical := 0.001]
-    df[prop_sampling_empirical > 1, prop_sampling_empirical := 0.999]
+
+    span = 0.3
+    span2 = 0.3
     
-    df <- df[, {
-      loess.fit = loess(prop_sampling_empirical~AGEYRS.RECIPIENT, span = 0.5, control=loess.control(surface="direct"))
-      prop_sampling <- inv_logit(predict(loess.fit, newdata = AGEYRS.RECIPIENT))
-      prop_sampling <- (predict(loess.fit, newdata = AGEYRS.RECIPIENT))
-      list(prop_sampling_empirical = prop_sampling, AGEYRS.RECIPIENT = AGEYRS.RECIPIENT)
-    },by = c('SEX.RECIPIENT', 'COMM', 'BEFORE_CUTOFF', 'PERIOD')]
+    tmp <- di[BEFORE_CUTOFF == T]
+    tmp <- tmp[, {
+      loess.fit = loess(prop_sampling_empirical~AGEYRS, span = span, control=loess.control(surface="direct"))
+      prop_sampling <- inv_logit(predict(loess.fit, newdata = AGEYRS))
+      prop_sampling <- (predict(loess.fit, newdata = AGEYRS))
+      list(prop_sampling_empirical = prop_sampling, AGEYRS = AGEYRS)
+    },by = c('SEX', 'COMM', 'BEFORE_CUTOFF', 'PERIOD')]
     
-    df[prop_sampling_empirical < 0, prop_sampling_empirical := 0.001]
-    df[prop_sampling_empirical > 1, prop_sampling_empirical := 0.999]
+    ds <- di[BEFORE_CUTOFF == F]
+    ds <- ds[, {
+      loess.fit = loess(prop_sampling_empirical~AGEYRS, span = span2, control=loess.control(surface="direct"))
+      prop_sampling <- inv_logit(predict(loess.fit, newdata = AGEYRS))
+      prop_sampling <- (predict(loess.fit, newdata = AGEYRS))
+      list(prop_sampling_empirical = prop_sampling, AGEYRS = AGEYRS)
+    },by = c('SEX', 'COMM', 'BEFORE_CUTOFF', 'PERIOD')]
     
-  }
-  
-  if(!diff_proportion_sampling_source_age){ 
-    # probability of sampling does not change with age of source
-    
-    # set prop sampling source to 1
-    tmp <- select(df, - prop_sampling_empirical)
-    setnames(tmp, c('SEX.RECIPIENT', 'AGEYRS.RECIPIENT'), c('SEX.SOURCE', 'AGEYRS.SOURCE'))
-    tmp[, prop_sampling.SOURCE := 1]
-    
-    # set prop sampling recipient to recipient x source
-    df[, prop_sampling.RECIPIENT := prop_sampling_empirical]
-    df <- select(df, - prop_sampling_empirical)
-    
-    # merge
-    df <- merge(df, tmp, by = c('BEFORE_CUTOFF', 'PERIOD', 'COMM'), allow.cartesian = T)
-    df <- df[SEX.SOURCE != SEX.RECIPIENT]
-    df[, prop_sampling := prop_sampling.RECIPIENT * prop_sampling.SOURCE]
-    df[, prop_sampling_check := prop_sampling.RECIPIENT * prop_sampling.SOURCE]
+    ds <- rbind(ds, tmp)
+    ds[prop_sampling_empirical < 0, prop_sampling_empirical := 0.00]
+    ds[prop_sampling_empirical > 1, prop_sampling_empirical := 1.00]
     
   }else{
-    
-    
-    # find probability to observe transmisison towards recipient j
-    df[, TOTAL_N := length(AGEYRS.RECIPIENT), by = c('BEFORE_CUTOFF', 'PERIOD', 'COMM')]
-    df[, TOTAL_prop_sampling := sum(prop_sampling_empirical), by = c('BEFORE_CUTOFF', 'PERIOD', 'COMM')]
-    stopifnot(nrow(df[TOTAL_prop_sampling == 0]) == 0)
-    df[, prop_sampling.RECIPIENT := sqrt(TOTAL_N)*prop_sampling_empirical / sqrt(TOTAL_prop_sampling)]
-    # df[COMM == 'inland' & prop_sampling.RECIPIENT > 1]
-    
-    tmp <- copy(df)
-    # tmp[, SEX.SOURCE := 'M']
-    # tmp[SEX.RECIPIENT == 'M', SEX.SOURCE := 'F']
-    # set(tmp, NULL, 'SEX.RECIPIENT', NULL)
-    setnames(tmp, 'SEX.RECIPIENT', 'SEX.SOURCE')
-    setnames(tmp, c('AGEYRS.RECIPIENT'), c('AGEYRS.SOURCE'))
-    tmp[, prop_sampling.SOURCE := sum(prop_sampling.RECIPIENT) / 2, by = c('BEFORE_CUTOFF', 'PERIOD', 'COMM', 'AGEYRS.SOURCE')]
-    set(tmp, NULL, 'prop_sampling.RECIPIENT', NULL)
-    
-    df <- merge(df, select(tmp, -c('prop_sampling_empirical', 'TOTAL_N', 'TOTAL_prop_sampling')), 
-                by = c('BEFORE_CUTOFF', 'PERIOD', 'COMM'), allow.cartesian = T)
-    df <- df[SEX.SOURCE != SEX.RECIPIENT]
-    df[, prop_sampling := prop_sampling.RECIPIENT * prop_sampling.SOURCE]
-    df[prop_sampling > 1 & COMM == 'inland']
-    df[, prop_sampling_check := sum((prop_sampling.SOURCE) / (TOTAL_N / 2)) * prop_sampling.RECIPIENT, by = c('BEFORE_CUTOFF', 'PERIOD', 'COMM', 'AGEYRS.RECIPIENT', 'SEX.RECIPIENT')]
-    
-    stopifnot(nrow(df[abs(prop_sampling_empirical - prop_sampling_check) > 1e-6]) == 0)
-
+    ds <- copy(di)
   }
   
+  # find proportion of the porbability across age of source 
+  if(diff_proportion_sampling_source_age_pair){ 
+
+    dp <- copy(pairs)
+    setnames(dp, c('SEX.SOURCE', 'COMM.RECIPIENT', 'AGE_INFECTION.SOURCE', 'DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT'), 
+             c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF'))
+    dp[, AGEYRS := floor(AGEYRS)]
+    dp <- dp[, list(count = .N), by = c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF')]
+    
+    df <- merge(dp, unique(ds[, .(AGEYRS, COMM, SEX, BEFORE_CUTOFF)]), by = c('AGEYRS', 'COMM', 'SEX', 'BEFORE_CUTOFF'), all.y = T)
+    df[is.na(count), count := 0]
+    
+    if(smooth_proportion_sampling_source_age_pair){
+      
+      df <- df[, {
+        loess.fit = loess(count~AGEYRS, span = 0.4, control=loess.control(surface="direct"))
+        count <- inv_logit(predict(loess.fit, newdata = AGEYRS))
+        count <- (predict(loess.fit, newdata = AGEYRS))
+        list(count = count, AGEYRS = AGEYRS)
+      },by = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
+      
+      df[count < 0, count := 0]
+    }
+    
+    
+    df[, N_AGE_GROUP := length(AGEYRS), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
+    df[, proportion := count / sum(count), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
+
+    ggplot(df, aes(x = AGEYRS, y =proportion )) + geom_line() + facet_grid(BEFORE_CUTOFF~SEX + COMM) + theme_bw()
+    ggsave(paste0(outdir, '-data-proportion_sampling_diff_proportion_sampling_source_age_pair.png'), w = 9, h = 8)
+    
+  }else if(diff_proportion_sampling_source_age_mirror){
+    # re-scale factor is proporitonal to the probability
+    
+    df <- copy(ds[, .(SEX, COMM, AGEYRS, BEFORE_CUTOFF, prop_sampling_empirical)])
+    df[, N_AGE_GROUP := length(AGEYRS), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
+    df[, proportion := prop_sampling_empirical / sum(prop_sampling_empirical), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
+    
+    df <- select(df, - prop_sampling_empirical)
+    
+  }else{
+    # re-scale factor does not change with age of source
+    
+    df <- copy(ds[, .(SEX, COMM, AGEYRS, BEFORE_CUTOFF, prop_sampling_empirical)])
+    df[, N_AGE_GROUP := length(AGEYRS), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
+    df[, proportion := 1 / N_AGE_GROUP]
+    
+    df <- select(df, - prop_sampling_empirical)
+  }
+  
+  # find re-scale factor for source
+  df[, rescale_factor := proportion * N_AGE_GROUP]
+  setnames(df, c('SEX', 'AGEYRS'), c('SEX.SOURCE', 'AGEYRS.SOURCE'))
+  
+  # merge to recipient
+  tmp <- ds[, .(SEX, COMM, AGEYRS, BEFORE_CUTOFF, prop_sampling_empirical)]
+  setnames(tmp, c('SEX', 'AGEYRS'), c('SEX.RECIPIENT', 'AGEYRS.RECIPIENT'))
+  df <- merge(df, tmp, by = c('BEFORE_CUTOFF', 'COMM'), allow.cartesian = T)
+  df[, prop_sampling := prop_sampling_empirical * rescale_factor]
+  df <- df[SEX.RECIPIENT != SEX.SOURCE]
+
+  # check
+  tmp <- df[, list(sum_prop_sampling = sum(prop_sampling)), by = c('SEX.RECIPIENT', 'AGEYRS.RECIPIENT', 'prop_sampling_empirical', 'COMM', 'BEFORE_CUTOFF', 'N_AGE_GROUP')]
+  tmp[, sum_prop_sampling_empirical := prop_sampling_empirical * N_AGE_GROUP]
+  stopifnot(nrow(tmp[abs(sum_prop_sampling - sum_prop_sampling_empirical) > 1e-6]) == 0)
+
+  # merge period 
+  df <- merge(df, unique(di[, .(PERIOD, BEFORE_CUTOFF)]), by = c('BEFORE_CUTOFF'))
   
   if(1){ # plots
     
@@ -629,7 +663,7 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir, diff_proport
     
     ggplot(tmp, aes(col = Direction)) + 
       geom_line(aes(x = AGEYRS, y = prop_sampling_empirical)) + 
-      geom_line(data = tmp1, aes(x = AGEYRS.RECIPIENT, y = prop_sampling_check), linetype = 'dashed') + 
+      geom_line(data = tmp1, aes(x = AGEYRS.RECIPIENT, y = prop_sampling_empirical), linetype = 'dashed') + 
       facet_grid(PERIOD~COMM + Direction) + 
       scale_y_continuous(labels = scales::percent)  + 
       theme_bw() +

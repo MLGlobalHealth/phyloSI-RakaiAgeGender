@@ -74,8 +74,10 @@ only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
-diff_proportion_sampling_source_age <- T
-smooth_proportion_sampling_probability <- T
+diff_proportion_sampling_source_age_mirror <- F
+diff_proportion_sampling_source_age_pair <- F
+smooth_proportion_sampling_probability <- F
+smooth_proportion_sampling_source_age_pair <- F
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -88,7 +90,7 @@ file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_c
 # file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
 file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_1000_220803.csv")
 #file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
-file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220805.csv')
+file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220811.csv')
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
 # load functions
@@ -242,7 +244,10 @@ print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SE
 #
 
 proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures,
-                                               diff_proportion_sampling_source_age,smooth_proportion_sampling_probability)
+                                               diff_proportion_sampling_source_age_mirror = T, 
+                                               diff_proportion_sampling_source_age_pair = F, 
+                                               smooth_proportion_sampling_probability = T, 
+                                               smooth_proportion_sampling_source_age_pair = T)
 
 
 #
