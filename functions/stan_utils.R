@@ -378,7 +378,7 @@ add_incidence_cases <- function(stan_data, incidence_cases, proportion_sampling)
         
         # add probability of sampling
         tmp <- proportion_sampling[SEX.RECIPIENT == .SEX.RECIPIENT & COMM == df_community[j, COMM] & BEFORE_CUTOFF == df_period[k, BEFORE_CUTOFF]]
-        tmp <- unique(tmp[, .(AGEYRS.RECIPIENT, prop_sampling.RECIPIENT)])
+        tmp <- tmp[, list(prop_sampling.RECIPIENT = sum(prop_sampling)), by = c('AGEYRS.RECIPIENT')]
         tmp <- tmp[order(AGEYRS.RECIPIENT)]
         
         n_sampling_index_z[i, j, k] <- tmp[, sum(prop_sampling.RECIPIENT == 0)]
