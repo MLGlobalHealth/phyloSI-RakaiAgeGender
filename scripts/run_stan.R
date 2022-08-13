@@ -244,10 +244,10 @@ print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SE
 #
 
 proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures,
-                                               diff_proportion_sampling_source_age_mirror = T, 
-                                               diff_proportion_sampling_source_age_pair = F, 
-                                               smooth_proportion_sampling_probability = T, 
-                                               smooth_proportion_sampling_source_age_pair = T)
+                                               diff_proportion_sampling_source_age_mirror, 
+                                               diff_proportion_sampling_source_age_pair, 
+                                               smooth_proportion_sampling_probability, 
+                                               smooth_proportion_sampling_source_age_pair)
 
 
 #
