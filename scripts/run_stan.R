@@ -19,7 +19,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220811a'
+  stan_model <- 'gp_220813'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -150,7 +150,6 @@ eligible_count_round <- add_infected_unsuppressed(eligible_count_round, proporti
 eligible_count <- summarise_eligible_count_period(eligible_count_round, cutoff_date, df_period)
 
 
-
 #
 # Find incidence cases
 #
@@ -267,22 +266,16 @@ df_community <- get.df.community()
 # PREPARE STAN DATA
 #
 
-stan_data <- prepare_stan_data(pairs, df_age, df_direction, df_community, df_period)
+stan_data <- add_stan_data_base()
+stan_data <- add_phylo_data(stan_data, pairs)
 stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 6, n_knots_columns = 6,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
-stan_data <- add_log_offset(stan_data, eligible_count, proportion_sampling, df_age, df_direction, df_community, df_period)
-stan_data <- add_incidence_cases(stan_data, incidence_cases, proportion_sampling)
+stan_data <- add_incidence_cases(stan_data, incidence_cases_round)
+stan_data <- add_offset(stan_data, eligible_count_round)
+stan_data <- add_probability_sampling(stan_data, proportion_sampling)
 stan_init <- add_init(stan_data)
-
-# if(use.informative.prior){
-#   stan_data <- add_informative_prior_gp_mean(stan_data, df_age, file.partnership.rate, outfile.figures)
-# } else if(use.diagonal.prior){
-#   stan_data <- add_diagonal_prior_gp_mean(stan_data, df_age, outfile.figures)
-# } else{
-#   stan_data <- add_flat_prior_gp_mean(stan_data, df_age, outfile.figures)
-# }
 
 
 #
@@ -292,11 +285,10 @@ stan_init <- add_init(stan_data)
 if(1){
   # plot count eligible susceptible / infected / infected unsuppressed and incident cases
   plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outfile.figures)
-  plot_data_by_period(eligible_count, incidence_cases, outfile.figures)
+  plot_data_by_period(incidence_cases, outfile.figures)
   
-  # plot crude force of infection 
-  crude_force_infection <- find_crude_force_infection(stan_data)
-  plot_crude_force_infection(crude_force_infection, outfile.figures)
+  # plot offset
+  plot_offset(stan_data, outfile.figures)
   
   # plot pair from chains
   # plot_pairs_infection_dates(pairs.all, outfile.figures)
@@ -307,9 +299,7 @@ if(1){
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M'], 'Female -> Male', 'FM', outfile.figures)
   plot_CI_age_infection(pairs, outfile.figures)
   plot_CI_age_transmission(pairs, outfile.figures)
-  
-  # plot offset
-  plot_offset(stan_data, outfile.figures)
+
 }
 
 
@@ -318,11 +308,9 @@ if(1){
   stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
   stan_data[['z']][,,1,] =  stan_data[['z']][,,2,]
   stan_data[['sampling_index_y']][,,1,] =  stan_data[['sampling_index_y']][,,2,]
-  stan_data[['sampling_index_z']][,,1,] =  stan_data[['sampling_index_z']][,,2,]
   stan_data[['log_offset']][,1,,] =  stan_data[['log_offset']][,2,,]
   stan_data[['log_prop_sampling']][,1,,] =  stan_data[['log_prop_sampling']][,2,,]
   stan_data[['n_sampling_index_y']][,1,] =stan_data[['n_sampling_index_y']][,2,] 
-  stan_data[['n_sampling_index_z']][,1,] =stan_data[['n_sampling_index_z']][,2,] 
 }
 
 

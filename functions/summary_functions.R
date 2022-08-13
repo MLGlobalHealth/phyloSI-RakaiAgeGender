@@ -346,15 +346,13 @@ add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppres
     
   # select variabel
   di <- di[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE, INFECTED, SUSCEPTIBLE)]
+  di[, ROUND := paste0('R0', ROUND)]
   
   # keep inside observational period
-  df_round[, round := as.character(round)]
-  df_round[round == '15.1', round := '15S']
-  di <- merge(di, df_round, by.x = 'ROUND', by.y = 'round')
+  di <- merge(di, df_round, by = 'ROUND')
   di <- di[min_sample_date >= start_observational_period & max_sample_date <= stop_observational_period ]
   
   # find proportion of unsuppressed by round
-  di[, ROUND := paste0('R0', ROUND)]
   df <- merge(di, pu, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
   # get infected non suppressed
@@ -374,21 +372,11 @@ summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, d
   eligible_count_round[, BEFORE_CUTOFF := max_sample_date <= cutoff_date]
   
   # summarise across time periods
-  df <- melt.data.table(eligible_count_round, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'min_sample_date', 'max_sample_date', 'BEFORE_CUTOFF', 'INDEX_TIME'))
-  
-  # fill missing months
-  df[ROUND == 'R014', max_sample_date := df_round[round == 15, min_sample_date]]
-  df[ROUND == 'R015', max_sample_date := df_round[round == 16, min_sample_date]]
-  df[ROUND == 'R016', max_sample_date := df_round[round == 17, min_sample_date]]
-  df[ROUND == 'R017', max_sample_date := df_round[round == 18, min_sample_date]]
-  
-  # find length in years of each round
-  df[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
-  
+  df <- melt.data.table(eligible_count_round, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'min_sample_date', 'round', 'INDEX_ROUND',
+                                                          'max_sample_date', 'BEFORE_CUTOFF', 'INDEX_TIME', 'ROUND_SPANYRS'))
+
   # check that the lengh corresponds to the one of the period
-  tmp <- unique(df[, .(ROUND, min_sample_date, max_sample_date, ROUND_SPANYRS)][order(ROUND)])
-  tmp[, round := (gsub('R0(.+)', '\\1', ROUND))]
-  tmp <- merge(tmp, df_round, by = 'round')
+  tmp <- unique(df[, .(ROUND, INDEX_TIME, min_sample_date, max_sample_date, ROUND_SPANYRS)][order(ROUND)])
   tmp <- tmp[, list(PERIOD_SPAN_WITH_ROUND = sum(ROUND_SPANYRS)), by = 'INDEX_TIME']
   tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
   stopifnot(tmp[, all(PERIOD_SPAN == PERIOD_SPAN_WITH_ROUND)])
@@ -429,7 +417,7 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
   setnames(incidence, 'AGE', 'AGEYRS')
   incidence[, COMM := 'inland']
   incidence[, SEX := substring(SEX, 1, 1)]
-  incidence <- incidence[ROUND >= 14]
+  incidence <- incidence[ROUND >= 15]
   
   if(grepl('R0', eligible_count_round[, ROUND[1]])){
     # add R0 in front of round index 
@@ -439,9 +427,14 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
   }
   
   # for now set incidence in fishing to be the same as in inland
-  incidence2 <- copy(incidence)
-  incidence2[, COMM := 'fishing']
-  incidence <- rbind(incidence, incidence2)
+  incidencefishing <- copy(incidence)
+  incidencefishing[, COMM := 'fishing']
+  incidence <- rbind(incidence, incidencefishing)
+  
+  # for now set incidence in round 14 to incidence in round 15
+  incidence14 <- copy(incidence[ROUND == 'R015'])
+  incidence14[, ROUND := 'R014']
+  incidence <- rbind(incidence, incidence14)
   
   if(0){
     ggplot(incidence, aes(x = AGEYRS)) +
@@ -458,19 +451,11 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
   
   if(full_time_period){
     
-    # fill missing months
-    dir[ROUND == 'R014', max_sample_date := df_round[round == 15, min_sample_date]]
-    dir[ROUND == 'R015', max_sample_date := df_round[round == 16, min_sample_date]]
-    dir[ROUND == 'R016', max_sample_date := df_round[round == 17, min_sample_date]]
-    dir[ROUND == 'R017', max_sample_date := df_round[round == 18, min_sample_date]]
-    
     # find length in years of each round
     dir[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
     
     # check that the lengh corresponds to the one of the period
-    tmp <- unique(dir[, .(ROUND, min_sample_date, max_sample_date, ROUND_SPANYRS)][order(ROUND)])
-    tmp[, round := (gsub('R0(.+)', '\\1', ROUND))]
-    tmp <- merge(tmp, df_round, by = 'round')
+    tmp <- unique(dir[, .(ROUND, INDEX_TIME, min_sample_date, max_sample_date, ROUND_SPANYRS)][order(ROUND)])
     tmp <- tmp[, list(PERIOD_SPAN_WITH_ROUND = sum(ROUND_SPANYRS)), by = 'INDEX_TIME']
     tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
     stopifnot(tmp[, all(PERIOD_SPAN == PERIOD_SPAN_WITH_ROUND)])
@@ -713,10 +698,28 @@ make.df.round <- function(df_round, df_period){
   df_round[round%in%14:15, INDEX_TIME := 1]
   df_round[round %in% 16:18, INDEX_TIME := 2]
   
+  # keep only round 14 to 18
+  df_round <- df_round[INDEX_TIME != '0']
+  df_round <- df_round[order(round)]
+  
+  # index 
+  df_round[, INDEX_ROUND := 1:nrow(df_round)]
+  df_round[, ROUND := paste0('R0', round)]
+  df_round[ROUND == 'R015.1', ROUND := 'R015S']
+  
+  # fill missing months
+  df_round[ROUND == 'R014', max_sample_date := df_round[round == 15, min_sample_date]]
+  df_round[ROUND == 'R015', max_sample_date := df_round[round == 16, min_sample_date]]
+  df_round[ROUND == 'R016', max_sample_date := df_round[round == 17, min_sample_date]]
+  df_round[ROUND == 'R017', max_sample_date := df_round[round == 18, min_sample_date]]
+  
+  # find length in years of each round
+  df_round[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
+  
   return(df_round)
 }
 
-find_log_offset_by_round <- function(stan_data, eligible_count_round, df_age, df_direction, df_community, df_period){
+find_log_offset_by_round <- function(stan_data, eligible_count_round){
   
   eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
   eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
@@ -797,26 +800,5 @@ prepare.proportion.unsuppresed <- function(proportion_unsuppressed){
   return(proportion_unsuppressed)
 }
 
-find_crude_force_infection <- function(stan_data){
-  
-  # retrieve observed transmission events and offset
-  tmp1 = as.data.table( reshape2::melt(stan_data[['y']]) )
-  setnames(tmp1, 1:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'Y'))
-  tmp2 = as.data.table( reshape2::melt(stan_data[['log_offset']]) )
-  setnames(tmp2, 1:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE', 'LOG_OFFSET'))
-  tmp1 <- merge(tmp1, tmp2, by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
-  tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
-  tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
-  tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
-  
-  # find offset
-  tmp1[, OFFSET := exp(LOG_OFFSET)]
-  
-  # find crude FOI
-  tmp1[, CRUDE_FOI := Y / OFFSET]
-  
-  
-  return(tmp1)
-}
+
 

@@ -75,7 +75,7 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-trace_plots.png'), w  = 8, h = 8
 p <- bayesplot::mcmc_intervals(fit, regex_pars = c('beta_baseline', 'rho_gp', 'alpha_gp')) + theme_bw()
 ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots.png'), w  = 8, h = 8)
 
-# period ontrast
+# period contrast
 add.vars = NULL
 if(length(dim(samples[['log_beta_period_contrast']])) > 2){
   add.vars = c('INDEX_DIRECTION', add.vars)

@@ -155,7 +155,7 @@ check_rhat <- function(fit) {
     print('  Rhat above 1.1 indicates that the chains very likely have not mixed')
 }
 
-find_summary_output <- function(samples, output, vars, df_direction, df_community, df_period, df_age, transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL){
+find_summary_output <- function(samples, output, vars, transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -215,7 +215,7 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
   return(tmp1)
 }
 
-find_summary_output_by_round <- function(samples, output, vars, df_direction, df_community, df_period, df_age, 
+find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
                                          log_offset_formula = 'LOG_OFFSET'){
   
@@ -226,9 +226,9 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
   if(!is.null(names)){
     setnames(tmp1, 2:(length(names) + 1), names)
   }else if(tmp1[, max(Var2)] == df_age[, max(INDEX_AGE)]){
-    setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
+    setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
   }else{
-    setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+    setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
   }
   
   if('INDEX_AGE' %in% names(tmp1)){
@@ -236,9 +236,8 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
     tmp1 <- merge(tmp1, df_age_aggregated, by = c('AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'))
   }
   
-  if('INDEX_TIME' %in% names(tmp1)){
-    tmp1 <- merge(tmp1, df_round, by = 'INDEX_TIME', allow.cartesian=TRUE)
-    tmp1[, ROUND := paste0('R0', round)]
+  if('INDEX_ROUND' %in% names(tmp1)){
+    tmp1 <- merge(tmp1, df_round, by = 'INDEX_ROUND')
   }
   
   if(!is.null(log_offset_round)){
@@ -273,10 +272,12 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
     tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
   if('INDEX_COMMUNITY' %in% vars)
     tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+  if('INDEX_ROUND' %in% vars)
+    tmp1 <- merge(tmp1, df_round, by = 'INDEX_ROUND')
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  if('INDEX_TIME' %in% vars)
+    tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
   
   file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')))
   if(!is.null(standardised.vars)){
@@ -289,34 +290,34 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
 }
 
 
-find_median_age_source <- function(samples, var, df_age, df_direction, df_community, df_period){
+find_median_age_source <- function(samples, var){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
-  setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+  setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
   
   tmp1[, value := exp(value)]
   
   tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'))
   tmp1[, delta := value / total_value]
-  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta )), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT')]
+  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta )), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT')]
   
   tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
-              by=c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT')]	
-  tmp1 = dcast(tmp1, INDEX_DIRECTION + INDEX_COMMUNITY + INDEX_TIME + AGE_INFECTION.RECIPIENT ~ q_label, value.var = "q")
+              by=c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT')]	
+  tmp1 = dcast(tmp1, INDEX_DIRECTION + INDEX_COMMUNITY + INDEX_ROUND + AGE_INFECTION.RECIPIENT ~ q_label, value.var = "q")
   
   tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
   tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+  tmp1 <- merge(tmp1, df_round, by = 'INDEX_ROUND')
   
   return(tmp1)
 }
 
-prepare_count_data <- function(stan_data, df_direction, df_community, df_period, df_age){
+prepare_count_data <- function(stan_data){
   
   tmp <- as.data.table(reshape2::melt(stan_data[['y']]))
   setnames(tmp, 1:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))

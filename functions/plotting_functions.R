@@ -730,73 +730,7 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   
 }
 
-plot_data_by_period <- function(eligible_count, incidence_cases, outdir){
-  
-  eligible_count_wide <- dcast.data.table(eligible_count, SEX + COMM + AGEYRS + BEFORE_CUTOFF + PERIOD + PERIOD_SPAN + INDEX_TIME ~ variable, value.var = 'count')
-  
-  # Census eligible count 
-  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = ELIGIBLE, col = PERIOD)) +
-    labs(y = 'Census eligible count', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_count_period.png'), w = 7, h = 6)
-  
-  # Infected 
-  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = INFECTED, col = PERIOD)) +
-    labs(y = 'Census eligible infected', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_infected_period.png'), w = 7, h = 6)
-  
-  eligible_count_wide[, PROP_INFECTED := INFECTED / ELIGIBLE]
-  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = PROP_INFECTED, col = PERIOD)) +
-    labs(y = 'Proportion of infected among census eligible', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_prop_infected_period.png'), w = 7, h = 6)
-  
-  # Susceptible census eligible count
-  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = SUSCEPTIBLE , col = PERIOD)) +
-    labs(y = 'Census eligible susceptible count', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_susceptible_period.png'), w = 7, h = 6)
-  
-  eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
-  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = PROP_SUSCEPTIBLE , col = PERIOD)) +
-    labs(y = 'Proportion of susceptible among census eligible individuals', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_prop_susceptible_period.png'), w = 7, h = 6)
-  
-  #HIV+ unsupressed census eligible count
-  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = PERIOD)) +
-    # geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX), alpha = 0.5) +
-    labs(y = 'Number of HIV+ unsupressed census eligible infected', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_period.png'), w = 7, h = 6)
-  
-  eligible_count_wide[, PROP_UNSUPPRESSED := INFECTED_NON_SUPPRESSED / INFECTED]
-  ggplot(eligible_count_wide, aes(x = AGEYRS)) +
-    geom_line(aes(y = PROP_UNSUPPRESSED , col = PERIOD)) +
-    labs(y = 'Proportion of unsuppressed among census eligible infected', x = 'Age') +
-    facet_grid(SEX~COMM, label = 'label_both') +
-    theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_prop_unsuppressed_period.png'), w = 7, h = 6)
+plot_data_by_period <- function(incidence_cases, outdir){
   
   # incidence cases
   ggplot(incidence_cases, aes(x = AGEYRS)) +
@@ -810,44 +744,27 @@ plot_data_by_period <- function(eligible_count, incidence_cases, outdir){
 }
 
 plot_offset <- function(stan_data, outdir){
+  
   tmp <- as.data.table(reshape2::melt(stan_data[['log_offset']]))
-  setnames(tmp, 1:4, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+  setnames(tmp, 1:4, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
   tmp <- merge(tmp, df_direction, by = 'INDEX_DIRECTION')
   tmp <- merge(tmp, df_community, by = 'INDEX_COMMUNITY')
-  tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
+  tmp <- merge(tmp, df_round, by = 'INDEX_ROUND')
   tmp <- merge(tmp, df_age, by = 'INDEX_AGE')
-  tmp <- tmp[COMM == 'inland']
-  tmp1 <- tmp[, list(value = sum(exp(value))), by = c('AGE_INFECTION.RECIPIENT', 'LABEL_DIRECTION', 'LABEL_COMMUNITY', 'PERIOD')]
+
+  tmp1 <- tmp[, list(value = sum(exp(value))), by = c('AGE_INFECTION.RECIPIENT', 'LABEL_DIRECTION', 'LABEL_COMMUNITY', 'ROUND')]
   
   ggplot(tmp, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
     geom_raster(aes(fill = exp(value))) +
-    facet_grid( PERIOD~LABEL_DIRECTION + LABEL_COMMUNITY) + 
+    facet_grid( ROUND~LABEL_DIRECTION + LABEL_COMMUNITY) + 
     theme_bw() +
+    scale_y_continuous(expand= c(0,0))+
+    scale_x_continuous(expand= c(0,0)) +
+    scale_fill_viridis_c()  + 
+    theme(strip.background = element_rect(colour="black", fill="white"),
+          strip.text = element_text(size = rel(1))) +
     labs(x= 'Age at infection recipient', y = 'Age at transmission source', fill = 'offset') 
-  ggsave(paste0(outdir, '-offset-value.png'), w = 7, h = 8)
-  
-  tmp <- as.data.table(reshape2::melt(stan_data[['y']]))
-  setnames(tmp, 1:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
-  tmp <- merge(tmp, df_direction, by = 'INDEX_DIRECTION')
-  tmp <- merge(tmp, df_community, by = 'INDEX_COMMUNITY')
-  tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
-  tmp <- merge(tmp, df_age, by = 'INDEX_AGE')
-  tmp <- tmp[COMM == 'inland']
-  tmp2 <- tmp[, list(value = sum(value)), by = c('AGE_INFECTION.RECIPIENT', 'LABEL_DIRECTION', 'LABEL_COMMUNITY', 'PERIOD')]
-  
-  ggplot(tmp1, aes(x = AGE_INFECTION.RECIPIENT, y = (value), col = PERIOD)) + 
-    geom_line() +
-    facet_grid( LABEL_COMMUNITY~LABEL_DIRECTION ) + 
-    theme_bw() +
-    labs(x=  'Age at infection recipient', y = 'total offset') 
-  ggsave(paste0(outdir, '-offset-value_aggregated.png'), w = 7, h = 5)
-  
-  ggplot(tmp2, aes(x = AGE_INFECTION.RECIPIENT, y = (value), col = PERIOD)) + 
-    geom_line() +
-    facet_grid( LABEL_COMMUNITY~LABEL_DIRECTION ) + 
-    theme_bw() +
-    labs(x=  'Age at infection recipient', y = 'total transmission events') 
-  ggsave(paste0(outdir, '-offset-total_count.png'), w = 7, h = 5)
+  ggsave(paste0(outdir, '-offset-value.png'), w = 10, h = 12 )
 }
 
 plot_crude_force_infection <- function(crude_force_infection, outdir){
