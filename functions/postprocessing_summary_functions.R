@@ -384,3 +384,20 @@ prepare_unsuppressed_proportion_by_round <- function(eligible_count_round, vars,
 
   tmp1[, type := 'Share in the unsuppressed HIV+ census eligible individuals']
 }
+
+remove_first_round <- function(tmp){
+  
+  rm.vars <- c('round', 'ROUND', 'ROUND_SPANYRS', 'INDEX_TIME', 'min_sample_date', 'max_sample_date')
+  
+  for(var in rm.vars){
+    if(var %in% names(tmp)){
+      tmp <- select(tmp, -var)
+      
+    }
+  }
+  
+  tmp[, INDEX_ROUND:= INDEX_ROUND +1]
+  tmp <- merge(tmp, df_round, by = 'INDEX_ROUND')
+  
+  return(tmp)
+}

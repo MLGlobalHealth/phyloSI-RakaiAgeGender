@@ -57,9 +57,12 @@ plot_2D_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
       guides(fill = guide_colorbar(order = 1), 
              shape = guide_legend(order = 2)) 
     
-    if('LABEL_DIRECTION' %in% names(tmp)){
+    if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
+      p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+    }else if('LABEL_DIRECTION' %in% names(tmp)){
       p <- p + facet_grid(LABEL_DIRECTION~.)
     }
+    
     
     ggsave(p, file = paste0(outdir, '-output-contrast_2D_', name, '.png'), w = 7, h = 7)
   
@@ -79,7 +82,9 @@ plot_source_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
           legend.position = 'bottom') +
     scale_fill_viridis_c() 
   
-  if('LABEL_DIRECTION' %in% names(tmp)){
+  if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
+    p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+  }else if('LABEL_DIRECTION' %in% names(tmp)){
     p <- p + facet_grid(LABEL_DIRECTION~.)
   }
   
@@ -101,7 +106,9 @@ plot_recipient_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
           legend.position = 'bottom') +
     scale_fill_viridis_c() 
   
-  if('LABEL_DIRECTION' %in% names(tmp)){
+  if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
+    p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+  }else if('LABEL_DIRECTION' %in% names(tmp)){
     p <- p + facet_grid(LABEL_DIRECTION~.)
   }
   

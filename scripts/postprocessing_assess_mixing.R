@@ -75,36 +75,69 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-trace_plots.png'), w  = 8, h = 8
 p <- bayesplot::mcmc_intervals(fit, regex_pars = c('beta_baseline', 'rho_gp', 'alpha_gp')) + theme_bw()
 ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots.png'), w  = 8, h = 8)
 
-# period contrast
-add.vars = NULL
-if(length(dim(samples[['log_beta_period_contrast']])) > 2){
-  add.vars = c('INDEX_DIRECTION', add.vars)
-}
-log_period_contrast <- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'INDEX_AGE'), df_direction, df_community, df_period, df_age, names = c(add.vars, 'INDEX_AGE'))
-plot_2D_contrast(log_period_contrast, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
-log_period_contrast_source <- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, 
-                                                  names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
-plot_source_contrast(log_period_contrast_source, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
-log_period_contrast_recipient<- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'AGE_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, 
-                                                  names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
-plot_recipient_contrast(log_period_contrast_recipient, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
-
-# community contrast
-log_community_contrast <- find_summary_output(samples, 'log_beta_community_contrast', c('INDEX_AGE'), df_direction, df_community, df_period, df_age, names = c('INDEX_AGE'))
-plot_2D_contrast(log_community_contrast, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
-log_community_contrast_source <- find_summary_output(samples, 'log_beta_community_contrast', c('AGE_TRANSMISSION.SOURCE'), df_direction, df_community, df_period, df_age, 
-                                                  names = c('INDEX_AGE'), operation = 'mean')
-plot_source_contrast(log_community_contrast_source, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
-log_community_contrast_recipient<- find_summary_output(samples, 'log_beta_community_contrast', c('AGE_INFECTION.RECIPIENT'), df_direction, df_community, df_period, df_age, 
-                                                    names = c('INDEX_AGE'), operation = 'mean')
-plot_recipient_contrast(log_community_contrast_recipient, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
-
 
 #
 # Pairs plot
 #
+
 p <- bayesplot::mcmc_pairs(fit, regex_pars = c('beta_baseline', 'rho_gp', 'alpha_gp')) + theme_bw()
 ggsave(p, file = paste0(outfile.figures, '-mcmc-pairs_plots.png'), w  = 8, h = 8)
+
+
+
+#
+# Force of infection contrasts
+#
+
+
+# # period contrast
+add.vars = NULL
+if(length(dim(samples[['log_beta_period_contrast']])) > 2){
+  add.vars = c('INDEX_DIRECTION', add.vars)
+}
+
+log_period_contrast <- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'INDEX_AGE'), names = c(add.vars, 'INDEX_AGE'))
+plot_2D_contrast(log_period_contrast, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
+
+log_period_contrast_source <- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'AGE_TRANSMISSION.SOURCE'), 
+                                                  names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
+plot_source_contrast(log_period_contrast_source, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
+
+log_period_contrast_recipient<- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'AGE_INFECTION.RECIPIENT'), 
+                                                  names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
+plot_recipient_contrast(log_period_contrast_recipient, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
+
+
+# # round contrast
+add.vars = 'INDEX_ROUND'
+if(length(dim(samples[['log_beta_round_contrast']])) > 2){
+  add.vars = c('INDEX_DIRECTION', add.vars)
+}
+
+log_round_contrast <- find_summary_output_by_round(samples, 'log_beta_round_contrast', c(add.vars, 'INDEX_AGE'),  names = c(add.vars, 'INDEX_AGE'))
+log_round_contrast <- remove_first_round(log_round_contrast)
+plot_2D_contrast(log_round_contrast, outfile.figures, paste0('Round contrast'), 'round')
+
+log_round_contrast_source <- find_summary_output(samples, 'log_beta_round_contrast', c(add.vars, 'AGE_TRANSMISSION.SOURCE'), 
+                                                  names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
+log_round_contrast_source <- remove_first_round(log_round_contrast_source)
+plot_source_contrast(log_round_contrast_source, outfile.figures, 'Round constrast', 'round')
+
+log_round_contrast_recipient<- find_summary_output(samples, 'log_beta_round_contrast', c(add.vars, 'AGE_INFECTION.RECIPIENT'), 
+                                                    names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
+log_round_contrast_recipient <- remove_first_round(log_round_contrast_recipient)
+plot_recipient_contrast(log_round_contrast_recipient, outfile.figures, 'Round constrast', 'round')
+
+
+# # community contrast
+log_community_contrast <- find_summary_output(samples, 'log_beta_community_contrast', c('INDEX_AGE'), names = c('INDEX_AGE'))
+plot_2D_contrast(log_community_contrast, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
+log_community_contrast_source <- find_summary_output(samples, 'log_beta_community_contrast', c('AGE_TRANSMISSION.SOURCE'), 
+                                                  names = c('INDEX_AGE'), operation = 'mean')
+plot_source_contrast(log_community_contrast_source, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
+log_community_contrast_recipient<- find_summary_output(samples, 'log_beta_community_contrast', c('AGE_INFECTION.RECIPIENT'), 
+                                                    names = c('INDEX_AGE'), operation = 'mean')
+plot_recipient_contrast(log_community_contrast_recipient, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
 
 
 cat("End of postprocessing_assess_mixing.R")
