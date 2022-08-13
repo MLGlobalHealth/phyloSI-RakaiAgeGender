@@ -168,16 +168,13 @@ nsinf <- vector(mode = 'list', length = length(rounds))
 for(i in seq_along(rounds)){
   
   round <- rounds[i]
-  DT <- copy(prev[ROUND == paste0('R0', round)] )
+  DT <- copy(rprev[ROUND == paste0('R0', round)] )
   
   # predicts age 
-  x_predict <- seq(prev[, min(AGE_LABEL)], prev[, max(AGE_LABEL)+1], 0.5)
-  if(round %in% 16:18){
-    x_predict <- seq(15, 51, 0.5)
-  }
+  x_predict <- seq(rprev[, min(AGE_LABEL)], rprev[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220729.rds')
+  filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220808.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -216,7 +213,7 @@ nsinf <- do.call('rbind', nsinf)
 
 #########
 
-ggplot(nsinf, aes(x = AGEYRS)) + 
+ggplot(nsinf2, aes(x = AGEYRS)) + 
   geom_line(aes(y = PREVALENCE_M)) + 
   geom_ribbon(aes(ymin = PREVALENCE_CL, ymax = PREVALENCE_CU), alpha = 0.5) + 
   geom_point(aes(y = EMPIRICAL_PREVALENCE), alpha = 0.5, col = 'darkred') + 
@@ -229,6 +226,8 @@ ggplot(nsinf, aes(x = AGEYRS)) +
 # SAVE #
 
 #########
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_estimates_220805.csv'))
+file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_estimates_220811.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
+
+
 
