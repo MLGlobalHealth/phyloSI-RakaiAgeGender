@@ -98,8 +98,10 @@ parameters {
   real log_beta_baseline;
   
   real log_beta_baseline_contrast_community;
-  real log_beta_baseline_contrast_round[N_ROUND - 1];
   real log_beta_baseline_contrast_direction;
+  
+  real log_beta_baseline_contrast_round[N_ROUND - 1];
+  real<lower=0> sigma_beta_baseline_contrast_round;
   
   real<lower=0> rho_gp_period[N_DIRECTION];
   real<lower=0> alpha_gp_period[N_DIRECTION];
@@ -183,8 +185,13 @@ transformed parameters {
 model {
   log_beta_baseline ~ normal(0, 10);
   log_beta_baseline_contrast_community ~ normal(0, 10);
-  log_beta_baseline_contrast_round ~ normal(0, 10);
   log_beta_baseline_contrast_direction ~ normal(0, 10);
+  
+  sigma_beta_baseline_contrast_round~ cauchy(0,1);
+  log_beta_baseline_contrast_round[1] ~ normal(log_beta_baseline, sigma_beta_baseline_contrast_round);
+  for(j in 2:(N_ROUND - 1)){
+    log_beta_baseline_contrast_round[j] ~ normal(log_beta_baseline_contrast_round[j - 1], sigma_beta_baseline_contrast_round);
+  }
   
   alpha_gp_period ~ cauchy(0,1);
   rho_gp_period ~ inv_gamma(2, 2);
@@ -227,7 +234,6 @@ generated quantities{
             if(sampling_index_y[n,i,j,map_round_period[k]] != -1){
               log_lik[n,i,j,k] += poisson_log_lpmf( y[n,i,j,map_round_period[k]] | log_lambda[i,j,map_round_period[k]][n] ) / N_ROUND_PER_PERIOD[map_round_period[k]];
             }
-           
          }
          for(p in 1:N_PERIOD){
            y_predict[n,i,j,p] = poisson_log_rng(log_lambda[i,j,p][n]);

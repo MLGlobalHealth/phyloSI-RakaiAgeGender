@@ -98,8 +98,11 @@ parameters {
   real log_beta_baseline;
   
   real log_beta_baseline_contrast_community;
-  real log_beta_baseline_contrast_round[N_ROUND - 1];
   real log_beta_baseline_contrast_direction;
+  
+  real<lower=0> rho_gp_round[N_DIRECTION,N_ROUND - 1];
+  real<lower=0> alpha_gp_round[N_DIRECTION,N_ROUND - 1];
+  vector[num_basis_rows] z_round[N_DIRECTION, N_ROUND - 1];
   
   real<lower=0> rho_gp_period[N_DIRECTION];
   real<lower=0> alpha_gp_period[N_DIRECTION];
@@ -117,7 +120,7 @@ transformed parameters {
   vector[N_PER_GROUP] log_lambda_latent[N_DIRECTION, N_COMMUNITY, N_ROUND]; 
   vector[N_PER_GROUP] lambda_latent[N_DIRECTION, N_COMMUNITY, N_ROUND]; 
   vector[N_AGE] log_lambda_latent_recipient[N_DIRECTION, N_COMMUNITY, N_ROUND]; 
-  vector[N_PER_GROUP] log_beta[N_DIRECTION, N_COMMUNITY, N_ROUND];  
+  vector[N_PER_GROUP] log_beta[N_DIRECTION, N_COMMUNITY, N_ROUND]; 
   vector[N_PER_GROUP] log_beta_direction_contrast[N_DIRECTION];
   vector[N_PER_GROUP] log_beta_period_contrast[N_DIRECTION];
   matrix[N_ROUND - 1, N_PER_GROUP] log_beta_round_contrast[N_DIRECTION];
@@ -126,7 +129,7 @@ transformed parameters {
   
   // find community contrast
   log_beta_community_contrast = rep_vector(log_beta_baseline_contrast_community, N_PER_GROUP);
-
+    
   // start with baseline
   log_beta = rep_array(rep_vector(log_beta_baseline, N_PER_GROUP), N_DIRECTION, N_COMMUNITY, N_ROUND);
   
@@ -140,12 +143,16 @@ transformed parameters {
       log_beta_direction_contrast[i] = log_beta_direction_contrast[i] + rep_vector(log_beta_baseline_contrast_direction, N_PER_GROUP);
     }
     
-    // find period contrast
+     // find period and round contrast
     log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_source];
-    log_beta_round_contrast[i] = rep_matrix(to_vector(log_beta_baseline_contrast_round), N_PER_GROUP) 
-                                    + append_row(rep_matrix(rep_row_vector(0.0, N_PER_GROUP), (N_ROUND_PER_PERIOD[1] - 1) ), 
-                                                 rep_matrix(to_row_vector(log_beta_period_contrast[i]), N_ROUND_PER_PERIOD[N_PERIOD])) ;
 
+    for(k in 1:(N_ROUND-1)){
+      log_beta_round_contrast[i][k,] = to_row_vector((BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_round[i,k], rho_gp_round[i,k], z_round[i,k]))[map_age_recipient] );
+      
+    }
+    log_beta_round_contrast[i] += append_row(rep_matrix(rep_row_vector(0.0, N_PER_GROUP), (N_ROUND_PER_PERIOD[1] - 1) ), 
+                                                     rep_matrix(to_row_vector(log_beta_period_contrast[i]), N_ROUND_PER_PERIOD[N_PERIOD])) ;
+    
     for(j in 1:N_COMMUNITY){
       for(k in 1:N_ROUND){
         
@@ -183,9 +190,8 @@ transformed parameters {
 model {
   log_beta_baseline ~ normal(0, 10);
   log_beta_baseline_contrast_community ~ normal(0, 10);
-  log_beta_baseline_contrast_round ~ normal(0, 10);
   log_beta_baseline_contrast_direction ~ normal(0, 10);
-  
+
   alpha_gp_period ~ cauchy(0,1);
   rho_gp_period ~ inv_gamma(2, 2);
   
@@ -201,8 +207,16 @@ model {
   
   for (i in 1:N_DIRECTION){
     z_period[i] ~ normal(0,1);
+    rho_gp_round[i,] ~ inv_gamma(2, 2);
+    alpha_gp_round[i,] ~ cauchy(0,1);
+    
     for (j in 1:N_COMMUNITY){
        for (k in 1:N_ROUND){
+         
+         if(k < N_ROUND){
+           z_round[i,k] ~ normal(0,1);
+         }
+         
         z[:,i,j,k] ~ poisson_log(log_lambda_latent_recipient[i,j,k]);
       }
       
@@ -227,7 +241,6 @@ generated quantities{
             if(sampling_index_y[n,i,j,map_round_period[k]] != -1){
               log_lik[n,i,j,k] += poisson_log_lpmf( y[n,i,j,map_round_period[k]] | log_lambda[i,j,map_round_period[k]][n] ) / N_ROUND_PER_PERIOD[map_round_period[k]];
             }
-           
          }
          for(p in 1:N_PERIOD){
            y_predict[n,i,j,p] = poisson_log_rng(log_lambda[i,j,p][n]);
@@ -236,6 +249,7 @@ generated quantities{
      }
   }
 }
+
 
 
 
