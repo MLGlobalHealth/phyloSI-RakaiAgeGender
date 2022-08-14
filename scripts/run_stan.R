@@ -19,7 +19,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220813'
+  stan_model <- 'gp_220813d'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -77,7 +77,6 @@ only.transmission.same.community <- F
 diff_proportion_sampling_source_age_mirror <- F
 diff_proportion_sampling_source_age_pair <- F
 smooth_proportion_sampling_probability <- F
-smooth_proportion_sampling_source_age_pair <- F
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -245,8 +244,7 @@ print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SE
 proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures,
                                                diff_proportion_sampling_source_age_mirror, 
                                                diff_proportion_sampling_source_age_pair, 
-                                               smooth_proportion_sampling_probability, 
-                                               smooth_proportion_sampling_source_age_pair)
+                                               smooth_proportion_sampling_probability)
 
 
 #

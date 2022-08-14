@@ -518,8 +518,7 @@ logit <- function(p) log(p / (1-p))
 get_proportion_sampling <- function(pairs, incidence_cases, outdir, 
                                     diff_proportion_sampling_source_age_mirror = F, 
                                     diff_proportion_sampling_source_age_pair = F, 
-                                    smooth_proportion_sampling_probability = F, 
-                                    smooth_proportion_sampling_source_age_pair = F){
+                                    smooth_proportion_sampling_probability = F){
   
   # find number of pair observed
   dp <- copy(pairs)
@@ -538,8 +537,8 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
   # smooth proportion of sampling
   if(smooth_proportion_sampling_probability){
 
-    span = 0.3
-    span2 = 0.3
+    span = 0.2
+    span2 = 0.2
     
     tmp <- di[BEFORE_CUTOFF == T]
     tmp <- tmp[, {
@@ -568,40 +567,63 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
   # find proportion of the porbability across age of source 
   if(diff_proportion_sampling_source_age_pair){ 
 
+    # count pairs by age source
     dp <- copy(pairs)
-    setnames(dp, c('SEX.SOURCE', 'COMM.RECIPIENT', 'AGE_INFECTION.SOURCE', 'DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT'), 
-             c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF'))
+    setnames(dp, c('SEX.SOURCE', 'COMM.RECIPIENT', 'AGE_INFECTION.SOURCE'), c('SEX', 'COMM', 'AGEYRS'))
     dp[, AGEYRS := floor(AGEYRS)]
-    dp <- dp[, list(count = .N), by = c('SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF')]
-    
-    df <- merge(dp, unique(ds[, .(AGEYRS, COMM, SEX, BEFORE_CUTOFF)]), by = c('AGEYRS', 'COMM', 'SEX', 'BEFORE_CUTOFF'), all.y = T)
-    df[is.na(count), count := 0]
-    
-    if(smooth_proportion_sampling_source_age_pair){
-      
-      df <- df[, {
-        loess.fit = loess(count~AGEYRS, span = 0.4, control=loess.control(surface="direct"))
-        count <- inv_logit(predict(loess.fit, newdata = AGEYRS))
-        count <- (predict(loess.fit, newdata = AGEYRS))
-        list(count = count, AGEYRS = AGEYRS)
-      },by = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
-      
-      df[count < 0, count := 0]
-    }
-    
-    
-    df[, N_AGE_GROUP := length(AGEYRS), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
-    df[, proportion := count / sum(count), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
+    dp <- dp[, list(count = .N), by = c('SEX', 'COMM', 'AGEYRS')]
+    df <- merge(dp, unique(ds[, .(AGEYRS, COMM, SEX)]), by = c('AGEYRS', 'COMM', 'SEX'), all.y = T)
+    df[is.na(count), count := 0.0]
+    df[, count :=  as.numeric(count)]
 
-    ggplot(df, aes(x = AGEYRS, y =proportion )) + geom_line() + facet_grid(BEFORE_CUTOFF~SEX + COMM) + theme_bw()
+    # smooth count pairs
+    df[, count := count + 1]
+    df <- df[, {
+      loess.fit = loess(count~AGEYRS, span = 0.6, control=loess.control(surface="direct"))
+      count <- inv_logit(predict(loess.fit, newdata = AGEYRS))
+      count <- (predict(loess.fit, newdata = AGEYRS))
+      list(count = count, AGEYRS = AGEYRS)
+    },by = c('SEX', 'COMM')]
+    df[, min_count := min(count[count > 0]), by  = c('SEX', 'COMM')]
+    df[count < 0, count := min_count]
+
+    # find proportion of pairs by source
+    df[, N_AGE_GROUP := length(AGEYRS), by  = c('SEX', 'COMM')]
+    df[, proportion := count / sum(count), by  = c('SEX', 'COMM')]
+
+    df <- as.data.table(full_join(df, data.table(BEFORE_CUTOFF = c(T,F)), by = character()))
+    
+    ggplot(df[COMM == 'inland'], aes(x = AGEYRS, y =proportion )) + geom_line() + 
+      facet_grid(BEFORE_CUTOFF~SEX, label= 'label_both') + theme_bw() + 
+      labs(x= 'Age source', y = 'Distribution of observed pairs')
     ggsave(paste0(outdir, '-data-proportion_sampling_diff_proportion_sampling_source_age_pair.png'), w = 9, h = 8)
     
+
   }else if(diff_proportion_sampling_source_age_mirror){
     # re-scale factor is proporitonal to the probability
     
-    df <- copy(ds[, .(SEX, COMM, AGEYRS, BEFORE_CUTOFF, prop_sampling_empirical)])
-    df[, N_AGE_GROUP := length(AGEYRS), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
-    df[, proportion := prop_sampling_empirical / sum(prop_sampling_empirical), by  = c('SEX', 'COMM', 'BEFORE_CUTOFF')]
+    df <- di[, list(count = sum(count), INCIDENT_CASES = sum(INCIDENT_CASES)), 
+             by = c('SEX', 'COMM', 'AGEYRS')]
+    
+    df[, prop_sampling_empirical := count / INCIDENT_CASES]
+    # df[, prop_sampling_empirical := prop_sampling_empirical + 0.009]
+    df <- df[, {
+      loess.fit = loess(prop_sampling_empirical~AGEYRS, span = 0.8, control=loess.control(surface="direct"))
+      prop_sampling_empirical <- inv_logit(predict(loess.fit, newdata = AGEYRS))
+      prop_sampling_empirical <- (predict(loess.fit, newdata = AGEYRS))
+      list(prop_sampling_empirical = prop_sampling_empirical, AGEYRS = AGEYRS)
+    },by = c('SEX', 'COMM')]
+    df[, min_prop_sampling_empirical := min(prop_sampling_empirical[prop_sampling_empirical > 0]), by  = c('SEX', 'COMM')]
+    df[prop_sampling_empirical < 0,prop_sampling_empirical := min_prop_sampling_empirical]
+    
+    df[, N_AGE_GROUP := length(AGEYRS), by  = c('SEX', 'COMM')]
+    df[, proportion := prop_sampling_empirical / sum(prop_sampling_empirical), by  = c('SEX', 'COMM')]
+
+    df <- as.data.table(full_join(df, data.table(BEFORE_CUTOFF = c(T,F)), by = character()))
+    
+    ggplot(df[COMM == 'inland'], aes(x = AGEYRS, y =proportion )) + geom_line() + 
+      facet_grid(BEFORE_CUTOFF~SEX, label= 'label_both') + theme_bw() + 
+      labs(x= 'Age source', y = 'Distribution of probability of observing a transmisssion')
     
     df <- select(df, - prop_sampling_empirical)
     
@@ -634,28 +656,59 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
   # merge period 
   df <- merge(df, unique(di[, .(PERIOD, BEFORE_CUTOFF)]), by = c('BEFORE_CUTOFF'))
   
+  # warnings
+  tmp <- df[prop_sampling > 1]
+  if(nrow(tmp) > 0){
+    cat('\n Some probabilities are greater than 1')
+    cat('\n In', tmp[, unique(COMM)], 'communities at period', tmp[, unique(PERIOD)])
+  }
+  tmp <- df[prop_sampling < 0]
+  if(nrow(tmp) > 0){
+    cat('\n Some probabilities are smaller than 0')
+    cat('\n In', tmp[, unique(COMM)], 'communities at period', tmp[, unique(PERIOD)])
+  }
+  
   if(1){ # plots
     
+    tmp1 <- df[COMM == 'inland']
+    tmp1[, Direction := 'Female -> Male']
+    tmp1[SEX.RECIPIENT == 'F', Direction := 'Male -> Female']
+
+    # age recipient plot
     # empirical probabilities
     tmp <- di[COMM == 'inland']
     tmp[, Direction := 'Female -> Male']
     tmp[SEX == 'F', Direction := 'Male -> Female']
-    
     # prepare probabilities 
-    tmp1 <- df[COMM == 'inland']
-    tmp1[, Direction := 'Female -> Male']
-    tmp1[SEX.RECIPIENT == 'F', Direction := 'Male -> Female']
+    tmp2 <- tmp1[, list(prop_sampling = mean(prop_sampling)), by = c('PERIOD', 'COMM', 'AGEYRS.RECIPIENT', 'Direction')]
     
     ggplot(tmp, aes(col = Direction)) + 
       geom_line(aes(x = AGEYRS, y = prop_sampling_empirical)) + 
-      geom_line(data = tmp1, aes(x = AGEYRS.RECIPIENT, y = prop_sampling_empirical), linetype = 'dashed') + 
+      geom_line(data = tmp2, aes(x = AGEYRS.RECIPIENT, y = prop_sampling), linetype = 'dashed') + 
       facet_grid(PERIOD~COMM + Direction) + 
       scale_y_continuous(labels = scales::percent)  + 
       theme_bw() +
       labs(y = 'Probability of observing transmission event', x = 'Age recipient')
-    ggsave(paste0(outdir, '-data-proportion_sampling_recipient_period.png'), w = 8, h = 7)
+    ggsave(paste0(outdir, '-data-proportion_sampling_empirical_recipient_period.png'), w = 8, h = 7)
     
-    # prepare pairs for plot
+    # age source plot
+    tmp2 <- tmp1[, list(prop_sampling = mean(prop_sampling)), by = c('PERIOD', 'COMM', 'AGEYRS.SOURCE', 'Direction')]
+    ggplot(tmp2, aes(col = Direction)) + 
+      geom_line(aes(x = AGEYRS.SOURCE, y = prop_sampling)) + 
+      facet_grid(PERIOD~COMM + Direction) + 
+      scale_y_continuous(labels = scales::percent)  + 
+      theme_bw() +
+      labs(y = 'Probability of observing transmission event', x = 'Age source')
+    ggsave(paste0(outdir, '-data-proportion_sampling_source_period.png'), w = 8, h = 7)
+    
+    ggplot(tmp2, aes(col = Direction)) + 
+      geom_line(aes(x = AGEYRS.SOURCE, y = prop_sampling)) + 
+      facet_grid(PERIOD~COMM + Direction) + 
+      scale_y_continuous(labels = scales::percent)  + 
+      theme_bw() +
+      labs(y = 'Probability of observing transmission event', x = 'Age source')
+    
+    # age source-recipient prepare pairs for plot
     dp <- pairs[, .(SEX.RECIPIENT, COMM.RECIPIENT, AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT)]
     setnames(dp, c('COMM.RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT'), 
              c('COMM', 'AGEYRS.SOURCE', 'AGEYRS.RECIPIENT', 'BEFORE_CUTOFF'))
