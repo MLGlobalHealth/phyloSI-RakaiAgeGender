@@ -604,7 +604,7 @@ plot_contribution_age_source_recipient_per_unsuppressed <- function(expected_con
             strip.text = element_text(size = rel(1))) +
       ggtitle(tmp[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) 
-    ggsave(p, file = paste0(outdir, '-output-', 'Expected_contribution_per_unsuppressed', '_age_',  communities[i], '.png'), w = 9, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-', 'Expected_contribution_per_unsuppressed', '_age_sr_',  communities[i], '.png'), w = 9, h = 7)
 
     p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
       geom_line(aes(y = M, col = ROUND)) + 
@@ -619,7 +619,7 @@ plot_contribution_age_source_recipient_per_unsuppressed <- function(expected_con
             strip.text = element_text(size = rel(1))) +
       ggtitle(tmp[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) 
-    ggsave(p, file = paste0(outdir, '-output-', 'Expected_contribution_per_unsuppressed', '_age_',  communities[i], '2.png'), w = 7, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-', 'Expected_contribution_per_unsuppressed', '_age_sr_',  communities[i], '2.png'), w = 7, h = 7)
     
     
       }
