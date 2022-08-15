@@ -254,7 +254,8 @@ get.df.direction <- function(){
 get.df.community <- function(){
     df_community <- data.table(INDEX_COMMUNITY = 1:2, COMM = c('fishing','inland'))
     df_community[, LABEL_COMMUNITY := ifelse(COMM == 'inland', 'Inland communities', 'Fishing communities')]
-
+    df_community[, LABEL_COMMUNITY := factor(LABEL_COMMUNITY, levels = c('Inland communities', 'Fishing communities'))]
+    
   df_community
 }
 
@@ -432,9 +433,9 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
   incidence <- rbind(incidence, incidencefishing)
   
   # for now set incidence in round 14 to incidence in round 15
-  incidence14 <- copy(incidence[ROUND == 'R015'])
-  incidence14[, ROUND := 'R014']
-  incidence <- rbind(incidence, incidence14)
+  # incidence14 <- copy(incidence[ROUND == 'R015'])
+  # incidence14[, ROUND := 'R014']
+  # incidence <- rbind(incidence, incidence14)
   
   if(0){
     ggplot(incidence, aes(x = AGEYRS)) +
@@ -596,7 +597,7 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
     ggplot(df[COMM == 'inland'], aes(x = AGEYRS, y =proportion )) + geom_line() + 
       facet_grid(BEFORE_CUTOFF~SEX, label= 'label_both') + theme_bw() + 
       labs(x= 'Age source', y = 'Distribution of observed pairs')
-    ggsave(paste0(outdir, '-data-proportion_sampling_diff_proportion_sampling_source_age_pair.png'), w = 9, h = 8)
+    ggsave(paste0(outdir, '-data-proportion_sampling_diff_source_age_pair.png'), w = 9, h = 8)
     
 
   }else if(diff_proportion_sampling_source_age_mirror){
@@ -606,26 +607,37 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
              by = c('SEX', 'COMM', 'AGEYRS')]
     
     df[, prop_sampling_empirical := count / INCIDENT_CASES]
+
     # df[, prop_sampling_empirical := prop_sampling_empirical + 0.009]
     df <- df[, {
       loess.fit = loess(prop_sampling_empirical~AGEYRS, span = 0.8, control=loess.control(surface="direct"))
-      prop_sampling_empirical <- inv_logit(predict(loess.fit, newdata = AGEYRS))
-      prop_sampling_empirical <- (predict(loess.fit, newdata = AGEYRS))
-      list(prop_sampling_empirical = prop_sampling_empirical, AGEYRS = AGEYRS)
+      prop_sampling_smooth <- inv_logit(predict(loess.fit, newdata = AGEYRS))
+      prop_sampling_smooth <- (predict(loess.fit, newdata = AGEYRS))
+      list(prop_sampling_empirical = prop_sampling_empirical, prop_sampling_smooth = prop_sampling_smooth, AGEYRS = AGEYRS)
     },by = c('SEX', 'COMM')]
-    df[, min_prop_sampling_empirical := min(prop_sampling_empirical[prop_sampling_empirical > 0]), by  = c('SEX', 'COMM')]
-    df[prop_sampling_empirical < 0,prop_sampling_empirical := min_prop_sampling_empirical]
+    
+    df[, min_prop_sampling_empirical := min(prop_sampling_smooth[prop_sampling_smooth > 0]), by  = c('SEX', 'COMM')]
+    df[prop_sampling_smooth < 0,prop_sampling_smooth := min_prop_sampling_empirical]
+    
+    ggplot(df[COMM == 'inland'], aes(x = AGEYRS)) + 
+      geom_line(aes(y =prop_sampling_empirical )) + 
+      geom_line(aes(y =prop_sampling_smooth ), col = 'red') + 
+      facet_grid(SEX~COMM, label= 'label_both', scale = 'free') + theme_bw() + 
+      labs(x= 'Age recipient', y = 'Distribution of probability of observing a transmission across both periods')
+    ggsave(paste0(outdir, '-data-proportion_sampling_age_aggregated.png'), w = 7, h = 6)
     
     df[, N_AGE_GROUP := length(AGEYRS), by  = c('SEX', 'COMM')]
-    df[, proportion := prop_sampling_empirical / sum(prop_sampling_empirical), by  = c('SEX', 'COMM')]
+    df[, proportion := prop_sampling_smooth / sum(prop_sampling_smooth), by  = c('SEX', 'COMM')]
 
     df <- as.data.table(full_join(df, data.table(BEFORE_CUTOFF = c(T,F)), by = character()))
     
-    ggplot(df[COMM == 'inland'], aes(x = AGEYRS, y =proportion )) + geom_line() + 
-      facet_grid(BEFORE_CUTOFF~SEX, label= 'label_both') + theme_bw() + 
-      labs(x= 'Age source', y = 'Distribution of probability of observing a transmisssion')
+    ggplot(df[COMM == 'inland' & BEFORE_CUTOFF == T], aes(x = AGEYRS, y =proportion * N_AGE_GROUP)) + geom_line() + 
+      facet_grid(SEX~COMM, label= 'label_both', scale = 'free') + theme_bw() + 
+      scale_y_continuous(limits = c(0, NA)) + 
+      labs(x= 'Age source', y = 'Re-caling factor')
+    ggsave(paste0(outdir, '-data-proportion_sampling_recaling_source_aggregated.png'), w = 7, h = 6)
     
-    df <- select(df, - prop_sampling_empirical)
+    df <- select(df, - prop_sampling_empirical, -prop_sampling_smooth)
     
   }else{
     # re-scale factor does not change with age of source
@@ -768,6 +780,11 @@ make.df.round <- function(df_round, df_period){
   
   # find length in years of each round
   df_round[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
+  
+  # label
+  df_round[, MIN_SAMPLE_DATE_LABEL := format(min_sample_date, '%b %Y')]
+  df_round[, MAX_SAMPLE_DATE_LABEL := format(max_sample_date - 31, '%b %Y')]
+  df_round[, LABEL_ROUND := paste0(MIN_SAMPLE_DATE_LABEL, '-\n', MAX_SAMPLE_DATE_LABEL)]
   
   return(df_round)
 }
