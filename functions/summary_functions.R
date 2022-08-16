@@ -305,8 +305,8 @@ get.age.aggregated.map <- function(age_aggregated){
   df_age_aggregated <- merge(df_age_aggregated, tmp1, by = 'AGE_GROUP_TRANSMISSION.SOURCE', allow.cartesian=TRUE)
   
   df_age_aggregated[, AGE_CLASSIFICATION.SOURCE := 'Same age']
-  df_age_aggregated[AGE_INFECTION.RECIPIENT < (AGE_TRANSMISSION.SOURCE - 5), AGE_CLASSIFICATION.SOURCE := 'Older']
-  df_age_aggregated[AGE_INFECTION.RECIPIENT > (AGE_TRANSMISSION.SOURCE + 5), AGE_CLASSIFICATION.SOURCE := 'Younger']
+  df_age_aggregated[AGE_INFECTION.RECIPIENT < (AGE_TRANSMISSION.SOURCE - 2.5), AGE_CLASSIFICATION.SOURCE := 'Older']
+  df_age_aggregated[AGE_INFECTION.RECIPIENT > (AGE_TRANSMISSION.SOURCE + 2.5), AGE_CLASSIFICATION.SOURCE := 'Younger']
   
   return(df_age_aggregated)
 }
@@ -785,6 +785,7 @@ make.df.round <- function(df_round, df_period){
   df_round[, MIN_SAMPLE_DATE_LABEL := format(min_sample_date, '%b %Y')]
   df_round[, MAX_SAMPLE_DATE_LABEL := format(max_sample_date - 31, '%b %Y')]
   df_round[, LABEL_ROUND := paste0(MIN_SAMPLE_DATE_LABEL, '-\n', MAX_SAMPLE_DATE_LABEL)]
+  df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(round), LABEL_ROUND])]
   
   return(df_round)
 }

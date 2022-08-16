@@ -382,8 +382,30 @@ prepare_unsuppressed_proportion_by_round <- function(eligible_count_round, vars,
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
 
-  tmp1[, type := 'Share in the unsuppressed HIV+ census eligible individuals']
+  tmp1[, type := 'Share in the HIV+ unsuppressed census eligible individuals']
 }
+
+prepare_prevalence_proportion_by_round <- function(eligible_count_round, vars, standardised.vars){
+  tmp1 <- eligible_count_round[, list(count = sum(INFECTED)), by = vars]
+  tmp1[, M := count / sum(count), by = standardised.vars]
+  tmp1[, IS_MF := as.numeric(SEX == 'M')]
+  tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
+  tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  
+  tmp1[, type := 'Share in the HIV+ census eligible individuals']
+}
+
+
+prepare_prevalence_by_round <- function(eligible_count_round, vars, standardised.vars){
+  tmp1 <- eligible_count_round[, list(M = sum(INFECTED) / sum(ELIGIBLE)), by = vars]
+
+  tmp1[, IS_MF := as.numeric(SEX == 'M')]
+  tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
+  tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  
+  tmp1[, type := 'Share in the HIV+ census eligible individuals']
+}
+
 
 remove_first_round <- function(tmp){
   
