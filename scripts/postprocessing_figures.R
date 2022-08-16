@@ -53,6 +53,7 @@ fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
 # temporary
+source(file.path(indir, 'functions', 'summary_functions.R'))
 df_community <- get.df.community()
 df_round[, MIN_SAMPLE_DATE_LABEL := format(min_sample_date, '%b %Y')]
 df_round[, MAX_SAMPLE_DATE_LABEL := format(max_sample_date - 31, '%b %Y')]

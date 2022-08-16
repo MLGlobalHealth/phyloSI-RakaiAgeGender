@@ -321,7 +321,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
      labs(x = '', y = 'Percent') + 
      theme_bw() +
      facet_grid(.~LABEL_COMMUNITY) + 
-     scale_fill_manual(values = '#C6DCE4') + 
+     scale_fill_manual(values = 'lightblue3') + 
      scale_linetype_manual(values = c('dotted','solid')) + 
      theme(strip.background = element_rect(colour="white", fill="white"),
            # axis.text.x = element_text(angle= 70, hjust = 1),
@@ -388,7 +388,8 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
       facet_grid(LABEL_ROUND~SEX)+
       scale_color_manual(values = c('#FF4949')) + 
       scale_alpha_manual(values = 0.95) + 
-      scale_fill_manual(values = c('Male source'='#C6DCE4','Female source'='#F2D1D1')) + 
+      # scale_fill_manual(values = c('Male source'='#C6DCE4','Female source'='#F2D1D1')) + 
+      scale_fill_manual(values = c('Male source'='lightblue3','Female source'='lightpink1')) + 
       scale_linetype_manual(values  = 'solid') +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
@@ -560,7 +561,7 @@ plot_transmission_risk_age_source <- function(transmission_risk_age_source, outd
       theme_bw() +
       facet_grid(LABEL_ROUND~SEX)+
       scale_color_manual(values = c('#FF4949')) + 
-      scale_fill_manual(values = c('Male source'='#C6DCE4','Female source'='#F2D1D1')) + 
+      scale_fill_manual(values = c('Male source'='lightblue3','Female source'='lightpink1')) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom', 
@@ -586,7 +587,7 @@ plot_transmission_risk_sex_source <- function(transmission_risk_sex_source_round
          col = '', alpha = '', fill ='') + 
     theme_bw() +
     facet_grid(LABEL_COMMUNITY~SEX)+
-    scale_fill_manual(values = c('Male source'='#C6DCE4','Female source'='#F2D1D1')) + 
+    scale_fill_manual(values = c('Male source'='lightblue3','Female source'='lightpink1')) + 
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'none', 
