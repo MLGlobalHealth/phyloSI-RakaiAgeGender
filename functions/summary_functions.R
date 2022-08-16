@@ -373,11 +373,12 @@ summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, d
   eligible_count_round[, BEFORE_CUTOFF := max_sample_date <= cutoff_date]
   
   # summarise across time periods
-  df <- melt.data.table(eligible_count_round, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'min_sample_date', 'round', 'INDEX_ROUND',
-                                                          'max_sample_date', 'BEFORE_CUTOFF', 'INDEX_TIME', 'ROUND_SPANYRS'))
+  df <- eligible_count_round[, .(ROUND, INDEX_TIME, SEX, COMM, AGEYRS, BEFORE_CUTOFF, ROUND_SPANYRS, 
+                                 ELIGIBLE, INFECTED, SUSCEPTIBLE, PROP_NON_SUPPRESSED_EMPIRICAL, INFECTED_NON_SUPPRESSED, INFECTED_NON_SUPPRESSED_CL, INFECTED_NON_SUPPRESSED_CU)]
+  df <- melt.data.table(df, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF', 'INDEX_TIME', 'ROUND_SPANYRS'))
 
   # check that the lengh corresponds to the one of the period
-  tmp <- unique(df[, .(ROUND, INDEX_TIME, min_sample_date, max_sample_date, ROUND_SPANYRS)][order(ROUND)])
+  tmp <- unique(df[, .(ROUND, INDEX_TIME, ROUND_SPANYRS)][order(ROUND)])
   tmp <- tmp[, list(PERIOD_SPAN_WITH_ROUND = sum(ROUND_SPANYRS)), by = 'INDEX_TIME']
   tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
   stopifnot(tmp[, all(PERIOD_SPAN == PERIOD_SPAN_WITH_ROUND)])
@@ -418,7 +419,7 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
   setnames(incidence, 'AGE', 'AGEYRS')
   incidence[, COMM := 'inland']
   incidence[, SEX := substring(SEX, 1, 1)]
-  incidence <- incidence[ROUND >= 15]
+  incidence <- incidence[ROUND >= 14]
   
   if(grepl('R0', eligible_count_round[, ROUND[1]])){
     # add R0 in front of round index 
