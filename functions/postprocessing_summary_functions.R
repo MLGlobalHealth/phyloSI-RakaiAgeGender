@@ -217,7 +217,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
-                                         log_offset_formula = 'LOG_OFFSET'){
+                                         log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -250,10 +250,8 @@ find_summary_output_by_round <- function(samples, output, vars,
   }
   
   #  sum force of infection
-  if(is.null(operation)){
-    tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
-  } else{
-    tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
+  tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
+  if(!is.null(operation)){
     tmp1 <- tmp1[, list(value = sapply(value, operation)), by = c('iterations', vars)]
   }
   
@@ -261,6 +259,22 @@ find_summary_output_by_round <- function(samples, output, vars,
   if(!is.null(standardised.vars)){
     tmp1[, total_value := sum(value), by = c('iterations', standardised.vars)]
     tmp1[, value := value / total_value]
+  }
+  
+  # divide by the number of unsuppressed
+  if(per_unsuppressed){
+    tmp <- copy(eligible_count_round)
+    if('AGE_TRANSMISSION.SOURCE' %in% vars)
+      setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
+    if('INDEX_DIRECTION' %in% vars)
+      tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
+    if('INDEX_COMMUNITY' %in% vars)
+      tmp <- merge(tmp, df_community, by = 'COMM')
+    
+    tmp <- tmp[,list(TOTAL_INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = vars]
+    
+    tmp1 <- merge(tmp, tmp1, by = vars)
+    tmp1[, value := value / TOTAL_INFECTED_NON_SUPPRESSED]
   }
   
   #summarise

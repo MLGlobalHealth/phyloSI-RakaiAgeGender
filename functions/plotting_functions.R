@@ -682,7 +682,8 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 6)
   
-  # empirical contribution
+
+  # empirical contribution and transmisison risk 
   tmp <- copy(incidence_cases_round)
   tmp <- tmp[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
                     INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = c('COMM', 'SEX', 'ROUND', 'ROUND_SPANYRS')]
@@ -713,7 +714,7 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   ggsave(paste0(outdir, '-data-empirical_contribution_infection.png'), w = 7, h = 6)
   
   # empirical transmission risk
-  tmp1 <- tmp[variable == 'INCIDENT_CASES']
+  tmp1 <- tmp[variable == 'ADJ_INCIDENT_CASES']
   tmp1[, SEX_SOURCE := 'Male']
   tmp1[SEX == 'M', SEX_SOURCE := 'Female']
   

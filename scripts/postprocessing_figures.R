@@ -200,14 +200,18 @@ log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round)
 
 # sex-specific transmission risk
 transmission_risk_sex_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'), 
-                                                                       transform = 'exp', 
-                                                                       log_offset_round = log_offset_round, log_offset_formula = 'log_PROP_SUSCEPTIBLE')
+                                                             transform = 'exp', 
+                                                             log_offset_round = log_offset_round, 
+                                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
+                                                             per_unsuppressed = T)
 plot_transmission_risk_sex_source(transmission_risk_sex_source, outfile.figures)
 
 # age-specific  transmission risk
 transmission_risk_age_source<- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
-                                                                       transform = 'exp', 
-                                                                       log_offset_round = log_offset_round, log_offset_formula = 'log_PROP_SUSCEPTIBLE')
+                                                            transform = 'exp', 
+                                                            log_offset_round = log_offset_round, 
+                                                            log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                            per_unsuppressed = T)
 plot_transmission_risk_age_source(transmission_risk_age_source, outfile.figures)
 
 
