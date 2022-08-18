@@ -57,8 +57,12 @@ source(file.path(indir, 'functions', 'summary_functions.R'))
 df_community <- get.df.community()
 df_round[, MIN_SAMPLE_DATE_LABEL := format(min_sample_date, '%b %Y')]
 df_round[, MAX_SAMPLE_DATE_LABEL := format(max_sample_date - 31, '%b %Y')]
-df_round[, LABEL_ROUND := paste0(MIN_SAMPLE_DATE_LABEL, '-\n', MAX_SAMPLE_DATE_LABEL)]
+df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
 df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(round), LABEL_ROUND])]
+
+file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_share_sex_vl_1000_220818.csv'))
+file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220818.csv'))
+
 
 #
 ## PPC
@@ -119,16 +123,13 @@ cat("\nPlot contribution\n")
 # sex-specific contribution to transmission
 contribution_sex_source <-  find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'), 
                                                          standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
-unsuppressed_prop_sex <- prepare_unsuppressed_proportion_by_round(eligible_count_round, c('ROUND', 'COMM', 'SEX'), c('ROUND', 'COMM'))
-prevalence_prop_sex<- prepare_prevalence_proportion_by_round(eligible_count_round, c('ROUND', 'COMM', 'SEX'), c('ROUND', 'COMM'))
+unsuppressed_prop_sex <- prepare_unsuppressed_proportion_by_round(file.unsuppressed.share, c('SEX'))
+prevalence_prop_sex<- prepare_prevalence_proportion_by_round(file.prevalence.share, 'SEX')
 plot_contribution_sex_source(contribution_sex_source, unsuppressed_prop_sex, prevalence_prop_sex, outfile.figures)
 
 # age-specific contribution to transmission by sex
 contribution_age_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
                                                          standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
-unsuppressed_prop_age <- prepare_unsuppressed_proportion_by_round(eligible_count_round, c('ROUND', 'COMM', 'SEX', 'AGEYRS'), c('ROUND','SEX', 'COMM'))
-plot_contribution_age_source(contribution_age_source, unsuppressed_prop_age, outfile.figures)
-
 contribution_age_source[, is_among_5 := M %in% sort(M, decreasing = T)[1:5], by = c('LABEL_COMMUNITY', 'ROUND', 'LABEL_DIRECTION')]
 tmp <- contribution_age_source[is_among_5 == T, list(total_M = paste0(round(sum(M)*100, 2), '%'), age_group = paste0(min(AGE_TRANSMISSION.SOURCE), '-', max(AGE_TRANSMISSION.SOURCE))), by = c('LABEL_COMMUNITY', 'ROUND', 'LABEL_DIRECTION')]
 print(tmp[order(LABEL_DIRECTION, ROUND)][ROUND %in% c('R015', 'R018')])
@@ -136,8 +137,8 @@ print(tmp[order(LABEL_DIRECTION, ROUND)][ROUND %in% c('R015', 'R018')])
 # age-specific contribution to transmission among all sources
 contribution_age_source2 <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
                                                          standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
-unsuppressed_prop_age2 <- prepare_unsuppressed_proportion_by_round(eligible_count_round, c('ROUND', 'COMM', 'SEX', 'AGEYRS'), c('ROUND', 'COMM'))
-plot_contribution_age_source(contribution_age_source2, unsuppressed_prop_age2, outfile.figures, lab = 'Contribution_to_infection_reg')
+unsuppressed_prop_age <- prepare_unsuppressed_proportion_by_round(file.unsuppressed.share, c('SEX', 'AGEYRS'))
+plot_contribution_age_source(contribution_age_source2, unsuppressed_prop_age, outfile.figures)
 
 # aggregated by agr group
 contribution_age_group_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 

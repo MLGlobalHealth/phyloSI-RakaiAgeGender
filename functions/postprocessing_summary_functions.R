@@ -389,22 +389,54 @@ prepare_unsuppressed_proportion <- function(eligible_count, vars, standardised.v
   tmp1[, type := 'Share in the unsuppressed HIV + census eligible individuals']
 }
 
-prepare_unsuppressed_proportion_by_round <- function(eligible_count_round, vars, standardised.vars){
-  tmp1 <- eligible_count_round[, list(count = sum(INFECTED_NON_SUPPRESSED)), by = vars]
-  tmp1[, M := count / sum(count), by = standardised.vars]
+prepare_unsuppressed_proportion_by_round <- function(file.unsuppressed.share, vars){
+  
+  tmp1 <- as.data.table(read.csv(file.unsuppressed.share))
+  
+  if(all(c('SEX', 'AGEYRS') %in%vars)){
+    tmp1 <- tmp1[, .(ROUND, COMM, SEX, AGEYRS, UNSUPPRESSED_SHARE_AGE_AND_SEX_CL, UNSUPPRESSED_SHARE_AGE_AND_SEX_CU, UNSUPPRESSED_SHARE_AGE_AND_SEX_M)]
+    setnames(tmp1, c('UNSUPPRESSED_SHARE_AGE_AND_SEX_CL', 'UNSUPPRESSED_SHARE_AGE_AND_SEX_CU', 'UNSUPPRESSED_SHARE_AGE_AND_SEX_M'), c('CL', "CU", 'M'))
+  }else if(vars == 'SEX'){
+    tmp1 <- unique(tmp1[, .(ROUND, COMM, SEX, UNSUPPRESSED_SHARE_SEX_CL, UNSUPPRESSED_SHARE_SEX_CU, UNSUPPRESSED_SHARE_SEX_M)])
+    setnames(tmp1, c('UNSUPPRESSED_SHARE_SEX_CL', 'UNSUPPRESSED_SHARE_SEX_CU', 'UNSUPPRESSED_SHARE_SEX_M'), c('CL', "CU", 'M'))
+  }else{
+    stop()
+  }
+
   tmp1[, IS_MF := as.numeric(SEX == 'M')]
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
 
+  # set round 14 to be the same as round 15 in inland
+  tmp <- tmp1[ROUND == 15 & COMM == 'inland']
+  tmp[, ROUND := 14]
+  tmp1 <- rbind(tmp, tmp1)
+  
   tmp1[, type := 'Share in the HIV+ unsuppressed census eligible individuals']
 }
 
-prepare_prevalence_proportion_by_round <- function(eligible_count_round, vars, standardised.vars){
-  tmp1 <- eligible_count_round[, list(count = sum(INFECTED)), by = vars]
-  tmp1[, M := count / sum(count), by = standardised.vars]
+prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
+
+  tmp1 <- as.data.table(read.csv(file.prevalence.share))
+  
+  if(all(c('SEX', 'AGEYRS') %in%vars)){
+    tmp1 <- tmp1[, .(ROUND, COMM, SEX, AGEYRS, PREVALENCE_SHARE_AGE_AND_SEX_CL, PREVALENCE_SHARE_AGE_AND_SEX_CU, PREVALENCE_SHARE_AGE_AND_SEX_M)]
+    setnames(tmp1, c('PREVALENCE_SHARE_AGE_AND_SEX_CL', 'PREVALENCE_SHARE_AGE_AND_SEX_CU', 'PREVALENCE_SHARE_AGE_AND_SEX_M'), c('CL', "CU", 'M'))
+  }else if(vars == 'SEX'){
+    tmp1 <- unique(tmp1[, .(ROUND, COMM, SEX, PREVALENCE_SHARE_SEX_CL, PREVALENCE_SHARE_SEX_CU, PREVALENCE_SHARE_SEX_M)])
+    setnames(tmp1, c('PREVALENCE_SHARE_SEX_CL', 'PREVALENCE_SHARE_SEX_CU', 'PREVALENCE_SHARE_SEX_M'), c('CL', "CU", 'M'))
+  }else{
+    stop()
+  }
+  
   tmp1[, IS_MF := as.numeric(SEX == 'M')]
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  
+  # set round 14 to be the same as round 15 in inland
+  tmp <- tmp1[ROUND == 15 & COMM == 'inland']
+  tmp[, ROUND := 14]
+  tmp1 <- rbind(tmp, tmp1)
   
   tmp1[, type := 'Share in the HIV+ census eligible individuals']
 }
