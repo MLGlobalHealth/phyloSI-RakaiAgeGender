@@ -155,7 +155,7 @@ for(round in c("R015", "R016", "R017", "R018", "R015S")){
 }
 
 # load results 
-rounds <- 15:18
+rounds <- c(15, '15S', 16:18)
 nsinf <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <- vector(mode = 'list', length = length(rounds))
 for(i in seq_along(rounds)){
