@@ -522,7 +522,7 @@ plot_contribution_age_classification <- function(contribution_age_classification
   tmp <- copy(contribution_age_classification_source)
   tmp[, AGE_CLASSIFICATION.SOURCE := factor(AGE_CLASSIFICATION.SOURCE, levels  = c('Younger', 'Same age', 'Older'))]
   tmp[, AGE_LABEL := paste0('Age recipient: ', AGE_GROUP_INFECTION.RECIPIENT)]
-  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' source')]
+  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
   
   for(i in seq_along(communities)){
     
@@ -531,7 +531,7 @@ plot_contribution_age_classification <- function(contribution_age_classification
     p <- ggplot(tmp1, aes(x = AGE_CLASSIFICATION.SOURCE)) + 
       geom_bar(aes(y = M, fill = LABEL_ROUND), stat = 'identity', position = position_dodge()) + 
       geom_errorbar(aes(ymin = CL, ymax = CU, group = LABEL_ROUND), position = position_dodge()) + 
-      labs(x = 'Age classification of the source', y = 'Share in HIV-1 transmissions', fill = '') + 
+      labs(x = 'Age classification of the source', y = 'HIV-1 transmission flows', fill = '') + 
       theme_bw() +
       facet_grid(AGE_LABEL~SEX)+
       theme(strip.background = element_rect(colour="white", fill="white"),
@@ -541,7 +541,8 @@ plot_contribution_age_classification <- function(contribution_age_classification
             panel.grid.minor.x = element_blank()) +
       ggsci::scale_fill_lancet()  +
       # ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
-      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) 
+      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) + 
+      guides(fill = guide_legend(byrow= T, nrow = 2))
     
     if(is.null(lab)) lab =  'Contribution'
     ggsave(p, file = paste0(outdir, '-output-', lab, '_age_classification_',  communities[i], '.png'), w = 7, h = 8)
@@ -574,7 +575,7 @@ plot_contribution_age_group_by_round <- function(contribution_age_group_source, 
       ggsci::scale_fill_npg() +
       ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) 
-    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_group_by_round_',  communities[i], '.png'), w = 9, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_group_by_round_',  communities[i], '.png'), w = 8, h = 7)
   }
   
 }
