@@ -314,11 +314,11 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   tmp1[, round :=as.numeric(gsub('R0(.+)', '\\1', ROUND)) ]
   
   p <-  ggplot(tmp, aes(x = round)) + 
+     geom_line(aes(y = M, col = type)) + 
+     geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5, fill = 'lightblue3') + 
     geom_errorbar(data = tmp1, aes(ymin = CL, ymax = CU), col = 'grey50', width = 0.1, size = 0.5)  +
     geom_line(data = tmp1, aes(y = M, linetype = type), col = 'black') +
     geom_point(data = tmp1, aes(y = M, shape = type), col = 'black', size= 2) + 
-     geom_line(aes(y = M, col = type)) + 
-     geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5, fill = 'lightblue3') + 
      labs(x = '', y = 'Percent', col = '', fill = '') + 
      theme_bw() +
      facet_grid(.~LABEL_COMMUNITY) + 
@@ -329,6 +329,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
            # axis.text.x = element_text(angle= 70, hjust = 1),
           strip.text = element_text(size = rel(1)),
           axis.text.x = element_text(angle = 70, hjust = 1),
+          axis.title.x = element_blank(), 
           # legend.justification = 'bottom',
           # legend.position='right',
           # legend.direction='vertical',
@@ -447,12 +448,12 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
     ggsave(p, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 8, h = 9)
     
     p <- ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_errorbar(data = tmp1.p, aes(ymin = CL, ymax = CU,alpha = type), width = 0.5, col='grey50') + 
-      geom_line(data = tmp1.p, aes(y = M,alpha = type)) + 
-      geom_point(data = tmp1.p, aes(y = M,alpha = type), size = 0.5) + 
       geom_line(data = tmp2.p, aes(y = M, col = SEX, linetype=type)) + 
       geom_line(aes(y = M, col = SEX,size = type), stat = 'identity', position = "identity") + 
       geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX, size = type), alpha = 0.5) + 
+      geom_errorbar(data = tmp1.p, aes(ymin = CL, ymax = CU,alpha = type), width = 0.5, col='grey50') + 
+      geom_line(data = tmp1.p, aes(y = M,alpha = type)) + 
+      geom_point(data = tmp1.p, aes(y = M,alpha = type), size = 0.5) + 
       labs(x = 'Age of the source', y = 'Percent') + 
       theme_bw() +
       facet_grid(LABEL_ROUND~SEX)+
