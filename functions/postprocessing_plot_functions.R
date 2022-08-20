@@ -470,7 +470,7 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
             legend.position = 'none', 
             legend.title = element_blank(), 
             panel.grid.minor = element_blank()) + 
-      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)))+ 
+      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
       scale_x_continuous(breaks = c(seq(min(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]), max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]), 5), 
                          max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]))) 
       
@@ -513,7 +513,7 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
   
   tmp <- copy(contribution_age_group_source)
   tmp[, AGE_LABEL := paste0('Age recipient: ', AGE_GROUP_INFECTION.RECIPIENT)]
-  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' source')]
+  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
   
   
   for(i in seq_along(communities)){
@@ -525,7 +525,7 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
       geom_errorbar(aes(ymin = CL, ymax = CU, group = ROUND), position = position_dodge()) + 
       labs(x = 'Age source', y = 'Share in HIV-1 transmissions', fill = '') + 
       theme_bw() +
-      facet_grid(SEX~AGE_LABEL)+
+      facet_grid(AGE_LABEL~SEX)+
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom', 
@@ -533,10 +533,11 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
             panel.grid.minor.x = element_blank()) +
       ggsci::scale_fill_lancet()  +
       # ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
-      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) 
+      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) + 
+      guides(fill = guide_legend(byrow= T, nrow = 2))
     
     if(is.null(lab)) lab =  'Contribution'
-    ggsave(p, file = paste0(outdir, '-output-', lab, '_age_group_',  communities[i], '.png'), w = 9, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-', lab, '_age_group_',  communities[i], '.png'), w = 7,h =8)
   }
   
 }
