@@ -64,6 +64,13 @@ df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(round), LA
 file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_share_sex_vl_1000_220818.csv'))
 file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220818.csv'))
 
+#
+# offset
+#
+
+log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round)
+
+
 
 #
 ## PPC
@@ -75,8 +82,10 @@ intensity_PP_sampled <- find_summary_output(samples, 'log_lambda', c('INDEX_DIRE
 count_data <- prepare_count_data(stan_data)
 plot_intensity_PP(intensity_PP_sampled, count_data, outfile.figures)
 
-intensity_PP <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE', 'ROUND_SPANYRS'), 
-                                             transform = 'exp', standardised.vars = 'ROUND_SPANYRS')
+intensity_PP <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'), 
+                                             transform = 'exp', 
+                                             log_offset_round = log_offset_round, 
+                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 plot_intensity_PP_by_round(intensity_PP, outfile.figures)
 
 predict_y_source <- find_summary_output(samples, 'y_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'))
@@ -194,8 +203,6 @@ plot_contribution_age_classification(expected_contribution_age_classification_so
 #
 
 cat("\nPlot transmission risk\n")
-
-log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round)
 
 
 # sex-specific transmission risk
