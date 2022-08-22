@@ -784,7 +784,7 @@ plot_offset <- function(stan_data, outdir){
   setnames(tmp, 1:4, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
   tmp <- merge(tmp, df_direction, by = 'INDEX_DIRECTION')
   tmp <- merge(tmp, df_community, by = 'INDEX_COMMUNITY')
-  tmp <- merge(tmp, df_round, by = 'INDEX_ROUND')
+  tmp <- merge(tmp, df_round, by = c('INDEX_ROUND', 'COMM'))
   tmp <- merge(tmp, df_age, by = 'INDEX_AGE')
 
   tmp1 <- tmp[, list(value = sum(exp(value))), by = c('AGE_INFECTION.RECIPIENT', 'LABEL_DIRECTION', 'LABEL_COMMUNITY', 'ROUND')]

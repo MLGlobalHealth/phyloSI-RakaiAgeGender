@@ -149,13 +149,6 @@ df_period <- make.df.period(start_observational_period_inland, stop_observationa
 
 df_round <- make.df.round(df_round_inland, df_round_fishing, df_period)
 
-# temp
-# df_period <- df_period[COMM == 'inland']
-# df_period <- select(df_period, - 'COMM')
-# df_round <- df_round[COMM == 'inland']
-# df_round <- select(df_round, - 'COMM')
-# start_observational_period <- start_observational_period_inland
-# stop_observational_period <- stop_observational_period_inland
 
 #
 # Find count eligible susceptible / infected / infected unsuppressed 
