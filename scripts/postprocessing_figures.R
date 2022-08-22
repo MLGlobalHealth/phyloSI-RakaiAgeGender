@@ -53,16 +53,6 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-source(file.path(indir, 'functions', 'summary_functions.R'))
-df_community <- get.df.community()
-df_round[, MIN_SAMPLE_DATE_LABEL := format(min_sample_date, '%b %Y')]
-df_round[, MAX_SAMPLE_DATE_LABEL := format(max_sample_date - 31, '%b %Y')]
-df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
-df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(round), LABEL_ROUND])]
-
-file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_share_sex_vl_1000_220818.csv'))
-file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220818.csv'))
 
 #
 # offset
