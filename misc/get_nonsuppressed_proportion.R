@@ -254,6 +254,12 @@ ggplot(nsinf, aes(x = AGEYRS)) +
   facet_grid(ROUND~COMM+SEX) + 
   theme_bw()
 
+ggplot(nsinf, aes(x = AGEYRS)) + 
+  geom_line(aes(y = PROP_UNSUPPRESSED_M, col = ROUND)) + 
+  geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU, fill = ROUND), alpha = 0.5) + 
+  geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL, col = ROUND), alpha = 0.5) + 
+  facet_grid(COMM~SEX) + 
+  theme_bw()
 
 #########
 
