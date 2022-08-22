@@ -427,37 +427,35 @@ summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, d
   return(dfw)
 }
 
-get_incidence_cases_round <- function(incidence, eligible_count_round, full_time_period = T){
+get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligible_count_round){
   
-  # prepare incidence
-  colnames(incidence) <- toupper(colnames(incidence))
-  setnames(incidence, 'AGE', 'AGEYRS')
-  incidence[, COMM := 'inland']
-  incidence[, SEX := substring(SEX, 1, 1)]
-  incidence <- incidence[ROUND >= 14]
+  # prepare incidence inland
+  inc.inland <- copy(incidence.inland)
+  colnames(inc.inland) <- toupper(colnames(inc.inland))
+  setnames(inc.inland, 'AGE', 'AGEYRS')
+  inc.inland[, COMM := 'inland']
+  inc.inland[, SEX := substring(SEX, 1, 1)]
+  inc.inland <- inc.inland[ROUND >= 14]
+  inc.inland[, ROUND := paste0('R0', as.character(ROUND))]
+  inc.inland <- inc.inland[, .(SEX, ROUND, AGEYRS, INCIDENCE, LB, UB, COMM)]
   
-  if(grepl('R0', eligible_count_round[, ROUND[1]])){
-    # add R0 in front of round index 
-    incidence[, ROUND := paste0('R0', as.character(ROUND))]
-  }else{
-    incidence[, ROUND := as.character(ROUND)]
-  }
+  # prepare incidence fishing
+  inc.fishing <- copy(incidence.fishing)
+  colnames(inc.fishing) <- toupper(colnames(inc.fishing))
+  setnames(inc.fishing, 'AGE', 'AGEYRS')
+  inc.fishing[, COMM := 'fishing']
+  inc.fishing[, SEX := substring(SEX, 1, 1)]
+  setnames(inc.fishing, 'ROUND_LABEL', 'ROUND')
   
-  # for now set incidence in fishing to be the same as in inland
-  incidencefishing <- copy(incidence)
-  incidencefishing[, COMM := 'fishing']
-  incidencefishing <- incidencefishing[ROUND != 'R014']
-  incidencefishing15 <- incidencefishing[ROUND == 'R015']
-  incidencefishing15[, ROUND := 'R015S']
-  incidencefishing <- rbind(incidencefishing, incidencefishing15)
-  incidence <- rbind(incidence, incidencefishing)
-  
+  # combine fishing and inland
+  incidence <- rbind(inc.inland, inc.fishing)
+
   if(0){
     ggplot(incidence, aes(x = AGEYRS)) +
       geom_line(aes(y = INCIDENCE*100, col = ROUND)) +
       geom_ribbon(aes(ymin = LB*100, ymax = UB*100, fill = ROUND),  alpha = 0.1) +
       labs(y = 'Incidence rate per 100 PY ', x = 'Age') +
-      facet_grid(COMM~SEX, label = 'label_both') +
+      facet_grid(COMM~SEX, label = 'label_both', scale = 'free_y') +
       theme_bw() +
       theme(legend.position = 'bottom')
   }
@@ -486,8 +484,8 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
     
     tmp <- dir[, list(INCIDENT_CASES = round(sum(INCIDENT_CASES), digits = 1),
                       INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1),
-                      INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('ROUND', 'COMM', 'MODEL')]
-    knitr::kable(subset(tmp, select = - c(MODEL)))
+                      INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('ROUND', 'COMM')]
+    knitr::kable(tmp)
     
   }
   
@@ -677,13 +675,13 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
   
   if(1){ # plots
     
-    tmp1 <- df[COMM == 'inland']
+    tmp1 <- copy(df)
     tmp1[, Direction := 'Female -> Male']
     tmp1[SEX.RECIPIENT == 'F', Direction := 'Male -> Female']
 
     # age recipient plot
     # empirical probabilities
-    tmp <- di[COMM == 'inland']
+    tmp <- copy(di)
     tmp[, Direction := 'Female -> Male']
     tmp[SEX == 'F', Direction := 'Male -> Female']
     # prepare probabilities 
@@ -723,7 +721,6 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
     dp <- merge(dp, unique(incidence_cases[, .(BEFORE_CUTOFF, PERIOD, COMM)]), by = c('BEFORE_CUTOFF', 'COMM'))
     dp[, Direction := 'Female -> Male']
     dp[SEX.RECIPIENT == 'F', Direction := 'Male -> Female']
-    dp <- dp[COMM == 'inland']
     
     ggplot(tmp1, aes(x = AGEYRS.SOURCE, y = AGEYRS.RECIPIENT)) + 
       geom_raster(aes(fill = prop_sampling)) + 

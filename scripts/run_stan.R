@@ -84,7 +84,8 @@ file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pange
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
-file.incidence	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
+file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
+file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220822.csv")
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220807.csv')
 # file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
 file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_1000_220803.csv")
@@ -125,8 +126,8 @@ proportion_unsuppressed <- as.data.table(read.csv(file.unsuppressed.prop))
 aik <- .read(file.anonymisation.keys); aik$X <- NULL
 
 # load incidence estimates from Adam
-incidence <- as.data.table(read.csv(file.incidence))
-
+incidence.inland <- as.data.table(read.csv(file.incidence.inland))
+incidence.fishing <- as.data.table(read.csv(file.incidence.fishing))
 
 #
 # Define start time, end time and cutoff
@@ -169,7 +170,7 @@ eligible_count[, table(PERIOD, COMM)]
 #
 
 # by round
-incidence_cases_round <- get_incidence_cases_round(incidence, eligible_count_round)
+incidence_cases_round <- get_incidence_cases_round(incidence.inland, incidence.fishing, eligible_count_round)
 incidence_cases_round[, table(ROUND, COMM)]
 
 # summarise by time period
@@ -331,7 +332,7 @@ if(1){
 
 
 # for now ignore fishing
-if(1){
+if(0){
   stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
   stan_data[['z']][,,1,] =  stan_data[['z']][,,2,]
   stan_data[['sampling_index_y']][,,1,] =  stan_data[['sampling_index_y']][,,2,]
