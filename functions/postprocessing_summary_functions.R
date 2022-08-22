@@ -201,7 +201,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
   if('INDEX_COMMUNITY' %in% vars)
     tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
   if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   
@@ -237,7 +237,8 @@ find_summary_output_by_round <- function(samples, output, vars,
   }
   
   if('INDEX_ROUND' %in% names(tmp1)){
-    tmp1 <- merge(tmp1, df_round, by = 'INDEX_ROUND')
+    tmp <- merge(df_round, df_community, by = c('COMM'))
+    tmp1 <- merge(tmp1, tmp, by = c('INDEX_ROUND', 'INDEX_COMMUNITY'))
   }
   
   if(!is.null(log_offset_round)){
@@ -287,7 +288,7 @@ find_summary_output_by_round <- function(samples, output, vars,
   if('INDEX_COMMUNITY' %in% vars)
     tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
   if('INDEX_ROUND' %in% vars)
-    tmp1 <- merge(tmp1, df_round, by = 'INDEX_ROUND')
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   if('INDEX_TIME' %in% vars)
@@ -337,7 +338,7 @@ prepare_count_data <- function(stan_data){
   setnames(tmp, 1:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
   tmp <- merge(tmp, df_direction, by = 'INDEX_DIRECTION')
   tmp <- merge(tmp, df_community, by = 'INDEX_COMMUNITY')
-  tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
+  tmp <- merge(tmp, df_period, by = c('INDEX_TIME', 'COMM'))
   tmp <- merge(tmp, df_age, by = 'INDEX_AGE')
   
   setnames(tmp, 'value', 'count')
@@ -412,7 +413,19 @@ prepare_unsuppressed_proportion_by_round <- function(file.unsuppressed.share, va
   tmp[, ROUND := 14]
   tmp1 <- rbind(tmp, tmp1)
   
+  # set round 15S to be the same as round 15 in fishing
+  tmp1[, ROUND := as.numeric(ROUND)]
+  tmp <- tmp1[ROUND == 15 & COMM == 'fishing']
+  tmp[, ROUND := 15.1]
+  tmp1 <- rbind(tmp, tmp1)
+  
+  # merge to index round
+  tmp1 <- merge(tmp1, df_round[, .(COMM,round, INDEX_ROUND, LABEL_ROUND)], by.x = c('COMM', 'ROUND'), by.y = c('COMM', 'round'))
+  
+  # type
   tmp1[, type := 'Share in the HIV+ unsuppressed census eligible individuals']
+  
+  return(tmp1)
 }
 
 prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
@@ -438,7 +451,16 @@ prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
   tmp[, ROUND := 14]
   tmp1 <- rbind(tmp, tmp1)
   
+  # find round label
+  tmp1[, ROUND := paste0('R0', ROUND)]
+  
+  # merge to index round
+  tmp1 <- merge(tmp1, df_round[, .(COMM, ROUND, INDEX_ROUND)], by = c('COMM', 'ROUND'))
+  
+  # type
   tmp1[, type := 'Share in the HIV+ census eligible individuals']
+  
+  return(tmp1)
 }
 
 

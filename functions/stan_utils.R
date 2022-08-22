@@ -277,7 +277,7 @@ add_stan_data_base <- function(){
   # number of groups
   stan_data[['N_DIRECTION']] = nrow(df_direction)
   stan_data[['N_COMMUNITY']] = nrow(df_community)
-  stan_data[['N_PERIOD']] = nrow(df_period)
+  stan_data[['N_PERIOD']] = max(df_period$INDEX_TIME)
   
   # number of age 
   stan_data[['N_PER_GROUP']] = nrow(df_age)
@@ -286,13 +286,14 @@ add_stan_data_base <- function(){
   stan_data[['N_AGE']] = df_age[, length(unique(AGE_INFECTION.RECIPIENT))]
   
   # number of rounds 
-  stan_data[['N_ROUND']] = nrow(df_round)
+  stan_data[['N_ROUND']] = df_round[, length(unique(INDEX_ROUND))]
   
   # map from round to period
-  stan_data[['map_round_period']] = df_round[order(round), INDEX_TIME]
+  stan_data[['map_round_period']] = df_round[COMM == 'inland' & order(round), INDEX_TIME] # same for fishing and inland
   
   return(stan_data)
 }
+
 add_phylo_data <- function(stan_data, pairs){
 
   # prepare pairs
@@ -355,7 +356,7 @@ add_phylo_data <- function(stan_data, pairs){
   return(stan_data)
 }
 
-add_incidence_cases <- function(stan_data, incidence_cases){
+add_incidence_cases <- function(stan_data, incidence_cases_round){
   
   # save count in each entry
   z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_ROUND']]))
@@ -363,23 +364,26 @@ add_incidence_cases <- function(stan_data, incidence_cases){
     for(j in 1:stan_data[['N_COMMUNITY']]){
       for(k in 1:stan_data[['N_ROUND']]){
         
-        # direction group
         .SEX.RECIPIENT = substr(gsub('.* -> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM = df_community[INDEX_COMMUNITY == j, COMM]
+        .ROUND = df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
+        
+        # direction group
         tmp <- incidence_cases_round[SEX == .SEX.RECIPIENT]
         
         # community group
-        tmp <- tmp[COMM == df_community[j, COMM]]
+        tmp <- tmp[COMM == .COMM]
         
-        # time group
-        tmp <- tmp[INDEX_ROUND == df_round[k, INDEX_ROUND]]
+        # round
+        tmp <- tmp[ROUND == .ROUND]
         
-        # count number of observation
+        # order by age
         tmp <- tmp[order(AGEYRS)] 
         
         # sanity check
-        tmp1 <- incidence_cases[SEX == .SEX.RECIPIENT  & COMM == df_community[j, COMM] & INDEX_ROUND == df_round[k, INDEX_ROUND]]
+        tmp1 <- incidence_cases_round[SEX == .SEX.RECIPIENT  & COMM == .COMM & ROUND == .ROUND]
         stopifnot(sum(tmp$INCIDENT_CASES) == sum(tmp1$INCIDENT_CASES))
-        cat(sum(tmp1$INCIDENT_CASES), 'incidence cases ', df_direction[i, LABEL_DIRECTION], 'towards', df_community[j, COMM], 'in', df_round[k, ROUND], '\n')
+        cat(sum(tmp1$INCIDENT_CASES), 'incidence cases ', df_direction[i, LABEL_DIRECTION], 'towards', .COMM, 'in', .ROUND, '\n')
         
         # fill
         z[, i, j, k] = ceiling(tmp$INCIDENT_CASES)
@@ -734,7 +738,7 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
 
 add_offset <- function(stan_data, eligible_count){
   
-  eligible_count_wide <- eligible_count_round[order(SEX, COMM, INDEX_ROUND, AGEYRS)]
+  eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
   eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
   
   log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_ROUND']], stan_data[['N_PER_GROUP']])))
@@ -748,18 +752,18 @@ add_offset <- function(stan_data, eligible_count){
           .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
           .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
           .COMM <- df_community[j, COMM]
-          .INDEX_ROUND <- df_round[k, INDEX_ROUND]
+          .ROUND <- df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
           
           # add proportion of susceptible in recipient
-          tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & INDEX_ROUND == .INDEX_ROUND]
+          tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & ROUND == .ROUND]
           log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
 
           # add number of infected unsuppressed in source
-          tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & INDEX_ROUND == .INDEX_ROUND]
+          tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & ROUND == .ROUND]
           log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
 
           # add period in year
-          log_offset[, PERIOD_SPAN := df_round[INDEX_ROUND == .INDEX_ROUND, ROUND_SPANYRS]]
+          log_offset[, PERIOD_SPAN := df_round[ROUND == .ROUND & COMM == .COMM, ROUND_SPANYRS]]
           
           # make log offset
           log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]

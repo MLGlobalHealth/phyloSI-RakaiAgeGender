@@ -25,15 +25,30 @@ make.time.since.infection <- function(time.since.infection)
   return(time.since.infection)
 }
 
-make.df.period <- function(start_observational_period, cutoff_date, stop_observational_period){
-  tmp <- data.table(PERIOD = c(paste0(format(start_observational_period, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
-                                     paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period, '%b %Y'))), 
-             BEFORE_CUTOFF = c(T, F), 
-             INDEX_TIME = 1:2, 
-             PERIOD_SPAN = c(.year.diff(cutoff_date, start_observational_period), 
-                             .year.diff(stop_observational_period, cutoff_date)))
+make.df.period <- function(start_observational_period_inland, stop_observational_period_inland, 
+                           start_observational_period_fishing, stop_observational_period_fishing, 
+                           cutoff_date){
   
-  stopifnot(tmp[, sum(PERIOD_SPAN)] == .year.diff(stop_observational_period, start_observational_period))
+  tmp_inland <- data.table(PERIOD = c(paste0(format(start_observational_period_inland, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
+                                      paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period_inland, '%b %Y'))), 
+                           BEFORE_CUTOFF = c(T, F), 
+                           INDEX_TIME = 1:2, 
+                           PERIOD_SPAN = c(.year.diff(cutoff_date, start_observational_period_inland), 
+                                           .year.diff(stop_observational_period_inland, cutoff_date)), 
+                           COMM = 'inland')
+  stopifnot(tmp_inland[, sum(PERIOD_SPAN)] == .year.diff(stop_observational_period_inland, start_observational_period_inland))
+  
+  tmp_fishing <- data.table(PERIOD = c(paste0(format(start_observational_period_fishing, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
+                                      paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period_fishing, '%b %Y'))), 
+                           BEFORE_CUTOFF = c(T, F), 
+                           INDEX_TIME = 1:2, 
+                           PERIOD_SPAN = c(.year.diff(cutoff_date, start_observational_period_fishing), 
+                                           .year.diff(stop_observational_period_fishing, cutoff_date)), 
+                           COMM = 'fishing')
+  stopifnot(abs(tmp_fishing[, sum(PERIOD_SPAN)] - .year.diff(stop_observational_period_fishing, start_observational_period_fishing)) < 1e-15)
+  
+  tmp <- rbind(tmp_inland, tmp_fishing)
+  
   return(tmp)
 }
 
@@ -327,42 +342,41 @@ add_susceptible_infected <- function(eligible_count, proportion_prevalence){
   return(df)
 }
 
-add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed, df_round, start_observational_period, stop_observational_period){
+add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed){
   
-  # use round 15 for round 14 for eligible count
+  # ensure that the data are data.table objects
   di <- as.data.table(eligible_count_round)
-  di15 <- di[ROUND == '15']
-  di15[, ROUND := '14']
-  di <- rbind(di15, di )
-  
-  #use round 15 for round 14
   pu <- as.data.table(proportion_unsuppressed)
-  rounds_fill <- c('R014')
-  pu <- pu[!ROUND %in% rounds_fill]
-  for(round in rounds_fill){
-    pu15 <- pu[ROUND == 'R015']
-    pu15[, ROUND := round]
-    pu <- rbind(pu15, pu)
-  }
+  
+  # use round 15 for round 14 in inland communties for eligible count
+  di15 <- di[ROUND == '15' & COMM == 'inland']
+  di15[, ROUND := '14']
+  di <- rbind(di15, di)
+  
+  # use round 15 for round 14 in inland communties for proportion of unsuppressed
+  pu15 <- pu[ROUND == 'R015'& COMM == 'inland']
+  pu15[, ROUND := 'R014']
+  pu <- rbind(pu15, pu)
+  
+  # use round 15 for round 15s in fishing communties for proportion of unsuppressed
+  pu15 <- pu[ROUND == 'R015'& COMM == 'fishing']
+  pu15[, ROUND := 'R015S']
+  pu <- rbind(pu15, pu)
     
   # select variabel
   di <- di[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE, INFECTED, SUSCEPTIBLE)]
   di[, ROUND := paste0('R0', ROUND)]
   
-  # keep inside observational period
-  di <- merge(di, df_round, by = 'ROUND')
-  di <- di[min_sample_date >= start_observational_period & max_sample_date <= stop_observational_period ]
-  
   # find proportion of unsuppressed by round
   df <- merge(di, pu, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
   # get infected non suppressed
-  df[, INFECTED_NON_SUPPRESSED := INFECTED * M]
-  df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * CL]
-  df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * CU]
+  df[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_M]
+  df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PROP_UNSUPPRESSED_CL]
+  df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PROP_UNSUPPRESSED_CU]
   
   # rm unecessary variable
-  df <- select(df, -c('M', "CL", "CU"))
+  df <- select(df, -c('PROP_UNSUPPRESSED_M', "PROP_UNSUPPRESSED_CL", "PROP_UNSUPPRESSED_CU"))
   
   return(df)
 }
@@ -370,24 +384,25 @@ add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppres
 summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, df_period){
   
   # find time intervals
-  eligible_count_round[, BEFORE_CUTOFF := max_sample_date <= cutoff_date]
+  eligible_count_round <- merge(eligible_count_round, df_round[, .(ROUND, ROUND_SPANYRS, INDEX_TIME, COMM)], by = c('ROUND', 'COMM'))
+  eligible_count_round[, BEFORE_CUTOFF := INDEX_TIME == 1]
   
   # summarise across time periods
   df <- eligible_count_round[, .(ROUND, INDEX_TIME, SEX, COMM, AGEYRS, BEFORE_CUTOFF, ROUND_SPANYRS, 
-                                 ELIGIBLE, INFECTED, SUSCEPTIBLE, PROP_NON_SUPPRESSED_EMPIRICAL, INFECTED_NON_SUPPRESSED, INFECTED_NON_SUPPRESSED_CL, INFECTED_NON_SUPPRESSED_CU)]
+                                 ELIGIBLE, INFECTED, SUSCEPTIBLE, PROP_UNSUPPRESSED_EMPIRICAL, INFECTED_NON_SUPPRESSED, INFECTED_NON_SUPPRESSED_CL, INFECTED_NON_SUPPRESSED_CU)]
   df <- melt.data.table(df, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'BEFORE_CUTOFF', 'INDEX_TIME', 'ROUND_SPANYRS'))
 
   # check that the lengh corresponds to the one of the period
-  tmp <- unique(df[, .(ROUND, INDEX_TIME, ROUND_SPANYRS)][order(ROUND)])
-  tmp <- tmp[, list(PERIOD_SPAN_WITH_ROUND = sum(ROUND_SPANYRS)), by = 'INDEX_TIME']
-  tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
+  tmp <- unique(df[, .(ROUND, INDEX_TIME, ROUND_SPANYRS, COMM)][order(ROUND)])
+  tmp <- tmp[, list(PERIOD_SPAN_WITH_ROUND = sum(ROUND_SPANYRS)), by = c('INDEX_TIME', 'COMM')]
+  tmp <- merge(tmp, df_period, by = c('INDEX_TIME', 'COMM'))
   stopifnot(tmp[, all(PERIOD_SPAN == PERIOD_SPAN_WITH_ROUND)])
   
   # find weight of every round in the period 
-  tmp <- unique(df[, .(ROUND, ROUND_SPANYRS, BEFORE_CUTOFF)])
+  tmp <- unique(df[, .(ROUND, ROUND_SPANYRS, BEFORE_CUTOFF, COMM)])
   tmp <- tmp[, list(WEIGHT_ROUND = ROUND_SPANYRS / sum(ROUND_SPANYRS),
-                    ROUND = ROUND), by = 'BEFORE_CUTOFF']
-  df <- merge(df, tmp, by = c('BEFORE_CUTOFF', 'ROUND'))
+                    ROUND = ROUND), by = c('BEFORE_CUTOFF', 'COMM')]
+  df <- merge(df, tmp, by = c('BEFORE_CUTOFF', 'ROUND', 'COMM'))
   
   # find variable over period 
   dfw <- df[, list(value = sum(value * WEIGHT_ROUND)), by = c('BEFORE_CUTOFF', 'SEX', 'COMM', 'AGEYRS', 'variable')]
@@ -407,7 +422,7 @@ summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, d
   setnames(dfw, 'value', 'count')
   
   # merge to period
-  dfw <- merge(dfw, df_period, by = 'BEFORE_CUTOFF')
+  dfw <- merge(dfw, df_period, by = c('BEFORE_CUTOFF', 'COMM'))
   
   return(dfw)
 }
@@ -431,19 +446,18 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
   # for now set incidence in fishing to be the same as in inland
   incidencefishing <- copy(incidence)
   incidencefishing[, COMM := 'fishing']
+  incidencefishing <- incidencefishing[ROUND != 'R014']
+  incidencefishing15 <- incidencefishing[ROUND == 'R015']
+  incidencefishing15[, ROUND := 'R015S']
+  incidencefishing <- rbind(incidencefishing, incidencefishing15)
   incidence <- rbind(incidence, incidencefishing)
-  
-  # for now set incidence in round 14 to incidence in round 15
-  # incidence14 <- copy(incidence[ROUND == 'R015'])
-  # incidence14[, ROUND := 'R014']
-  # incidence <- rbind(incidence, incidence14)
   
   if(0){
     ggplot(incidence, aes(x = AGEYRS)) +
-      geom_line(aes(y = INCIDENCE, col = ROUND)) +
-      geom_ribbon(aes(ymin = LB, ymax = UB, fill = ROUND),  alpha = 0.1) +
-      labs(y = 'Incidence rate per 1 PY in inland community', x = 'Age') +
-      facet_grid(SEX~COMM, label = 'label_both') +
+      geom_line(aes(y = INCIDENCE*100, col = ROUND)) +
+      geom_ribbon(aes(ymin = LB*100, ymax = UB*100, fill = ROUND),  alpha = 0.1) +
+      labs(y = 'Incidence rate per 100 PY ', x = 'Age') +
+      facet_grid(COMM~SEX, label = 'label_both') +
       theme_bw() +
       theme(legend.position = 'bottom')
   }
@@ -451,25 +465,8 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
   # merge to susceptible
   dir <- merge(incidence, eligible_count_round, by = c('COMM', 'AGEYRS', 'SEX', 'ROUND'))
   
-  if(full_time_period){
-    
-    # find length in years of each round
-    dir[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
-    
-    # check that the lengh corresponds to the one of the period
-    tmp <- unique(dir[, .(ROUND, INDEX_TIME, min_sample_date, max_sample_date, ROUND_SPANYRS)][order(ROUND)])
-    tmp <- tmp[, list(PERIOD_SPAN_WITH_ROUND = sum(ROUND_SPANYRS)), by = 'INDEX_TIME']
-    tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
-    stopifnot(tmp[, all(PERIOD_SPAN == PERIOD_SPAN_WITH_ROUND)])
-    
-  } else{
-    # find start and end date of rounds
-    dir <- merge(dir, df_round, by.x = 'ROUND', by.y = 'round')
-    
-    # find length in years of each round
-    dir[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
-    
-  }
+  # find length in years of each round
+  dir <- merge(dir, df_round[, .(COMM, ROUND, ROUND_SPANYRS, INDEX_TIME)], by = c("COMM", 'ROUND'))
   
   # find incident cases
   dir[, INCIDENT_CASES:= SUSCEPTIBLE * ROUND_SPANYRS * INCIDENCE]
@@ -489,7 +486,7 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
     
     tmp <- dir[, list(INCIDENT_CASES = round(sum(INCIDENT_CASES), digits = 1),
                       INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1),
-                      INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('ROUND', 'MODEL')]
+                      INCIDENT_CASES_UB = round(sum(INCIDENT_CASES_UB), digits = 1)), by = c('ROUND', 'COMM', 'MODEL')]
     knitr::kable(subset(tmp, select = - c(MODEL)))
     
   }
@@ -501,15 +498,12 @@ get_incidence_cases_round <- function(incidence, eligible_count_round, full_time
 
 summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date, df_period){
   
-  # find time intervals
-  incidence_cases_round[, BEFORE_CUTOFF := max_sample_date <= cutoff_date]
-  
   # summarise across time periods
   incidence_cases <- incidence_cases_round[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
                                                   INCIDENT_CASES_UB = sum(INCIDENT_CASES_UB), 
-                                                  INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB)), by = c('COMM', 'AGEYRS', 'SEX', 'BEFORE_CUTOFF')]
+                                                  INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB)), by = c('COMM', 'AGEYRS', 'SEX', 'INDEX_TIME')]
   # make period
-  incidence_cases <- merge(incidence_cases, df_period, by = 'BEFORE_CUTOFF')
+  incidence_cases <- merge(incidence_cases, df_period, by = c('INDEX_TIME', 'COMM'))
   
   return(incidence_cases)
 }
@@ -667,7 +661,7 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
   stopifnot(nrow(tmp[abs(sum_prop_sampling - sum_prop_sampling_empirical) > 1e-6]) == 0)
 
   # merge period 
-  df <- merge(df, unique(di[, .(PERIOD, BEFORE_CUTOFF)]), by = c('BEFORE_CUTOFF'))
+  df <- merge(df, unique(di[, .(PERIOD, BEFORE_CUTOFF, COMM)]), by = c('BEFORE_CUTOFF', 'COMM'))
   
   # warnings
   tmp <- df[prop_sampling > 1]
@@ -726,7 +720,7 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir,
     setnames(dp, c('COMM.RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT'), 
              c('COMM', 'AGEYRS.SOURCE', 'AGEYRS.RECIPIENT', 'BEFORE_CUTOFF'))
     dp[, `:=` (AGEYRS.RECIPIENT = floor(AGEYRS.RECIPIENT), AGEYRS.SOURCE = floor(AGEYRS.SOURCE))]
-    dp <- merge(dp, unique(incidence_cases[, .(BEFORE_CUTOFF, PERIOD)]), by = 'BEFORE_CUTOFF')
+    dp <- merge(dp, unique(incidence_cases[, .(BEFORE_CUTOFF, PERIOD, COMM)]), by = c('BEFORE_CUTOFF', 'COMM'))
     dp[, Direction := 'Female -> Male']
     dp[SEX.RECIPIENT == 'F', Direction := 'Male -> Female']
     dp <- dp[COMM == 'inland']
@@ -758,34 +752,63 @@ prepare_unsuppressed <- function(eligible_count){
   tmp
 }
 
-make.df.round <- function(df_round, df_period){
+make.df.round <- function(df_round_inland, df_round_fishing, df_period){
   
-  df_round[, INDEX_TIME := 0]
-  df_round[round%in%14:15, INDEX_TIME := 1]
-  df_round[round %in% 16:18, INDEX_TIME := 2]
+  #
+  # for inland
+  df_round_inland[, INDEX_TIME := 0]
+  df_round_inland[round%in%paste0('R0', 14:15), INDEX_TIME := 1]
+  df_round_inland[round %in% paste0('R0',16:18), INDEX_TIME := 2]
+  
+  # fill missing months
+  df_round_inland[round == 'R014', max_sample_date := df_round_inland[round == 'R015', min_sample_date]]
+  df_round_inland[round == 'R015', max_sample_date := df_round_inland[round == 'R016', min_sample_date]]
+  df_round_inland[round == 'R016', max_sample_date := df_round_inland[round == 'R017', min_sample_date]]
+  df_round_inland[round == 'R017', max_sample_date := df_round_inland[round == 'R018', min_sample_date]]
+  
+  #
+  # for fishing
+  df_round_fishing[, INDEX_TIME := 0]
+  df_round_fishing[round%in%paste0('R0',c(15,'15S')), INDEX_TIME := 1]
+  df_round_fishing[round %in% paste0('R0',16:18), INDEX_TIME := 2]
+  
+  # fill missing months
+  df_round_fishing[round == 'R015', min_sample_date := start_observational_period_fishing]
+  df_round_fishing[round == 'R015', max_sample_date := df_round_fishing[round == 'R015S', min_sample_date]]
+  df_round_fishing[round == 'R015S', max_sample_date := cutoff_date]
+  df_round_fishing[round == 'R016', min_sample_date := cutoff_date]
+  df_round_fishing[round == 'R016', max_sample_date := df_round_fishing[round == 'R017', min_sample_date]]
+  df_round_fishing[round == 'R017', max_sample_date := df_round_fishing[round == 'R018', min_sample_date]]
+  
+  #
+  # combine
+  df_round_inland[, COMM := 'inland']
+  df_round_fishing[, COMM := 'fishing']
+  df_round <- rbind(df_round_inland, df_round_fishing)
   
   # keep only round 14 to 18
   df_round <- df_round[INDEX_TIME != '0']
-  df_round <- df_round[order(round)]
+  df_round <- df_round[order(COMM, round)]
   
   # index 
-  df_round[, INDEX_ROUND := 1:nrow(df_round)]
-  df_round[, ROUND := paste0('R0', round)]
-  df_round[ROUND == 'R015.1', ROUND := 'R015S']
-  
-  # fill missing months
-  df_round[ROUND == 'R014', max_sample_date := df_round[round == 15, min_sample_date]]
-  df_round[ROUND == 'R015', max_sample_date := df_round[round == 16, min_sample_date]]
-  df_round[ROUND == 'R016', max_sample_date := df_round[round == 17, min_sample_date]]
-  df_round[ROUND == 'R017', max_sample_date := df_round[round == 18, min_sample_date]]
-  
-  # find length in years of each round
+  df_round[, INDEX_ROUND := 1:length(round), by = 'COMM']
+
+  # find length in years of each round and check that it maches the period
   df_round[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
+  tmp <- df_round[, list(ROUND_SPANYRS = sum(ROUND_SPANYRS)), by = c('COMM', 'INDEX_TIME')]
+  tmp <- merge(tmp, df_period, by = c('COMM', 'INDEX_TIME'))
+  stopifnot(tmp[, all(ROUND_SPANYRS == PERIOD_SPAN)])
+  
+  # round in capital
+  colnames(df_round) <- toupper(colnames(df_round))
+  df_round[, round := gsub('R0', '', ROUND)]
+  df_round[round == '15S', round := '15.1']
+  df_round[, round := as.numeric(round)]
   
   # label
-  df_round[, MIN_SAMPLE_DATE_LABEL := format(min_sample_date, '%b %Y')]
-  df_round[, MAX_SAMPLE_DATE_LABEL := format(max_sample_date - 31, '%b %Y')]
-  df_round[, LABEL_ROUND := paste0(MIN_SAMPLE_DATE_LABEL, '-\n', MAX_SAMPLE_DATE_LABEL)]
+  df_round[, MIN_SAMPLE_DATE_LABEL := format(MIN_SAMPLE_DATE, '%b %Y')]
+  df_round[, MAX_SAMPLE_DATE_LABEL := format(MAX_SAMPLE_DATE - 31, '%b %Y')]
+  df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
   df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(round), LABEL_ROUND])]
   
   return(df_round)
@@ -796,17 +819,16 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round){
   eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
   eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
   
-  ROUNDS <- eligible_count_wide[, unique(ROUND)]
-  
+
   res <- list(); index = 1
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(j in 1:stan_data[['N_COMMUNITY']]){
-      for(k in seq_along(ROUNDS)){
+      for(k in 1:stan_data[['N_ROUND']]){
         
         .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
         .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
         .COMM <- df_community[j, COMM]
-        .ROUND <- ROUNDS[k]
+        .ROUND <- df_round[COMM == .COMM & INDEX_ROUND == k, ROUND]
         
         log_offset = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
         log_offset[, INDEX_DIRECTION := df_direction[i, INDEX_DIRECTION]]
@@ -822,8 +844,8 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round){
         log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
         
         # add period in year
-        tmp <- df_round[paste0('R0', toupper(round)) == .ROUND]
-        log_offset[, PERIOD_SPAN := .year.diff(tmp[, max_sample_date], tmp[, min_sample_date])]
+        tmp <- df_round[ROUND == .ROUND & COMM == .COMM]
+        log_offset[, PERIOD_SPAN := tmp[, ROUND_SPANYRS]]
         
         # make log offset
         log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]

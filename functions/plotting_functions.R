@@ -149,32 +149,57 @@ plot_hist_age_infection <- function(pairs, outdir = NULL){
 
 plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
   
-  pairs[, COHORT_ROUND.SOURCE := substr(ROUND.SOURCE, 1, 4)]
+  pairs <- copy(pairs.all)
+  
+  # pairs[, COHORT_ROUND.SOURCE := substr(ROUND.SOURCE, 1, 4)]
   pairs[, COHORT_ROUND.RECIPIENT := substr(ROUND.RECIPIENT, 1, 4)]
-  pairs[, `Round source` := COHORT_ROUND.SOURCE]
-  pairs[, `Round recipient` := COHORT_ROUND.RECIPIENT]
-  
-  p1 <- ggplot(pairs, aes(x = DATE_INFECTION.SOURCE)) + 
-    geom_histogram(bins = 30) +
-    facet_wrap(~`Round source`, nrow = length(unique(pairs$COHORT_ROUND.SOURCE))) +
-    theme_bw() + 
-    labs(x = 'Date of infection source') + 
-    geom_vline(xintercept = cutoff_date, linetype = 'dashed')
-  
-  p2 <- ggplot(pairs, aes(x = DATE_INFECTION.RECIPIENT)) + 
-    geom_histogram(bins = 30) +
-    facet_wrap(~`Round recipient`, nrow = length(unique(pairs$COHORT_ROUND.RECIPIENT))) +
+  # pairs[, `Round source` := COHORT_ROUND.SOURCE]
+  pairs[, Round_recipient := paste0('First round recipient:\n', COHORT_ROUND.RECIPIENT)]
+  pairs <- pairs[COHORT_ROUND.RECIPIENT != 'neur']
+ 
+  if(use.tsi.estimates){
+    pairs[, type := 'With TSI estimates']
+  }else{
+    pairs[, type := 'Date infection = Date first visit - 1 year']
+    pairs[!is.na(AGE_FIRST_POSITIVE.RECIPIENT) , type := 'Date infection = Date first positive - 1 year']
+    pairs[AGE_FIRST_POSITIVE.RECIPIENT == AGE_FIRST_VISIT.RECIPIENT, type := 'Date infection = Date first visit(=first positive) - 1 year']
+  }
+
+  # inland
+  tmp <- pairs[COMM.RECIPIENT == 'inland']
+  tmp_round <- df_round[COMM == 'inland']
+  p <- ggplot(tmp) +
+    geom_rect(data = tmp_round, aes(ymin = -Inf, ymax = Inf, xmin = MIN_SAMPLE_DATE, 
+                                    xmax = MAX_SAMPLE_DATE, fill = ROUND), alpha = 0.5) + 
+    geom_histogram(aes(x = DATE_INFECTION.RECIPIENT), bins = 100) +
+    facet_grid(Round_recipient~type) +
     theme_bw() + 
     labs(x = 'Date of infection recipient') + 
-    geom_vline(xintercept = cutoff_date, linetype = 'dashed')
-
-  p <- ggarrange(p1, p2, ncol = 2)
+    geom_vline(xintercept = cutoff_date, linetype = 'dashed') + 
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))+ 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1))) +
+    ggtitle('Inland communities')
+  file = paste0(outdir, '-data-hist_date_infection_inland.png')
+  ggsave(p, file = file, w = 10.5, h = 9.5)
   
-  if(!is.null(outdir)){
-    file = paste0(outdir, '-data-hist_date_infection.png')
-    cat('saving', file, '\n')
-    ggsave(p, file = file, w = 6, h = 6)
-  }
+  # fishing
+  tmp <- pairs[COMM.RECIPIENT == 'fishing']
+  tmp_round <- df_round[COMM == 'fishing']
+  p <- ggplot(tmp) +
+    geom_rect(data = tmp_round, aes(ymin = -Inf, ymax = Inf, xmin = MIN_SAMPLE_DATE, 
+                                    xmax = MAX_SAMPLE_DATE, fill = ROUND), alpha = 0.5) + 
+    geom_histogram(aes(x = DATE_INFECTION.RECIPIENT), bins = 100) +
+    facet_grid(Round_recipient~type) +
+    theme_bw() + 
+    labs(x = 'Date of infection recipient', y = 'Count of phylo pairs') + 
+    geom_vline(xintercept = cutoff_date, linetype = 'dashed') + 
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))+ 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)))  +
+    ggtitle('Fishing communities')
+  file = paste0(outdir, '-data-hist_date_infection_fishing.png')
+  ggsave(p, file = file, w = 10.5, h = 9.5)
 
   return(p)
 }
@@ -521,6 +546,15 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   
   level_rounds <- c('R014', 'R015', 'R016', 'R017', 'R018')
   
+  # round periods
+  tmp <- rbind(df_round_inland, df_round_fishing)
+  ggplot(tmp, aes(y = as.factor(round))) + 
+    geom_errorbarh(aes(xmin =min_sample_date , xmax =  max_sample_date, col = as.factor(round))) + 
+    facet_grid(COMM~.) + 
+    labs(y = 'Round')
+    theme_bw() 
+  ggsave(paste0(outdir, '-data-period-round.png'), w = 7, h = 8)
+  
   # Census eligible count 
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
     geom_line(aes(y = ELIGIBLE, col = SEX)) +
@@ -624,9 +658,9 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   
   # proportion of unsuppressed
   ggplot(proportion_unsuppressed, aes(x = AGEYRS)) +
-    geom_line(aes(y = M , col = SEX)) +
-    geom_ribbon(aes(ymin = CL , ymax = CU , fill = SEX), alpha = 0.5) +
-    geom_point(aes(y = PROP_NON_SUPPRESSED_EMPIRICAL , col = SEX), alpha = 0.5) +
+    geom_line(aes(y = PROP_UNSUPPRESSED_M , col = SEX)) +
+    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL , ymax = PROP_UNSUPPRESSED_CU , fill = SEX), alpha = 0.5) +
+    geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL , col = SEX), alpha = 0.5) +
     labs(y = 'Proportion of unsupressed', x = 'Age') +
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
@@ -634,9 +668,9 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   ggsave(paste0(outdir, '-data-census_eligible_prop_unsuppressed_round_sex.png'), w = 7, h = 8)
   
   ggplot(proportion_unsuppressed, aes(x = AGEYRS)) +
-    geom_line(aes(y = M , col = ROUND)) +
-    geom_ribbon(aes(ymin = CL , ymax = CU , fill = ROUND), alpha = 0.5) +
-    geom_point(aes(y = PROP_NON_SUPPRESSED_EMPIRICAL , col = ROUND), alpha = 0.5) +
+    geom_line(aes(y = PROP_UNSUPPRESSED_M , col = ROUND)) +
+    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL , ymax = PROP_UNSUPPRESSED_CU , fill = ROUND), alpha = 0.5) +
+    geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL , col = ROUND), alpha = 0.5) +
     labs(y = 'Proportion of unsupressed', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
