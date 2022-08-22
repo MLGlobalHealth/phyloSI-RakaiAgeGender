@@ -333,6 +333,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   # tmp[, type := factor(type , levels = c(type_cont,unique(unsuppressed_prop_sex$type), unique(prepare_prevalence_sex$type)))]
   # 
   tmp <- tmp[LABEL_DIRECTION == 'Male -> Female']
+  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 5, 0)]
   # tmp <- tmp[ROUND != 'R014' & LABEL_DIRECTION == 'Male -> Female']
   
 
@@ -341,72 +342,41 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   tmp1 <- rbind(prevalence_prop_sex, unsuppressed_prop_sex, fill=TRUE)
   tmp1[, type := factor(type , levels = c(unique(prevalence_prop_sex$type), unique(unsuppressed_prop_sex$type)))]
   tmp1 <- tmp1[LABEL_DIRECTION == 'Male -> Female']
-  tmp1[, round :=as.numeric(gsub('R0(.+)', '\\1', ROUND)) ]
+  tmp1[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 5, 0)]
   
-  p <-  ggplot(tmp, aes(x = round)) + 
-     geom_line(aes(y = M, col = type)) + 
-     geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5, fill = 'lightblue3') + 
-    geom_errorbar(data = tmp1, aes(ymin = CL, ymax = CU), col = 'grey50', width = 0.1, size = 0.5)  +
-    geom_line(data = tmp1, aes(y = M, linetype = type), col = 'black') +
-    geom_point(data = tmp1, aes(y = M, shape = type), col = 'black', size= 2) + 
+  tmp2 <- rbind(tmp, tmp1, fill=TRUE)
+  tmp2[, type := factor(type , levels = c(unique(tmp$type), levels(tmp1$type)))]
+  
+  p <-  ggplot(tmp2, aes(x = INDEX_ROUND2, group = type)) +
+      geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.1))  +
+    geom_line(aes(y = M, linetype = type), col = 'black', position = position_dodge(width = 0.1)) +
+    geom_point(aes(y = M, shape = type), col = 'black', size= 1.7, position = position_dodge(width = 0.1)) + 
      labs(x = '', y = 'Percent', col = '', fill = '') + 
      theme_bw() +
-     facet_grid(.~LABEL_COMMUNITY) + 
-     scale_color_manual(values = 'lightblue3') + 
-     scale_linetype_manual(values = c('dotted','solid')) + 
-     scale_shape_manual(values = c(17, 16)) + 
+     facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
+     scale_linetype_manual(values = c('solid', 'dashed', 'dotted')) + 
+     scale_shape_manual(values = c(16, 17, 15)) + 
      theme(strip.background = element_rect(colour="white", fill="white"),
            # axis.text.x = element_text(angle= 70, hjust = 1),
           strip.text = element_text(size = rel(1)),
-          axis.text.x = element_text(angle = 70, hjust = 1),
+          axis.text.x = element_text(angle = 50, hjust = 1),
           axis.title.x = element_blank(), 
           # legend.justification = 'bottom',
           # legend.position='right',
           # legend.direction='vertical',
-          legend.position = c(0.84,0.87),
+          legend.position = c(0.85,0.14),
           panel.grid.major.x = element_blank(), 
           panel.grid.minor.x = element_blank(), 
+          panel.grid.minor.y = element_blank(), 
           legend.margin = margin(),
-          legend.spacing = unit(0.03, "cm"),
           legend.title = element_blank())  + 
-     scale_x_continuous(labels = tmp[order(round), unique(LABEL_ROUND)], breaks = tmp[order(round), unique(round)]) + 
+     scale_x_continuous(labels = tmp[order(INDEX_ROUND2), unique(LABEL_ROUND)], breaks = tmp[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1)) + 
      guides(color = guide_legend(order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
    
    if(is.null(lab)) lab =  'Contribution'
   ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex.png'), w = 8, h = 5.3)
   
-  # just inland for andrea's poster
-  p <-  ggplot(tmp[COMM == 'inland'], aes(x = round)) + 
-    geom_errorbar(data = tmp1[COMM == 'inland'], aes(ymin = CL, ymax = CU), col = 'grey50', width = 0.1, size = 0.5)  +
-    geom_line(data = tmp1[COMM == 'inland'], aes(y = M, linetype = type), col = 'black') +
-    geom_point(data = tmp1[COMM == 'inland'], aes(y = M, shape = type), col = 'black', size= 2) + 
-    geom_line(aes(y = M, col = type)) + 
-    geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5, fill = 'lightblue3') + 
-    labs(x = '', y = 'Percent', col = '', fill = '') + 
-    theme_bw() +
-    scale_color_manual(values = 'lightblue3') + 
-    scale_linetype_manual(values = c('dotted','solid')) + 
-    scale_shape_manual(values = c(17, 16)) + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          # axis.text.x = element_text(angle= 70, hjust = 1),
-          strip.text = element_text(size = rel(1)),
-          axis.text.x = element_text(angle = 70, hjust = 1),
-          # legend.justification = 'bottom',
-          # legend.position='right',
-          # legend.direction='vertical',
-          legend.position = c(0.80,0.87),
-          panel.grid.major.x = element_blank(), 
-          panel.grid.minor.x = element_blank(), 
-          legend.margin = margin(),
-          legend.spacing = unit(0.03, "cm"),
-          legend.title = element_blank())  + 
-    scale_x_continuous(labels = tmp[order(round), unique(LABEL_ROUND)], breaks = tmp[order(round), unique(round)]) + 
-    scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1)) + 
-    guides(color = guide_legend(order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
-  
-  if(is.null(lab)) lab =  'Contribution'
-  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex_inland.png'), w = 6, h = 5.3)
 }
 
 plot_contribution_age_source <- function(contribution_age_source, unsuppressed_prop_age, outdir, lab = NULL){
@@ -416,29 +386,15 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
   tmp <- copy(contribution_age_source)
   tmp[, type  := type_cont]
   tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
-  # tmp[, AGE_TRANSMISSION.SOURCE:= AGE_TRANSMISSION.SOURCE - 0.5] # account for the step function
-  # tmpp <- copy(tmp[AGE_TRANSMISSION.SOURCE == max(AGE_TRANSMISSION.SOURCE)])
-  # tmpp[, AGE_TRANSMISSION.SOURCE := AGE_TRANSMISSION.SOURCE + 1]
-  # tmp <- rbind(tmp, tmpp)
   
   tmp1 <- copy(unsuppressed_prop_age)
   setnames(tmp1, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
   tmp1[, type := 'Share among HIV+\nunsuppressed individuals']
   tmp1[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
-
-  # tmp1[, AGE_TRANSMISSION.SOURCE:= AGE_TRANSMISSION.SOURCE - 0.5]
-  # tmp11 <- copy(tmp1[AGE_TRANSMISSION.SOURCE == max(AGE_TRANSMISSION.SOURCE)])
-  # tmp11[, AGE_TRANSMISSION.SOURCE := AGE_TRANSMISSION.SOURCE + 1]
-  # tmp1 <- rbind(tmp1, tmp11)
-  tmp1 <- merge(tmp1, df_round, by.x = 'ROUND', by.y = 'round')
   
-  tmp2 <- tmp[round == min(round)]
+  tmp2 <- tmp[INDEX_ROUND == min(INDEX_ROUND)]
   tmp2[, type := paste0(type, '\nin ', gsub('\n', ', ', LABEL_ROUND))]
   tmp2 <- select(tmp2, -LABEL_ROUND)
-  # tmp2[, AGE_TRANSMISSION.SOURCE:= AGE_TRANSMISSION.SOURCE - 0.5] # account for the step function
-  # tmp22 <- copy(tmp2[AGE_TRANSMISSION.SOURCE == max(AGE_TRANSMISSION.SOURCE)])
-  # tmp22[, AGE_TRANSMISSION.SOURCE := AGE_TRANSMISSION.SOURCE + 1]
-  # tmp2 <- rbind(tmp2, tmp22)
   
   communities <- tmp[, unique(COMM)]
   
@@ -448,17 +404,18 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
     tmp1.p <- tmp1[COMM == communities[i]]
     tmp2.p <- tmp2[COMM == communities[i]]
     
-    p <- ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX, size = type), alpha = 0.5) + 
+    p <-  ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
+        geom_ribbon(data = tmp1.p, aes(ymin = CL, ymax = CU, linetype=type), alpha = 0.3, fill='grey50')+
+        geom_line(data = tmp1.p, aes(y = M,linetype = type)) + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX, size = type), alpha = 0.6) + 
       geom_line(aes(y = M, col = SEX, size = type), stat = 'identity', position = "identity") + 
       scale_color_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) +
       new_scale_color() +
-      geom_line(data = tmp1.p, aes(y = M,alpha = type)) + 
-      geom_line(data = tmp2.p, aes(y = M, col = SEX, linetype=type)) + 
+      geom_line(data = tmp2.p, aes(y = M, col = SEX, alpha=type), linetype ='solid') +  
       scale_color_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) + 
       labs(x = 'Age of the source', y = 'Percent') + 
       theme_bw() +
-      facet_grid(LABEL_ROUND~SEX)+
+      facet_grid(LABEL_ROUND~SEX) +
       # scale_color_manual(values = c('#FF4949')) + 
       scale_alpha_manual(values = 1) + 
       scale_size_manual(values = 0.5) + 
@@ -475,15 +432,17 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
                          max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]))) 
       
     p_legend <- ggplot(tmp.p[SEX == 'Female sources'], aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU, fill = type), alpha = 0.5) + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = type), alpha = 0.6) + 
       geom_line(aes(y = M, col = type), stat = 'identity', position = "identity") + 
-      geom_line(data = tmp1.p, aes(y = M, alpha = type), col = 'black') + 
+      geom_line(data = tmp1.p, aes(y = M, size = type), col = 'black', linetype = 'dashed') + 
+      geom_ribbon(data = tmp1.p, aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + 
       geom_line(data = tmp2.p, aes(y = M, linetype=type), col = 'deeppink') + 
       theme_bw() +
       scale_alpha_manual(values = 1) + 
+      scale_size_manual(values = 0.5) + 
       scale_color_manual(values = 'lightpink1') +
       scale_fill_manual(values = 'lightpink1') + 
-      scale_linetype_manual(values  = 'dashed') +
+      scale_linetype_manual(values  = 'solid') +
       theme(legend.position = 'bottom', 
             legend.title = element_blank()) + 
       guides(fill = guide_legend(order = 1), color=guide_legend(order = 1),
@@ -494,15 +453,6 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
       theme(panel.background = element_rect(fill='white'))
     if(is.null(lab)) lab =  'Contribution'
     ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 8, h = 9)
-    
-    ### with ci on the unsuppressed 
-    
-    p <- p +  geom_errorbar(data = tmp1.p, aes(ymin = CL, ymax = CU,alpha = type), width = 0.5, col='grey50')
-    pp <- ggarrange(p, legend.grob = get_legend(p_legend), legend = 'bottom')+ 
-      theme(panel.background = element_rect(fill='white'))
-    if(is.null(lab)) lab =  'Contribution'
-    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '2.png'), w = 8, h = 9)
-
     
   }
 }
@@ -521,8 +471,8 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
     tmp1 <- tmp[ COMM == communities[i]]
 
     p <- ggplot(tmp1, aes(x = AGE_GROUP_TRANSMISSION.SOURCE)) + 
-      geom_bar(aes(y = M, fill = LABEL_ROUND), stat = 'identity', position = position_dodge()) + 
-      geom_errorbar(aes(ymin = CL, ymax = CU, group = ROUND), position = position_dodge()) + 
+      geom_bar(aes(y = M, fill = LABEL_ROUND), stat = 'identity', position =position_dodge(width = 0.9)) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = LABEL_ROUND), position =position_dodge(width = 0.9), width = 0.3) + 
       labs(x = 'Age source', y = 'Share in HIV-1 transmissions', fill = '') + 
       theme_bw() +
       facet_grid(AGE_LABEL~SEX)+
@@ -531,7 +481,7 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
             legend.position = 'bottom', 
             panel.grid.major.x = element_blank(), 
             panel.grid.minor.x = element_blank()) +
-      ggsci::scale_fill_lancet()  +
+      scale_fill_manual(values = c('#444e86', '#955196', '#dd5182', '#ff6e54', '#ffa600')) +
       # ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow= T, nrow = 2))
@@ -555,9 +505,9 @@ plot_contribution_age_classification <- function(contribution_age_classification
     
     tmp1 <- tmp[ COMM == communities[i]]
     
-    p <- ggplot(tmp1, aes(x = AGE_CLASSIFICATION.SOURCE)) + 
-      geom_bar(aes(y = M, fill = LABEL_ROUND), stat = 'identity', position = position_dodge()) + 
-      geom_errorbar(aes(ymin = CL, ymax = CU, group = LABEL_ROUND), position = position_dodge()) + 
+    p <- ggplot(tmp1, aes(x = AGE_CLASSIFICATION.SOURCE, group = LABEL_ROUND)) + 
+      geom_bar(aes(y = M, fill = LABEL_ROUND), stat = 'identity', position =position_dodge(width = 0.9)) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = LABEL_ROUND), position =position_dodge(width = 0.9), width = 0.3) + 
       labs(x = 'Age classification of the source', y = 'HIV-1 transmission flows', fill = '') + 
       theme_bw() +
       facet_grid(AGE_LABEL~SEX)+
@@ -566,8 +516,7 @@ plot_contribution_age_classification <- function(contribution_age_classification
             legend.position = 'bottom', 
             panel.grid.major.x = element_blank(), 
             panel.grid.minor.x = element_blank()) +
-      ggsci::scale_fill_lancet()  +
-      # ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
+      scale_fill_manual(values = c('#444e86', '#955196', '#dd5182', '#ff6e54', '#ffa600')) +
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow= T, nrow = 2))
     
