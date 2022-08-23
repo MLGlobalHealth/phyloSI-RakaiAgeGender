@@ -844,7 +844,7 @@ add_init <- function(stan_data){
   stan_init[['log_beta_baseline']] = 0
   stan_init[['log_beta_baseline_contrast_community']] = 0
   stan_init[['log_beta_baseline_contrast_direction']] = 0
-  stan_init[['log_beta_baseline_contrast_round']] = matrix(nrow = stan_data[['N_ROUND']] - 1, ncol = stan_data[['N_DIRECTION']], 0)
+  stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
   stan_init[['rho_gp1']] = rep(2, stan_data[['N_DIRECTION']])
   stan_init[['rho_gp2']] = rep(2, stan_data[['N_DIRECTION']])
   stan_init[['alpha_gp']] = rep(1, stan_data[['N_DIRECTION']])

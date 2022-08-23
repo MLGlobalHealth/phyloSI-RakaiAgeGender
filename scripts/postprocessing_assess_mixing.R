@@ -92,8 +92,10 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-pairs_plots.png'), w  = 8, h = 8
 
 # # period contrast
 add.vars = NULL
-if(length(dim(samples[['log_beta_period_contrast']])) > 2){
+if(length(dim(samples[['log_beta_period_contrast']])) == 3){
   add.vars = c('INDEX_DIRECTION', add.vars)
+}else if(length(dim(samples[['log_beta_period_contrast']])) == 4){
+  add.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', add.vars)
 }
 
 log_period_contrast <- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'INDEX_AGE'), names = c(add.vars, 'INDEX_AGE'))
@@ -110,8 +112,10 @@ plot_recipient_contrast(log_period_contrast_recipient, outfile.figures, paste0(d
 
 # # round contrast
 add.vars = 'INDEX_ROUND'
-if(length(dim(samples[['log_beta_round_contrast']])) > 2){
+if(length(dim(samples[['log_beta_round_contrast']])) == 4){
   add.vars = c('INDEX_DIRECTION', add.vars)
+}else if(length(dim(samples[['log_beta_round_contrast']])) == 5){
+  add.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', add.vars)
 }
 
 log_round_contrast <- find_summary_output_by_round(samples, 'log_beta_round_contrast', c(add.vars, 'INDEX_AGE'),  names = c(add.vars, 'INDEX_AGE'))

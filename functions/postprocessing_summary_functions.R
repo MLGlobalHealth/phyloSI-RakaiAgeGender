@@ -490,7 +490,7 @@ remove_first_round <- function(tmp){
   }
   
   tmp[, INDEX_ROUND:= INDEX_ROUND +1]
-  tmp <- merge(tmp, df_round, by = 'INDEX_ROUND')
+  tmp <- merge(tmp, df_round, by = c('INDEX_ROUND', 'COMM'))
   
   return(tmp)
 }
