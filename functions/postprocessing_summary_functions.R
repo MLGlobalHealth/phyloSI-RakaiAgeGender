@@ -447,6 +447,7 @@ prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
   tmp1[, IS_MF := as.numeric(SEX == 'M')]
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  tmp1[, ROUND := as.numeric(ROUND)]
   
   # set round 14 to be the same as round 15 in inland
   tmp <- tmp1[ROUND == 15 & COMM == 'inland']
