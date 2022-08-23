@@ -271,6 +271,8 @@ find_summary_output_by_round <- function(samples, output, vars,
       tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
     if('INDEX_COMMUNITY' %in% vars)
       tmp <- merge(tmp, df_community, by = 'COMM')
+    if('INDEX_ROUND' %in% vars)
+      tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
     
     tmp <- tmp[,list(TOTAL_INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = vars]
     
@@ -292,7 +294,7 @@ find_summary_output_by_round <- function(samples, output, vars,
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
   
   file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')))
   if(!is.null(standardised.vars)){
@@ -327,7 +329,7 @@ find_median_age_source <- function(samples, var){
   
   tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
   tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  tmp1 <- merge(tmp1, df_round, by = 'INDEX_ROUND')
+  tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
   
   return(tmp1)
 }
