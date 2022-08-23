@@ -360,14 +360,15 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   tmp2[, type := factor(type , levels = c(unique(tmp$type), levels(tmp1$type)))]
   
   p <-  ggplot(tmp2, aes(x = INDEX_ROUND2, group = type)) +
-      geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.1))  +
-    geom_line(aes(y = M, linetype = type), col = 'black', position = position_dodge(width = 0.1)) +
-    geom_point(aes(y = M, shape = type), col = 'black', size= 1.7, position = position_dodge(width = 0.1)) + 
-     labs(x = '', y = 'Percent', col = '', fill = '') + 
+      geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
+    geom_line(aes(y = M, linetype = type), col = 'black', position = position_dodge(width = 0.2)) +
+    geom_point(aes(y = M, shape = type, col = type), size= 1.7, position = position_dodge(width = 0.2)) + 
+     labs(x = '', y = 'Percent', col = '', shape = '', linetype = '') + 
      theme_bw() +
      facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
      scale_linetype_manual(values = c('solid', 'dashed', 'dotted')) + 
      scale_shape_manual(values = c(16, 17, 15)) + 
+      scale_color_manual(values = c("black", "#E69F00",  "#009E73")) + 
      theme(strip.background = element_rect(colour="white", fill="white"),
            # axis.text.x = element_text(angle= 70, hjust = 1),
           strip.text = element_text(size = rel(1)),
@@ -384,7 +385,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
           legend.title = element_blank())  + 
      scale_x_continuous(labels = tmp[order(INDEX_ROUND2), unique(LABEL_ROUND)], breaks = tmp[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1)) + 
-     guides(color = guide_legend(order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
+     guides(color = guide_legend(order = 1), linetype = guide_legend(order = 1), shape = guide_legend(order = 1))
    
    if(is.null(lab)) lab =  'Contribution'
   ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex.png'), w = 8, h = 5.3)
