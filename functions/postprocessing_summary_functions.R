@@ -422,7 +422,8 @@ prepare_unsuppressed_proportion_by_round <- function(file.unsuppressed.share, va
   tmp1 <- rbind(tmp, tmp1)
   
   # merge to index round
-  tmp1 <- merge(tmp1, df_round[, .(COMM,round, INDEX_ROUND, LABEL_ROUND)], by.x = c('COMM', 'ROUND'), by.y = c('COMM', 'round'))
+  setnames(tmp1, 'ROUND', 'round')
+  tmp1 <- merge(tmp1, df_round[, .(COMM, round, ROUND, INDEX_ROUND, LABEL_ROUND)],  by = c('COMM', 'round'))
   
   # type
   tmp1[, type := 'Share in the HIV+ unsuppressed census eligible individuals']
@@ -435,8 +436,8 @@ prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
   tmp1 <- as.data.table(read.csv(file.prevalence.share))
   
   if(all(c('SEX', 'AGEYRS') %in%vars)){
-    tmp1 <- tmp1[, .(ROUND, COMM, SEX, AGEYRS, PREVALENCE_SHARE_AGE_AND_SEX_CL, PREVALENCE_SHARE_AGE_AND_SEX_CU, PREVALENCE_SHARE_AGE_AND_SEX_M)]
-    setnames(tmp1, c('PREVALENCE_SHARE_AGE_AND_SEX_CL', 'PREVALENCE_SHARE_AGE_AND_SEX_CU', 'PREVALENCE_SHARE_AGE_AND_SEX_M'), c('CL', "CU", 'M'))
+    tmp1 <- tmp1[, .(ROUND, COMM, SEX, AGEYRS, PREVALENCE_SHARE_SEX_AND_AGE_CL, PREVALENCE_SHARE_SEX_AND_AGE_CU, PREVALENCE_SHARE_SEX_AND_AGE_M)]
+    setnames(tmp1, c('PREVALENCE_SHARE_SEX_AND_AGE_CL', 'PREVALENCE_SHARE_SEX_AND_AGE_CU', 'PREVALENCE_SHARE_SEX_AND_AGE_M'), c('CL', "CU", 'M'))
   }else if(vars == 'SEX'){
     tmp1 <- unique(tmp1[, .(ROUND, COMM, SEX, PREVALENCE_SHARE_SEX_CL, PREVALENCE_SHARE_SEX_CU, PREVALENCE_SHARE_SEX_M)])
     setnames(tmp1, c('PREVALENCE_SHARE_SEX_CL', 'PREVALENCE_SHARE_SEX_CU', 'PREVALENCE_SHARE_SEX_M'), c('CL', "CU", 'M'))
@@ -447,11 +448,11 @@ prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
   tmp1[, IS_MF := as.numeric(SEX == 'M')]
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
-  tmp1[, ROUND := as.numeric(ROUND)]
+  tmp1[, ROUND := as.character(ROUND)]
   
   # set round 14 to be the same as round 15 in inland
-  tmp <- tmp1[ROUND == 15 & COMM == 'inland']
-  tmp[, ROUND := 14]
+  tmp <- tmp1[ROUND == '15' & COMM == 'inland']
+  tmp[, ROUND := '14']
   tmp1 <- rbind(tmp, tmp1)
   
   # find round label
