@@ -74,9 +74,7 @@ only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
-diff_proportion_sampling_source_age_mirror <- F
-diff_proportion_sampling_source_age_pair <- F
-smooth_proportion_sampling_probability <- F
+
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -272,10 +270,7 @@ print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SE
 # Find probability of observing a transmissing event
 #
 
-proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures,
-                                               diff_proportion_sampling_source_age_mirror, 
-                                               diff_proportion_sampling_source_age_pair, 
-                                               smooth_proportion_sampling_probability)
+proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures)
 
 
 #
