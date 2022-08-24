@@ -482,6 +482,12 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
   for(i in seq_along(communities)){
     
     tmp1 <- tmp[ COMM == communities[i]]
+    
+    if(communities[i] == 'inland'){
+      colors <- c('#374c80', '#7a5195',  '#ef5675', '#ff764a', '#ffa600')
+    }else{
+      colors <- c( '#7a5195', '#bc5090', '#ef5675', '#ff764a', '#ffa600')
+    }
 
     p <- ggplot(tmp1, aes(x = AGE_GROUP_TRANSMISSION.SOURCE)) + 
       geom_bar(aes(y = M, fill = LABEL_ROUND), stat = 'identity', position =position_dodge(width = 0.9)) + 
@@ -494,7 +500,7 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
             legend.position = 'bottom', 
             panel.grid.major.x = element_blank(), 
             panel.grid.minor.x = element_blank()) +
-      scale_fill_manual(values = c('#444e86', '#955196', '#dd5182', '#ff6e54', '#ffa600')) +
+      scale_fill_manual(values = colors) +
       # ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow= T, nrow = 2))
@@ -516,6 +522,12 @@ plot_contribution_age_classification <- function(contribution_age_classification
   
   for(i in seq_along(communities)){
     
+    if(communities[i] == 'inland'){
+      colors <- c('#374c80', '#7a5195',  '#ef5675', '#ff764a', '#ffa600')
+    }else{
+      colors <- c( '#7a5195', '#bc5090', '#ef5675', '#ff764a', '#ffa600')
+    }
+    
     tmp1 <- tmp[ COMM == communities[i]]
     
     p <- ggplot(tmp1, aes(x = AGE_CLASSIFICATION.SOURCE, group = LABEL_ROUND)) + 
@@ -529,7 +541,7 @@ plot_contribution_age_classification <- function(contribution_age_classification
             legend.position = 'bottom', 
             panel.grid.major.x = element_blank(), 
             panel.grid.minor.x = element_blank()) +
-      scale_fill_manual(values = c('#444e86', '#955196', '#dd5182', '#ff6e54', '#ffa600')) +
+      scale_fill_manual(values = colors) +
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow= T, nrow = 2))
     
