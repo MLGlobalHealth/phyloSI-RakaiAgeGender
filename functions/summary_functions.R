@@ -35,7 +35,9 @@ make.df.period <- function(start_observational_period_inland, stop_observational
                            INDEX_TIME = 1:2, 
                            PERIOD_SPAN = c(.year.diff(cutoff_date, start_observational_period_inland), 
                                            .year.diff(stop_observational_period_inland, cutoff_date)), 
-                           COMM = 'inland')
+                           COMM = 'inland', 
+                           MIN_PERIOD_DATE = c(start_observational_period_inland, cutoff_date),
+                           MAX_PERIOD_DATE = c(cutoff_date, stop_observational_period_inland))
   stopifnot(tmp_inland[, sum(PERIOD_SPAN)] == .year.diff(stop_observational_period_inland, start_observational_period_inland))
   
   tmp_fishing <- data.table(PERIOD = c(paste0(format(start_observational_period_fishing, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
@@ -44,7 +46,9 @@ make.df.period <- function(start_observational_period_inland, stop_observational
                            INDEX_TIME = 1:2, 
                            PERIOD_SPAN = c(.year.diff(cutoff_date, start_observational_period_fishing), 
                                            .year.diff(stop_observational_period_fishing, cutoff_date)), 
-                           COMM = 'fishing')
+                           COMM = 'fishing', 
+                           MIN_PERIOD_DATE = c(start_observational_period_fishing, cutoff_date),
+                           MAX_PERIOD_DATE = c(cutoff_date, stop_observational_period_fishing))
   stopifnot(abs(tmp_fishing[, sum(PERIOD_SPAN)] - .year.diff(stop_observational_period_fishing, start_observational_period_fishing)) < 1e-15)
   
   tmp <- rbind(tmp_inland, tmp_fishing)

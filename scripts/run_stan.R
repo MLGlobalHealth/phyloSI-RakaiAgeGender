@@ -9,6 +9,7 @@ library(ggtree)
 library(ggnet)
 require(lubridate)
 library(rstan)
+library(gridExtra)
 
 # laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
@@ -84,6 +85,9 @@ file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anon
 
 file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
 file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220822.csv")
+file.inc.cases.inland	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_seroconverter_cohort_inland_220822.csv")
+file.inc.cases.fishing <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_seroconverter_cohort_fishing_220822.csv")
+
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220807.csv')
 # file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
 file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_1000_220803.csv")
@@ -311,6 +315,9 @@ if(1){
   plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outfile.figures)
   plot_data_by_period(incidence_cases, outfile.figures)
   
+  # plot tansmission events over time
+  plot_transmission_events_over_time(eligible_count_round, incidence_cases_round, pairs, outfile.figures)
+    
   # plot offset
   plot_offset(stan_data, outfile.figures)
   
