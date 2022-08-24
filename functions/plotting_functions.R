@@ -548,11 +548,14 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   
   # round periods
   tmp <- rbind(df_round_inland, df_round_fishing)
-  ggplot(tmp, aes(y = as.factor(round))) + 
-    geom_errorbarh(aes(xmin =min_sample_date , xmax =  max_sample_date, col = as.factor(round))) + 
+  tmp1 <- copy(df_period)
+  tmp1[, INDEX_TIME2 := paste0('Period: ', INDEX_TIME)]
+  ggplot(tmp) + 
+    geom_rect(data = tmp1, aes(ymin = -Inf, ymax = Inf, xmin = MIN_PERIOD_DATE, xmax = MAX_PERIOD_DATE, fill = INDEX_TIME2), alpha = 0.5) + 
+    geom_errorbarh(aes(xmin =min_sample_date , xmax =  max_sample_date, col = as.factor(round), y = as.factor(round))) + 
     facet_grid(COMM~.) + 
-    labs(y = 'Round')
-    theme_bw() 
+    theme_bw() + 
+    labs(y = 'Round', col = '', fill = '') 
   ggsave(paste0(outdir, '-data-period-round.png'), w = 7, h = 8)
   
   # Census eligible count 
@@ -858,6 +861,141 @@ plot_crude_force_infection <- function(crude_force_infection, outdir){
 }
 
 
+plot_transmission_events_over_time <- function(eligible_count_round, incidence_cases_round, pairs, outdir){
+  # timeline
+  df_timeline <- copy(df_round)
+  df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE))), by = c('ROUND', 'COMM')]
+  df_timeline <- df_timeline[, .(ROUND, MIDPOINT, COMM, INDEX_ROUND)]
+  
+  # age groups
+  age_groups <- c('15-24', '25-34', '35-49')
+  df_age_group <- data.table(AGEYRS = 15:49)
+  df_age_group[, index_age_group := 3]
+  df_age_group[AGEYRS < 35, index_age_group := 2]
+  df_age_group[AGEYRS < 25, index_age_group := 1]
+  df_age_group[, age_group := age_groups[index_age_group]]
+  df_age_group[, AGE_GROUP_LABEL := paste0('Age: ', age_group)]
+  
+  # sex
+  df_sex <- data.table(SEX = c('M', 'F'), SEX_LABEL = c('Male', 'Female'))
+  
+  # grid
+  df_grid <- data.table(expand.grid(SEX_LABEL = df_sex[, unique(SEX)], 
+                                    age_group = df_age_group[, unique(age_group)], 
+                                    INDEX_ROUND = df_timeline[, unique(INDEX_ROUND)], 
+                                    COMM=c('inland', 'fishing')))
+  df_grid <- merge(df_grid, unique(df_age_group[, .(age_group, AGE_GROUP_LABEL)]), by = 'age_group')
+  df_grid <- merge(df_grid, (df_timeline), by = c('INDEX_ROUND', 'COMM'))
+  
+  #
+  # Prepare census eligible
+  
+  # sum across age group
+  ecr <- merge(eligible_count_round, df_age_group, by = 'AGEYRS')
+  ecr <- ecr[, list(ELIGIBLE = sum(ELIGIBLE)), by = c('SEX', 'ROUND', 'COMM', 'AGE_GROUP_LABEL')] 
+  
+  # merge labels
+  ecr <- merge(ecr, df_timeline, by = c('ROUND', 'COMM'))
+  ecr <- merge(ecr, df_sex, by = 'SEX')
+  
+  #
+  # Prepare incidence cases
+  icr <- merge(incidence_cases_round, df_age_group, by = 'AGEYRS')
+  icr <- icr[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
+                    INCIDENT_CASES_UB = sum(INCIDENT_CASES_UB),
+                    INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB)), by = c('SEX', 'ROUND', 'COMM', 'AGE_GROUP_LABEL')] 
+  
+  # merge labels
+  icr <- merge(icr, df_timeline, by = c('ROUND', 'COMM'))
+  icr <- merge(icr, df_sex, by = 'SEX')
+  
+  #
+  # Prepare phylo pairs
+  dp <- copy(pairs)
+  setnames(dp, c('SEX.RECIPIENT', 'COMM.RECIPIENT', 'AGE_INFECTION.RECIPIENT', 'DATE_INFECTION.RECIPIENT'), 
+           c('SEX', 'COMM', 'AGEYRS', 'DATE'))
+  dp[, AGEYRS := floor(AGEYRS)]
+  dp <- merge(dp, df_age_group, by = 'AGEYRS')
+  dp[, DIRECTION := 'Male -> Female']
+  dp[SEX.SOURCE == 'F', DIRECTION := 'Female -> Male']
+  # aggregated  age groups
+  # dp <- dp[, list(count = .N), by =  c('SEX', 'DATE', 'AGE_GROUP_LABEL', 'COMM')]
+  
+  
+  
+  #
+  # Plot
+  
+  communities <- hivinc[, unique(COMM)]
+  male_color <- 'lightblue3'
+  female_color <- 'lightpink2'
+  
+  i = 1
+  comm <- communities[i]
+  df_round_comm <- df_round[COMM == comm]
+  df_round_comm <- full_join(df_round_comm, unique(df_age_group[, .(AGE_GROUP_LABEL)]), by = character())
+  
+  # plot person year
+  p1 <- ggplot(ecr[COMM == comm]) + 
+    geom_bar(aes(x = MIDPOINT, y = ELIGIBLE, fill = SEX_LABEL), stat = 'identity', position = position_dodge()) + 
+    facet_grid(.~AGE_GROUP_LABEL) + 
+    labs(y = 'Census eligible count', x= 'Date (midpoint of survey interval)') + 
+    theme_bw() + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          strip.background = element_rect(colour="white", fill="white"),
+          # axis.text.x = element_text(angle= 70, hjust = 1),
+          strip.text = element_text(size = rel(1.2)), 
+          panel.grid.minor.x = element_blank(),
+          panel.grid.major.x = element_blank(),
+          legend.position = c(0.93, 0.85), 
+          legend.title = element_blank()) + 
+    scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) +
+    scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
+    scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0)) 
+  
+  # plot incidence cases
+  p2 <- ggplot(icr[COMM == comm]) + 
+    geom_bar(aes(x = MIDPOINT, y = INCIDENT_CASES, fill = SEX_LABEL), stat = 'identity', position = position_dodge(width = 550)) +
+    geom_errorbar(aes(x = MIDPOINT, ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, group = SEX_LABEL), position = position_dodge(width = 550), width = 200, col = 'grey50') +
+    facet_grid(.~AGE_GROUP_LABEL) + 
+    labs(y = 'HIV incident cases\namong census eligible population', x= 'Date (midpoint of survey interval)') + 
+    theme_bw() + 
+    theme(plot.title = element_text(hjust = 0.5), 
+          strip.background = element_rect(colour="white", fill="white"),
+          # axis.text.x = element_text(angle= 70, hjust = 1),
+          strip.text = element_blank(), 
+          legend.position = c(0.93, 0.85), 
+          panel.grid.minor.x = element_blank(),
+          panel.grid.major.x = element_blank(),
+          legend.title = element_blank()) + 
+    scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) +
+    scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
+    scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))
+  
+  # plot pairs 
+  p3 <- ggplot(dp[COMM == comm]) + 
+    geom_histogram(aes(x = DATE, fill = DIRECTION), bins = 30) + 
+    facet_grid(.~AGE_GROUP_LABEL) + 
+    labs(y = '\nDetected HIV-1 transmission events', x = 'Date at transmission') + 
+    theme_bw() + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          # axis.text.x = element_text(angle= 70, hjust = 1),
+          strip.text =  element_blank(), 
+          legend.position = c(0.90, 0.85), 
+          legend.title = element_blank()) + 
+    scale_fill_manual(values = c('Male -> Female'=female_color,'Female -> Male'=male_color)) +
+    scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
+    scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))  
+  
+  # arrange
+  p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA,1,1), 
+                                                      c(2, 2, 2), 
+                                                      c(NA,NA,3)), 
+                                                      widths = c(0.01, 0.008, 0.98), 
+                                                      heights = c(0.35, 0.32,0.32))
+  ggsave(p, file =  paste0(outdir, '-data-panel.png'), w = 8, h = 10)
+
+}
 
 
 
