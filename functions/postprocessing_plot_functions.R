@@ -372,12 +372,12 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
      theme(strip.background = element_rect(colour="white", fill="white"),
            # axis.text.x = element_text(angle= 70, hjust = 1),
           strip.text = element_text(size = rel(1)),
-          axis.text.x = element_text(angle = 50, hjust = 1),
+          axis.text.x = element_text(angle = 40, hjust = 1),
           axis.title.x = element_blank(), 
           # legend.justification = 'bottom',
           # legend.position='right',
           # legend.direction='vertical',
-          legend.position = c(0.85,0.14),
+          legend.position = c(0.83,0.14),
           panel.grid.major.x = element_blank(), 
           panel.grid.minor.x = element_blank(), 
           panel.grid.minor.y = element_blank(), 
@@ -388,7 +388,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
      guides(color = guide_legend(order = 1), linetype = guide_legend(order = 1), shape = guide_legend(order = 1))
    
    if(is.null(lab)) lab =  'Contribution'
-  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex.png'), w = 8, h = 5.3)
+  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex.png'), w = 7, h = 4.5)
   
 }
 
