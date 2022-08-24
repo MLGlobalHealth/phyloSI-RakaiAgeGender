@@ -10,7 +10,7 @@ indir.repository <- '~/git/phyloflows'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
 file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.csv'))
-file.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_estimates_220811.csv'))
+file.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220807.csv')
 
 # load census eligible ount
@@ -22,6 +22,7 @@ proportion_prevalence <- as.data.table(read.csv(file.prevalence))
 # load unsuppressed proportion 
 proportion_unsuppressed <- as.data.table(read.csv(file.nonsuppressed.prop))
 
+
 ####################
 
 # FIND INFECTED UNSUPPRESSED
@@ -29,22 +30,18 @@ proportion_unsuppressed <- as.data.table(read.csv(file.nonsuppressed.prop))
 ###################
 
 # define round
-df <- copy(proportion_prevalence)
+df <- merge(proportion_prevalence, proportion_unsuppressed, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX', 'iterations'))
 df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
 
 # merge number of eligible and the prevalence
 df <- merge(eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
 
 # find infected
-df[, INFECTED := ELIGIBLE * PREVALENCE_M]
+df[, INFECTED := ELIGIBLE * PREVALENCE_POSTERIOR_SAMPLE]
 
 # find infected unsuppressed
-tmp <- copy(proportion_unsuppressed)
-tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
-
-df <- merge(df[, .(ROUND, COMM, AGEYRS, SEX, INFECTED)], tmp, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
-
 df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
+
 
 #####################################################
 
