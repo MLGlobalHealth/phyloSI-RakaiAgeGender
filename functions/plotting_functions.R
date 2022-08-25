@@ -711,7 +711,7 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   
   # incidence cases
   ggplot(incidence_cases_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENT_CASES / ROUND_SPANYRS, col = ROUND)) +
+    geom_line(aes(y = SUSCEPTIBLE * INCIDENCE, col = ROUND)) +
     # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
     labs(y = 'Number of incident cases per year', x = 'Age') +
     facet_grid(COMM~SEX, label = 'label_both', scale = 'free_y') +
@@ -862,6 +862,7 @@ plot_crude_force_infection <- function(crude_force_infection, outdir){
 
 
 plot_transmission_events_over_time <- function(eligible_count_round, incidence_cases_round, pairs, outdir){
+  
   # timeline
   df_timeline <- copy(df_round)
   df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE))), by = c('ROUND', 'COMM')]
@@ -926,74 +927,80 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
   #
   # Plot
   
-  communities <- hivinc[, unique(COMM)]
+  communities <- df_round[, unique(COMM)]
   male_color <- 'lightblue3'
   female_color <- 'lightpink2'
   
-  i = 1
-  comm <- communities[i]
-  df_round_comm <- df_round[COMM == comm]
-  df_round_comm <- full_join(df_round_comm, unique(df_age_group[, .(AGE_GROUP_LABEL)]), by = character())
-  
-  # plot person year
-  p1 <- ggplot(ecr[COMM == comm]) + 
-    geom_bar(aes(x = MIDPOINT, y = ELIGIBLE, fill = SEX_LABEL), stat = 'identity', position = position_dodge()) + 
-    facet_grid(.~AGE_GROUP_LABEL) + 
-    labs(y = 'Census eligible count', x= 'Date (midpoint of survey interval)') + 
-    theme_bw() + 
-    theme(plot.title = element_text(hjust = 0.5), 
-          strip.background = element_rect(colour="white", fill="white"),
-          # axis.text.x = element_text(angle= 70, hjust = 1),
-          strip.text = element_text(size = rel(1.2)), 
-          panel.grid.minor.x = element_blank(),
-          panel.grid.major.x = element_blank(),
-          legend.position = c(0.93, 0.85), 
-          legend.title = element_blank()) + 
-    scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) +
-    scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
-    scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0)) 
-  
-  # plot incidence cases
-  p2 <- ggplot(icr[COMM == comm]) + 
-    geom_bar(aes(x = MIDPOINT, y = INCIDENT_CASES, fill = SEX_LABEL), stat = 'identity', position = position_dodge(width = 550)) +
-    geom_errorbar(aes(x = MIDPOINT, ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, group = SEX_LABEL), position = position_dodge(width = 550), width = 200, col = 'grey50') +
-    facet_grid(.~AGE_GROUP_LABEL) + 
-    labs(y = 'HIV incident cases\namong census eligible population', x= 'Date (midpoint of survey interval)') + 
-    theme_bw() + 
-    theme(plot.title = element_text(hjust = 0.5), 
-          strip.background = element_rect(colour="white", fill="white"),
-          # axis.text.x = element_text(angle= 70, hjust = 1),
-          strip.text = element_blank(), 
-          legend.position = c(0.93, 0.85), 
-          panel.grid.minor.x = element_blank(),
-          panel.grid.major.x = element_blank(),
-          legend.title = element_blank()) + 
-    scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) +
-    scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
-    scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))
-  
-  # plot pairs 
-  p3 <- ggplot(dp[COMM == comm]) + 
-    geom_histogram(aes(x = DATE, fill = DIRECTION), bins = 30) + 
-    facet_grid(.~AGE_GROUP_LABEL) + 
-    labs(y = '\nDetected HIV-1 transmission events', x = 'Date at transmission') + 
-    theme_bw() + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          # axis.text.x = element_text(angle= 70, hjust = 1),
-          strip.text =  element_blank(), 
-          legend.position = c(0.90, 0.85), 
-          legend.title = element_blank()) + 
-    scale_fill_manual(values = c('Male -> Female'=female_color,'Female -> Male'=male_color)) +
-    scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
-    scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))  
-  
-  # arrange
-  p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA,1,1), 
-                                                      c(2, 2, 2), 
-                                                      c(NA,NA,3)), 
-                                                      widths = c(0.01, 0.008, 0.98), 
-                                                      heights = c(0.35, 0.32,0.32))
-  ggsave(p, file =  paste0(outdir, '-data-panel.png'), w = 8, h = 10)
+  for(i in seq_along(communities)){
+    comm <- communities[i]
+    df_round_comm <- df_round[COMM == comm]
+    df_round_comm <- full_join(df_round_comm, unique(df_age_group[, .(AGE_GROUP_LABEL)]), by = character())
+    
+    # plot person year
+    p1 <- ggplot(ecr[COMM == comm]) + 
+      geom_bar(aes(x = MIDPOINT, y = ELIGIBLE, fill = SEX_LABEL), stat = 'identity', position = position_dodge()) + 
+      facet_grid(.~AGE_GROUP_LABEL) + 
+      labs(y = 'Census eligible count', x= 'Date (midpoint of survey interval)') + 
+      theme_bw() + 
+      theme(plot.title = element_text(hjust = 0.5), 
+            strip.background = element_rect(colour="white", fill="white"),
+            # axis.text.x = element_text(angle= 70, hjust = 1),
+            strip.text = element_text(size = rel(1.2)), 
+            panel.grid.minor.x = element_blank(),
+            panel.grid.major.x = element_blank(),
+            legend.position = c(0.93, 0.85), 
+            legend.title = element_blank()) + 
+      scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) +
+      scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
+      scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0)) 
+    
+    # plot incidence cases
+    width.error.bar <- 400
+    if(comm == 'inland')  width.error.bar <- 550
+    p2 <- ggplot(icr[COMM == comm], aes(group= SEX_LABEL)) + 
+      geom_bar(aes(x = MIDPOINT, y = INCIDENT_CASES, fill = SEX_LABEL), stat = 'identity', 
+               position = position_dodge(width = width.error.bar)) +
+      geom_errorbar(aes(x = MIDPOINT, ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, group = SEX_LABEL),
+                    col = 'grey50', position=position_dodge(width = width.error.bar),width = 200) +
+      facet_grid(.~AGE_GROUP_LABEL) + 
+      labs(y = 'HIV incident cases\namong census eligible population', x= 'Date (midpoint of survey interval)') + 
+      theme_bw() + 
+      theme(plot.title = element_text(hjust = 0.5), 
+            strip.background = element_rect(colour="white", fill="white"),
+            # axis.text.x = element_text(angle= 70, hjust = 1),
+            strip.text = element_blank(), 
+            legend.position = c(0.93, 0.85), 
+            panel.grid.minor.x = element_blank(),
+            panel.grid.major.x = element_blank(),
+            legend.title = element_blank()) + 
+      scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) +
+      scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
+      scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))
+    
+    # plot pairs 
+    p3 <- ggplot(dp[COMM == comm]) + 
+      geom_histogram(aes(x = DATE, fill = DIRECTION), bins = 30) + 
+      facet_grid(.~AGE_GROUP_LABEL) + 
+      labs(y = '\nDetected HIV-1 transmission events', x = 'Date at transmission') + 
+      theme_bw() + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            # axis.text.x = element_text(angle= 70, hjust = 1),
+            strip.text =  element_blank(), 
+            legend.position = c(0.90, 0.85), 
+            legend.title = element_blank()) + 
+      scale_fill_manual(values = c('Male -> Female'=female_color,'Female -> Male'=male_color)) +
+      scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
+      scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))  
+    
+    # arrange
+    p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA,1,1), 
+                                                        c(2, 2, 2), 
+                                                        c(NA,NA,3)), 
+                      widths = c(0.01, 0.008, 0.98), 
+                      heights = c(0.35, 0.32,0.32))
+    ggsave(p, file =  paste0(outdir, '-data-panel_', communities[i], '.png'), w = 8, h = 10)
+    
+  }
 
 }
 
