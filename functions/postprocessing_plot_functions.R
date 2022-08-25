@@ -665,16 +665,17 @@ plot_transmission_risk_sex_source <- function(transmission_risk_sex_source_round
     labs(x = '', y = 'Transmission risk per unsuppressed per year', 
          col = '', alpha = '', fill ='') + 
     theme_bw() +
-    facet_grid(LABEL_COMMUNITY~SEX)+
+    facet_grid(SEX~LABEL_COMMUNITY, scale = 'free_x')+
     scale_fill_manual(values = c('Male source'='lightblue3','Female source'='lightpink1')) + 
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'none', 
+          axis.text.x = element_text(angle = 40, hjust = 1),
           panel.grid.major.x = element_blank(),
           panel.grid.minor.x = element_blank()) +
     guides(alpha = 'none') + 
     scale_y_continuous(expand = expansion(mult = c(0, .05)))
-  ggsave(p, file = paste0(outdir, '-output-', 'transmission_risk', '_sex.png'), w = 8, h = 6)
+  ggsave(p, file = paste0(outdir, '-output-', 'transmission_risk', '_sex.png'), w = 8, h = 6.5)
   
 }
 
