@@ -20,7 +20,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220813d'
+  stan_model <- 'gp_220824'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -84,9 +84,7 @@ file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
-file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220822.csv")
-file.inc.cases.inland	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_seroconverter_cohort_inland_220822.csv")
-file.inc.cases.fishing <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_seroconverter_cohort_fishing_220822.csv")
+file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220825.csv")
 
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220807.csv')
 # file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
