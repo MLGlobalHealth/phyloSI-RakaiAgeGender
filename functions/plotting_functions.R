@@ -700,23 +700,40 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round.png'), w = 7, h = 6)
   
   # incidence rate per person per round
-  ggplot(incidence_cases_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENCE, col = ROUND)) +
-    # geom_ribbon(aes(ymin = LB * ROUND_SPANYRS, ymax = UB* ROUND_SPANYRS, fill = SEX),  alpha = 0.5) +
-    labs(y = 'Incidence rate per 1 person per year', x = 'Age') +
-    facet_grid(COMM~SEX, label = 'label_both') +
+  tmp <- copy(incidence_cases_round)
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+  tmp[, LABEL_ROUND := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
+  tmp[, SEX_LABEL := 'Female']
+  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  ggplot(tmp, aes(x = AGEYRS)) +
+    geom_line(aes(y = INCIDENCE*100, col = LABEL_ROUND)) +
+    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = LABEL_ROUND),  alpha = 0.1) +
+    labs(y = 'Incidence rate per 100 person-year', x = 'Age', fill = '', col = '') +
+    facet_grid(LABEL_COMMUNITY~SEX_LABEL,  scale = 'free_y') +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    scale_color_manual(values = c('#374c80', '#7a5195', '#bc5090',  '#ef5675', '#ff764a', '#ffa600')) + 
+    scale_fill_manual(values = c('#374c80',  '#7a5195','#bc5090',  '#ef5675', '#ff764a', '#ffa600')) + 
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"))
   ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 6)
   
   # incidence cases
-  ggplot(incidence_cases_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = SUSCEPTIBLE * INCIDENCE, col = ROUND)) +
-    # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
-    labs(y = 'Number of incident cases per year', x = 'Age') +
-    facet_grid(COMM~SEX, label = 'label_both', scale = 'free_y') +
+  tmp <- copy(incidence_cases_round)
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+  tmp[, LABEL_ROUND := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
+  tmp[, SEX_LABEL := 'Female']
+  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  ggplot(tmp, aes(x = AGEYRS)) +
+    geom_line(aes(y = SUSCEPTIBLE * INCIDENCE, col = LABEL_ROUND)) +
+    # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = LABEL_ROUND), alpha = 0.5) +
+    labs(y = 'Number of incident cases per year', x = 'Age', col= '') +
+    facet_grid(LABEL_COMMUNITY~SEX_LABEL) +
     theme_bw() +
-    theme(legend.position = 'bottom')
+    scale_color_manual(values = c('#374c80',  '#7a5195','#bc5090',  '#ef5675', '#ff764a', '#ffa600')) + 
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"))
   ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 6)
   
 
@@ -865,7 +882,7 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
   
   # timeline
   df_timeline <- copy(df_round)
-  df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE))), by = c('ROUND', 'COMM')]
+  df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE_ORIGINAL, MAX_SAMPLE_DATE_ORIGINAL))), by = c('ROUND', 'COMM')]
   df_timeline <- df_timeline[, .(ROUND, MIDPOINT, COMM, INDEX_ROUND, ROUND_SPANYRS)]
   
   # age groups
@@ -952,11 +969,12 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
             legend.title = element_blank()) + 
       scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) +
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
-      scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0)) 
+      scale_x_date(expand = c(0,0)) +
+      coord_cartesian(xlim = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]))
     
     # plot incidence cases
-    width.error.bar <- 400
-    if(comm == 'inland')  width.error.bar <- 550
+    width.error.bar <- 230
+    if(comm == 'inland')  width.error.bar <- 500
     p2 <- ggplot(icr[COMM == comm], aes(group= SEX_LABEL)) + 
       geom_bar(aes(x = MIDPOINT, y = INCIDENT_CASES / ROUND_SPANYRS, fill = SEX_LABEL), stat = 'identity', 
                position = position_dodge(width = width.error.bar)) +
@@ -975,7 +993,8 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
             legend.title = element_blank()) + 
       scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) +
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
-      scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))
+      scale_x_date( expand = c(0,0))+
+      coord_cartesian(xlim = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]))
     
     # plot pairs 
     p3 <- ggplot(dp[COMM == comm]) + 

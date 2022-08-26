@@ -619,6 +619,10 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period){
   df_round_inland[round%in%paste0('R0', 14:15), INDEX_TIME := 1]
   df_round_inland[round %in% paste0('R0',16:18), INDEX_TIME := 2]
   
+  # keep original min and max sample date
+  df_round_inland[, max_sample_date_original := max_sample_date]
+  df_round_inland[, min_sample_date_original := min_sample_date]
+  
   # fill missing months
   df_round_inland[round == 'R014', max_sample_date := df_round_inland[round == 'R015', min_sample_date]]
   df_round_inland[round == 'R015', max_sample_date := df_round_inland[round == 'R016', min_sample_date]]
@@ -630,6 +634,10 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period){
   df_round_fishing[, INDEX_TIME := 0]
   df_round_fishing[round%in%paste0('R0',c(15,'15S')), INDEX_TIME := 1]
   df_round_fishing[round %in% paste0('R0',16:18), INDEX_TIME := 2]
+  
+  # keep original min and max sample date
+  df_round_fishing[, max_sample_date_original := max_sample_date]
+  df_round_fishing[, min_sample_date_original := min_sample_date]
   
   # fill missing months
   df_round_fishing[round == 'R015', min_sample_date := start_observational_period_fishing]
@@ -665,8 +673,8 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period){
   df_round[, round := as.numeric(round)]
   
   # label
-  df_round[, MIN_SAMPLE_DATE_LABEL := format(MIN_SAMPLE_DATE, '%b %Y')]
-  df_round[, MAX_SAMPLE_DATE_LABEL := format(MAX_SAMPLE_DATE - 31, '%b %Y')]
+  df_round[, MIN_SAMPLE_DATE_LABEL := format(MIN_SAMPLE_DATE_ORIGINAL, '%b %Y')]
+  df_round[, MAX_SAMPLE_DATE_LABEL := format(MAX_SAMPLE_DATE_ORIGINAL - 31, '%b %Y')]
   df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
   df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(round), LABEL_ROUND])]
   
