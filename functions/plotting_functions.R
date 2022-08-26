@@ -866,7 +866,7 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
   # timeline
   df_timeline <- copy(df_round)
   df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE))), by = c('ROUND', 'COMM')]
-  df_timeline <- df_timeline[, .(ROUND, MIDPOINT, COMM, INDEX_ROUND)]
+  df_timeline <- df_timeline[, .(ROUND, MIDPOINT, COMM, INDEX_ROUND, ROUND_SPANYRS)]
   
   # age groups
   age_groups <- c('15-24', '25-34', '35-49')
@@ -958,12 +958,12 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
     width.error.bar <- 400
     if(comm == 'inland')  width.error.bar <- 550
     p2 <- ggplot(icr[COMM == comm], aes(group= SEX_LABEL)) + 
-      geom_bar(aes(x = MIDPOINT, y = INCIDENT_CASES, fill = SEX_LABEL), stat = 'identity', 
+      geom_bar(aes(x = MIDPOINT, y = INCIDENT_CASES / ROUND_SPANYRS, fill = SEX_LABEL), stat = 'identity', 
                position = position_dodge(width = width.error.bar)) +
-      geom_errorbar(aes(x = MIDPOINT, ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, group = SEX_LABEL),
+      geom_errorbar(aes(x = MIDPOINT, ymin = INCIDENT_CASES_LB / ROUND_SPANYRS, ymax = INCIDENT_CASES_UB / ROUND_SPANYRS, group = SEX_LABEL),
                     col = 'grey50', position=position_dodge(width = width.error.bar),width = 200) +
       facet_grid(.~AGE_GROUP_LABEL) + 
-      labs(y = 'HIV incident cases\namong census eligible population', x= 'Date (midpoint of survey interval)') + 
+      labs(y = 'HIV incident cases per year\namong census eligible population', x= 'Date (midpoint of survey interval)') + 
       theme_bw() + 
       theme(plot.title = element_text(hjust = 0.5), 
             strip.background = element_rect(colour="white", fill="white"),
