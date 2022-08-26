@@ -109,14 +109,29 @@ if(0){
   tmp[, Suppressed := HIV_N - VLNS_N] 
   setnames(tmp, 'VLNS_N', 'Unsuppressed')
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'HIV_N'))
+  setnames(tmp, 'LOC_LABEL', 'COMM')
+  setnames(tmp, 'SEX_LABEL', 'SEX')
+  tmp[, ROUND := as.character(ROUND)]
+  tmp[ROUND == '15.5', ROUND := '15S']
+  tmp <- tmp[ROUND != '15S']
+  tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+  tmp <- tmp[!(ROUND == '15S' & COMM == 'inland')]
+  tmp[, SEX_LABEL := 'Female']
+  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, COMM_LABEL := 'Fishing\n communities']
+  tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
   # plot
   p <- ggplot(tmp, aes(x = AGE_LABEL, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'age at visit (years)', y = 'Count HIV+ individuals') +
-    theme_bw() + 
-    facet_grid(ROUND~SEX_LABEL+LOC_LABEL) 
-  ggsave(p, file=file.path(outdir, paste0('count_infected_by_gender_loc_age.png')), w=10, h=9)
+    labs(x = 'Age', y = 'Count HIV+ participants', fill = '') +
+    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+    theme_bw() +
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)))
+
+  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age.png')), w=9, h=7)
   
 }
 
@@ -247,12 +262,25 @@ nsinf.samples <- do.call('rbind', nsinf.samples)
 
 #########
 
-ggplot(nsinf, aes(x = AGEYRS)) + 
+tmp <- copy(nsinf)
+tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+tmp[, SEX_LABEL := 'Female']
+tmp[SEX== 'M', SEX_LABEL := 'Male']
+tmp[, COMM_LABEL := 'Fishing\n communities']
+tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
+
+# plot
+ggplot(tmp, aes(x = AGEYRS)) + 
   geom_line(aes(y = PROP_UNSUPPRESSED_M)) + 
   geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU), alpha = 0.5) + 
   geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL), alpha = 0.5, col = 'darkred') + 
-  facet_grid(ROUND~COMM+SEX) + 
-  theme_bw()
+  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+  labs(x = 'Age', y = 'Proportion of unsuppressed among HIV+ participants', fill = '') +
+  theme_bw() +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white"),
+        strip.text = element_text(size = rel(1)))
+ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion.png')), w=9, h=7)
 
 ggplot(nsinf, aes(x = AGEYRS)) + 
   geom_line(aes(y = PROP_UNSUPPRESSED_M, col = ROUND)) + 

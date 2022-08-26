@@ -145,15 +145,25 @@ tmp[, mean(abs(count - COUNT_SMOOTH))]
 knitr::kable(tmp[order(COMM,SEX,ROUND)])
 
 if(1){
+  tmp <- copy(ncen)
+  tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+  tmp <- tmp[!(ROUND == '15S' & COMM == 'inland')]
+  tmp[, SEX_LABEL := 'Female']
+  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, COMM_LABEL := 'Fishing\n communities']
+  tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
-  p <- ggplot(ncen, aes(x = AGEYRS)) +
+  p <- ggplot(tmp, aes(x = AGEYRS)) +
     geom_bar(aes(y = ELIGIBLE_SMOOTH), stat = 'identity') +
     geom_line(aes(y = ELIGIBLE), col = 'darkred', alpha  = 0.6) +
-    labs(y = 'Smooth count census eligible individuals', x = 'Age') +
-    facet_grid(ROUND~SEX + COMM, label = 'label_both') +
+    labs(y = 'Census eligible individuals', x = 'Age') +
+    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
     theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(p, file = file.path(outdir, 'CensusEligibleIndividuals.png'), w = 10, h = 10)
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)))
+  p
+  ggsave(p, file = file.path(outdir, 'CensusEligibleIndividuals.png'), w = 8, h = 9)
 
 }
 

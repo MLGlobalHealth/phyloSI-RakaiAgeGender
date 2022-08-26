@@ -76,16 +76,24 @@ if(0){
   tmp[, Negative := TOTAL_COUNT - COUNT] 
   setnames(tmp, 'COUNT', 'Positive')
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'COMM', 'SEX', 'AGEYRS', 'TOTAL_COUNT'))
+  tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
+  tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
+  tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+  tmp[, SEX_LABEL := 'Female']
+  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, COMM_LABEL := 'Fishing\n communities']
+  tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
   # plot
-  tmp[, SEX := factor(SEX, levels = c('F', 'M'))]
-  tmp[, COMM := factor(COMM, levels = c('inland', 'fishing'))]
   p <- ggplot(tmp, aes(x = AGEYRS, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'age at visit (years)', y = 'Count participants') +
-    theme_bw() + 
-    facet_grid(ROUND~SEX+COMM) 
-  ggsave(p, file=file.path(outdir, paste0('count_participants_by_gender_loc_age.png')), w=10, h=9)
+    labs(x = 'Age', y = 'Count participants', fill = 'HIV status') +
+    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+    theme_bw() +
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)))
+  ggsave(p, file=file.path(outdir, paste0('count_participants_by_gender_loc_age.png')), w=8, h=9)
   
 }
 
@@ -226,12 +234,26 @@ nsinf.samples <- do.call('rbind', nsinf.samples)
 
 #########
 
-ggplot(nsinf, aes(x = AGEYRS)) + 
+tmp <- copy(nsinf)
+tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
+tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
+tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+tmp[, SEX_LABEL := 'Female']
+tmp[SEX== 'M', SEX_LABEL := 'Male']
+tmp[, COMM_LABEL := 'Fishing\n communities']
+tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
+ggplot(tmp, aes(x = AGEYRS)) + 
+  geom_point(aes(y = EMPIRICAL_PREVALENCE), alpha = 0.5, col = 'darkred') + 
   geom_line(aes(y = PREVALENCE_M)) + 
   geom_ribbon(aes(ymin = PREVALENCE_CL, ymax = PREVALENCE_CU), alpha = 0.5) + 
-  geom_point(aes(y = EMPIRICAL_PREVALENCE), alpha = 0.5, col = 'darkred') + 
-  facet_grid(ROUND~COMM+SEX) + 
-  theme_bw()
+  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+  theme_bw() +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white"),
+        strip.text = element_text(size = rel(1))) + 
+  labs(x = 'Age', y = 'Prevalence among participants')
+ggsave(file=file.path(outdir, paste0('smooth_prevalence.png')), w=8, h=9)
+
 
 
 #########
