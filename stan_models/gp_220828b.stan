@@ -192,18 +192,26 @@ transformed parameters {
 }
 
 model {
+  
   log_beta_baseline ~ normal(0, 10);
   log_beta_baseline_contrast_community ~ normal(0, 10);
+  
   log_beta_baseline_contrast_direction ~ normal(0, 10);
   log_beta_contrast_direction ~ normal(log_beta_baseline_contrast_direction, sigma_beta_contrast_direction);
   sigma_beta_contrast_direction~ cauchy(0,1);
   
+  alpha_gp ~ cauchy(0,1);
+  rho_gp1 ~ inv_gamma(2, 2);
+  rho_gp2 ~ inv_gamma(2, 2);
+  
+  for(i in 1:num_basis_rows){
+    for(j in 1:num_basis_columns){
+      z1[:,i,j] ~ normal(0,1);
+    }
+  }
+
   for (i in 1:N_DIRECTION){
     
-    alpha_gp[i] ~ cauchy(0,1);
-    rho_gp1[i] ~ inv_gamma(2, 2);
-    rho_gp2[i] ~ inv_gamma(2, 2);
-  
     alpha_gp_period[i] ~ cauchy(0,1);
     rho_gp_period[i] ~ inv_gamma(2, 2);
     
@@ -218,7 +226,6 @@ model {
     
     for (j in 1:N_COMMUNITY){
         z_period[i,j] ~ normal(0,1);
-        to_vector(z1[i,j]) ~ normal(0,1);
           
        for (k in 1:N_ROUND){
         z[:,i,j,k] ~ poisson_log(log_lambda_latent_recipient[i,j,k]);
