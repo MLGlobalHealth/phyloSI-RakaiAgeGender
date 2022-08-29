@@ -105,8 +105,8 @@ parameters {
   real log_beta_baseline_contrast_round[N_ROUND - 1, N_DIRECTION,N_COMMUNITY];
   real<lower=0> sigma_beta_baseline_contrast_round;
   
-  real<lower=0> rho_gp_period[N_DIRECTION,N_COMMUNITY];
-  real<lower=0> alpha_gp_period[N_DIRECTION,N_COMMUNITY];
+  real<lower=0> rho_gp_period[N_DIRECTION];
+  real<lower=0> alpha_gp_period[N_DIRECTION];
   vector[num_basis_rows] z_period[N_DIRECTION,N_COMMUNITY];
   
   real<lower=0> rho_gp1[N_DIRECTION,N_COMMUNITY];
@@ -147,7 +147,7 @@ transformed parameters {
     }
       
     // find period contrast
-    log_beta_period_contrast[i,j] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i,j], rho_gp_period[i,j], z_period[i,j]))[map_age_source];
+    log_beta_period_contrast[i,j] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i,j]))[map_age_source];
     log_beta_round_contrast[i,j] = rep_matrix(to_vector(log_beta_baseline_contrast_round[:,i,j]), N_PER_GROUP) 
                                     + append_row(rep_matrix(rep_row_vector(0.0, N_PER_GROUP), (N_ROUND_PER_PERIOD[1] - 1) ), 
                                                  rep_matrix(to_row_vector(log_beta_period_contrast[i,j]), N_ROUND_PER_PERIOD[N_PERIOD])) ;
@@ -192,14 +192,14 @@ model {
   log_beta_baseline_contrast_direction_re ~ normal(log_beta_baseline_contrast_direction, sigma_beta_contrast_direction);
   sigma_beta_contrast_direction~ cauchy(0,1);
   
+  alpha_gp_period ~ cauchy(0,1);
+  rho_gp_period ~ inv_gamma(2, 2);
+    
   for (i in 1:N_DIRECTION){
     
     alpha_gp[i] ~ cauchy(0,1);
     rho_gp1[i] ~ inv_gamma(2, 2);
     rho_gp2[i] ~ inv_gamma(2, 2);
-  
-    alpha_gp_period[i] ~ cauchy(0,1);
-    rho_gp_period[i] ~ inv_gamma(2, 2);
   
     log_beta_baseline_contrast_round[1,i,:] ~ normal(0, 10);
     for(k in 2:(N_ROUND - 1)){
@@ -243,8 +243,5 @@ generated quantities{
      }
   }
 }
-
-
-
 
 
