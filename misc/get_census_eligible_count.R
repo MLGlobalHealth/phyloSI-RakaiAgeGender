@@ -61,7 +61,7 @@ flow[is.na(reason_ineligible), reason_ineligible := 'none']
 re <- flow[, list(count = .N), by = c('reason_ineligible', 'round', 'comm', 'ageyrs', 'sex')]
 re <- dcast.data.table(re, round + comm + ageyrs + sex ~ reason_ineligible, value.var = 'count')
 re[is.na(re)] = 0
-re[, ELIGIBLE := round(none + Out_migrated *2 /3)]
+re[, ELIGIBLE := round(none + Out_migrated / 2)]
 re <- re[ELIGIBLE != 0]
 
 # additional variable
@@ -167,6 +167,7 @@ if(1){
 
 }
 
+ncen[, ELIGIBLE_NOT_SMOOTH := ELIGIBLE]
 ncen[, ELIGIBLE := ELIGIBLE_SMOOTH]
 ncen <- select(ncen, -'ELIGIBLE_SMOOTH')
 

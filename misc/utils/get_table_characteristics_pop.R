@@ -9,13 +9,14 @@ indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.repository <- '~/git/phyloflows'
 
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
 path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
+file.seq.count <- file.path(outdir, 'characteristics_sequenced.rds')
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
@@ -24,6 +25,8 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 hiv <- as.data.table(read.csv(file.path.hiv))
 quest <- as.data.table(read.csv(file.path.quest))
 
+# load seq count
+sequ <- as.data.table(readRDS(file.seq.count))
 
 #################################
 
@@ -32,18 +35,18 @@ quest <- as.data.table(read.csv(file.path.quest))
 #################################
 
 # load census eligible ount
-eligible_count_smooth <- as.data.table(read.csv(file.eligible.count))
+eligible_count <- as.data.table(read.csv(file.eligible.count))
 
 # find census eligible
-census <- eligible_count_smooth[, list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Total'), by = c('COMM', 'ROUND')]
-census <- rbind(census, eligible_count_smooth[SEX == 'F', list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Female'), by = c('COMM', 'ROUND')])
-census <- rbind(census, eligible_count_smooth[SEX == 'M', list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Male'), by = c('COMM', 'ROUND')])
-census <- rbind(census, eligible_count_smooth[SEX == 'F' & AGEYRS < 25, list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Female, 15-24'), by = c('COMM', 'ROUND')])
-census <- rbind(census, eligible_count_smooth[SEX == 'F' & AGEYRS > 24 & AGEYRS < 35, list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Female, 25-34'), by = c('COMM', 'ROUND')])
-census <- rbind(census, eligible_count_smooth[SEX == 'F' & AGEYRS > 34, list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Female, 35-49'), by = c('COMM', 'ROUND')])
-census <- rbind(census, eligible_count_smooth[SEX == 'M' & AGEYRS < 25, list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Male, 15-24'), by = c('COMM', 'ROUND')])
-census <- rbind(census, eligible_count_smooth[SEX == 'M' & AGEYRS > 24 & AGEYRS < 35, list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Male, 25-34'), by = c('COMM', 'ROUND')])
-census <- rbind(census, eligible_count_smooth[SEX == 'M' & AGEYRS > 34, list(ELIGIBLE = sum(ELIGIBLE),  TYPE = 'Male, 35-49'), by = c('COMM', 'ROUND')])
+census <- eligible_count[, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Total'), by = c('COMM', 'ROUND')]
+census <- rbind(census, eligible_count[SEX == 'F', list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Female'), by = c('COMM', 'ROUND')])
+census <- rbind(census, eligible_count[SEX == 'M', list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Male'), by = c('COMM', 'ROUND')])
+census <- rbind(census, eligible_count[SEX == 'F' & AGEYRS < 25, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Female, 15-24'), by = c('COMM', 'ROUND')])
+census <- rbind(census, eligible_count[SEX == 'F' & AGEYRS > 24 & AGEYRS < 35, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Female, 25-34'), by = c('COMM', 'ROUND')])
+census <- rbind(census, eligible_count[SEX == 'F' & AGEYRS > 34, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Female, 35-49'), by = c('COMM', 'ROUND')])
+census <- rbind(census, eligible_count[SEX == 'M' & AGEYRS < 25, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Male, 15-24'), by = c('COMM', 'ROUND')])
+census <- rbind(census, eligible_count[SEX == 'M' & AGEYRS > 24 & AGEYRS < 35, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Male, 25-34'), by = c('COMM', 'ROUND')])
+census <- rbind(census, eligible_count[SEX == 'M' & AGEYRS > 34, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Male, 35-49'), by = c('COMM', 'ROUND')])
 census[, ROUND := paste0('R0', ROUND)]
 
 
@@ -195,6 +198,8 @@ uns[ROUND == "R015.5", ROUND := 'R015S']
 tab <- merge(census, part, by = c('TYPE', 'COMM', 'ROUND'))
 tab <- merge(tab, hivp, by = c('TYPE', 'COMM', 'ROUND'))
 tab <- merge(tab, uns, by = c('TYPE', 'COMM', 'ROUND'))
+tab <- merge(tab, sequ, by = c('TYPE', 'COMM', 'ROUND'), all.x = T)
+tab[is.na(tab)] = 0
 
 tab[, unique(TYPE)]
 tab[, TYPE := factor(TYPE, levels = c('Total', 'Female', 'Female, 15-24', "Female, 25-34", "Female, 35-49", 
@@ -203,7 +208,10 @@ tab <- tab[order(COMM, ROUND, TYPE)]
 tab[, ELIGIBLE := round(ELIGIBLE)]
 tab <- tab[!(ROUND == 'R015S' & COMM=='inland')]
 
-tab[COMM == 'inland']
+stopifnot(nrow(tab[ELIGIBLE  < PARTICIPANT ]) == 0)
+stopifnot(nrow(tab[PARTICIPANT  < HIV ]) == 0)
+stopifnot(nrow(tab[HIV  < SEQUENCE ]) == 0)
+
 saveRDS(tab, file.path(outdir, 'characteristics_study_population.rds'))
 
 
