@@ -99,9 +99,7 @@ parameters {
   
   real log_beta_baseline_contrast_community;
   real log_beta_baseline_contrast_direction;
-  real log_beta_contrast_direction[N_COMMUNITY];
-  real<lower=0> sigma_beta_contrast_direction;
-  
+
   real log_beta_baseline_contrast_round[N_ROUND - 1, N_DIRECTION,N_COMMUNITY];
   real<lower=0> sigma_beta_baseline_contrast_round[N_COMMUNITY];
   
@@ -142,7 +140,7 @@ transformed parameters {
               alpha_gp[i], rho_gp1[i], rho_gp2[i], z1[i]);
     log_beta_direction_contrast[i] = to_vector(((BASIS_ROWS') * low_rank_gp_direction[i] * BASIS_COLUMNS)');
     if(i == 2){
-      log_beta_direction_contrast[i] = log_beta_direction_contrast[i] + rep_vector(log_beta_baseline_contrast_direction, N_PER_GROUP);
+      log_beta_direction_contrast[i] += rep_vector(log_beta_baseline_contrast_direction, N_PER_GROUP);
     }
     
       // find community contrast
@@ -161,7 +159,7 @@ transformed parameters {
       for(k in 1:N_ROUND){
         
         // add direction contrast
-        log_beta[i,j,k] += log_beta_direction_contrast[i,j];
+        log_beta[i,j,k] += log_beta_direction_contrast[i];
         
         // add community contrast
         if(j == 1){
@@ -197,9 +195,7 @@ model {
   log_beta_baseline_contrast_community ~ normal(0, 10);
   
   log_beta_baseline_contrast_direction ~ normal(0, 10);
-  log_beta_contrast_direction ~ normal(log_beta_baseline_contrast_direction, sigma_beta_contrast_direction);
-  sigma_beta_contrast_direction~ cauchy(0,1);
-  
+
   alpha_gp ~ cauchy(0,1);
   rho_gp1 ~ inv_gamma(2, 2);
   rho_gp2 ~ inv_gamma(2, 2);
