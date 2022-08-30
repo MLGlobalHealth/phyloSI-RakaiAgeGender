@@ -154,7 +154,7 @@ plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
   # pairs[, COHORT_ROUND.SOURCE := substr(ROUND.SOURCE, 1, 4)]
   pairs[, COHORT_ROUND.RECIPIENT := substr(ROUND.RECIPIENT, 1, 4)]
   # pairs[, `Round source` := COHORT_ROUND.SOURCE]
-  pairs[, Round_recipient := paste0('First round recipient:\n', COHORT_ROUND.RECIPIENT)]
+  pairs[, Round_recipient := paste0('Round recipient:\n', COHORT_ROUND.RECIPIENT)]
   pairs <- pairs[COHORT_ROUND.RECIPIENT != 'neur']
  
   if(use.tsi.estimates){

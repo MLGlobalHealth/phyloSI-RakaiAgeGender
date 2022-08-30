@@ -105,26 +105,6 @@ find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate)
 
 pairs.get.meta.data <- function(chain, meta, aik){
   
-  # stopifnot(unique(dchain$SOURCE) %in% unique(meta_data$aid))
-  # stopifnot(unique(dchain$RECIPIENT) %in% unique(meta_data$aid))
-  meta <- copy(meta_data); 
-  
-  # find first roung 
-  meta[, first_round := substr(round, 1, 4)]
-  meta[round == 'neur', round := 'neuro']
-
-  # merge by source, then recipient
-  tmp <- copy(meta)
-  names(tmp) = paste0(names(tmp), '.SOURCE')
-  
-  tmp1 <- merge(chain, tmp, by.x = 'SOURCE', by.y = 'aid.SOURCE')
-  tmp <- copy(meta)
-  names(tmp) = paste0(names(tmp), '.RECIPIENT')
-  tmp1 <- merge(tmp1, tmp, by.x = 'RECIPIENT', by.y = 'aid.RECIPIENT')
-  
-  # find age transmission source
-  tmp1[, AGE_TRANSMISSION.SOURCE := as.numeric(date_infection.RECIPIENT - date_birth.SOURCE)/365]
-  
   # individuals without meta data
   missing_indiv = unique(c(chain$SOURCE, chain$RECIPIENT)[!(c(chain$SOURCE, chain$RECIPIENT) %in% meta$aid)])
   missing_indiv <- .aid2pt(missing_indiv, aik)
@@ -132,6 +112,40 @@ pairs.get.meta.data <- function(chain, meta, aik){
   missing_indiv <- grep('RK-', missing_indiv, value=T)
   cat('- ', length(missing_indiv), 'of which are in the Rakai Cohort.\n')
   cat(missing_indiv, '\n')
+  
+  # stopifnot(unique(dchain$SOURCE) %in% unique(meta_data$aid))
+  # stopifnot(unique(dchain$RECIPIENT) %in% unique(meta_data$aid))
+  meta <- copy(meta_data); 
+  
+  # remove neuro individual
+  meta <- meta[round != 'neuro']
+  
+  # merge by source, then recipient
+  tmp <- copy(meta)
+  names(tmp) = paste0(names(tmp), '.SOURCE')
+  tmp1 <- merge(chain, tmp, by.x = 'SOURCE', by.y = 'aid.SOURCE')
+  
+  tmp <- copy(meta)
+  names(tmp) = paste0(names(tmp), '.RECIPIENT')
+  tmp1 <- merge(tmp1, tmp, by.x = 'RECIPIENT', by.y = 'aid.RECIPIENT')
+  
+  # keep meta data from round the closest to the date at infection
+  tmp1[, diff_date_sample_transmission.SOURCE := abs(sample_date.SOURCE - date_infection.RECIPIENT)]
+  tmp1[, diff_date_sample_infection.RECIPIENT := abs(sample_date.RECIPIENT - date_infection.RECIPIENT)]
+  tmp1[, select_this_date := (diff_date_sample_transmission.SOURCE == min(diff_date_sample_transmission.SOURCE) &
+         diff_date_sample_infection.RECIPIENT == min(diff_date_sample_infection.RECIPIENT)), 
+       by = c('SOURCE', 'RECIPIENT')]
+  tmp1 <- tmp1[select_this_date == T]
+  set(tmp1, NULL, 'select_this_date', NULL)
+  set(tmp1, NULL, 'diff_date_sample_transmission.SOURCE', NULL)
+  set(tmp1, NULL, 'diff_date_sample_infection.RECIPIENT', NULL)
+  
+  # check
+  tmp2 <- chain[SOURCE %in% meta$aid & RECIPIENT %in% meta$aid]
+  stopifnot(nrow(tmp1) == nrow(tmp2))
+
+  # find age transmission source
+  tmp1[, AGE_TRANSMISSION.SOURCE := .year.diff(date_infection.RECIPIENT, date_birth.SOURCE)]
   
   # upper column name
   colnames(tmp1) <- toupper(colnames(tmp1))
@@ -163,11 +177,11 @@ print.statements.about.pairs <- function(pairs){
   print_table(tab)
   
   cat('\nPairs by round')
-  tab <- pairs[, list(count = .N), by = c('FIRST_ROUND.SOURCE')]
-  print_table(tab[order(FIRST_ROUND.SOURCE)])
+  tab <- pairs[, list(count = .N), by = c('ROUND.SOURCE')]
+  print_table(tab[order(ROUND.SOURCE)])
   
-  tab <- pairs[, list(count = .N), by = c('FIRST_ROUND.RECIPIENT')]
-  print_table(tab[order(FIRST_ROUND.RECIPIENT)])
+  tab <- pairs[, list(count = .N), by = c('ROUND.RECIPIENT')]
+  print_table(tab[order(ROUND.RECIPIENT)])
 }
 
 # Want to see how many aids in potential pairs have an associated prefix and base frequency file 

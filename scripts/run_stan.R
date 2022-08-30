@@ -203,12 +203,6 @@ if(remove.inconsistent.infection.dates){
   pairs.all <- pairs.all[! DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
-if(remove.neuro.individuals){
-  cat('\nExcluding individuals from the neuro cohort \n')
-  cat('Removing ', nrow(pairs.all[ROUND.SOURCE == 'neuro' | ROUND.RECIPIENT == 'neuro']), ' pairs\n')
-  pairs.all <- pairs.all[ROUND.SOURCE != 'neuro' & ROUND.RECIPIENT != 'neuro']
-  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
-}
 if(remove.young.individuals){
   # exclude young indivis
   cat('\nExcluding sources and recipients younger than 15\n')
