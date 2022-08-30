@@ -11,8 +11,8 @@ indir.repository <- '~/git/phyloflows'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
-infile.unsuppressed <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_age_group_vl_1000_220822.csv'))
-infile.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_age_group_220822.csv'))
+infile.unsuppressed <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_age_group_vl_1000_220830.csv'))
+infile.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_age_group_220830.csv'))
 
 load(file.path.meta)
 prevalence <- as.data.table(read.csv(infile.prevalence))

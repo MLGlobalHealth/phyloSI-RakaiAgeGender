@@ -11,7 +11,7 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_
 
 file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.csv'))
 file.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
-file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220807.csv')
+file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
 
 # load census eligible ount
 eligible_count <- as.data.table(read.csv(file.eligible.count))
@@ -97,9 +97,9 @@ ggplot(sinf.age, aes(x = AGE_GROUP, group = SEX)) +
 
 #########################################
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_age_group_vl_1000_220822.csv'))
+file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_age_group_vl_1000_220830.csv'))
 write.csv(sing.age, file = file.name, row.names = F)
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_age_group_220822.csv'))
+file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_age_group_220830.csv'))
 write.csv(sinf.age, file = file.name, row.names = F)
 

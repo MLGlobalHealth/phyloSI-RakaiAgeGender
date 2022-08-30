@@ -10,7 +10,7 @@ indir.repository <- '~/git/phyloflows'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
 file.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
-file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220807.csv')
+file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
 
 # load census eligible ount
 eligible_count <- as.data.table(read.csv(file.eligible.count))
@@ -97,6 +97,6 @@ ggplot(sing, aes(x = ROUND)) +
 
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220818.csv'))
+file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
 write.csv(tmp, file = file.name, row.names = F)
 
