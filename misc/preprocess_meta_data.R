@@ -99,7 +99,7 @@ stopifnot(.vars.with.multiple.values(date.first.positive, 'study_id')[, .N == 0]
 meta_data_2 <- process.meta.data(raw_metadata, aik, community.keys)
 
 # process Neuro's meta data
-meta_data_neuro <- process.neuro.meta.data(raw_neuro_metadata, aik)
+meta_data_neuro <- process.neuro.meta.data(copy(raw_neuro_metadata), aik)
 
 #
 # MAKE META DATA
@@ -112,10 +112,10 @@ meta_data <- get.meta.data(quest, date.first.positive, date.first.last.visit, ai
 meta_data <- rbind(meta_data, meta_data_2[!study_id %in% meta_data[, study_id]])
 
 # get round by study_id
-tmp <- merge(quest[!is.na(round), .(study_id, round)], raw_metadata[!is.na(round), .(study_id, round)], by = 'study_id', all.x = T, all.y = T)
-tmp[, round.x := gsub('R0(.*)', '\\1', round.x)]
-tmp <- tmp[, list(round = paste0('R0', sort(unique(na.omit(c(round.x, round.y)))), collapse = '_')), by = 'study_id']
-meta_data <- merge(select(meta_data, -round), tmp[, .(study_id, round)], by = 'study_id')
+# tmp <- merge(quest[!is.na(round), .(study_id, round)], raw_metadata[!is.na(round), .(study_id, round)], by = 'study_id', all.x = T, all.y = T)
+# tmp[, round.x := gsub('R0(.*)', '\\1', round.x)]
+# tmp <- tmp[, list(round = paste0('R0', sort(unique(na.omit(c(round.x, round.y)))), collapse = '_')), by = 'study_id']
+# meta_data <- merge(select(meta_data, -round), tmp[, .(study_id, round)], by = 'study_id')
 
 # add Neuro's data for missing individuals
 meta_data <- rbind(meta_data, meta_data_neuro[!study_id %in% meta_data[, study_id]], fill=TRUE)
