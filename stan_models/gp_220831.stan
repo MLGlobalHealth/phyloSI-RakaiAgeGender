@@ -198,6 +198,8 @@ model {
     
   alpha_gp_period ~ cauchy(0,1);
   rho_gp_period ~ inv_gamma(2, 2);
+  
+  phi ~ normal(0,5);
     
   for (i in 1:N_DIRECTION){
     
