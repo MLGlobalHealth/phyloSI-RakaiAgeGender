@@ -1024,7 +1024,62 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
 }
 
 
-
+plot_pairs <- function(pairs, outdir){
+  
+  tmp <- merge(pairs, df_period, by.x = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT'), by.y = c('BEFORE_CUTOFF', 'COMM'))
+  tmp[, DIRECTION := 'Male -> Female' ]
+  tmp[SEX.SOURCE == 'F', DIRECTION := 'Female -> Male' ]
+  
+  COMMS <- c('fishing', 'inland')
+  SEX <- c('M', 'F')
+  PERIOD <- c(1,2)
+  for(i in seq_along(COMMS)){
+    p <- list();index = 1
+    for(j in seq_along(SEX)){
+      for(k in seq_along(PERIOD)){
+        
+        comm <- COMMS[i]
+        sex <- SEX[j]
+        index_time <- PERIOD[k]
+        
+        tmp1 <- tmp[COMM.RECIPIENT == comm & SEX.SOURCE == sex & INDEX_TIME == index_time]
+        p[[index]] <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE, y = AGE_INFECTION.RECIPIENT)) + 
+          geom_point() + 
+          labs(x = 'Age at transmission source', y = 'Age at infection recipient') +
+          geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+          theme_bw() + 
+          coord_fixed() +
+          scale_x_continuous(limits = c(15, 49))+
+          scale_y_continuous(limits = c(15, 49)) +
+          geom_label(x = 18, y = 49, label = paste0(paste0(nrow(tmp1), ' pairs')), label.size = NA) 
+        
+        if(j == 1){
+          p[[index]] <- p[[index]] +
+            ggtitle(tmp1[, unique(PERIOD)]) + 
+            theme(plot.title = element_text(hjust = 0.5, face = 'bold'), 
+                  axis.title.x = element_blank())
+        }
+        
+        if(k == 2){
+          p[[index]] <- p[[index]] +
+            theme(axis.title.y = element_blank())
+        }
+        
+        p[[index]] <- ggExtra::ggMarginal(p[[index]], type = "histogram")
+        
+        index=index + 1
+        
+      }
+    }
+    
+    pp <- grid.arrange(grobs = p, layout_matrix = rbind(c(1,2), c(3,4)), width= c(0.52, 0.48), 
+                       left = text_grob('Male to Female                                                 Female to Male', 
+                                        face = 'bold', rot = 90, hjust =0.53, size = 13))
+    ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.png'), w = 8, h = 8)
+    
+  }
+  
+} 
 
 
 

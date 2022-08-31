@@ -20,7 +20,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220831'
+  stan_model <- 'gp_220828a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -319,6 +319,7 @@ if(1){
   plot_hist_age_infection(copy(pairs), outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M'], 'Female -> Male', 'FM', outfile.figures)
+  plot_pairs(pairs, outfile.figures)
   plot_CI_age_infection(pairs, outfile.figures)
   plot_CI_age_transmission(pairs, outfile.figures)
 
