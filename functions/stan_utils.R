@@ -843,12 +843,17 @@ add_init <- function(stan_data){
   stan_init <- list()
   stan_init[['log_beta_baseline']] = 0
   stan_init[['log_beta_baseline_contrast_community']] = 0
-  stan_init[['log_beta_baseline_contrast_direction']] = 0
+  stan_init[['log_beta_baseline_contrast_direction']] =  0
+  # stan_init[['log_beta_baseline_contrast_direction']] =  array(0, dim = c(stan_data[['N_COMMUNITY']]))
+  stan_init[['log_beta_period_contrast_re']] = array(0, dim = c( stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']]))
+  # stan_init[['log_beta_baseline_contrast_direction']] = array(0, dim = c(stan_data[['N_COMMUNITY']]))
   stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
-  stan_init[['rho_gp1']] = rep(2, stan_data[['N_DIRECTION']])
-  stan_init[['rho_gp2']] = rep(2, stan_data[['N_DIRECTION']])
-  stan_init[['alpha_gp']] = rep(1, stan_data[['N_DIRECTION']])
-  
+  # stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
+  # stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
+  # stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
+  stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
+  stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
+  stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']]))
   return(stan_init)
 }
 
