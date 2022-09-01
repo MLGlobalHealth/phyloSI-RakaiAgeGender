@@ -841,19 +841,24 @@ add_probability_sampling <- function(stan_data, proportion_sampling){
 
 add_init <- function(stan_data){
   stan_init <- list()
-  stan_init[['log_beta_baseline']] = 0
-  stan_init[['log_beta_baseline_contrast_community']] = 0
-  stan_init[['log_beta_baseline_contrast_direction']] =  0
-  # stan_init[['log_beta_baseline_contrast_direction']] =  array(0, dim = c(stan_data[['N_COMMUNITY']]))
-  stan_init[['log_beta_period_contrast_re']] = array(0, dim = c( stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']]))
-  # stan_init[['log_beta_baseline_contrast_direction']] = array(0, dim = c(stan_data[['N_COMMUNITY']]))
+  
+  # for fit inland and fishing together
+  # stan_init[['log_beta_baseline']] = 0
+  # stan_init[['log_beta_baseline_contrast_community']] = 0
+  # stan_init[['log_beta_baseline_contrast_direction']] =  0
+  # stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
+  # stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
+  # stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
+  # stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']]))
+  # 
+  ## for fit inland and fishing independetly
+  stan_init[['log_beta_baseline']] = array(0, dim = c(stan_data[['N_COMMUNITY']]))
+  stan_init[['log_beta_baseline_contrast_direction']] =  array(0, dim = c(stan_data[['N_COMMUNITY']]))
   stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
-  # stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
-  # stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
-  # stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
-  stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
-  stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
-  stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']]))
+  stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
+  stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
+  stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
+  
   return(stan_init)
 }
 
