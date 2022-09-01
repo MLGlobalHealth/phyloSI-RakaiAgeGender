@@ -971,6 +971,8 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
       scale_x_date(expand = c(0,0)) +
       coord_cartesian(xlim = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]))
+    p1 <- ggarrange(p1, labels = 'A', 
+                    font.label = list(size = 20))
     
     # plot incidence cases
     width.error.bar <- 230
@@ -995,6 +997,8 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
       scale_x_date( expand = c(0,0))+
       coord_cartesian(xlim = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]))
+    p2 <- ggarrange(p2, labels = 'B', label.y = 1.05, 
+                    font.label = list(size = 20))
     
     # plot pairs 
     p3 <- ggplot(dp[COMM == comm]) + 
@@ -1010,6 +1014,8 @@ plot_transmission_events_over_time <- function(eligible_count_round, incidence_c
       scale_fill_manual(values = c('Male -> Female'=female_color,'Female -> Male'=male_color)) +
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
       scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))  
+    p3 <- ggarrange(p3, labels = 'C', label.y = 1.05, label.x = -0.02,
+                    font.label = list(size = 20))
     
     # arrange
     p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA,1,1), 
