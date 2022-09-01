@@ -660,7 +660,7 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period){
   df_round_fishing[round == 'R016', min_sample_date := cutoff_date]
   df_round_fishing[round == 'R016', max_sample_date := df_round_fishing[round == 'R017', min_sample_date]]
   df_round_fishing[round == 'R017', max_sample_date := df_round_fishing[round == 'R018', min_sample_date]]
-  
+  df_round_fishing[round == 'R018', max_sample_date := stop_observational_period_fishing]
   #
   # combine
   df_round_inland[, COMM := 'inland']
