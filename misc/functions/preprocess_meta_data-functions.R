@@ -191,21 +191,22 @@ get.meta.data <- function(quest, date.first.positive, date.first.last.visit, aik
   tmp <- tmp[, .N, by= study_id][N > 1, study_id]
   meta[, is_migrant:=ifelse(study_id %in% tmp, TRUE, FALSE)]
   meta[, is_latest:=(intdate == max(intdate)), by='study_id']
-  meta <- meta[,  comm_num:=comm_num[which(is_latest)], by='study_id' ]
+  # meta <- meta[,  comm_num:=comm_num[which(is_latest)], by='study_id' ]
   
   # community key
   colnames(community.keys) <- tolower(colnames(community.keys))
   community.keys[, comm := ifelse(strsplit(as.character(comm_num_a), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'comm_num_a']
   meta <- merge(meta, community.keys[, .(comm_num_raw, comm)], by.x = 'comm_num', by.y = 'comm_num_raw', all.x = T)
-  meta[, `:=` (intdate=NULL, is_latest=NULL, comm_num=NULL)]
+  meta[, `:=` (is_latest=NULL, comm_num=NULL)]
+  setnames(meta, 'intdate', 'sample_date')
   meta <- unique(meta)
   
   # list rounds
   # TODO: ? We have multiple rows for study id's living in multiple communities.
   # It is also unclear in which comm they were at a spec round.
   # Maybe do something like: comm = inland_fishing?
-  tmp <- meta[, list(round = paste0(round, collapse = "_")), by ='study_id' ]
-  meta <- merge(unique(select(meta, -round)), tmp, by ='study_id')
+  # tmp <- meta[, list(round = paste0(round, collapse = "_")), by ='study_id' ]
+  # meta <- merge(unique(select(meta, -round)), tmp, by ='study_id')
   #   anyDuplicated(meta, by=c('study_id', 'round'))
   #   stopifnot(meta[, .lu(study_id) == .N])
   
@@ -248,7 +249,7 @@ process.meta.data <- function(raw_metadata, aik, community.keys){
   tmp <- tmp[, .N, by= study_id][N > 1, study_id]
   raw_metadata[, is_migrant:=ifelse(study_id %in% tmp, TRUE, FALSE)]
   raw_metadata[, is_latest:=(sample_date == max(sample_date)), by='study_id']
-  raw_metadata <- raw_metadata[is_latest == T]
+  # raw_metadata <- raw_metadata[is_latest == T]
   
   # find community
   raw_metadata[, comm := 'inland']
@@ -261,12 +262,10 @@ process.meta.data <- function(raw_metadata, aik, community.keys){
   # get age first positive
   setnames(raw_metadata, c('firstposvd', 'lastnegvd' ), c('date_first_positive', 'date_last_negative'))
   
-  # find date first, last visit and round
-  tmp <- raw_metadata[, list(date_first_visit = min(sample_date), 
-                             date_last_visit = max(sample_date),
-                             round = paste0('R0', round, collapse = "_")), by = 'study_id']
-  raw_metadata <- merge(unique(select(raw_metadata, - sample_date, -round)), tmp , by = 'study_id')
-  stopifnot(raw_metadata[, length(unique(study_id))] == nrow(raw_metadata))
+  # find date first, last visit 
+  raw_metadata[, date_first_visit := min(sample_date), by = 'study_id']
+  raw_metadata[, date_last_visit := max(sample_date), by = 'study_id']
+  # stopifnot(raw_metadata[, length(unique(study_id))] == nrow(raw_metadata))
   
   # find age at first visit and age first positive 
   raw_metadata[, age_first_visit := .year.diff(date_first_visit, date_birth)]
@@ -275,9 +274,14 @@ process.meta.data <- function(raw_metadata, aik, community.keys){
   # Get anonymised ID
   raw_metadata <- merge(raw_metadata, aik, by.x='study_id', by.y='pt_id', all.x=T)
   
+  # round format
+  raw_metadata[, round := paste0('R0', round)]
+  raw_metadata[round == 'R015.1', round := 'R015S']
+  
   # keep variable of interest
   raw_metadata[, .(study_id, aid, sex, comm, date_birth, round, age_first_positive, is_migrant, 
-                   date_first_visit, date_last_visit, date_last_negative, date_first_positive, age_first_visit)]
+                   date_first_visit, date_last_visit, date_last_negative, date_first_positive, age_first_visit, 
+                   sample_date)]
   
 }
 
@@ -291,18 +295,18 @@ process.neuro.meta.data <- function(raw_neuro_metadata, aik){
   setnames(raw_neuro_metadata, 'gender', 'sex')
   
   # find first and last visit
-  tmp <- raw_neuro_metadata[, list(date_first_visit = min(sampleDate), 
-                           date_last_visit = max(sampleDate)), by = 'study_id']
-  neuro_metadata <- merge(raw_neuro_metadata, tmp, by = 'study_id')
-  
+  raw_neuro_metadata[, date_first_visit := min(sampleDate), by = 'study_id']
+  raw_neuro_metadata[, date_last_visit := max(sampleDate), by = 'study_id']
+  setnames(raw_neuro_metadata, 'sampleDate', 'sample_date')
+
   # add age at first visit
-  neuro_metadata[, age_first_visit := .year.diff(date_first_visit, date_birth)]
+  raw_neuro_metadata[, age_first_visit := .year.diff(date_first_visit, date_birth)]
   
   # add neuro cohort
-  neuro_metadata[, round := 'neuro']
+  raw_neuro_metadata[, round := 'neuro']
   
   # Get anonymised ID
-  neuro_metadata <- merge(neuro_metadata, aik, by.x='study_id', by.y='pt_id', all.x=T)
+  neuro_metadata <- merge(raw_neuro_metadata, aik, by.x='study_id', by.y='pt_id', all.x=T)
   
   # keep variable of interest
   neuro_metadata <- neuro_metadata[, .(study_id, aid, sex, date_birth, round, date_first_visit, date_last_visit, age_first_visit)]

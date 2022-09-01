@@ -270,18 +270,32 @@ ageanalysis <- function(infile.inference=NULL,infile.prior.samples=NULL,opt=NULL
   return(data.fit)
 }
 
-prepare_stan_data <- function(pairs, df_age, df_direction, df_community, df_period){
+add_stan_data_base <- function(){
   
   stan_data = list()
   
   # number of groups
   stan_data[['N_DIRECTION']] = nrow(df_direction)
   stan_data[['N_COMMUNITY']] = nrow(df_community)
-  stan_data[['N_PERIOD']] = nrow(df_period)
+  stan_data[['N_PERIOD']] = max(df_period$INDEX_TIME)
   
   # number of age 
   stan_data[['N_PER_GROUP']] = nrow(df_age)
   
+  # number of age group
+  stan_data[['N_AGE']] = df_age[, length(unique(AGE_INFECTION.RECIPIENT))]
+  
+  # number of rounds 
+  stan_data[['N_ROUND']] = df_round[, length(unique(INDEX_ROUND))]
+  
+  # map from round to period
+  stan_data[['map_round_period']] = df_round[COMM == 'inland' & order(round), INDEX_TIME] # same for fishing and inland
+  
+  return(stan_data)
+}
+
+add_phylo_data <- function(stan_data, pairs){
+
   # prepare pairs
   pairs_round <- pairs[, list(AGE_TRANSMISSION.SOURCE = floor(AGE_TRANSMISSION.SOURCE), 
                     AGE_INFECTION.RECIPIENT = floor(AGE_INFECTION.RECIPIENT), 
@@ -342,53 +356,44 @@ prepare_stan_data <- function(pairs, df_age, df_direction, df_community, df_peri
   return(stan_data)
 }
 
-add_incidence_cases <- function(stan_data, incidence_cases, proportion_sampling){
-  
-  # number of age group
-  stan_data[['N_AGE']] = df_age[, length(unique(AGE_INFECTION.RECIPIENT))]
+add_incidence_cases <- function(stan_data, incidence_cases_round){
   
   # save count in each entry
-  z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']]))
-  n_sampling_index_z = array(NA, c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']]))
-  sampling_index_z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']]))
+  z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_ROUND']]))
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(j in 1:stan_data[['N_COMMUNITY']]){
-      for(k in 1:stan_data[['N_PERIOD']]){
+      for(k in 1:stan_data[['N_ROUND']]){
+        
+        .SEX.RECIPIENT = substr(gsub('.* -> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM = df_community[INDEX_COMMUNITY == j, COMM]
+        .ROUND = df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
         
         # direction group
-        .SEX.RECIPIENT = substr(gsub('.* -> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
-        tmp <- incidence_cases[SEX == .SEX.RECIPIENT]
+        tmp <- incidence_cases_round[SEX == .SEX.RECIPIENT]
         
         # community group
-        tmp <- tmp[COMM == df_community[j, COMM]]
+        tmp <- tmp[COMM == .COMM]
         
-        # time group
-        tmp <- tmp[INDEX_TIME == df_period[k, INDEX_TIME]]
+        # round
+        tmp <- tmp[ROUND == .ROUND]
         
-        # count number of observation
+        # order by age
         tmp <- tmp[order(AGEYRS)] 
         
         # sanity check
-        tmp1 <- incidence_cases[SEX == .SEX.RECIPIENT  & COMM == df_community[j, COMM] & INDEX_TIME == df_period[k, INDEX_TIME]]
+        tmp1 <- incidence_cases_round[SEX == .SEX.RECIPIENT  & COMM == .COMM & ROUND == .ROUND]
         stopifnot(sum(tmp$INCIDENT_CASES) == sum(tmp1$INCIDENT_CASES))
-        cat(sum(tmp1$INCIDENT_CASES), 'incidence cases ', df_direction[i, LABEL_DIRECTION], 'towards', df_community[j, COMM], 'in', df_period[k, PERIOD], '\n')
+        cat(sum(tmp1$INCIDENT_CASES), 'incidence cases ', df_direction[i, LABEL_DIRECTION], 'towards', .COMM, 'in', .ROUND, '\n')
         
         # fill
         z[, i, j, k] = ceiling(tmp$INCIDENT_CASES)
         
-        # add probability of sampling
-        tmp <- proportion_sampling[SEX == .SEX.RECIPIENT & COMM ==df_community[j, COMM] & INDEX_TIME == df_period[k, INDEX_TIME]]
-        tmp <- tmp[order(AGEYRS)]
-        n_sampling_index_z[i, j, k] <- tmp[, sum(prop_sampling == 0)]
-        sampling_index_z[,i,j,k] <- rep(-1,nrow(tmp) )
-        sampling_index_z[1:n_sampling_index_z[i, j, k],i,j,k] <- tmp[, which(prop_sampling == 0)]
       }
     }
   }
   
   stan_data[['z']] = z
-  stan_data[['sampling_index_z']] = sampling_index_z
-  stan_data[['n_sampling_index_z']] = n_sampling_index_z
+
   
   return(stan_data)
   
@@ -731,50 +736,37 @@ find_spectral_projection_gp_mean <- function(mu, outdir = NULL){
   return(theta)
 }
 
-add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_age, df_direction, df_community, df_period){
+add_offset <- function(stan_data, eligible_count){
   
-  eligible_count_wide <- dcast.data.table(eligible_count, SEX + COMM + AGEYRS + BEFORE_CUTOFF + PERIOD ~ variable, value.var = 'count')
-  eligible_count_wide <- eligible_count_wide[order(SEX, COMM, BEFORE_CUTOFF, PERIOD, AGEYRS)]
+  eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
   eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
   
-  proportion_sampling <- proportion_sampling[order(SEX, COMM, BEFORE_CUTOFF, PERIOD, AGEYRS)]
+  log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_ROUND']], stan_data[['N_PER_GROUP']])))
   
-  log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
-  log_prop_sampling_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
-  sampling_index=array(NA, c(c(stan_data[['N_PER_GROUP']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']])))
-  n_sampling_index=array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']])))
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(j in 1:stan_data[['N_COMMUNITY']]){
-      for(k in 1:stan_data[['N_PERIOD']]){
+      for(k in 1:stan_data[['N_ROUND']]){
           
           log_offset = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
 
           .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
           .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
           .COMM <- df_community[j, COMM]
-          .BEFORE_CUTOFF <- df_period[k, BEFORE_CUTOFF]
+          .ROUND <- df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
           
           # add proportion of susceptible in recipient
-          tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
+          tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & ROUND == .ROUND]
           log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
 
           # add number of infected unsuppressed in source
-          tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
+          tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & ROUND == .ROUND]
           log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
-          
-          # add probability of sampling recipient
-          tmp <- proportion_sampling[SEX == .SEX.RECIPIENT & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
-          log_offset <- merge(log_offset, tmp[, .(AGEYRS, prop_sampling)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
 
           # add period in year
-          log_offset[, PERIOD_SPAN := df_period[BEFORE_CUTOFF == .BEFORE_CUTOFF, PERIOD_SPAN]]
+          log_offset[, PERIOD_SPAN := df_round[ROUND == .ROUND & COMM == .COMM, ROUND_SPANYRS]]
           
           # make log offset
-          if(1){
-              log_offset[prop_sampling == 0, prop_sampling := 0.0001]
-           }
-          log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(prop_sampling) + log(PERIOD_SPAN)]
-          log_offset[, LOG_PROP_SAMPLING := log(prop_sampling)]
+          log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
           
           # check the order of ages is correct
           log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
@@ -784,18 +776,61 @@ add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_ag
           # add to array
           log_offset_array[i, j, k,] = log_offset[, LOG_OFFSET]
           
-          # prop sampling
-          log_prop_sampling_array[i, j, k,] = log_offset[, LOG_PROP_SAMPLING]
-          
-          # was the recipient sampled
-          n_sampling_index[i, j, k] = log_offset[, sum(prop_sampling != 0.0001)]
-          sampling_index[,i, j, k] = rep(-1, nrow(log_offset))
-          sampling_index[1:n_sampling_index[i, j, k], i, j, k]  = log_offset[, which(prop_sampling != 0.0001)]
       }
     }
   }
   
   stan_data[['log_offset']] = log_offset_array
+
+  return(stan_data)
+}
+
+add_probability_sampling <- function(stan_data, proportion_sampling){
+  
+  proportion_sampling <- proportion_sampling[order(SEX.RECIPIENT, COMM, BEFORE_CUTOFF, PERIOD)]
+  
+  log_prop_sampling_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']], stan_data[['N_PER_GROUP']])))
+  sampling_index=array(NA, c(c(stan_data[['N_PER_GROUP']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']])))
+  n_sampling_index=array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_PERIOD']])))
+  
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in 1:stan_data[['N_PERIOD']]){
+        
+        log_prop_sampling = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
+        
+        .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+        .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM <- df_community[j, COMM]
+        .BEFORE_CUTOFF <- df_period[k, BEFORE_CUTOFF]
+        
+        # add probability of sampling recipient 
+        tmp <- proportion_sampling[SEX.RECIPIENT == .SEX.RECIPIENT & COMM == .COMM & BEFORE_CUTOFF == .BEFORE_CUTOFF]
+        log_prop_sampling <- merge(log_prop_sampling, tmp[, .(AGEYRS.SOURCE, AGEYRS.RECIPIENT, prop_sampling)], by.x = c('AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'), 
+                            by.y = c('AGEYRS.SOURCE', 'AGEYRS.RECIPIENT'))
+        
+        # make log prob sampling
+        if(1){
+          log_prop_sampling[prop_sampling == 0, prop_sampling := 0.0001]
+        }
+        log_prop_sampling[, LOG_PROP_SAMPLING := log(prop_sampling)]
+        
+        # check the order of ages is correct
+        log_prop_sampling <- log_prop_sampling[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
+        stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_prop_sampling[, AGE_INFECTION.RECIPIENT])
+        stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_prop_sampling[, AGE_TRANSMISSION.SOURCE])
+        
+        # prop sampling
+        log_prop_sampling_array[i, j, k,] = log_prop_sampling[, LOG_PROP_SAMPLING]
+        
+        # was the recipient sampled
+        n_sampling_index[i, j, k] = log_prop_sampling[, sum(prop_sampling != 0.0001)]
+        sampling_index[,i, j, k] = rep(-1, nrow(log_prop_sampling))
+        sampling_index[1:n_sampling_index[i, j, k], i, j, k]  = log_prop_sampling[, which(prop_sampling != 0.0001)]
+      }
+    }
+  }
+  
   stan_data[['log_prop_sampling']] = log_prop_sampling_array
   stan_data[['n_sampling_index_y']] = n_sampling_index
   stan_data[['sampling_index_y']] = sampling_index
@@ -803,14 +838,26 @@ add_log_offset <- function(stan_data, eligible_count, proportion_sampling, df_ag
   return(stan_data)
 }
 
+
 add_init <- function(stan_data){
   stan_init <- list()
-  stan_init[['log_beta_baseline']] = 0
-  stan_init[['log_beta_community']] = 0
-  stan_init[['log_beta_period']] = 0
-  stan_init[['rho_gp1']] = rep(2, stan_data[['N_DIRECTION']])
-  stan_init[['rho_gp2']] = rep(2, stan_data[['N_DIRECTION']])
-  stan_init[['alpha_gp']] = rep(1, stan_data[['N_DIRECTION']])
+  
+  # for fit inland and fishing together
+  # stan_init[['log_beta_baseline']] = 0
+  # stan_init[['log_beta_baseline_contrast_community']] = 0
+  # stan_init[['log_beta_baseline_contrast_direction']] =  0
+  # stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
+  # stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
+  # stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
+  # stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']]))
+  # 
+  ## for fit inland and fishing independetly
+  stan_init[['log_beta_baseline']] = array(0, dim = c(stan_data[['N_COMMUNITY']]))
+  stan_init[['log_beta_baseline_contrast_direction']] =  array(0, dim = c(stan_data[['N_COMMUNITY']]))
+  stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
+  stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
+  stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
+  stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
   
   return(stan_init)
 }

@@ -8,8 +8,8 @@ functions {
 }
 
 data{
-  int lower_b;
-  int upper_b;
+  real lower_b;
+  real upper_b;
 }
 
 transformed data {

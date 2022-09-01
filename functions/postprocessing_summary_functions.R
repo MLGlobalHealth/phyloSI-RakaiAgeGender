@@ -155,7 +155,7 @@ check_rhat <- function(fit) {
     print('  Rhat above 1.1 indicates that the chains very likely have not mixed')
 }
 
-find_summary_output <- function(samples, output, vars, df_direction, df_community, df_period, df_age, transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL){
+find_summary_output <- function(samples, output, vars, transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -201,7 +201,7 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
   if('INDEX_COMMUNITY' %in% vars)
     tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
   if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   
@@ -215,9 +215,9 @@ find_summary_output <- function(samples, output, vars, df_direction, df_communit
   return(tmp1)
 }
 
-find_summary_output_by_round <- function(samples, output, vars, df_direction, df_community, df_period, df_age, 
+find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
-                                         log_offset_name = 'LOG_OFFSET', adjust_unsuppressed = F){
+                                         log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -226,9 +226,9 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
   if(!is.null(names)){
     setnames(tmp1, 2:(length(names) + 1), names)
   }else if(tmp1[, max(Var2)] == df_age[, max(INDEX_AGE)]){
-    setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
+    setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
   }else{
-    setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+    setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
   }
   
   if('INDEX_AGE' %in% names(tmp1)){
@@ -236,14 +236,14 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
     tmp1 <- merge(tmp1, df_age_aggregated, by = c('AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'))
   }
   
-  if('INDEX_TIME' %in% names(tmp1)){
-    tmp1 <- merge(tmp1, df_round, by = 'INDEX_TIME', allow.cartesian=TRUE)
-    tmp1[, ROUND := paste0('R0', round)]
+  if('INDEX_ROUND' %in% names(tmp1)){
+    tmp <- merge(df_round, df_community, by = c('COMM'))
+    tmp1 <- merge(tmp1, tmp, by = c('INDEX_ROUND', 'INDEX_COMMUNITY'))
   }
   
   if(!is.null(log_offset_round)){
     tmp1 <- merge(tmp1, log_offset_round, by = c('ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY'))
-    tmp1[, value := value + get(log_offset_name)]
+    tmp1[, value := value + eval(rlang::parse_expr(log_offset_formula))]
   }
   
   if(!is.null(transform)){
@@ -251,37 +251,33 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
   }
   
   #  sum force of infection
-  if(is.null(operation)){
-    tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
-  } else{
-    tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
+  tmp1 <- tmp1[, list(value = sum(value)), by = c('iterations', vars)]
+  if(!is.null(operation)){
     tmp1 <- tmp1[, list(value = sapply(value, operation)), by = c('iterations', vars)]
-  }
-  
-  if(adjust_unsuppressed){
-    tmp <- copy(eligible_count_round)
-    tmp[, IS_MF := as.numeric(SEX == 'M')]
-    setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
-    tmp <- merge(tmp, df_direction, by = 'IS_MF')
-    tmp <- merge(tmp, df_community, by = 'COMM')
-    
-    if(any(grepl('RECIPIENT', vars))){
-      tmp <- merge(tmp, df_age_aggregated, by = 'AGE_TRANSMISSION.SOURCE', allow.cartesian = T)
-    }else{
-      tmp <- merge(tmp, unique(df_age_aggregated[, .(AGE_TRANSMISSION.SOURCE, AGE_GROUP_TRANSMISSION.SOURCE)]), by = 'AGE_TRANSMISSION.SOURCE')
-    }
-    
-    tmp <- tmp[, list(count_unsuppressed = sum(INFECTED_NON_SUPPRESSED)), by = vars]
-    
-    tmp1 <- merge(tmp1, tmp, by = vars, allow.cartesian=TRUE)
-    tmp1[, value := value / count_unsuppressed]
-    
   }
   
   # standardised
   if(!is.null(standardised.vars)){
     tmp1[, total_value := sum(value), by = c('iterations', standardised.vars)]
     tmp1[, value := value / total_value]
+  }
+  
+  # divide by the number of unsuppressed
+  if(per_unsuppressed){
+    tmp <- copy(eligible_count_round)
+    if('AGE_TRANSMISSION.SOURCE' %in% vars)
+      setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
+    if('INDEX_DIRECTION' %in% vars)
+      tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
+    if('INDEX_COMMUNITY' %in% vars)
+      tmp <- merge(tmp, df_community, by = 'COMM')
+    if('INDEX_ROUND' %in% vars)
+      tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+    
+    tmp <- tmp[,list(TOTAL_INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = vars]
+    
+    tmp1 <- merge(tmp, tmp1, by = vars)
+    tmp1[, value := value / TOTAL_INFECTED_NON_SUPPRESSED]
   }
   
   #summarise
@@ -293,10 +289,12 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
     tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
   if('INDEX_COMMUNITY' %in% vars)
     tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+  if('INDEX_ROUND' %in% vars)
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  if('INDEX_TIME' %in% vars)
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
   
   file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')))
   if(!is.null(standardised.vars)){
@@ -309,40 +307,40 @@ find_summary_output_by_round <- function(samples, output, vars, df_direction, df
 }
 
 
-find_median_age_source <- function(samples, var, df_age, df_direction, df_community, df_period){
+find_median_age_source <- function(samples, var){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   tmp1 = as.data.table( reshape2::melt(samples[[var]]) )
-  setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+  setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
   
   tmp1[, value := exp(value)]
   
   tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
-  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT')]
-  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'))
+  tmp2 <- tmp1[, list(total_value = sum(value)), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT')]
+  tmp1 <- merge(tmp1, tmp2, by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'))
   tmp1[, delta := value / total_value]
-  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta )), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT')]
+  tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta )), by = c('iterations', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT')]
   
   tmp1 = tmp1[, list(q= quantile(na.omit(value), prob=ps, na.rm = T), q_label=p_labs), 
-              by=c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT')]	
-  tmp1 = dcast(tmp1, INDEX_DIRECTION + INDEX_COMMUNITY + INDEX_TIME + AGE_INFECTION.RECIPIENT ~ q_label, value.var = "q")
+              by=c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT')]	
+  tmp1 = dcast(tmp1, INDEX_DIRECTION + INDEX_COMMUNITY + INDEX_ROUND + AGE_INFECTION.RECIPIENT ~ q_label, value.var = "q")
   
   tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
   tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  tmp1 <- merge(tmp1, df_period, by = 'INDEX_TIME')
+  tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
   
   return(tmp1)
 }
 
-prepare_count_data <- function(stan_data, df_direction, df_community, df_period, df_age){
+prepare_count_data <- function(stan_data){
   
   tmp <- as.data.table(reshape2::melt(stan_data[['y']]))
   setnames(tmp, 1:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
   tmp <- merge(tmp, df_direction, by = 'INDEX_DIRECTION')
   tmp <- merge(tmp, df_community, by = 'INDEX_COMMUNITY')
-  tmp <- merge(tmp, df_period, by = 'INDEX_TIME')
+  tmp <- merge(tmp, df_period, by = c('INDEX_TIME', 'COMM'))
   tmp <- merge(tmp, df_age, by = 'INDEX_AGE')
   
   setnames(tmp, 'value', 'count')
@@ -394,12 +392,106 @@ prepare_unsuppressed_proportion <- function(eligible_count, vars, standardised.v
   tmp1[, type := 'Share in the unsuppressed HIV + census eligible individuals']
 }
 
-prepare_unsuppressed_proportion_by_round <- function(eligible_count_round, vars, standardised.vars){
-  tmp1 <- eligible_count_round[, list(count = sum(INFECTED_NON_SUPPRESSED)), by = vars]
-  tmp1[, M := count / sum(count), by = standardised.vars]
+prepare_unsuppressed_proportion_by_round <- function(file.unsuppressed.share, vars){
+  
+  tmp1 <- as.data.table(read.csv(file.unsuppressed.share))
+  
+  if(all(c('SEX', 'AGEYRS') %in%vars)){
+    tmp1 <- tmp1[, .(ROUND, COMM, SEX, AGEYRS, UNSUPPRESSED_SHARE_AGE_AND_SEX_CL, UNSUPPRESSED_SHARE_AGE_AND_SEX_CU, UNSUPPRESSED_SHARE_AGE_AND_SEX_M)]
+    setnames(tmp1, c('UNSUPPRESSED_SHARE_AGE_AND_SEX_CL', 'UNSUPPRESSED_SHARE_AGE_AND_SEX_CU', 'UNSUPPRESSED_SHARE_AGE_AND_SEX_M'), c('CL', "CU", 'M'))
+  }else if(vars == 'SEX'){
+    tmp1 <- unique(tmp1[, .(ROUND, COMM, SEX, UNSUPPRESSED_SHARE_SEX_CL, UNSUPPRESSED_SHARE_SEX_CU, UNSUPPRESSED_SHARE_SEX_M)])
+    setnames(tmp1, c('UNSUPPRESSED_SHARE_SEX_CL', 'UNSUPPRESSED_SHARE_SEX_CU', 'UNSUPPRESSED_SHARE_SEX_M'), c('CL', "CU", 'M'))
+  }else{
+    stop()
+  }
+
   tmp1[, IS_MF := as.numeric(SEX == 'M')]
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
 
-  tmp1[, type := 'Share in the unsuppressed HIV+ census eligible individuals']
+  # set round 14 to be the same as round 15 in inland
+  tmp <- tmp1[ROUND == 15 & COMM == 'inland']
+  tmp[, ROUND := 14]
+  tmp1 <- rbind(tmp, tmp1)
+  
+  # set round 15S to be the same as round 15 in fishing
+  tmp1[, ROUND := as.numeric(ROUND)]
+  tmp <- tmp1[ROUND == 15 & COMM == 'fishing']
+  tmp[, ROUND := 15.1]
+  tmp1 <- rbind(tmp, tmp1)
+  
+  # merge to index round
+  setnames(tmp1, 'ROUND', 'round')
+  tmp1 <- merge(tmp1, df_round[, .(COMM, round, ROUND, INDEX_ROUND, LABEL_ROUND)],  by = c('COMM', 'round'))
+  
+  # type
+  tmp1[, type := 'Share in the HIV+ unsuppressed census eligible individuals']
+  
+  return(tmp1)
+}
+
+prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
+
+  tmp1 <- as.data.table(read.csv(file.prevalence.share))
+  
+  if(all(c('SEX', 'AGEYRS') %in%vars)){
+    tmp1 <- tmp1[, .(ROUND, COMM, SEX, AGEYRS, PREVALENCE_SHARE_SEX_AND_AGE_CL, PREVALENCE_SHARE_SEX_AND_AGE_CU, PREVALENCE_SHARE_SEX_AND_AGE_M)]
+    setnames(tmp1, c('PREVALENCE_SHARE_SEX_AND_AGE_CL', 'PREVALENCE_SHARE_SEX_AND_AGE_CU', 'PREVALENCE_SHARE_SEX_AND_AGE_M'), c('CL', "CU", 'M'))
+  }else if(vars == 'SEX'){
+    tmp1 <- unique(tmp1[, .(ROUND, COMM, SEX, PREVALENCE_SHARE_SEX_CL, PREVALENCE_SHARE_SEX_CU, PREVALENCE_SHARE_SEX_M)])
+    setnames(tmp1, c('PREVALENCE_SHARE_SEX_CL', 'PREVALENCE_SHARE_SEX_CU', 'PREVALENCE_SHARE_SEX_M'), c('CL', "CU", 'M'))
+  }else{
+    stop()
+  }
+  
+  tmp1[, IS_MF := as.numeric(SEX == 'M')]
+  tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
+  tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  tmp1[, ROUND := as.character(ROUND)]
+  
+  # set round 14 to be the same as round 15 in inland
+  tmp <- tmp1[ROUND == '15' & COMM == 'inland']
+  tmp[, ROUND := '14']
+  tmp1 <- rbind(tmp, tmp1)
+  
+  # find round label
+  tmp1[, ROUND := paste0('R0', ROUND)]
+  
+  # merge to index round
+  tmp1 <- merge(tmp1, df_round[, .(COMM, ROUND, INDEX_ROUND)], by = c('COMM', 'ROUND'))
+  
+  # type
+  tmp1[, type := 'Share in the HIV+ census eligible individuals']
+  
+  return(tmp1)
+}
+
+
+prepare_prevalence_by_round <- function(eligible_count_round, vars, standardised.vars){
+  tmp1 <- eligible_count_round[, list(M = sum(INFECTED) / sum(ELIGIBLE)), by = vars]
+
+  tmp1[, IS_MF := as.numeric(SEX == 'M')]
+  tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
+  tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  
+  tmp1[, type := 'Share in the HIV+ census eligible individuals']
+}
+
+
+remove_first_round <- function(tmp){
+  
+  rm.vars <- c('round', 'ROUND', 'ROUND_SPANYRS', 'INDEX_TIME', 'min_sample_date', 'max_sample_date')
+  
+  for(var in rm.vars){
+    if(var %in% names(tmp)){
+      tmp <- select(tmp, -var)
+      
+    }
+  }
+  
+  tmp[, INDEX_ROUND:= INDEX_ROUND +1]
+  tmp <- merge(tmp, df_round, by = c('INDEX_ROUND', 'COMM'))
+  
+  return(tmp)
 }

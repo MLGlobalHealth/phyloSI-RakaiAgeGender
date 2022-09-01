@@ -33,14 +33,43 @@ plot_intensity_PP <- function(intensity_PP, count_data, outdir){
       guides(fill = guide_colorbar(order = 1), 
              shape = guide_legend(order = 2)) + 
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    
+
     ggsave(p, file = paste0(outdir, '-output-intensity_transmission_',  communities[i], '.png'), w = 7, h = 7)
   }
 
 } 
 
-plot_2D_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
+plot_intensity_PP_by_round <- function(intensity_PP, outdir){
   
+  communities <- intensity_PP[, unique(COMM)]
+  for(i in seq_along(communities)){
+    
+    tmp <- intensity_PP[ COMM == communities[i]]
+    
+    p <- ggplot(tmp, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
+      geom_raster(aes(fill = M)) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+      theme_bw() + 
+      labs(x = 'Age at infection recipient', fill = 'Estimated median transmission rate\nper year', 
+           y= 'Age at transmission source',size='Pairs\ncount') +
+      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+      facet_grid(LABEL_DIRECTION~LABEL_ROUND) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      scale_fill_viridis_c() + 
+      scale_x_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0)) + 
+      guides(fill = guide_colorbar(order = 1), 
+             shape = guide_legend(order = 2)) + 
+      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
+    
+    ggsave(p, file = paste0(outdir, '-output-intensity_transmission_by_round_',  communities[i], '.png'), w = 12, h = 7)
+  }
+  
+} 
+
+plot_2D_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
 
     p <- ggplot(tmp, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
       geom_raster(aes(fill = M)) + 
@@ -58,11 +87,18 @@ plot_2D_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
       guides(fill = guide_colorbar(order = 1), 
              shape = guide_legend(order = 2)) 
     
-    if('LABEL_DIRECTION' %in% names(tmp)){
+    if(all(c('ROUND', 'LABEL_DIRECTION', 'COMM') %in% names(tmp))){
+      p <- p + facet_grid(LABEL_DIRECTION+COMM~ROUND)
+    }else if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
+      p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+    }else if(all(c('COMM', 'LABEL_DIRECTION') %in% names(tmp))){
+      p <- p + facet_grid(LABEL_DIRECTION~COMM)
+    }else if('LABEL_DIRECTION' %in% names(tmp)){
       p <- p + facet_grid(LABEL_DIRECTION~.)
     }
     
-    ggsave(p, file = paste0(outdir, '-output-contrast_2D_', name, '.png'), w = 7, h = 7)
+    
+    ggsave(p, file = paste0(outdir, '-output-contrast_2D_', name, '.png'), w = 9, h = 9)
   
 } 
 
@@ -79,8 +115,14 @@ plot_source_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
     scale_fill_viridis_c() 
-  
-  if('LABEL_DIRECTION' %in% names(tmp)){
+
+  if(all(c('ROUND', 'LABEL_DIRECTION', 'COMM') %in% names(tmp))){
+    p <- p + facet_grid(LABEL_DIRECTION+COMM~ROUND)
+  }else if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
+    p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+  }else if(all(c('COMM', 'LABEL_DIRECTION') %in% names(tmp))){
+    p <- p + facet_grid(LABEL_DIRECTION~COMM)
+  }else if('LABEL_DIRECTION' %in% names(tmp)){
     p <- p + facet_grid(LABEL_DIRECTION~.)
   }
   
@@ -102,7 +144,13 @@ plot_recipient_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
           legend.position = 'bottom') +
     scale_fill_viridis_c() 
   
-  if('LABEL_DIRECTION' %in% names(tmp)){
+  if(all(c('ROUND', 'LABEL_DIRECTION', 'COMM') %in% names(tmp))){
+    p <- p + facet_grid(LABEL_DIRECTION+COMM~ROUND)
+  }else if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
+    p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+  }else if(all(c('COMM', 'LABEL_DIRECTION') %in% names(tmp))){
+    p <- p + facet_grid(LABEL_DIRECTION~COMM)
+  }else if('LABEL_DIRECTION' %in% names(tmp)){
     p <- p + facet_grid(LABEL_DIRECTION~.)
   }
   
@@ -116,7 +164,7 @@ plot_force_infection <- function(force_infection, outdir, lab = NULL){
   for(i in seq_along(communities)){
     
     tmp <- force_infection[ COMM == communities[i]]
-
+    tmp <- tmp[ROUND != 'R014']
     p <- ggplot(tmp, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
       geom_raster(aes(fill = M)) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
@@ -124,7 +172,7 @@ plot_force_infection <- function(force_infection, outdir, lab = NULL){
       labs(x = 'Age at infection recipient', fill = paste0('Estimated median\n', lab, ' force infection'), 
            y= 'Age at transmission source',size='Pairs\ncount') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
-      facet_grid(LABEL_DIRECTION~PERIOD) + 
+      facet_grid(LABEL_DIRECTION~ROUND) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
@@ -135,48 +183,28 @@ plot_force_infection <- function(force_infection, outdir, lab = NULL){
              shape = guide_legend(order = 2)) + 
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
     
-    ggsave(p, file = paste0(outdir, '-output-', lab, 'force_infection_2D_',  communities[i], '.png'), w = 7, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-', lab, 'force_infection_2D_',  communities[i], '.png'), w = 10, h = 7)
   }
   
 } 
 
-plot_force_infection_age_source <- function(force_infection_age_source, crude_force_infection, outdir){
+plot_force_infection_age_source <- function(force_infection_age_source, outdir){
   
   tmp <- copy(force_infection_age_source)
   
   tmp[, Age := AGE_TRANSMISSION.SOURCE]
   tmp[, Direction :=LABEL_DIRECTION]
   
-  tmp1 <- crude_force_infection[, list(CRUDE_FOI = sum(CRUDE_FOI)), by= c('AGE_TRANSMISSION.SOURCE', 'PERIOD', 'LABEL_DIRECTION', 'COMM')]
-  tmp1[, Direction :=LABEL_DIRECTION]
-  
   communities <- tmp[, unique(COMM)]
   
-  for(i in seq_along(communities)){
-  
-    p <- ggplot(tmp[COMM == communities[i]], aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_bar(aes(y = M), stat = 'identity') + 
-      geom_errorbar(aes(ymin = CL, ymax = CU)) + 
-      geom_point(data = tmp1[COMM == communities[i]], aes(y = CRUDE_FOI), col = 'darkred') + 
-      labs(x = 'Age', y = 'Force of infection exerted', fill = '') + 
-      theme_bw() +
-      facet_grid(PERIOD~LABEL_DIRECTION, scale = 'free')+
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggsci::scale_fill_npg()  + 
-      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    
-    ggsave(p, file = paste0(outdir, '-output-', 'FOI', '_crude_age_source_',  communities[i], '.png'), w = 12, h = 9)
-  }
-  
+  tmp <- tmp[ROUND != 'R014']
   
   p <- ggplot(tmp, aes(x = Age)) + 
     geom_bar(aes(y = M, fill = Direction), stat = 'identity', position = position_dodge()) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, group = Direction), position = position_dodge()) + 
     labs(x = 'Age', y = 'Force of infection exerted', fill = '') + 
     theme_bw() +
-    facet_grid(PERIOD~LABEL_COMMUNITY, scale = 'free')+
+    facet_grid(ROUND~LABEL_COMMUNITY, scale = 'free')+
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
@@ -184,8 +212,8 @@ plot_force_infection_age_source <- function(force_infection_age_source, crude_fo
   ggsave(p, file = paste0(outdir, '-output-', 'FOI', '_age_source.png'), w = 12, h = 9)
   
   p <- ggplot(tmp, aes(x = Age)) + 
-    geom_bar(aes(y = M, fill = PERIOD), stat = 'identity', position = position_dodge()) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, group = PERIOD), position = position_dodge()) + 
+    geom_bar(aes(y = M, fill = ROUND), stat = 'identity', position = position_dodge()) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, group = ROUND), position = position_dodge()) + 
     labs(x = 'Age', y = 'Force of infection exerted', fill = '') + 
     theme_bw() +
     facet_grid(Direction~LABEL_COMMUNITY, scale = 'free')+
@@ -197,43 +225,23 @@ plot_force_infection_age_source <- function(force_infection_age_source, crude_fo
   
 }
 
-plot_force_infection_age_recipient <- function(force_infection_age_recipient, crude_force_infection, outdir){
+plot_force_infection_age_recipient <- function(force_infection_age_recipient, outdir){
   
   tmp <- copy(force_infection_age_recipient)
   
   tmp[, Age := AGE_INFECTION.RECIPIENT]
   tmp[, Direction :=LABEL_DIRECTION]
   
-  tmp1 <- crude_force_infection[, list(CRUDE_FOI = sum(CRUDE_FOI)), by= c('AGE_INFECTION.RECIPIENT', 'PERIOD', 'LABEL_DIRECTION', 'COMM')]
-  tmp1[, Direction :=LABEL_DIRECTION]
-  
   communities <- tmp[, unique(COMM)]
   
-  for(i in seq_along(communities)){
-    
-    p <- ggplot(tmp[COMM == communities[i]], aes(x = AGE_INFECTION.RECIPIENT)) + 
-      geom_bar(aes(y = M), stat = 'identity') + 
-      geom_errorbar(aes(ymin = CL, ymax = CU)) + 
-      geom_point(data = tmp1[COMM == communities[i]], aes(y = CRUDE_FOI), col = 'darkred') + 
-      labs(x = 'Age', y = 'Force of infection received', fill = '') + 
-      theme_bw() +
-      facet_grid(PERIOD~LABEL_DIRECTION, scale = 'free')+
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggsci::scale_fill_npg()  + 
-      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    
-    ggsave(p, file = paste0(outdir, '-output-', 'FOI', '_crude_age_recipient_',  communities[i], '.png'), w = 12, h = 9)
-  }
-  
+  tmp <- tmp[ROUND != 'R014']
   
   p <- ggplot(tmp, aes(x = Age)) + 
     geom_bar(aes(y = M, fill = Direction), stat = 'identity', position = position_dodge()) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, group = Direction), position = position_dodge()) + 
     labs(x = 'Age', y = 'Force of infection received', fill = '') + 
     theme_bw() +
-    facet_grid(PERIOD~LABEL_COMMUNITY, scale = 'free')+
+    facet_grid(ROUND~LABEL_COMMUNITY, scale = 'free')+
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
@@ -241,8 +249,8 @@ plot_force_infection_age_recipient <- function(force_infection_age_recipient, cr
   ggsave(p, file = paste0(outdir, '-output-', 'FOI', '_age_recipient.png'), w = 12, h = 9)
   
   p <- ggplot(tmp, aes(x = Age)) + 
-    geom_bar(aes(y = M, fill = PERIOD), stat = 'identity', position = position_dodge()) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, group = PERIOD), position = position_dodge()) + 
+    geom_bar(aes(y = M, fill = ROUND), stat = 'identity', position = position_dodge()) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU, group = ROUND), position = position_dodge()) + 
     labs(x = 'Age', y = 'Force of infection received', fill = '') + 
     theme_bw() +
     facet_grid(Direction~LABEL_COMMUNITY, scale = 'free')+
@@ -261,7 +269,9 @@ plot_force_infection_sex_source <- function(force_infection_sex_source, outdir){
   
   tmp[, Direction :=LABEL_DIRECTION]
   
-  p <- ggplot(tmp, aes(x = PERIOD)) + 
+  tmp <- tmp[ROUND != 'R014']
+  
+  p <- ggplot(tmp, aes(x = ROUND)) + 
     geom_bar(aes(y = M, fill = Direction), stat = 'identity', position = position_dodge()) + 
     geom_errorbar(aes(ymin = CL, ymax = CU, group = Direction), position = position_dodge()) + 
     labs(x = '', y = 'Force of infection exerted', fill = '') + 
@@ -271,7 +281,7 @@ plot_force_infection_sex_source <- function(force_infection_sex_source, outdir){
           strip.text = element_text(size = rel(1)),
           legend.position = 'bottom') +
     ggsci::scale_fill_npg() 
-  ggsave(p, file = paste0(outdir, '-output-', 'FOI', '_sex.png'), w = 6, h = 7)
+  ggsave(p, file = paste0(outdir, '-output-', 'FOI', '_sex.png'), w = 10, h = 7)
 }
 
 plot_force_infection_age_group <- function(force_infection_aggregated_age_group, outdir){
@@ -325,66 +335,137 @@ plot_force_infection_age_classification <- function(force_infection_aggregated_a
   
 }
 
-plot_contribution_sex_source <- function(contribution_sex_source, eligible_prop, outdir, lab = NULL){
+plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_prop_sex, prevalence_prop_sex,outdir, lab = NULL){
   
-  type_cont <- 'Contribution to HIV infection'
+  type_cont <- 'Contribution from male sources\nto HIV-1 infection'
   
   tmp <- copy(contribution_sex_source)
   tmp[, type  := type_cont]
-  tmp <- rbind(tmp, eligible_prop, fill=TRUE)
-  tmp[, type := factor(type , levels = c(type_cont,unique(unsuppressed_prop_sex$type)))]
+  # tmp <- rbind(tmp, unsuppressed_prop_sex, fill=TRUE)
+  # tmp[, type := factor(type , levels = c(type_cont,unique(unsuppressed_prop_sex$type), unique(prepare_prevalence_sex$type)))]
+  # 
+  tmp <- tmp[LABEL_DIRECTION == 'Male -> Female']
+  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 5, 0)]
+  # tmp <- tmp[ROUND != 'R014' & LABEL_DIRECTION == 'Male -> Female']
   
-  if(is.null(lab)) lab =  'Contribution to infection'
+
+  prevalence_prop_sex[, type  := 'Share of males among HIV+\nindividuals']
+  unsuppressed_prop_sex[, type  := 'Share of males among HIV+\nunsuppressed individuals']
+  tmp1 <- rbind(prevalence_prop_sex, unsuppressed_prop_sex, fill=TRUE)
+  tmp1[, type := factor(type , levels = c(unique(prevalence_prop_sex$type), unique(unsuppressed_prop_sex$type)))]
+  tmp1 <- tmp1[LABEL_DIRECTION == 'Male -> Female']
+  tmp1[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 5, 0)]
   
- p <- ggplot(tmp, aes(x = LABEL_DIRECTION)) + 
-    geom_bar(aes(y = M, alpha = type, col = type), stat = 'identity', position = "identity", fill = 'cornflowerblue') + 
-    geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.2, col = 'grey40') + 
-    labs(x = '', y = 'Percent of census eligible individuals', 
-         fill = lab, col = '', alpha = '') + 
-    theme_bw() +
-    facet_grid(LABEL_COMMUNITY~PERIOD, scale = 'free')+
-    scale_color_manual(values = c('cornflowerblue', 'black')) + 
-    scale_alpha_manual(values = c(1,0)) + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
+  tmp2 <- rbind(tmp, tmp1, fill=TRUE)
+  tmp2[, type := factor(type , levels = c(unique(tmp$type), levels(tmp1$type)))]
+  
+  p <-  ggplot(tmp2, aes(x = INDEX_ROUND2, group = type)) +
+      geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
+    geom_line(aes(y = M, linetype = type), col = 'black', position = position_dodge(width = 0.2)) +
+    geom_point(aes(y = M, shape = type, col = type), size= 1.7, position = position_dodge(width = 0.2)) + 
+     labs(x = '', y = 'Percent', col = '', shape = '', linetype = '') + 
+     theme_bw() +
+     facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
+     scale_linetype_manual(values = c('solid', 'dashed', 'dotted')) + 
+     scale_shape_manual(values = c(16, 17, 15)) + 
+      scale_color_manual(values = c("black", "#E69F00",  "#009E73")) + 
+     theme(strip.background = element_rect(colour="white", fill="white"),
+           # axis.text.x = element_text(angle= 70, hjust = 1),
           strip.text = element_text(size = rel(1)),
-          legend.position = 'bottom') 
-  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex.png'), w = 6, h = 7)
+          axis.text.x = element_text(angle = 40, hjust = 1),
+          axis.title.x = element_blank(), 
+          # legend.justification = 'bottom',
+          # legend.position='right',
+          # legend.direction='vertical',
+          legend.position = c(0.83,0.14),
+          panel.grid.major.x = element_blank(), 
+          panel.grid.minor.x = element_blank(), 
+          panel.grid.minor.y = element_blank(), 
+          legend.margin = margin(),
+          legend.title = element_blank())  + 
+     scale_x_continuous(labels = tmp[order(INDEX_ROUND2), unique(LABEL_ROUND)], breaks = tmp[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
+     scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1)) + 
+     guides(color = guide_legend(order = 1), linetype = guide_legend(order = 1), shape = guide_legend(order = 1))
+   
+   if(is.null(lab)) lab =  'Contribution'
+  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex.png'), w = 7, h = 4.5)
   
 }
 
-plot_contribution_age_source <- function(contribution_age_source, eligible_prop, outdir, lab = NULL){
+plot_contribution_age_source <- function(contribution_age_source, unsuppressed_prop_age, outdir, lab = NULL){
   
-  type_cont <- 'Contribution to HIV infection'
+  type_cont <- 'Contribution to HIV-1 infection'
   
   tmp <- copy(contribution_age_source)
   tmp[, type  := type_cont]
+  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
   
-  tmp1 <- copy(eligible_prop)
+  tmp1 <- copy(unsuppressed_prop_age)
   setnames(tmp1, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
-  tmp <- rbind(tmp, tmp1, fill=TRUE)
-  tmp[, type := factor(type , levels = c(type_cont,unique(eligible_prop$type)))]
+  tmp1[, type := 'Share among HIV+\nunsuppressed individuals']
+  tmp1[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
+  
+  tmp2 <- tmp[INDEX_ROUND == min(INDEX_ROUND)]
+  tmp2[, type := paste0(type, '\nin ', gsub('\n', ', ', LABEL_ROUND))]
+  tmp2 <- select(tmp2, -LABEL_ROUND)
   
   communities <- tmp[, unique(COMM)]
   
-  if(is.null(lab)) lab =  'Contribution to infection'
-  
   for(i in seq_along(communities)){
     
-    tmp1 <- tmp[COMM == communities[i]]
+    tmp.p <- tmp[COMM == communities[i]]
+    tmp1.p <- tmp1[COMM == communities[i]]
+    tmp2.p <- tmp2[COMM == communities[i]]
     
-    p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_bar(aes(y = M, alpha = type, col = type), stat = 'identity', position = "identity", fill = 'cornflowerblue') + 
-      geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.5, col = 'grey40') + 
-      labs(x = 'Age', y = 'Percent of census eligible individuals', 
-           fill = lab, col = '', alpha = '') + 
+    p <-  ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
+        geom_ribbon(data = tmp1.p, aes(ymin = CL, ymax = CU, linetype=type), alpha = 0.3, fill='grey50')+
+        geom_line(data = tmp1.p, aes(y = M,linetype = type)) + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX, size = type), alpha = 0.6) + 
+      geom_line(aes(y = M, col = SEX, size = type), stat = 'identity', position = "identity") + 
+      scale_color_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) +
+      new_scale_color() +
+      geom_line(data = tmp2.p, aes(y = M, col = SEX, alpha=type), linetype ='solid') +  
+      scale_color_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) + 
+      labs(x = 'Age of the source', y = 'Percent') + 
       theme_bw() +
-      facet_grid(LABEL_DIRECTION~PERIOD, scale = 'free')+
-      scale_color_manual(values = c('cornflowerblue', 'black')) + 
-      scale_alpha_manual(values = c(1,0)) + 
+      facet_grid(LABEL_ROUND~SEX) +
+      # scale_color_manual(values = c('#FF4949')) + 
+      scale_alpha_manual(values = 1) + 
+      scale_size_manual(values = 0.5) + 
+      scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
+      # scale_fill_manual(values = c('Male source'='#C6DCE4','Female source'='#F2D1D1')) + 
+      scale_linetype_manual(values  = 'dashed') +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') 
-    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_', communities[i], '.png'), w = 9, h = 7)
+            legend.position = 'none', 
+            legend.title = element_blank(), 
+            panel.grid.minor = element_blank()) + 
+      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
+      scale_x_continuous(breaks = c(seq(min(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]), max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]), 5), 
+                         max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]))) 
+      
+    p_legend <- ggplot(tmp.p[SEX == 'Female sources'], aes(x = AGE_TRANSMISSION.SOURCE)) + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = type), alpha = 0.6) + 
+      geom_line(aes(y = M, col = type), stat = 'identity', position = "identity") + 
+      geom_line(data = tmp1.p, aes(y = M, size = type), col = 'black', linetype = 'dashed') + 
+      geom_ribbon(data = tmp1.p, aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + 
+      geom_line(data = tmp2.p, aes(y = M, linetype=type), col = 'deeppink') + 
+      theme_bw() +
+      scale_alpha_manual(values = 1) + 
+      scale_size_manual(values = 0.5) + 
+      scale_color_manual(values = 'lightpink1') +
+      scale_fill_manual(values = 'lightpink1') + 
+      scale_linetype_manual(values  = 'solid') +
+      theme(legend.position = 'bottom', 
+            legend.title = element_blank()) + 
+      guides(fill = guide_legend(order = 1), color=guide_legend(order = 1),
+             alpha = guide_legend(order = 3), 
+             linetype = guide_legend(order = 2))
+    
+    pp <- ggarrange(p, legend.grob = get_legend(p_legend), legend = 'bottom') + 
+      theme(panel.background = element_rect(fill='white'))
+    if(is.null(lab)) lab =  'Contribution'
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 8, h = 9)
     
   }
 }
@@ -393,26 +474,39 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
   
   communities <- contribution_age_group_source[, unique(COMM)]
   
-  if(is.null(lab)) lab =  'Contribution to infection'
+  tmp <- copy(contribution_age_group_source)
+  tmp[, AGE_LABEL := paste0('Age recipient: ', AGE_GROUP_INFECTION.RECIPIENT)]
+  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
+  
   
   for(i in seq_along(communities)){
     
-    tmp <- contribution_age_group_source[ COMM == communities[i]]
-    tmp[, `Direction` := LABEL_DIRECTION]
-    tmp[, `Age Recipient` := AGE_GROUP_INFECTION.RECIPIENT]
+    tmp1 <- tmp[ COMM == communities[i]]
     
-    p <- ggplot(tmp, aes(x = AGE_GROUP_TRANSMISSION.SOURCE)) + 
-      geom_bar(aes(y = M, fill = PERIOD), stat = 'identity', position = position_dodge()) + 
-      geom_errorbar(aes(ymin = CL, ymax = CU, group = PERIOD), position = position_dodge()) + 
-      labs(x = 'Age source', y = lab, fill = '') + 
+    if(communities[i] == 'inland'){
+      colors <- c('#374c80', '#7a5195',  '#ef5675', '#ff764a', '#ffa600')
+    }else{
+      colors <- c( '#7a5195', '#bc5090', '#ef5675', '#ff764a', '#ffa600')
+    }
+
+    p <- ggplot(tmp1, aes(x = AGE_GROUP_TRANSMISSION.SOURCE)) + 
+      geom_bar(aes(y = M, fill = LABEL_ROUND), stat = 'identity', position =position_dodge(width = 0.9)) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = LABEL_ROUND), position =position_dodge(width = 0.9), width = 0.3) + 
+      labs(x = 'Age source', y = 'Share in HIV-1 transmissions', fill = '') + 
       theme_bw() +
-      facet_grid(Direction~`Age Recipient`, label = 'label_both')+
+      facet_grid(AGE_LABEL~SEX)+
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggsci::scale_fill_npg()  +
-      ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_group_',  communities[i], '.png'), w = 9, h = 7)
+            legend.position = 'bottom', 
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank()) +
+      scale_fill_manual(values = colors) +
+      # ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
+      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) + 
+      guides(fill = guide_legend(byrow= T, nrow = 2))
+    
+    if(is.null(lab)) lab =  'Contribution'
+    ggsave(p, file = paste0(outdir, '-output-', lab, '_age_group_',  communities[i], '.png'), w = 7,h =8)
   }
   
 }
@@ -420,103 +514,43 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
 plot_contribution_age_classification <- function(contribution_age_classification_source, outdir, lab = NULL){
   
   communities <- contribution_age_classification_source[, unique(COMM)]
-  contribution_age_classification_source[, AGE_CLASSIFICATION.SOURCE := factor(AGE_CLASSIFICATION.SOURCE, levels  = c('Younger', 'Same age', 'Older'))]
   
-  if(is.null(lab)) lab =  'Contribution to infection'
+  tmp <- copy(contribution_age_classification_source)
+  tmp[, AGE_CLASSIFICATION.SOURCE := factor(AGE_CLASSIFICATION.SOURCE, levels  = c('Younger', 'Same age', 'Older'))]
+  tmp[, AGE_LABEL := paste0('Age recipient: ', AGE_GROUP_INFECTION.RECIPIENT)]
+  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
   
   for(i in seq_along(communities)){
     
-    tmp <- contribution_age_classification_source[ COMM == communities[i]]
-    tmp[, `Direction` := LABEL_DIRECTION]
-    tmp[, `Age Recipient` := AGE_GROUP_INFECTION.RECIPIENT]
+    if(communities[i] == 'inland'){
+      colors <- c('#374c80', '#7a5195',  '#ef5675', '#ff764a', '#ffa600')
+    }else{
+      colors <- c( '#7a5195', '#bc5090', '#ef5675', '#ff764a', '#ffa600')
+    }
     
-    p <- ggplot(tmp, aes(x = AGE_CLASSIFICATION.SOURCE)) + 
-      geom_bar(aes(y = M, fill = PERIOD), stat = 'identity', position = position_dodge()) + 
-      geom_errorbar(aes(ymin = CL, ymax = CU, group = PERIOD), position = position_dodge()) + 
-      labs(x = 'Age source', y = lab, fill = '') + 
+    tmp1 <- tmp[ COMM == communities[i]]
+    
+    p <- ggplot(tmp1, aes(x = AGE_CLASSIFICATION.SOURCE, group = LABEL_ROUND)) + 
+      geom_bar(aes(y = M, fill = LABEL_ROUND), stat = 'identity', position =position_dodge(width = 0.9)) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = LABEL_ROUND), position =position_dodge(width = 0.9), width = 0.3) + 
+      labs(x = 'Age classification of the source', y = 'HIV-1 transmission flows', fill = '') + 
       theme_bw() +
-      facet_grid(Direction~`Age Recipient`, label = 'label_both')+
+      facet_grid(AGE_LABEL~SEX)+
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggsci::scale_fill_npg()  +
-      ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_classification_',  communities[i], '.png'), w = 9, h = 7)
+            legend.position = 'bottom', 
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank()) +
+      scale_fill_manual(values = colors) +
+      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) + 
+      guides(fill = guide_legend(byrow= T, nrow = 2))
+    
+    if(is.null(lab)) lab =  'Contribution'
+    ggsave(p, file = paste0(outdir, '-output-', lab, '_age_classification_',  communities[i], '.png'), w = 7, h = 8)
   }
   
 }
 
-plot_contribution_sex_source_by_round <- function(expected_contribution_sex_source_round, outdir, lab = NULL){
-  
-  tmp <- copy(expected_contribution_sex_source_round)
-  tmp <- tmp[ROUND != 'R014']
-  tmp[, SEX := gsub('(.+) ->.*', '\\1', LABEL_DIRECTION) ]
-
-  if(is.null(lab)) lab =  'Contribution to infection'
-  
-  p <- ggplot(tmp, aes(x = ROUND)) + 
-    geom_bar(aes(y = M, fill = SEX), stat = 'identity', position = "identity") + 
-    geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.2, col = 'grey40') + 
-    labs(x = '', y = 'Contribution to infection', 
-         fill = lab, col = '', alpha = '') + 
-    theme_bw() +
-    facet_grid(LABEL_COMMUNITY~SEX, scale = 'free')+
-    scale_fill_manual(values = c('Male'='royalblue3','Female'='deeppink2')) + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)),
-          legend.position = 'none') + 
-    scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) 
-  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex_byround.png'), w = 6, h = 7)
-  
-}
-
-plot_contribution_age_source_by_round <- function(contribution_age_source, outdir, lab = NULL){
-  
-  tmp <- copy(contribution_age_source)
-  tmp <- tmp[ROUND != 'R014']
-  tmp[, type  := 'Contribution to HIV infection']
-  tmp[, SEX :=  gsub('(.+) ->.*', '\\1', LABEL_DIRECTION) ]
-  
-  communities <- tmp[, unique(COMM)]
-  
-  if(is.null(lab)) lab =  'Contribution to infection'
-  
-  for(i in seq_along(communities)){
-    
-    tmp1 <- tmp[COMM == communities[i]]
-    
-    p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_bar(aes(y = M, fill = SEX), stat = 'identity', position = "identity") + 
-      geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.5, col = 'grey60') + 
-      labs(x = 'Age', y = 'Contribution to infection', 
-           fill = lab, col = '', alpha = '') + 
-      theme_bw() +
-      facet_grid(ROUND~SEX)+
-      scale_fill_manual(values = c('Male'='royalblue3','Female'='deeppink2')) + 
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            legend.position = 'none') + 
-      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) +
-      ggtitle(tmp1[, unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_by_round_', communities[i], '.png'), w = 8, h = 9)
-    
-    p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_line(aes(y = M, col = ROUND)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU, fill = ROUND), alpha = 0.2) + 
-      labs(x = 'Age', y = 'Contribution to infection', 
-           fill = '', col = '') + 
-      theme_bw() +
-      facet_grid(SEX~.)+
-      ggsci::scale_fill_npg() +
-      ggsci::scale_color_npg() +
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1))) + 
-      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) +
-      ggtitle(tmp1[, unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_by_round_', communities[i], '2.png'), w = 7, h = 7)
-    
-  }
-}
 
 plot_contribution_age_group_by_round <- function(contribution_age_group_source, outdir, lab = NULL){
   
@@ -542,38 +576,7 @@ plot_contribution_age_group_by_round <- function(contribution_age_group_source, 
       ggsci::scale_fill_npg() +
       ggtitle(contribution_age_group_source[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) 
-    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_group_by_round_',  communities[i], '.png'), w = 9, h = 7)
-  }
-  
-}
-
-plot_contribution_age_source_recipient_by_round <- function(expected_contribution_round, outdir){
-  
-  tmp <- copy(expected_contribution_round)
-  tmp <- tmp[ROUND != 'R014']
-  tmp[, SEX := gsub('(.+) ->.*', '\\1', LABEL_DIRECTION)  ]
-  
-  communities <- expected_contribution_round[, unique(COMM)]
-  
-  for(i in seq_along(communities)){
-    
-    tmp1 <- tmp[ COMM == communities[i] & AGE_INFECTION.RECIPIENT %in% c(20, 30, 40)]
-    tmp1[, `Age recipient` := AGE_INFECTION.RECIPIENT]
-    
-    p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_line(aes(y = M, col = SEX)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX), alpha = 0.5 ) + 
-      labs(x = 'Age source', y = 'Contribution to infection', 
-           col = '',  fill ='') + 
-      theme_bw() +
-      facet_grid(`Age recipient`~ROUND, label = 'label_both')+
-      scale_fill_manual(values = c('Male'='royalblue3','Female'='deeppink2')) + 
-      scale_color_manual(values = c('Male'='royalblue3','Female'='deeppink2')) + 
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1))) +
-      ggtitle(tmp[ COMM == communities[i], unique(LABEL_COMMUNITY)])+ 
-      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05))) 
-    ggsave(p, file = paste0(outdir, '-output-', 'Expected_contribution_to_infection', '_age_byround_',  communities[i], '.png'), w = 9, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_age_group_by_round_',  communities[i], '.png'), w = 8, h = 7)
   }
   
 }
@@ -609,66 +612,80 @@ plot_contribution_age_classification_by_round <- function(contribution_age_class
   
 }
 
-plot_transmission_risk_sex_source_by_round <- function(transmission_risk_sex_source_round, outdir){
+plot_transmission_risk_age_source <- function(transmission_risk_age_source, outdir){
   
-  tmp <- copy(transmission_risk_sex_source_round)
-  tmp[, SEX := substr(LABEL_DIRECTION, 1, 1) ]
+  tmp <- copy(transmission_risk_age_source)
+  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' source')]
   
-  p <- ggplot(tmp, aes(x = ROUND)) + 
-    geom_bar(aes(y = M, fill = SEX), stat = 'identity', position = "identity") + 
-    geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.2, col = 'grey40') + 
-    labs(x = '', y = 'Exerted transmission risk per year', 
-         col = '', alpha = '', fill ='') + 
-    theme_bw() +
-    facet_grid(LABEL_COMMUNITY~SEX, scale = 'free')+
-    scale_fill_manual(values = c('M'='royalblue3','F'='deeppink2')) + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)),
-          legend.position = 'bottom') +
-    guides(alpha = 'none')
-  ggsave(p, file = paste0(outdir, '-output-', 'transmisison_risk', '_sex_byround.png'), w = 6, h = 7)
+  tmp2 <- tmp[round == min(round)]
+  tmp2[, type := paste0('In ', gsub('\n', '', LABEL_ROUND))]
+  tmp2 <- select(tmp2, -LABEL_ROUND)
+  tmp2[, AGE_TRANSMISSION.SOURCE:= AGE_TRANSMISSION.SOURCE - 0.5] # account for the step function
+  tmp22 <- copy(tmp2[AGE_TRANSMISSION.SOURCE == max(AGE_TRANSMISSION.SOURCE)])
+  tmp22[, AGE_TRANSMISSION.SOURCE := AGE_TRANSMISSION.SOURCE + 1]
+  tmp2 <- rbind(tmp2, tmp22)
   
-}
-
-
-plot_transmission_risk_age_source_by_round <- function(transmission_risk_round, outdir){
-  
-  tmp <- copy(transmission_risk_round)
-  tmp[, SEX := substr(LABEL_DIRECTION, 1, 1) ]
-  
-  communities <- transmission_risk_round[, unique(COMM)]
+  communities <- tmp[, unique(COMM)]
   
   for(i in seq_along(communities)){
     
-    tmp1 <- tmp[ COMM == communities[i] & AGE_INFECTION.RECIPIENT %in% c(25, 35, 45)]
-    tmp1[, `Age recipient` := AGE_INFECTION.RECIPIENT]
-
-    p <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE)) + 
-      geom_line(aes(y = M, col = SEX)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX), alpha = 0.5 ) + 
-      labs(x = 'Age source', y = 'Exerted transmission risk per year', 
-           col = '',  fill ='') + 
+    tmp.p <- tmp[COMM == communities[i]]
+    tmp2.p <- tmp2[COMM == communities[i]]
+    
+    p <- ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) + 
+      geom_bar(aes(y = M,fill = SEX), stat = 'identity', position = "identity") + 
+      geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.5, col = 'grey40') + 
+      geom_step(data = tmp2.p, aes(y = M, color = type), linetype = 'solid') + 
+      labs(x = 'Age of the source', y = 'Transmission risk exerted per unsuppressed per year') + 
       theme_bw() +
-      facet_grid(`Age recipient`~ROUND, scale = 'free', label = 'label_both')+
-      scale_fill_manual(values = c('M'='royalblue3','F'='deeppink2')) + 
-      scale_color_manual(values = c('M'='royalblue3','F'='deeppink2')) + 
+      facet_grid(LABEL_ROUND~SEX)+
+      scale_color_manual(values = c('#FF4949')) + 
+      scale_fill_manual(values = c('Male source'='lightblue3','Female source'='lightpink1')) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggtitle(tmp[ COMM == communities[i], unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-', 'transmisison_risk', '_age_byround_',  communities[i], '.png'), w = 9, h = 7)
+            legend.position = 'bottom', 
+            legend.title = element_blank()) + 
+      scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
+      guides(fill = 'none')
+    
+    ggsave(p, file = paste0(outdir, '-output-', 'transmission_risk_age_', communities[i], '.png'), w = 8, h = 9)
+    
   }
+}
+
+
+plot_transmission_risk_sex_source <- function(transmission_risk_sex_source_round, outdir){
+  
+  tmp <- copy(transmission_risk_sex_source_round)
+  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' source')  ]
+  
+  p <- ggplot(tmp, aes(x = LABEL_ROUND)) + 
+    geom_bar(aes(y = M, fill = SEX), stat = 'identity', position = "identity") + 
+    geom_errorbar(aes(ymin = CL, ymax = CU), width = 0.2, col = 'grey40') + 
+    labs(x = '', y = 'Transmission risk per unsuppressed per year', 
+         col = '', alpha = '', fill ='') + 
+    theme_bw() +
+    facet_grid(SEX~LABEL_COMMUNITY, scale = 'free_x')+
+    scale_fill_manual(values = c('Male source'='lightblue3','Female source'='lightpink1')) + 
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          legend.position = 'none', 
+          axis.text.x = element_text(angle = 40, hjust = 1),
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank()) +
+    guides(alpha = 'none') + 
+    scale_y_continuous(expand = expansion(mult = c(0, .05)))
+  ggsave(p, file = paste0(outdir, '-output-', 'transmission_risk', '_sex.png'), w = 8, h = 6.5)
   
 }
+
 
 
 plot_median_age_source <- function(median_age_source, outdir){
   
-  cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
-  
   p <- ggplot(median_age_source) + 
-    geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = PERIOD)) + 
-    geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = PERIOD), alpha = 0.15) + 
+    geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = ROUND)) + 
+    geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = ROUND), alpha = 0.15) + 
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
     theme_bw() + 
     labs(x = 'Age at infection recipient', y = 'Median age at transmission source') +
@@ -686,56 +703,12 @@ plot_median_age_source <- function(median_age_source, outdir){
   
 }
 
-plot_PPC_augmented_recipient <- function(predict_z, incidence_cases_recipient, susceptible_recipient, outdir){
-  
-  predict_z <- merge(predict_z, incidence_cases_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, INDEX_TIME, AGE_INFECTION.RECIPIENT, INCIDENT_CASES, INCIDENT_CASES_UB, INCIDENT_CASES_LB)], 
-                     by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'))
-  predict_z <- merge(predict_z, susceptible_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, INDEX_TIME, AGE_INFECTION.RECIPIENT, SUSCEPTIBLE)], 
-                     by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'))
-  
-  communities <- predict_z[, unique(COMM)]
-  for(i in seq_along(communities)){
-    
-    tmp <- predict_z[ COMM == communities[i]]
 
-    p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
-      geom_line(aes(y = M)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU), alpha = 0.5) + 
-      geom_point(aes(y = INCIDENT_CASES), col = 'darkred') +
-      geom_errorbar(aes(ymax = INCIDENT_CASES_UB, ymin = INCIDENT_CASES_LB), col = 'darkred', width = 0.2) +
-      theme_bw() + 
-      labs(x = 'Age at infection recipient', y = 'Incidence data') +
-      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
-      facet_grid(LABEL_DIRECTION~PERIOD) + 
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_recipient_', communities[i], '.png'), w = 7, h = 7)
-    
-    p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
-      geom_line(aes(y = M/(PERIOD_SPAN*SUSCEPTIBLE))) +
-      geom_ribbon(aes(ymin = CL/(PERIOD_SPAN*SUSCEPTIBLE), ymax = CU/(PERIOD_SPAN*SUSCEPTIBLE)), alpha = 0.5) +
-      geom_point(aes(y = INCIDENT_CASES/(PERIOD_SPAN*SUSCEPTIBLE)), col = 'darkred') +
-      geom_errorbar(aes(ymax = INCIDENT_CASES_UB/(PERIOD_SPAN*SUSCEPTIBLE), ymin = INCIDENT_CASES_LB/(PERIOD_SPAN*SUSCEPTIBLE)), col = 'darkred', width = 0.2) +
-      theme_bw() + 
-      labs(x = 'Age at infection recipient', y = 'Incidence data per PY') +
-      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
-      facet_grid(LABEL_DIRECTION~PERIOD) + 
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            legend.position = 'bottom') +
-      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_perPY_recipient_', communities[i], '.png'), w = 7, h = 7)
-  }
+plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incidence_cases_recipient_round, susceptible_recipient_count, outdir){
   
-}
-
-plot_PPC_augmented_recipient_round <- function(predict_z, incidence_cases_recipient, susceptible_recipient, outdir){
-  
-  predict_z <- merge(predict_z, incidence_cases_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, ROUND_SPANYRS, AGE_INFECTION.RECIPIENT, INCIDENT_CASES, INCIDENT_CASES_UB, INCIDENT_CASES_LB)], 
+  predict_z <- merge(predict_z_recipient_round, incidence_cases_recipient_round[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, INCIDENT_CASES, INCIDENT_CASES_UB, INCIDENT_CASES_LB)], 
                      by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'))
-  predict_z <- merge(predict_z, susceptible_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, SUSCEPTIBLE)], 
+  predict_z <- merge(predict_z, susceptible_recipient_count[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, SUSCEPTIBLE)], 
                      by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'))
   
   communities <- predict_z[, unique(COMM)]
@@ -865,7 +838,7 @@ plot_observed_to_augmented <- function(predict_y, predict_z, unsuppressed_count,
       geom_line(aes(y = M/(count*PERIOD_SPAN), col = type)) + 
       geom_ribbon(aes(ymin = CL/(count*PERIOD_SPAN), ymax = CU/(count*PERIOD_SPAN), fill = type), alpha = 0.5) + 
       theme_bw() + 
-      labs(x = 'Age at transmission', y = 'Transmission events per PY') +
+      labs(x = 'Age at transmission', y = 'Transmission events per unsuppressed per year') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
       facet_grid(LABEL_DIRECTION~PERIOD) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
@@ -876,3 +849,5 @@ plot_observed_to_augmented <- function(predict_y, predict_z, unsuppressed_count,
   }
   
 }
+
+

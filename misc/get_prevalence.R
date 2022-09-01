@@ -32,17 +32,22 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 hiv <- as.data.table(read.csv(file.path.hiv))
 quest <- as.data.table(read.csv(file.path.quest))
 
+if(0){ # check percentage with hiv tests
+  
+  for(Round in hiv[, sort(unique(round))]){
+    hiv_n <- hiv[round == Round, length(unique(study_id))]
+    participant_n <- quest[round == gsub(' ', '', Round), length(unique(study_id))]
+    cat('There is ', participant_n, 'participants in round', Round, ', ')
+    cat(hiv_n, 'of them have an hiv test result (', round(hiv_n  / participant_n, 4), '%)\n')
+  }
+  
+}
+
 # keep variable of interest
 rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, intdate)]
 
 # Set to date format
 rin[, intdate := as.Date(intdate, format = '%d-%b-%y')]
-
-# keep only first round
-rin <- rin[, list(intdate = min(intdate),
-                  round = round[intdate == min(intdate)][1],
-                  ageyrs = ageyrs[intdate == min(intdate)][1],
-                  comm_num = comm_num[intdate == min(intdate)][1]), by = c('study_id', 'sex')]
 
 # find  community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
@@ -71,98 +76,28 @@ if(0){
   tmp[, Negative := TOTAL_COUNT - COUNT] 
   setnames(tmp, 'COUNT', 'Positive')
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'COMM', 'SEX', 'AGEYRS', 'TOTAL_COUNT'))
+  tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
+  tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
+  tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+  tmp[, SEX_LABEL := 'Female']
+  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, COMM_LABEL := 'Fishing\n communities']
+  tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
   # plot
   p <- ggplot(tmp, aes(x = AGEYRS, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'age at visit (years)', y = 'Count participants') +
-    theme_bw() + 
-    facet_grid(ROUND~SEX+COMM) 
-  ggsave(p, file=file.path(outdir, paste0('HIV_count_participants_by_gender_loc_age.png')), w=10, h=9)
+    labs(x = 'Age', y = 'Count participants', fill = 'HIV status') +
+    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+    theme_bw() +
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)))
+  ggsave(p, file=file.path(outdir, paste0('count_participants_by_gender_loc_age.png')), w=8, h=9)
   
 }
 
 
-###################################
-
-# HIV TESTS USING ALLPCR DATA SET #
-
-###################################
-
-# Load data using 
-# Quest_R015_R020_VOIs_May062022.csv and Allpcr_data_for_R015_R020_study_ids.xlsx to find positive test
-# R016_R020_Data_for_HIVnegatives.csv to find negative test
-# (https://github.com/abriz97/longi_viral_loads/blob/main/scripts/process_data.R)
-dall <- fread(path.tests)
-dall <- dall[ROUND %in% 15:18]
-
-# remove one unknwon sex
-dall <- dall[! SEX=='']
-
-# keep within census eligible age
-DT <- dall[AGEYRS > 14 & AGEYRS < 50]
-
-# get count for every categories
-tmp <- seq.int(min(DT$AGEYRS), max(DT$AGEYRS))
-tmp1 <- DT[, sort(unique(ROUND))]
-vla <- as.data.table(expand.grid(ROUND=tmp1,
-                                 COMM=c('fishing','inland'),
-                                 SEX=c('M','F'),
-                                 AGEYRS=tmp))
-vla <- vla[, {		
-  z <- which(DT$ROUND==ROUND & DT$COMM==COMM & DT$SEX==SEX & DT$AGEYRS==AGEYRS)	
-  list(TOTAL_COUNT          = length(z), # number of participants
-       COUNT      = sum(DT$HIV_STATUS[z]==1) # number of HIV+
-  )				
-}, by=names(vla)]
-
-vla[, ROUND := paste0('R0', ROUND)]
-
-# plot
-if(0){
-  
-  tmp <- copy(vla)
-  tmp[, Negative := TOTAL_COUNT - COUNT] 
-  setnames(tmp, 'COUNT', 'Positive')
-  tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'COMM', 'SEX', 'AGEYRS', 'TOTAL_COUNT'))
-  
-  # plot
-  p <- ggplot(tmp, aes(x = AGEYRS, y = value)) +
-    geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'age at visit (years)', y = 'Count participants') +
-    theme_bw() + 
-    facet_grid(ROUND~SEX+COMM) 
-  ggsave(p, file=file.path(outdir, paste0('AllPCR_count_participants_by_gender_loc_age.png')), w=10, h=9)
-  
-}
-
-#####################################
-
-# HIV TESTS COMBINING BOTH DATA SETS #
-
-#####################################
-
-# We use the hiv dataset for round 15 and the allpcr and quest datasets for round 16 to 18. 
-prev <- rbind(rprev[ROUND == 'R015'], vla[ROUND %in% c('R016', 'R017', 'R018')])
-
-# plot
-if(0){
-  
-  tmp <- copy(prev)
-  tmp[, Negative := TOTAL_COUNT - COUNT] 
-  setnames(tmp, 'COUNT', 'Positive')
-  tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'COMM', 'SEX', 'AGEYRS', 'TOTAL_COUNT'))
-  
-  # plot
-  p <- ggplot(tmp, aes(x = AGEYRS, y = value)) +
-    geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'age at visit (years)', y = 'Count participants') +
-    theme_bw() + 
-    facet_grid(ROUND~SEX+COMM) 
-  ggsave(p, file=file.path(outdir, paste0('count_participants_by_gender_loc_age.png')), w=10, h=9)
-  
-}
-  
 
 ########################
 
@@ -170,116 +105,127 @@ if(0){
 
 ########################
 
-setnames(prev, c('COMM','SEX','AGEYRS'), c('LOC_LABEL','SEX_LABEL','AGE_LABEL'))
-prev[, LOC:= as.integer(LOC_LABEL=='fishing')]
-prev[, SEX:= as.integer(SEX_LABEL=='M')]
-prev[, AGE:= AGE_LABEL-14L]
-prev[, ROW_ID:= seq_len(nrow(prev))]
+setnames(rprev, c('COMM','SEX','AGEYRS'), c('LOC_LABEL','SEX_LABEL','AGE_LABEL'))
+rprev[, LOC:= as.integer(LOC_LABEL=='fishing')]
+rprev[, SEX:= as.integer(SEX_LABEL=='M')]
+rprev[, AGE:= AGE_LABEL-14L]
+rprev[, ROW_ID:= seq_len(nrow(rprev))]
 
 # find empirical proportions
-prev[, EMPIRICAL_PREVALENCE := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# prevalence
+rprev[, EMPIRICAL_PREVALENCE := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# prevalence
 
-
-if(0){
+# find smooth proportion
+for(round in c("R015", "R016", "R017", "R018", "R015S")){
+  # round <- 'R015S'
   
-  for(round in 15:18){
-    round <- 15
-    # round <- 16
-    # round <- 17
-    # round <- 18
-    
-    DT <- copy(prev[ROUND == paste0('R0', round)] )
-    DT <- DT[order(SEX, LOC, AGE_LABEL)]
-    
-    stopifnot(length(round) == 1)
-    cat('Fitting stan model for round ', round, '\n')
-    
-    # predicts age 
-    x_predict <- seq(prev[, min(AGE_LABEL)], prev[, max(AGE_LABEL)+1], 0.5)
-    
-    # make stan data
-    stan.data <- list(
-      x_predict = x_predict,
-      y_observed_00 = DT[SEX==0 & LOC==0, COUNT],
-      y_observed_10 = DT[SEX==1 & LOC==0, COUNT],
-      y_observed_01 = DT[SEX==0 & LOC==1, COUNT],
-      y_observed_11 = DT[SEX==1 & LOC==1, COUNT],
-      total_observed_00 = DT[SEX==0 & LOC==0, TOTAL_COUNT],
-      total_observed_10 = DT[SEX==1 & LOC==0, TOTAL_COUNT],
-      total_observed_01 = DT[SEX==0 & LOC==1, TOTAL_COUNT],
-      total_observed_11 = DT[SEX==1 & LOC==1, TOTAL_COUNT],
-      alpha_hyper_par_00 = 2,
-      alpha_hyper_par_10 = 2,
-      alpha_hyper_par_01 = 2,
-      alpha_hyper_par_11 = 2
-    )
-    stan.data$N_predict <- length(stan.data$x_predict)
-    stan.data$observed_idx <- which(stan.data$x_predict%%1==0.5)
-    stan.data$N_observed <- length(stan.data$observed_idx)
-    stan.data$rho_hyper_par_00 <- diff(range(stan.data$x_predict))/3
-    stan.data$rho_hyper_par_10 <- diff(range(stan.data$x_predict))/3
-    stan.data$rho_hyper_par_01 <- diff(range(stan.data$x_predict))/3
-    stan.data$rho_hyper_par_11 <- diff(range(stan.data$x_predict))/3
-    
-    # load stan model
-    stan.model <- stan_model(path.stan, model_name='gp_all')	
-    
-    # run and save model
-    fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-    filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220729.rds')
-    saveRDS(fit, file=file.path(outdir,filename))
-    # fit <- readRDS(file.path(outdir,filename))
-    
-  }
+  DT <- copy(rprev[ROUND == round] )
+  DT <- DT[order(SEX, LOC, AGE_LABEL)]
+  
+  stopifnot(length(round) == 1)
+  cat('Fitting stan model for round ', round, '\n')
+  
+  # predicts age 
+  x_predict <- seq(rprev[, min(AGE_LABEL)], rprev[, max(AGE_LABEL)+1], 0.5)
+  
+  # make stan data
+  stan.data <- list(
+    x_predict = x_predict,
+    y_observed_00 = DT[SEX==0 & LOC==0, COUNT],
+    y_observed_10 = DT[SEX==1 & LOC==0, COUNT],
+    y_observed_01 = DT[SEX==0 & LOC==1, COUNT],
+    y_observed_11 = DT[SEX==1 & LOC==1, COUNT],
+    total_observed_00 = DT[SEX==0 & LOC==0, TOTAL_COUNT],
+    total_observed_10 = DT[SEX==1 & LOC==0, TOTAL_COUNT],
+    total_observed_01 = DT[SEX==0 & LOC==1, TOTAL_COUNT],
+    total_observed_11 = DT[SEX==1 & LOC==1, TOTAL_COUNT],
+    alpha_hyper_par_00 = 2,
+    alpha_hyper_par_10 = 2,
+    alpha_hyper_par_01 = 2,
+    alpha_hyper_par_11 = 2
+  )
+  stan.data$N_predict <- length(stan.data$x_predict)
+  stan.data$observed_idx <- which(stan.data$x_predict%%1==0.5)
+  stan.data$N_observed <- length(stan.data$observed_idx)
+  stan.data$rho_hyper_par_00 <- diff(range(stan.data$x_predict))/3
+  stan.data$rho_hyper_par_10 <- diff(range(stan.data$x_predict))/3
+  stan.data$rho_hyper_par_01 <- diff(range(stan.data$x_predict))/3
+  stan.data$rho_hyper_par_11 <- diff(range(stan.data$x_predict))/3
+  
+  # load stan model
+  stan.model <- stan_model(path.stan, model_name='gp_all')	
+  
+  # run and save model
+  fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
+  filename <- paste0('hivprevalence_gp_stanfit_round',gsub('R0', '', round),'_220808.rds')
+  saveRDS(fit, file=file.path(outdir,filename))
+  # fit <- readRDS(file.path(outdir,filename))
+  
 }
 
-
 # load results 
-rounds <- 15:18
+rounds <- c(15, '15S', 16:18)
 nsinf <- vector(mode = 'list', length = length(rounds))
+nsinf.samples <- vector(mode = 'list', length = length(rounds))
 for(i in seq_along(rounds)){
   
   round <- rounds[i]
-  DT <- copy(prev[ROUND == paste0('R0', round)] )
+  DT <- copy(rprev[ROUND == paste0('R0', round)] )
   
   # predicts age 
-  x_predict <- seq(prev[, min(AGE_LABEL)], prev[, max(AGE_LABEL)+1], 0.5)
-  if(round %in% 16:18){
-    x_predict <- seq(15, 51, 0.5)
-  }
+  x_predict <- seq(rprev[, min(AGE_LABEL)], rprev[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220729.rds')
+  filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220808.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
-  #	summarise
+  #
+  #	summarise prevalence by sex and age
   ps <- c(0.025,0.5,0.975)
   qlab <- c('CL','M','CU')
-  tmp <- cbind(apply(re$p_predict_00, 2, quantile, probs=ps),
-               apply(re$p_predict_10, 2, quantile, probs=ps),
-               apply(re$p_predict_01, 2, quantile, probs=ps),
-               apply(re$p_predict_11, 2, quantile, probs=ps))
-  rownames(tmp) <- qlab
-  tmp <- as.data.table(reshape2::melt(tmp))
-  nsinf.by.age <- dcast.data.table(tmp, Var2~Var1, value.var='value')
-  tmp <- as.data.table(expand.grid(AGE_LABEL=x_predict, SEX=c(0,1), LOC=c(0,1)))
-  nsinf.by.age <- cbind(tmp, nsinf.by.age) 
+  tmp <- as.data.table(reshape2::melt(re$p_predict_00))
+  tmp[, `:=` (SEX = 0, LOC = 0)]
+  tmp1 <- as.data.table(reshape2::melt(re$p_predict_10))
+  tmp1[, `:=` (SEX = 1, LOC = 0)]
+  tmp <- rbind(tmp, tmp1)
+  tmp1 <- as.data.table(reshape2::melt(re$p_predict_01))
+  tmp1[, `:=` (SEX = 0, LOC = 1)]
+  tmp <- rbind(tmp, tmp1)
+  tmp1 <- as.data.table(reshape2::melt(re$p_predict_11))
+  tmp1[, `:=` (SEX = 1, LOC = 1)]
+  tmp <- rbind(tmp, tmp1)
+
+  tmp[, AGE_LABEL := x_predict[Var2]]
+
+  nsinf.by.age = tmp[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
+  nsinf.by.age = as.data.table(reshape2::dcast(nsinf.by.age, ... ~ q_label, value.var = "q"))
+
+  # merge 
   nsinf.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_PREVALENCE)), nsinf.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
-  
+  nsinf.samples.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_PREVALENCE)), tmp, by=c('SEX','LOC', 'AGE_LABEL'))
+
   # load change of var name
   set(nsinf.by.age, NULL, 'SEX', NULL)
   set(nsinf.by.age, NULL, 'LOC', NULL)
-  set(nsinf.by.age, NULL, 'Var2', NULL)
   setnames(nsinf.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'M', "CL", "CU"), 
            c('COMM', 'SEX', 'AGEYRS', 'PREVALENCE_M', 'PREVALENCE_CL', 'PREVALENCE_CU'))
-  # nsinf.by.age[, ROUND := paste0('R0', round)]
-  
   nsinf.by.age[, ROUND := paste0('R0', round)]
+
+  # load change of var name
+  set(nsinf.samples.by.age, NULL, 'SEX', NULL)
+  set(nsinf.samples.by.age, NULL, 'LOC', NULL)
+  set(nsinf.samples.by.age, NULL, 'Var2', NULL)
+  setnames(nsinf.samples.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'value'),
+           c('COMM', 'SEX', 'AGEYRS', 'PREVALENCE_POSTERIOR_SAMPLE'))
+  nsinf.samples.by.age[, ROUND := paste0('R0', round)]
+
   # keep
   nsinf[[i]] <- nsinf.by.age
+  nsinf.samples[[i]] <- nsinf.samples.by.age
 }
+
 nsinf <- do.call('rbind', nsinf)
+nsinf.samples <- do.call('rbind', nsinf.samples)
 
 
 #########
@@ -288,12 +234,26 @@ nsinf <- do.call('rbind', nsinf)
 
 #########
 
-ggplot(nsinf, aes(x = AGEYRS)) + 
+tmp <- copy(nsinf)
+tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
+tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
+tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+tmp[, SEX_LABEL := 'Female']
+tmp[SEX== 'M', SEX_LABEL := 'Male']
+tmp[, COMM_LABEL := 'Fishing\n communities']
+tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
+ggplot(tmp, aes(x = AGEYRS)) + 
+  geom_point(aes(y = EMPIRICAL_PREVALENCE), alpha = 0.5, col = 'darkred') + 
   geom_line(aes(y = PREVALENCE_M)) + 
   geom_ribbon(aes(ymin = PREVALENCE_CL, ymax = PREVALENCE_CU), alpha = 0.5) + 
-  geom_point(aes(y = EMPIRICAL_PREVALENCE), alpha = 0.5, col = 'darkred') + 
-  facet_grid(ROUND~COMM+SEX) + 
-  theme_bw()
+  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+  theme_bw() +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white"),
+        strip.text = element_text(size = rel(1))) + 
+  labs(x = 'Age', y = 'Prevalence among participants')
+ggsave(file=file.path(outdir, paste0('smooth_prevalence.png')), w=8, h=9)
+
 
 
 #########
@@ -301,6 +261,10 @@ ggplot(nsinf, aes(x = AGEYRS)) +
 # SAVE #
 
 #########
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_estimates_220805.csv'))
+
+file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_estimates_220811.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
+
+file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
+write.csv(nsinf.samples, file = file.name, row.names = F)
 
