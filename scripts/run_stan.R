@@ -20,7 +20,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220901a'
+  stan_model <- 'gp_220902a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -140,7 +140,7 @@ start_observational_period_inland <- df_round_inland[round == 'R014', min_sample
 stop_observational_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
 
 start_observational_period_fishing <- start_observational_period_inland #"2010-01-20" 
-stop_observational_period_fishing <- df_round_inland[round == 'R018', max_sample_date] #  "2017-08-14"
+stop_observational_period_fishing <- df_round_fishing[round == 'R018', max_sample_date] #  "2017-08-14"
 
 cutoff_date <- df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
 
