@@ -33,10 +33,12 @@ make.date.first.positive <- function(allhiv)
 {
   
   # Check whether there are hidden NAs 
-  stopifnot(allhiv[nchar(as.character(date_coll)) != 9, .N == 0])
-  allhiv[nchar(as.character(firstpos_diagnosis_dt)) != 9, firstpos_diagnosis_dt := NA]
-  allhiv[nchar(as.character(lastnegvd)) != 9, lastnegvd := NA]
-  cols <- c('visitno','copies', 'new_copies', 'rct', 'lastnegv', 'lastnegvd', 'firstpos_diagnosis_vis')
+  .f <- as.function(x) nchar(as.character(x)) != 9 
+  stopifnot(allhiv[.f(date_coll) , .N == 0])
+  allhiv[.f(firstpos_diagnosis_dt) , firstpos_diagnosis_dt := NA]
+  allhiv[.f(lastnegvd) , lastnegvd := NA]
+  cols <- c('visitno','copies', 'new_copies', 'rct', 
+            'lastnegv', 'lastnegvd', 'firstpos_diagnosis_vis')
   allhiv[, (cols):=lapply(.SD, .remove.spaces), .SDcols = cols]
   
   # Format dates
@@ -53,7 +55,9 @@ make.date.first.positive <- function(allhiv)
   cat("- these had visit rounds in ", allhiv[study_id %in% tmp, paste0(unique(visitno), collapse = ', ')], '\n')
   
   # rename
-  setnames(allhiv, c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis', 'lastnegvd'), c('date_first_positive', 'visit_first_positive', 'date_last_negative'))
+  setnames(allhiv,
+           c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis', 'lastnegvd'),
+           c('date_first_positive', 'visit_first_positive', 'date_last_negative'))
   
   # NAs in each col
   print.which.NA(allhiv, 'allhiv')
