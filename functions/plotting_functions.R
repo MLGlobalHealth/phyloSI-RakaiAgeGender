@@ -1087,6 +1087,158 @@ plot_pairs <- function(pairs, outdir){
   
 } 
 
+plot.coherent.tsi.estimates.with.seroconversion <- function()
+{
+        tmp <- meta_data[!is.na(date_infection)]
+        cols <- grep('study_id|age|date', names(tmp), value=TRUE)
+        tmp <- tmp[, ..cols]
 
+        # Age collection does not strongly contradict age_first_positive, good
+        tmp[ age_collection - age_first_positive < - 0.1]
 
+        # Get visit date used to obtain estimate
+        tmp <- merge(tmp, time.since.infection[, .(study_id, visit_dt)], by='study_id')
+        cols <- c('visit_dt', 'date_infection')
+        tmp[, (cols):=lapply(.SD,as.Date) , .SDcols=cols]
+        tmp <- melt(tmp, measure.vars=c('visit_dt', 'date_infection'), value.name = "date")
+        tmp[, variable:=fifelse(variable %like% 'visit', 'Collection date', 'Infection date')]
 
+        idx <- tmp[!is.na(date_first_positive) & !is.na(date_last_negative) & !is.na(date), study_id]
+
+        # study_id as.factor to set an order 
+        tmp[, validity := fcase(
+                           variable == 'Collection date', 'NA',
+                           date <= date_first_positive & date >= date_last_negative, 'Coherent', 
+                           rep(TRUE, .N), 'Incoherent'
+        )] 
+        
+        tmp1 <- tmp[variable == 'Collection date', ] 
+        setkey(tmp1, date)
+        tmp1 <- tmp[, study_id := factor(study_id, levels=unique(tmp1$study_id), ordered=TRUE)]
+        tmp1 <- tmp1[study_id %in% idx]
+        .p <- function(x) paste0(round(x*100, 2), '%')
+        lab <- tmp1[validity != 'NA', mean(validity=='Coherent')]
+        lab <- paste0('\n\tCoherent predictions:\n\t',.p(lab))
+
+        g <- ggplot(tmp1, aes(y=study_id, group=study_id)) +
+                geom_segment(aes(x=date_last_negative, xend=date_first_positive, yend=study_id, linetype='seroconversion interval'), color='grey80') +
+                geom_point(aes(x=date, pch=variable, color=validity)) +
+                geom_text(aes(x=as.Date(-Inf), y=+Inf, label=lab), vjust=1, hjust=0) +
+                scale_color_manual(values = c('green', 'red', 'blue'))+
+                scale_x_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
+                theme_bw() +
+                theme(legend.position='bottom',
+                      axis.text.x=element_text(angle=45, vjust=1, hjust=1),
+                      axis.text.y=element_blank(),
+                      axis.ticks.y=element_blank()) +
+                labs(y='participants', x='', linetype='', pch='') 
+        
+        if(!is.null(outdir))
+                ggsave(g, filename = paste0(outdir, '-TSI_all_seroconverters.png'), w = 10, h = 15)
+
+        # Coherence vs time difference between first positive and collection
+        # get time difference
+        tmp2 <- tmp1[, {
+                z <- date[variable == 'Collection date']
+                z1 <- z - date_first_positive 
+                list(validity, deltaT=as.integer(z1))
+                }, by='study_id'][validity != 'NA'] 
+        tmp2 <- unique(tmp2)
+
+        tmp2[, as.data.table(table(validity)), by=deltaT==0]
+
+        # transform variable to wanted formats
+        tmp2[, validity2 := fifelse(validity == 'Coherent', 1, 0)]
+
+        # group together by time difference
+        setkey(tmp2, deltaT)
+        idx <- which(tmp2[, diff(deltaT) > 200])
+        idx <- c(-1, tmp2$deltaT[idx], max(tmp2$deltaT))
+
+        # compute binomial p estimates 
+        tmp2[, deltaT2 := cut(tmp2$deltaT, idx) ]
+        cols <- c('M', 'CL', 'CU')
+        tmp2[, (cols) := 
+             Hmisc::binconf(sum(validity2), .N, return.df=TRUE),
+             by=deltaT2]
+        tmp2[, midpoint2 := median(deltaT), by=deltaT2]
+
+        # plot: Coherency drops with increasing time distance
+        p <- ggplot(tmp2, aes(y=validity2, x=deltaT/365, col=deltaT2)) + 
+                geom_jitter(pch='X', height=.01, width=0.02) +
+                geom_point(data=tmp2[midpoint2 < 13 * 365],
+                           aes(x=midpoint2/365, y=M), pch='triangle', size=3) +
+                geom_linerange(data=tmp2[midpoint2 < 13 * 365],
+                               aes(x=midpoint2/365, ymin=CL, ymax=CU)) +
+                theme_bw() +
+                theme(legend.position='none') +
+                labs(
+                     x= 'years between date of first positive test and sample collection (for TSI purposes)',
+                     y='Proportion of TSI estimates in seroconversion interval',
+                     title='Estimate Coherency drops as sample collection is delayed'
+                )
+
+        if(!is.null(outdir))
+                ggsave(p, filename = paste0(outdir, '-TSI_vs_difftime_since_collection.png'), w = 10, h = 10)
+
+}
+
+plot.tsi.relationships.among.source.recipient.pairs <- function()
+{
+        cols <- grep('AID|DATE_INFECTION',names(pairs.all), value=TRUE)
+        tmp <- pairs.all[, ..cols] 
+        # tmp[, uniqueN(.SD) == .N]
+        lab <- tmp[, round(mean(DATE_INFECTION.SOURCE < DATE_INFECTION.RECIPIENT) * 100, 2)]
+        lab <- data.table(lab = paste0('\n\tCoherent dates of infection:\n\t', lab, '%'))
+
+        # TSI are quite bad:
+        # in 69% of the cases, we expect the source to have been infected AFTER the recipient
+        p <- ggplot(tmp, aes(x=DATE_INFECTION.SOURCE, y=DATE_INFECTION.RECIPIENT)) +
+                geom_abline(slope=1, color='red', linetype='dashed') +
+                geom_point() +
+                geom_text(data=lab, aes(label=lab, x=as.Date(-Inf), y=as.Date(Inf), hjust=0, vjust=1)) +
+                scale_x_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
+                scale_y_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
+                theme_bw() +
+                theme(legend.position='bottom',
+                      axis.text.x=element_text(angle=45, vjust=1, hjust=1)) +
+                labs(x='Source',
+                     y='Recipient',
+                     linetype='', pch='',
+                     title='Transmission pairs: estimated dates of infection') 
+
+        file = paste0(outdir, '-tsi-source_vs_recipient_from_HIVphyloTSI.png')
+        ggsave(p, file = file, w = 10, h = 10)
+
+        # However, is this partially due to very unlikely transmission pairs? 
+        .p <- function(x) round(100*x, 2)
+        .f <- function(x) paste0( sum(x), "/", length(x), " (",  .p(mean(x)), "%)")
+
+        cols <- grep('AID|DATE_FIRST_POSITIVE.RECIPIENT|DATE_LAST_NEGATIVE.SOURCE',
+                     names(pairs.all), value=TRUE)
+        tmp <- pairs.all[, ..cols]
+        lab0 <- tmp[, paste0(.f(!is.na(DATE_LAST_NEGATIVE.SOURCE)), 'of date-last-negative for sources are defined\n')] 
+        lab1 <- tmp[ !is.na(DATE_LAST_NEGATIVE.SOURCE),
+            paste0('Of these:\n',
+                .f(DATE_FIRST_POSITIVE.RECIPIENT < DATE_LAST_NEGATIVE.SOURCE),
+                ', are incoherent in the sense that the source supposedely got infected after the recipient.\n')]
+        cat(lab0)
+        lab <- data.table(lab=paste0(lab0, gsub('source', 'source\n',lab1)))
+        .f <- function(x) as.Date(x)
+        p <- ggplot(tmp, aes(x=DATE_LAST_NEGATIVE.SOURCE, y=DATE_FIRST_POSITIVE.RECIPIENT)) +
+                geom_abline(slope=1, color='red', linetype='dashed') +
+                geom_point() +
+                geom_text(data=lab, aes(label=lab, x=.f('2003-01-01'), y=.f(-Inf), hjust='left', vjust=0)) +
+                scale_x_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
+                scale_y_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
+                theme_bw() +
+                theme(legend.position='bottom',
+                      axis.text.x=element_text(angle=45, vjust=1, hjust=1)) +
+                labs(x='Source: date of last negative test',
+                     y='Recipient: date of first postive test',
+                     linetype='', pch='',
+                     title='Transmission pairs: seroconversion date from interview data') 
+        p
+        file = paste0(outdir, '-tsi-source_vs_recipient_from_interviewdata.png')
+        ggsave(p, file = file, w = 8, h = 10)
+}

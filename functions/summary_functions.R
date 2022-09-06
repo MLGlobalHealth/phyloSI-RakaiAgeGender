@@ -1,4 +1,5 @@
-keep.likely.transmission.pairs <- function(dchain, threshold){
+keep.likely.transmission.pairs <- function(dchain, threshold)
+{
   
   dchain <- dchain[SCORE_LINKED>threshold]
   dchain[SCORE_DIR_12 <= threshold & SCORE_DIR_21 <= threshold, EST_DIR:='unclear']
@@ -25,9 +26,35 @@ make.time.since.infection <- function(time.since.infection)
   return(time.since.infection)
 }
 
+make.time.since.infection2 <- function(DT)
+{
+        # DT <- fread(file.path.tsiestimates)
+        
+        # cols <- grep("AID|visit_dt|pred_doi|RF_pred_linear",names(DT), value=T)
+        cols <- grep("AID|visit_dt|pred_doi",names(DT), value=T)
+        tmp <- DT[, ..cols]
+        setcolorder(tmp, 'AID')
+
+        cnd <- tmp[, .N>1, by='AID'][, any(V1)]
+        if(cnd)
+        {
+                cat('Multiple samples per participant used:\n',
+                    '\textract TSI prediction from first pos sample\n')
+                setorder(tmp, AID, visit_dt)
+                tmp <- tmp[, lapply(.SD, function(x) x[1] ) , by='AID']
+        }
+
+        # Get study_id's 
+        tmp <- merge(aik[, .(study_id = PT_ID, AID)], tmp, all.y=TRUE)
+
+        setnames(tmp, 'pred_doi_mid', 'date_infection')
+        tmp
+}
+
 make.df.period <- function(start_observational_period_inland, stop_observational_period_inland, 
                            start_observational_period_fishing, stop_observational_period_fishing, 
-                           cutoff_date){
+                           cutoff_date)
+{
   
   tmp_inland <- data.table(PERIOD = c(paste0(format(start_observational_period_inland, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
                                       paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period_inland, '%b %Y'))), 
@@ -56,30 +83,33 @@ make.df.period <- function(start_observational_period_inland, stop_observational
   return(tmp)
 }
 
-find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate){
-  
-  # time.since.infection to produce age at infection and time.since.infection
+
+find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate)
+{
+
   if(use.TSI.estimate)
   {
     cat("# MAKE TSI ADJUSTMENT\n")
     tmp <- unique(meta[,.(study_id, date_birth)])
-    tmp <- merge(time.since.infection, tmp, by='study_id')
-    tmp[, age_collection := .year.diff(date_collection, date_birth)]
-    cols <- grep('TSI_estimated', colnames(tmp), value=T)
-    tmp[, `:=` (age_infection_mean = age_collection - TSI_estimated_mean,
-                age_infection_max = age_collection - TSI_estimated_min,
-                age_infection_min = age_collection - TSI_estimated_max)]
-    tmp[, (cols) := lapply(.SD, .f),.SDcols=cols]
-    setnames(tmp, 'age_infection_mean', 'age_infection')
-    tmp <- tmp[, .(study_id, age_infection)]
+    tmp <- merge(tmp, time.since.infection, by='study_id')
+
+    # Compute estimated infection ages
+    tmp[, age_collection := .year.diff(visit_dt, date_birth)]
+    tmp[, age_infection  := .year.diff(date_infection, date_birth)]
+
     
-    meta <- merge(meta, tmp, by='study_id', all.x=T) 
-    
+    meta
+    meta <- merge(meta, tmp, by=c('study_id', 'date_birth'), all.x=T) 
+
+    # Print statements
     tmp <- unique(meta[,.(study_id, age_infection)])
-    cat(tmp[, sum(!is.na(age_infection))], "TSI estimates out of", tmp[,.N], "individuals in meta data\n")
-    
-    cat(tmp[is.na(age_infection), .N], " HIV-positive individuals do not have an estimate for age at infection\n" )
-    cat(tmp[is.na(age_infection), round(mean(study_id %in% time.since.infection$study_id)*100,2)], "% of which are included in the TSI analysis and do not have sampling date\n")
+
+    cat(tmp[, sum(!is.na(age_infection))], 
+        "TSI estimates out of", tmp[,.N], "individuals in meta data\n")
+    cat(tmp[is.na(age_infection), .N],
+        " HIV-positive individuals do not have an estimate for age at infection\n" )
+    cat(tmp[is.na(age_infection), round(mean(study_id %in% time.since.infection$study_id)*100,2)],
+        "% of which are included in the TSI analysis and do not have sampling date\n")
     
   }else{
     
@@ -93,21 +123,24 @@ find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate)
     print.table(table(tmp[is.na(age_infection), round]))
   }
   
-  meta[, `:=` (date_birth = as.Date(date_birth),
-               date_first_visit = as.Date(date_first_visit),
-               date_last_visit = as.Date(date_last_visit),
-               date_first_positive = as.Date(date_first_positive))]
+  # Transform date format
+  cols <- grep("date_", names(meta), value=TRUE)
+  meta[, (cols) := lapply(.SD, as.Date) , .SDcols=cols]
   
-  meta[, date_infection := date_birth + 365*(age_infection), by = 'study_id']
+  if(! 'date_infection' %in% names(meta))
+          meta[, date_infection := date_birth + 365*(age_infection), by = 'study_id']
   
   return(meta)
 }
 
-pairs.get.meta.data <- function(chain, meta, aik){
-  
+pairs.get.meta.data <- function(chain, meta, aik)
+{
+
   # individuals without meta data
-  missing_indiv = unique(c(chain$SOURCE, chain$RECIPIENT)[!(c(chain$SOURCE, chain$RECIPIENT) %in% meta$aid)])
-  missing_indiv <- .aid2pt(missing_indiv, aik)
+  idx <- chain[, unique(c(SOURCE, RECIPIENT)) ]
+  missing_indiv <- .aid2pt(idx[! idx %in% meta$aid], aik)
+  length(missing_indiv)
+
   cat('There are ', length(missing_indiv), 'indivs without meta data:\n' )
   missing_indiv <- grep('RK-', missing_indiv, value=T)
   cat('- ', length(missing_indiv), 'of which are in the Rakai Cohort.\n')
@@ -135,13 +168,16 @@ pairs.get.meta.data <- function(chain, meta, aik){
   tmp1[, select_this_date := (diff_date_sample_transmission.SOURCE == min(diff_date_sample_transmission.SOURCE) &
          diff_date_sample_infection.RECIPIENT == min(diff_date_sample_infection.RECIPIENT)), 
        by = c('SOURCE', 'RECIPIENT')]
-  tmp1 <- tmp1[select_this_date == T]
+  # In 1 case, there are 2 dates satisfying the above equality. Take any:
+  tmp1 <- tmp1[select_this_date == T, lapply(.SD, `[[`, 1), by=c('SOURCE', 'RECIPIENT')]
+
   set(tmp1, NULL, 'select_this_date', NULL)
   set(tmp1, NULL, 'diff_date_sample_transmission.SOURCE', NULL)
   set(tmp1, NULL, 'diff_date_sample_infection.RECIPIENT', NULL)
   
   # check
   tmp2 <- chain[SOURCE %in% meta$aid & RECIPIENT %in% meta$aid]
+
   stopifnot(nrow(tmp1) == nrow(tmp2))
 
   # find age transmission source
@@ -153,7 +189,8 @@ pairs.get.meta.data <- function(chain, meta, aik){
   return(tmp1)
 }
 
-print.statements.about.pairs <- function(pairs){
+print.statements.about.pairs <- function(pairs)
+{
   
   cat('\nThere is ', nrow(pairs), ' source-recipient pairs\n\n')
   
@@ -241,7 +278,8 @@ print.statements.about.basefreq.files <- function(chain)
   return(tmp)
 }
 
-get.age.map <- function(pairs, age_bands_reduced = 4){
+get.age.map <- function(pairs, age_bands_reduced = 4)
+{
   
   extended_age_length <- 0
   
@@ -278,13 +316,15 @@ get.age.map <- function(pairs, age_bands_reduced = 4){
   return(df_age)
 }
 
-get.df.direction <- function(){
+get.df.direction <- function()
+{
   df_direction <- data.table(INDEX_DIRECTION = 1:2, IS_MF = c(0, 1))
   df_direction[, LABEL_DIRECTION := ifelse(IS_MF == 1, 'Male -> Female', 'Female -> Male')]
   df_direction
 }
 
-get.df.community <- function(){
+get.df.community <- function()
+{
     df_community <- data.table(INDEX_COMMUNITY = 1:2, COMM = c('fishing','inland'))
     df_community[, LABEL_COMMUNITY := ifelse(COMM == 'inland', 'Inland communities', 'Fishing communities')]
     df_community[, LABEL_COMMUNITY := factor(LABEL_COMMUNITY, levels = c('Inland communities', 'Fishing communities'))]
@@ -292,7 +332,8 @@ get.df.community <- function(){
   df_community
 }
 
-get.group.map <- function(stratify.by.community.recipient, df_period){
+get.group.map <- function(stratify.by.community.recipient, df_period)
+{
   
   df_direction <- data.table(INDEX_DIRECTION = 1:2, IS_MF = c(0, 1))
   df_direction[, LABEL_DIRECTION := ifelse(IS_MF == 1, 'Male -> Female', 'Female -> Male')]
@@ -300,7 +341,8 @@ get.group.map <- function(stratify.by.community.recipient, df_period){
   tmp <- data.table(INDEX_TIME = 1:2, BEFORE_CUTOFF = c(T, F))
   df_period <- merge(df_period, tmp, by = 'BEFORE_CUTOFF')
   
-  if(stratify.by.community.recipient){
+  if(stratify.by.community.recipient)
+  {
     df_community <- data.table(INDEX_COMMUNITY = 1:2, COMM = c('fishing','inland'))
     df_community[, LABEL_COMMUNITY := ifelse(COMM == 'inland', 'Inland communities', 'Fishing communities')]
   } else{
@@ -322,7 +364,8 @@ get.group.map <- function(stratify.by.community.recipient, df_period){
   return(df_group)
 }
 
-get.age.aggregated.map <- function(age_aggregated){
+get.age.aggregated.map <- function(age_aggregated)
+{
   
 
   df_age_aggregated <- data.table(expand.grid(AGE_GROUP_INFECTION.RECIPIENT = age_aggregated, AGE_GROUP_TRANSMISSION.SOURCE = age_aggregated))
@@ -344,7 +387,8 @@ get.age.aggregated.map <- function(age_aggregated){
   return(df_age_aggregated)
 }
 
-add_susceptible_infected <- function(eligible_count, proportion_prevalence){
+add_susceptible_infected <- function(eligible_count, proportion_prevalence)
+{
   
   df <- copy(proportion_prevalence)
   df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
@@ -360,7 +404,8 @@ add_susceptible_infected <- function(eligible_count, proportion_prevalence){
   return(df)
 }
 
-add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed){
+add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed)
+{
   
   # ensure that the data are data.table objects
   di <- as.data.table(eligible_count_round)
@@ -399,7 +444,8 @@ add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppres
   return(df)
 }
 
-summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, df_period){
+summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, df_period)
+{
   
   # find time intervals
   eligible_count_round <- merge(eligible_count_round, df_round[, .(ROUND, ROUND_SPANYRS, INDEX_TIME, COMM)], by = c('ROUND', 'COMM'))
@@ -426,7 +472,8 @@ summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, d
   dfw <- df[, list(value = sum(value * WEIGHT_ROUND)), by = c('BEFORE_CUTOFF', 'SEX', 'COMM', 'AGEYRS', 'variable')]
   
   # plot
-  if(0){
+  if(0)
+  {
     tmp <- copy(dfw)
     tmp[, ROUND := 'average']
     tmp <- rbind(tmp, df, fill = T)
@@ -445,7 +492,9 @@ summarise_eligible_count_period <- function(eligible_count_round, cutoff_date, d
   return(dfw)
 }
 
-get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligible_count_round){
+get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligible_count_round)
+{
+
   
   # prepare incidence inland
   inc.inland <- copy(incidence.inland)
@@ -468,7 +517,8 @@ get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligi
   # combine fishing and inland
   incidence <- rbind(inc.inland, inc.fishing)
 
-  if(0){
+  if(0)
+  {
     ggplot(incidence, aes(x = AGEYRS)) +
       geom_line(aes(y = INCIDENCE*100, col = ROUND)) +
       geom_ribbon(aes(ymin = LB*100, ymax = UB*100, fill = ROUND),  alpha = 0.1) +
@@ -490,7 +540,8 @@ get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligi
   dir[, INCIDENT_CASES_LB:= SUSCEPTIBLE * ROUND_SPANYRS * LB]
   
   # plot
-  if(0){
+  if(0)
+  {
     
     ggplot(dir, aes(x = AGEYRS)) +
       geom_line(aes(y = INCIDENT_CASES, col = ROUND)) +
@@ -512,7 +563,8 @@ get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligi
 }
 
 
-summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date, df_period){
+summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date, df_period)
+{
   
   # summarise across time periods
   incidence_cases <- incidence_cases_round[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
@@ -527,7 +579,8 @@ summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date,
 inv_logit <- function(x) 1 / (1 + exp(-x))
 logit <- function(p) log(p / (1-p))
 
-get_proportion_sampling <- function(pairs, incidence_cases, outdir){
+get_proportion_sampling <- function(pairs, incidence_cases, outdir)
+{
   
   # find number of pair observed
   dp <- copy(pairs)
@@ -562,7 +615,8 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir){
     cat('\n In', tmp[, unique(COMM)], 'communities at period', tmp[, unique(PERIOD)])
   }
   
-  if(1){ # plots
+  if(1)
+  { # plots
     
     tmp1 <- copy(df)
     tmp1[, Direction := 'Female -> Male']
@@ -616,7 +670,8 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir){
   df
 }
 
-prepare_unsuppressed <- function(eligible_count){
+prepare_unsuppressed <- function(eligible_count)
+{
   tmp <- eligible_count[variable == 'INFECTED_NON_SUPPRESSED']
   setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
   tmp[, IS_MF := as.numeric(SEX == 'M')]
@@ -625,7 +680,8 @@ prepare_unsuppressed <- function(eligible_count){
   tmp
 }
 
-make.df.round <- function(df_round_inland, df_round_fishing, df_period){
+make.df.round <- function(df_round_inland, df_round_fishing, df_period)
+{
   
   #
   # for inland
@@ -695,7 +751,8 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period){
   return(df_round)
 }
 
-find_log_offset_by_round <- function(stan_data, eligible_count_round){
+find_log_offset_by_round <- function(stan_data, eligible_count_round)
+{
   
   eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
   eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
@@ -752,7 +809,8 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round){
   return(res)
 }
 
-prepare.proportion.unsuppresed <- function(proportion_unsuppressed){
+prepare.proportion.unsuppresed <- function(proportion_unsuppressed)
+{
   
   # use round 15 for round 16
   proportion_unsuppressed <- proportion_unsuppressed[!ROUND %in% c('R016', 'R015S')]

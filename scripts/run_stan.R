@@ -20,7 +20,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220902a'
+  stan_model <- 'gp_220901a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -33,7 +33,7 @@ if(dir.exists('/home/andrea'))
   outdir <- '~/Documents/Box/2021/phyloflows'
 
   jobname <- 'test'
-  stan_model <- 'gp_220108'
+  stan_model <- 'gp_220901a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -65,7 +65,7 @@ if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
 # indicators
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
-use.tsi.estimates <- F
+use.tsi.estimates <- T
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
 remove.missing.community.recipient <- T
@@ -129,8 +129,8 @@ proportion_unsuppressed <- fread(file.unsuppressed.prop)
 
 
 # load incidence estimates from Adam
-incidence.inland <- fread(read.csv(file.incidence.inland)
-incidence.fishing <- fread(read.csv(file.incidence.fishing))
+incidence.inland <- fread(file.incidence.inland)
+incidence.fishing <- fread(file.incidence.fishing)
 
 #
 # Define start time, end time and cutoff
@@ -187,12 +187,14 @@ incidence_cases[, table(PERIOD, COMM)]
 
 # get time of infection (using Tanya's estimate if use.tsi.estimates == T)
 meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
+plot.coherent.tsi.estimates.with.seroconversion()
 
 # get likely transmission pairs
 chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
 
 # merge meta data to source and recipient
 pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
+plot.tsi.relationships.among.source.recipient.pairs()
 
 if(include.only.heterosexual.pairs){
   cat('Keep only heterosexual pairs\n')
