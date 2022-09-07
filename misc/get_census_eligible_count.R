@@ -3,20 +3,41 @@ library(dplyr)
 library(ggplot2)
 library(scales)
 library(lubridate)
+library("haven")
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
-
-file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv')
 file.community.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
+
+# round 14
+file.path.flow.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'verif_1.dta')
+
+# round 15 to 18
+file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv')
+
 
 # load files
 flow <- as.data.table(read.csv(file.path.flow))
+flow.14<-as.data.table(read_dta(file.path.flow.614))
 community.keys <- as.data.table(read.csv(file.community.keys))
 
+
+#
+# combine flow across rounds
+# 
+
+# up until round 14
+flow.14 <- select(flow.14, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', 'sex', 'round'))
+flow.14 <- flow.14[!round %in% paste0('R0', 15:18)]
+
+# round 15 to 18
+flow <- select(flow, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', 'sex', 'round'))
+
+# merge
+flow <- rbind(flow, flow.14)
 
 #
 # Find census eligible count
@@ -153,7 +174,7 @@ if(1){
   tmp[, COMM_LABEL := 'Fishing\n communities']
   tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
-  p <- ggplot(tmp, aes(x = AGEYRS)) +
+  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS)) +
     geom_bar(aes(y = ELIGIBLE_SMOOTH), stat = 'identity', fill = 'grey70') +
     geom_line(aes(y = ELIGIBLE), col = 'darkred', alpha  = 0.6) +
     labs(y = 'Census eligible individuals', x = 'Age') +
