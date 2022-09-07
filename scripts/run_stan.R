@@ -82,7 +82,7 @@ file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phsc
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 tmp <- dirname(indir.deepsequence_analyses)
-file.path.tsiestimates <- file.path(tmp, 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_TSI_with_estimated_dates.csv')
+file.path.tsiestimates <- file.path(tmp, 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_adjusted_TSI_with_estimated_dates.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
@@ -165,7 +165,6 @@ eligible_count_round[, table(ROUND, COMM)]
 
 # summarise by time period
 eligible_count <- summarise_eligible_count_period(eligible_count_round, cutoff_date, df_period)
-eligible_count[, table(PERIOD, COMM)]
 
 
 #
@@ -194,6 +193,7 @@ chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.
 
 # merge meta data to source and recipient
 pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
+
 plot.tsi.relationships.among.source.recipient.pairs()
 
 if(include.only.heterosexual.pairs){
@@ -215,6 +215,7 @@ if(remove.young.individuals){
   pairs.all <- pairs.all[AGE_TRANSMISSION.SOURCE >= 15 & AGE_INFECTION.RECIPIENT >= 15]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
+
 
 # plot time of infection
 plot_hist_time_infection(copy(pairs.all), cutoff_date, outfile.figures)

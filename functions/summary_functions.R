@@ -28,9 +28,13 @@ make.time.since.infection <- function(time.since.infection)
 
 make.time.since.infection2 <- function(DT)
 {
-        # DT <- fread(file.path.tsiestimates)
-        
-        # cols <- grep("AID|visit_dt|pred_doi|RF_pred_linear",names(DT), value=T)
+        # set iDats to Dates
+        is.idate <- function(x) inherits(x, 'IDate')
+        cols <- DT[, lapply(.SD, is.idate) ,] 
+        cols <- names(which(unlist(cols))) 
+        DT[, (cols) := lapply(.SD, as.Date) , .SDcols=cols]
+
+        # Extract columns of interest
         cols <- grep("AID|visit_dt|pred_doi",names(DT), value=T)
         tmp <- DT[, ..cols]
         setcolorder(tmp, 'AID')
@@ -47,7 +51,26 @@ make.time.since.infection2 <- function(DT)
         # Get study_id's 
         tmp <- merge(aik[, .(study_id = PT_ID, AID)], tmp, all.y=TRUE)
 
-        setnames(tmp, 'pred_doi_mid', 'date_infection')
+        if('pred_doi_adjusted_mid' %in% names(tmp))
+        {
+                cat('Using age-deltaT adjusted TSI\n')
+
+                names(tmp)
+                tmp[, bias_adj := pred_doi_adjusted_mid - pred_doi_mid ]
+                cols <- c('pred_doi_max', 'pred_doi_min')
+                tmp[,  (cols) := lapply(.SD,
+                              function(x) {x + bias_adj}
+                              ) , .SDcols=cols]
+                
+
+                setnames(tmp, 'pred_doi_adjusted_mid', 'date_infection')
+                tmp[ ,pred_doi_mid := NULL]
+
+        }else{
+                cat('Using Tanya-like TSIs\n')
+                setnames(tmp, 'pred_doi_mid', 'date_infection')
+        }
+
         tmp
 }
 

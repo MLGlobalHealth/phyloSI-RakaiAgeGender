@@ -1134,7 +1134,12 @@ plot.coherent.tsi.estimates.with.seroconversion <- function()
                 labs(y='participants', x='', linetype='', pch='') 
         
         if(!is.null(outdir))
-                ggsave(g, filename = paste0(outdir, '-TSI_all_seroconverters.png'), w = 10, h = 15)
+        {
+                tmp <- '-TSI_all_seroconverters.png'
+                if( file.path.tsiestimates %like% 'adjusted')
+                        tmp <- gsub('TSI','TSI_adj',tmp)
+                ggsave(g, filename = paste0(outdir, tmp), w = 10, h = 15)
+        }
 
         # Coherence vs time difference between first positive and collection
         # get time difference
@@ -1179,7 +1184,12 @@ plot.coherent.tsi.estimates.with.seroconversion <- function()
                 )
 
         if(!is.null(outdir))
-                ggsave(p, filename = paste0(outdir, '-TSI_vs_difftime_since_collection.png'), w = 10, h = 10)
+        {
+                tmp <- '-TSI_vs_difftime_since_collection.png'
+                if( file.path.tsiestimates %like% 'adjusted')
+                        tmp <- gsub('TSI','TSI_adj',tmp)
+                ggsave(p, filename = paste0(outdir, tmp), w = 10, h = 10)
+        }
 
 }
 
@@ -1208,6 +1218,9 @@ plot.tsi.relationships.among.source.recipient.pairs <- function()
                      title='Transmission pairs: estimated dates of infection') 
 
         file = paste0(outdir, '-tsi-source_vs_recipient_from_HIVphyloTSI.png')
+        if( file.path.tsiestimates %like% 'adjusted')
+                file <- gsub('tsi','tsi-adj',file)
+
         ggsave(p, file = file, w = 10, h = 10)
 
         # However, is this partially due to very unlikely transmission pairs? 
@@ -1240,5 +1253,8 @@ plot.tsi.relationships.among.source.recipient.pairs <- function()
                      title='Transmission pairs: seroconversion date from interview data') 
         p
         file = paste0(outdir, '-tsi-source_vs_recipient_from_interviewdata.png')
+        if( file.path.tsiestimates %like% 'adjusted')
+                file <- gsub('tsi','tsi-adj',file)
+
         ggsave(p, file = file, w = 8, h = 10)
 }
