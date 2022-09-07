@@ -20,7 +20,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
-  stan_model <- 'gp_220902a'
+  stan_model <- 'gp_220905a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -60,7 +60,9 @@ if(length(args_line) > 0)
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
+outdir.table <- file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
 if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
+if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 
 # indicators
 include.only.heterosexual.pairs <- T
@@ -76,21 +78,22 @@ use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
 
-
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
-file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
-file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_220524.csv")
+# from EMODO_RAKAI repo
+file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220905.csv")
 file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220825.csv")
 
+# from misc/
+file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
+file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
+
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
-# file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "RCCS_nonsuppressed_proportion_arvmed_220801.csv")
-file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', "RCCS_nonsuppressed_proportion_vl_1000_220803.csv")
-file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_share_sex_vl_1000_220830.csv'))
-#file.partnership.rate <- file.path(indir.deepsequence_analyses,'RCCS_partnership_rate_220422.csv')
+file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "RCCS_artcoverage_estimates_220906.csv")
+file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
 file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220811.csv')
 file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
 
@@ -100,6 +103,7 @@ path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'
 source(file.path(indir, 'functions', 'utils.R'))
 source(file.path(indir, 'functions', 'summary_functions.R'))
 source(file.path(indir, 'functions', 'plotting_functions.R'))
+source(file.path(indir, 'functions', 'statistics_functions.R'))
 source(file.path(indir, 'functions', 'stan_utils.R'))
 source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 
@@ -107,8 +111,9 @@ source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 load(file.path.chains.data)
 dchain <- as.data.table(dchain)
 
-# load meta data
+# load meta data and round timeline
 load(file.path.meta)
+load(file.path.round.timeline)
 
 # load Tanya's estimate time since infection using phylogenetic data
 time.since.infection <- make.time.since.infection(as.data.table(read.csv(file.path.tsiestimates)))
@@ -133,10 +138,10 @@ incidence.fishing <- as.data.table(read.csv(file.incidence.fishing))
 # Define start time, end time and cutoff
 #
 
-start_observational_period_inland <- df_round_inland[round == 'R014', min_sample_date] #"2010-01-20" 
+start_observational_period_inland <- df_round_inland[round == 'R012', min_sample_date] #"2006-08-30" 
 stop_observational_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
 
-start_observational_period_fishing <- start_observational_period_inland #"2010-01-20" 
+start_observational_period_fishing <- start_observational_period_inland 
 stop_observational_period_fishing <- df_round_fishing[round == 'R018', max_sample_date] #  "2017-08-14"
 
 cutoff_date <- df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
@@ -154,6 +159,7 @@ df_round <- make.df.round(df_round_inland, df_round_fishing, df_period)
 #
 # Find count eligible susceptible / infected / infected unsuppressed 
 # 
+
 
 # by round
 eligible_count_round <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
@@ -309,7 +315,8 @@ if(1){
   
   # plot tansmission events over time
   plot_transmission_events_over_time(eligible_count_round, incidence_cases_round, pairs, outfile.figures)
-    
+  save_statistics_transmission_events(pairs, outdir.table)
+  
   # plot offset
   plot_offset(stan_data, outfile.figures)
   
@@ -323,17 +330,6 @@ if(1){
   plot_CI_age_infection(pairs, outfile.figures)
   plot_CI_age_transmission(pairs, outfile.figures)
 
-}
-
-
-# for now ignore fishing
-if(0){
-  stan_data[['y']][,,1,] =  stan_data[['y']][,,2,]
-  stan_data[['z']][,,1,] =  stan_data[['z']][,,2,]
-  stan_data[['sampling_index_y']][,,1,] =  stan_data[['sampling_index_y']][,,2,]
-  stan_data[['log_offset']][,1,,] =  stan_data[['log_offset']][,2,,]
-  stan_data[['log_prop_sampling']][,1,,] =  stan_data[['log_prop_sampling']][,2,,]
-  stan_data[['n_sampling_index_y']][,1,] =stan_data[['n_sampling_index_y']][,2,] 
 }
 
 
