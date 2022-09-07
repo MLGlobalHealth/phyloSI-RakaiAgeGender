@@ -33,7 +33,7 @@ if(dir.exists('/home/andrea'))
   outdir <- '~/Documents/Box/2021/phyloflows'
 
   jobname <- 'test'
-  stan_model <- 'gp_220108'
+  stan_model <- 'gp_220901a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -67,7 +67,7 @@ if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 # indicators
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
-use.tsi.estimates <- F
+use.tsi.estimates <- T
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
 remove.missing.community.recipient <- T
@@ -81,6 +81,8 @@ only.transmission.same.community <- F
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
 file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
+tmp <- dirname(indir.deepsequence_analyses)
+file.path.tsiestimates <- file.path(tmp, 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_TSI_with_estimated_dates.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 # from EMODO_RAKAI repo
@@ -107,6 +109,9 @@ source(file.path(indir, 'functions', 'statistics_functions.R'))
 source(file.path(indir, 'functions', 'stan_utils.R'))
 source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 
+# load anonymous aid
+aik <- .read(file.anonymisation.keys); aik$X <- NULL
+
 # load chains
 load(file.path.chains.data)
 dchain <- as.data.table(dchain)
@@ -116,23 +121,21 @@ load(file.path.meta)
 load(file.path.round.timeline)
 
 # load Tanya's estimate time since infection using phylogenetic data
-time.since.infection <- make.time.since.infection(as.data.table(read.csv(file.path.tsiestimates)))
+time.since.infection <- make.time.since.infection2(fread(file.path.tsiestimates))
 
 # load census eligible ount
-eligible_count_smooth <- as.data.table(read.csv(file.eligible.count))
+eligible_count_smooth <- fread(file.eligible.count)
 
 # load proportion prevalence
-proportion_prevalence <- as.data.table(read.csv(file.prevalence.prop))
+proportion_prevalence <- fread(file.prevalence.prop)
 
 # load non-suppressed proportion 
-proportion_unsuppressed <- as.data.table(read.csv(file.unsuppressed.prop))
+proportion_unsuppressed <- fread(file.unsuppressed.prop)
 
-# load anonymous aid
-aik <- .read(file.anonymisation.keys); aik$X <- NULL
 
 # load incidence estimates from Adam
-incidence.inland <- as.data.table(read.csv(file.incidence.inland))
-incidence.fishing <- as.data.table(read.csv(file.incidence.fishing))
+incidence.inland <- fread(file.incidence.inland)
+incidence.fishing <- fread(file.incidence.fishing)
 
 #
 # Define start time, end time and cutoff
@@ -190,12 +193,14 @@ incidence_cases[, table(PERIOD, COMM)]
 
 # get time of infection (using Tanya's estimate if use.tsi.estimates == T)
 meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
+plot.coherent.tsi.estimates.with.seroconversion()
 
 # get likely transmission pairs
 chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
 
 # merge meta data to source and recipient
 pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
+plot.tsi.relationships.among.source.recipient.pairs()
 
 if(include.only.heterosexual.pairs){
   cat('Keep only heterosexual pairs\n')

@@ -33,10 +33,12 @@ make.date.first.positive <- function(allhiv)
 {
   
   # Check whether there are hidden NAs 
-  stopifnot(allhiv[nchar(as.character(date_coll)) != 9, .N == 0])
-  allhiv[nchar(as.character(firstpos_diagnosis_dt)) != 9, firstpos_diagnosis_dt := NA]
-  allhiv[nchar(as.character(lastnegvd)) != 9, lastnegvd := NA]
-  cols <- c('visitno','copies', 'new_copies', 'rct', 'lastnegv', 'lastnegvd', 'firstpos_diagnosis_vis')
+  .f <- as.function(x) nchar(as.character(x)) != 9 
+  stopifnot(allhiv[.f(date_coll) , .N == 0])
+  allhiv[.f(firstpos_diagnosis_dt) , firstpos_diagnosis_dt := NA]
+  allhiv[.f(lastnegvd) , lastnegvd := NA]
+  cols <- c('visitno','copies', 'new_copies', 'rct', 
+            'lastnegv', 'lastnegvd', 'firstpos_diagnosis_vis')
   allhiv[, (cols):=lapply(.SD, .remove.spaces), .SDcols = cols]
   
   # Format dates
@@ -53,7 +55,9 @@ make.date.first.positive <- function(allhiv)
   cat("- these had visit rounds in ", allhiv[study_id %in% tmp, paste0(unique(visitno), collapse = ', ')], '\n')
   
   # rename
-  setnames(allhiv, c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis', 'lastnegvd'), c('date_first_positive', 'visit_first_positive', 'date_last_negative'))
+  setnames(allhiv,
+           c('firstpos_diagnosis_dt', 'firstpos_diagnosis_vis', 'lastnegvd'),
+           c('date_first_positive', 'visit_first_positive', 'date_last_negative'))
   
   # NAs in each col
   print.which.NA(allhiv, 'allhiv')
@@ -315,5 +319,50 @@ process.neuro.meta.data <- function(raw_neuro_metadata, aik){
   unique(neuro_metadata)
   
   
+}
+
+#### MISC ##### 
+# Ask Joseph which date_first_positive and date_first_negative should we trust more. 
+# Further, why isn t lastnegvd defined in hiv even when there are reported negatives?
+# I wrote that after hiv <- process.hiv(hiv) line.
+if(0)
+{
+        tmp <- hiv[hiv=='N', {
+                z <- max(hivdate);
+                sum(lastnegvd < z)
+        }, by='study_id']
+        stopifnot(tmp[,  ! any(V1>0, na.rm=T )])
+        hiv[hiv=='N', lastnegvd:= max(hivdate), by='study_id']
+        hiv[lastnegvd > date_first_positive,]
+}
+if(0)
+{
+        tmp <- unique(date.first.positive[, .(study_id, date_first_positive, date_last_negative)])
+        tmp1 <- unique(hiv[, .(study_id, date_first_positive, date_last_negative=lastnegvd)])
+        tmp[, all(study_id %in% tmp1$study_id)]
+        dcomp <- merge(tmp, tmp1, by='study_id')
+
+        # compare date_first_positive
+        dcomp[, table(date_first_positive.x == date_first_positive.y, useNA='ifany'),]
+        ids_firstpositive_disagree <- dcomp[date_first_positive.x != date_first_positive.y, study_id]
+        dcomp[study_id %in% ids_firstpositive_disagree] # earlier first positives are not birthdates
+        allhiv[study_id %in% ids_firstpositive_disagree, .(study_id, date_coll, date_first_positive) ] %>% unique
+        hiv[study_id %in% ids_firstpositive_disagree, .(study_id, hivdate, hiv,  date_first_positive)] %>% unique
+        colnames(hiv)
+
+        # compare date_last_negative
+        dcomp[, table(date_last_negative.x == date_last_negative.y, useNA='ifany'),]
+        ids_lastnegative_disagree <- dcomp[date_last_negative.x != date_last_negative.y, study_id]
+        dcomp[study_id %in% ids_lastnegative_disagree] # earlier first positives are not birthdates
+        allhiv[study_id %in% ids_lastnegative_disagree, .(study_id, date_coll, date_last_negative) ] %>% unique
+        hiv[study_id %in% ids_lastnegative_disagree, .(study_id, hivdate, hiv,  date_last_negative=lastnegvd)] %>% unique
+        colnames(hiv)
+        colnames(dcomp) <- gsub('x$','allhiv',colnames(dcomp))
+        colnames(dcomp) <- gsub('y$','hiv',colnames(dcomp))
+        dcomp <- dcomp[study_id %in% ids_firstpositive_disagree | study_id %in% ids_lastnegative_disagree]
+        dcomp[, lastneg_disagree := study_id %in% ids_lastnegative_disagree ]
+        dcomp[, firstpos_disagree := study_id %in% ids_firstpositive_disagree ]
+        dcomp
+        write.csv(dcomp, 'HIV_ALLHIV_firstpos_lastneg_disagree_220401.csv', row.names=F)
 }
 

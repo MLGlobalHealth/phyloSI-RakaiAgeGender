@@ -79,6 +79,8 @@ invisible(lapply(list(hiv, allhiv, quest, raw_metadata, raw_neuro_metadata),
                    dt[!grepl('RK-', study_id), study_id := paste0('RK-', study_id)]
                  }))
 
+
+
 # process quest and make date.birth
 quest <- process.quest(quest)
 
@@ -87,11 +89,14 @@ date.first.positive <- make.date.first.positive(allhiv)
 
 # process hiv and find date first and last visit 
 hiv <- process.hiv(hiv)
+
 date.first.last.visit <- make.date.first.last.visit(hiv)
 
 # what s the difference between hiv and allhiv?
 # hiv probably contains all tests, while allhiv only those from people ever tested positive?
 # There are 6 entries with different first positive diagnoses between hiv and allhivl
+# THink it makes more sense to take values from hiv, BUT be careful to those that
+# turned negative after a first positive.
 date.first.positive <- compare.hiv.allhiv.firstpositivedates(hiv, date.first.positive)
 stopifnot(.vars.with.multiple.values(date.first.positive, 'study_id')[, .N == 0])
 
