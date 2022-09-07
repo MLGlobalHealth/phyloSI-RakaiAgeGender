@@ -133,44 +133,6 @@ meta_data <- rbind(meta_data, meta_data_neuro[!study_id %in% meta_data[, study_i
 
 
 #
-# Find start and end data round
-#
-
-df <- merge(hiv, quest, by = c('study_id', 'round'))
-cat('Interview date = hiv test date for ', round(nrow(df[intdate == hivdate]) / nrow(df) * 100, 2), '% of the participants')
-
-df <- df[intdate == hivdate] # remove participants who did not had their interview at the same time as the hiv test 
-
-# fishing
-community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
-df_round_fishing <- df[comm_num %in% community.keys[comm =='fishing', COMM_NUM_RAW], list(min_sample_date = min(intdate), max_sample_date = max(intdate)), by='round']
-df_round_fishing <- df_round_fishing[order(round)]
-df_round_fishing[, COMM := 'fishing']
-
-# inland
-df_round_inland <- df[!comm_num %in% community.keys[comm =='fishing', COMM_NUM_RAW], list(min_sample_date = min(intdate), max_sample_date = max(intdate)), by='round']
-# round 14
-df_round_inland14 <- raw_metadata[round == 14 & LakeVictoria_FishingCommunity== 'no', list(min_sample_date = min(na.omit(sample_date)), 
-                                                                                             max_sample_date = max(na.omit(sample_date))), by = 'round']
-df_round_inland14[, round := paste0('R0', round)]
-df_round_inland <- rbind(df_round_inland14, df_round_inland)
-# exclude round 15s
-df_round_inland <- df_round_inland[round != 'R015S']
-df_round_inland <- df_round_inland[order(round)]
-df_round_inland[, COMM := 'inland']
-
-if(0){
-  library(ggplot2)
-  
-  tmp <- rbind(df_round_inland, df_round_fishing)
-  ggplot(tmp, aes(y = as.factor(round))) + 
-    geom_errorbarh(aes(xmin =min_sample_date , xmax =  max_sample_date, col = as.factor(round))) + 
-    facet_grid(COMM~.)
-
-}
-
-
-#
 # SAVE META DATA
 #
-save(meta_data, df_round_inland, df_round_fishing, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData'), row.names = F)
+save(meta_data, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData'), row.names = F)

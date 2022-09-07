@@ -17,9 +17,6 @@ outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfec
 path.stan <- file.path(indir.repository, 'stan_models', 'binomial_gp.stan')
 path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 
-# functions
-# source( file.path(indir.repository, 'functions', 'get_nonsuppressed_proportion_from_vl_functions.R') )
-
 # tuning
 VL_DETECTABLE = 400
 VIREMIC_VIRAL_LOAD = 1000 # WHO standards
@@ -104,18 +101,19 @@ vla[, NONVLNS := HIV_N-VLNS_N]
 vla[, EMPIRICAL_NONVLNS_IN_HIV := NONVLNS / HIV_N, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# proportion of suppressed
 vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsuppressed
 
-if(0){
+if(1){
   tmp <- vla[, .(ROUND, LOC_LABEL, SEX_LABEL, AGE_LABEL, HIV_N, VLNS_N)]
-  tmp[, Suppressed := HIV_N - VLNS_N] 
-  setnames(tmp, 'VLNS_N', 'Unsuppressed')
+  tmp[, `Non viremic` := HIV_N - VLNS_N] 
+  setnames(tmp, 'VLNS_N', 'Viremic')
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'HIV_N'))
   setnames(tmp, 'LOC_LABEL', 'COMM')
   setnames(tmp, 'SEX_LABEL', 'SEX')
   tmp[, ROUND := as.character(ROUND)]
   tmp[ROUND == '15.5', ROUND := '15S']
   tmp <- tmp[ROUND != '15S']
-  tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
-  tmp <- tmp[!(ROUND == '15S' & COMM == 'inland')]
+  tmp[, ROUND_LABEL := paste0('ROUND: ', ROUND)]
+  tmp <- tmp[!(ROUND == '15S')]
+  # tmp <- tmp[!(ROUND == '15')]
   tmp[, SEX_LABEL := 'Female']
   tmp[SEX== 'M', SEX_LABEL := 'Male']
   tmp[, COMM_LABEL := 'Fishing\n communities']
@@ -124,20 +122,20 @@ if(0){
   # plot
   p <- ggplot(tmp, aes(x = AGE_LABEL, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'Age', y = 'Count HIV+ participants', fill = '') +
+    labs(x = 'Age', y = 'Count HIV-positive participants', fill = 'Viral load') +
     facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)))
-
-  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age.png')), w=9, h=7)
+  p
+  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age.png')), w=9, h=8)
   
 }
 
 # find smooth proportion
 for(round in 15:18){
-  round <- 15
+  # round <- 15
   # round <- 16
   # round <- 17
   # round <- 18
@@ -263,7 +261,7 @@ nsinf.samples <- do.call('rbind', nsinf.samples)
 #########
 
 tmp <- copy(nsinf)
-tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+tmp[, ROUND_LABEL := paste0('ROUND: ', gsub('R0(.+)', '\\1', ROUND))]
 tmp[, SEX_LABEL := 'Female']
 tmp[SEX== 'M', SEX_LABEL := 'Male']
 tmp[, COMM_LABEL := 'Fishing\n communities']
@@ -271,16 +269,17 @@ tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
 
 # plot
 ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_line(aes(y = PROP_UNSUPPRESSED_M)) + 
-  geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU), alpha = 0.5) + 
-  geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL), alpha = 0.5, col = 'darkred') + 
+  geom_line(aes(y = 1-PROP_UNSUPPRESSED_M)) + 
+  geom_ribbon(aes(ymin = 1-PROP_UNSUPPRESSED_CL, ymax = 1-PROP_UNSUPPRESSED_CU), alpha = 0.5) + 
+  geom_point(aes(y = 1-PROP_UNSUPPRESSED_EMPIRICAL), alpha = 0.5, col = 'darkred') + 
   facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
-  labs(x = 'Age', y = 'Proportion of unsuppressed among HIV+ participants', fill = '') +
+  labs(x = 'Age', y = 'Proportion of HIV-positive participants with suppressed viral load', fill = '') +
   theme_bw() +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1)))
-ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion.png')), w=9, h=7)
+        strip.text = element_text(size = rel(1))) + 
+  scale_y_continuous(labels = scales::percent, limits= c(0,1))
+ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion.png')), w=9, h=8)
 
 ggplot(nsinf, aes(x = AGEYRS)) + 
   geom_line(aes(y = PROP_UNSUPPRESSED_M, col = ROUND)) + 

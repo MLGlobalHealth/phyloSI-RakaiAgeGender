@@ -424,6 +424,9 @@ add_susceptible_infected <- function(eligible_count, proportion_prevalence)
   # find susceptible
   df[, SUSCEPTIBLE := ELIGIBLE - INFECTED]
   
+  # do not include 15S in inland
+  df <- df[!(COMM == 'inland' & ROUND == '15S')]
+  
   return(df)
 }
 
@@ -433,21 +436,6 @@ add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppres
   # ensure that the data are data.table objects
   di <- as.data.table(eligible_count_round)
   pu <- as.data.table(proportion_unsuppressed)
-  
-  # use round 15 for round 14 in inland communties for eligible count
-  di15 <- di[ROUND == '15' & COMM == 'inland']
-  di15[, ROUND := '14']
-  di <- rbind(di15, di)
-  
-  # use round 15 for round 14 in inland communties for proportion of unsuppressed
-  pu15 <- pu[ROUND == 'R015'& COMM == 'inland']
-  pu15[, ROUND := 'R014']
-  pu <- rbind(pu15, pu)
-  
-  # use round 15 for round 15s in fishing communties for proportion of unsuppressed
-  pu15 <- pu[ROUND == 'R015'& COMM == 'fishing']
-  pu15[, ROUND := 'R015S']
-  pu <- rbind(pu15, pu)
     
   # select variabel
   di <- di[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE, INFECTED, SUSCEPTIBLE)]
@@ -523,9 +511,10 @@ get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligi
   inc.inland <- copy(incidence.inland)
   colnames(inc.inland) <- toupper(colnames(inc.inland))
   setnames(inc.inland, 'AGE', 'AGEYRS')
+  setnames(inc.inland, 'ROUND_LABEL', 'ROUND')
   inc.inland[, COMM := 'inland']
   inc.inland[, SEX := substring(SEX, 1, 1)]
-  inc.inland <- inc.inland[ROUND >= 14]
+  inc.inland <- inc.inland[ROUND >= 12]
   inc.inland[, ROUND := paste0('R0', as.character(ROUND))]
   inc.inland <- inc.inland[, .(SEX, ROUND, AGEYRS, INCIDENCE, LB, UB, COMM)]
   
@@ -709,14 +698,16 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period)
   #
   # for inland
   df_round_inland[, INDEX_TIME := 0]
-  df_round_inland[round%in%paste0('R0', 14:15), INDEX_TIME := 1]
+  df_round_inland[round%in%paste0('R0', 12:15), INDEX_TIME := 1]
   df_round_inland[round %in% paste0('R0',16:18), INDEX_TIME := 2]
-  
+
   # keep original min and max sample date
   df_round_inland[, max_sample_date_original := max_sample_date]
   df_round_inland[, min_sample_date_original := min_sample_date]
   
   # fill missing months
+  df_round_inland[round == 'R012', max_sample_date := df_round_inland[round == 'R013', min_sample_date]]
+  df_round_inland[round == 'R013', max_sample_date := df_round_inland[round == 'R014', min_sample_date]]
   df_round_inland[round == 'R014', max_sample_date := df_round_inland[round == 'R015', min_sample_date]]
   df_round_inland[round == 'R015', max_sample_date := df_round_inland[round == 'R016', min_sample_date]]
   df_round_inland[round == 'R016', max_sample_date := df_round_inland[round == 'R017', min_sample_date]]
@@ -746,7 +737,7 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period)
   df_round_fishing[, COMM := 'fishing']
   df_round <- rbind(df_round_inland, df_round_fishing)
   
-  # keep only round 14 to 18
+  # keep only round 12 to 18
   df_round <- df_round[INDEX_TIME != '0']
   df_round <- df_round[order(COMM, round)]
   
@@ -784,7 +775,12 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round)
   res <- list(); index = 1
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(j in 1:stan_data[['N_COMMUNITY']]){
-      for(k in 1:stan_data[['N_ROUND']]){
+      for(k in 1:max(stan_data[['N_ROUND']])){
+        
+        if(k > stan_data[['N_ROUND']][j]){
+          res[[index]]  = res[[index-1]] 
+          next
+        }
         
         .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
         .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 

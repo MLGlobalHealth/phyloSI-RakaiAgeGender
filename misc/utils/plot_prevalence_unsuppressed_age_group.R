@@ -10,11 +10,11 @@ indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
-file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
-infile.unsuppressed <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_age_group_vl_1000_220830.csv'))
+file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
+infile.unsuppressed <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_coverage_age_group_220906.csv'))
 infile.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_age_group_220830.csv'))
 
-load(file.path.meta)
+load(file.path.round.timeline)
 prevalence <- as.data.table(read.csv(infile.prevalence))
 unsuppressed <- as.data.table(read.csv(infile.unsuppressed))
 
@@ -22,13 +22,13 @@ unsuppressed <- as.data.table(read.csv(infile.unsuppressed))
 tmp <- data.table(reshape2::melt(prevalence, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
 tmp[, TYPE := 'HIV-1 prevalence']
 tmp1 <- data.table(reshape2::melt(unsuppressed, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
-tmp1[, TYPE := 'HIV+ with unsuppressed viral load']
+tmp1[, TYPE := 'HIV-positive with unsuppressed viral load']
 tmp <- rbind(tmp, tmp1)
 tmp[, variable := stringi::stri_sub(variable,-2,-1)]
 tmp[variable == '_M', variable := 'M']
 tmp <- dcast.data.table(tmp, ROUND + COMM + SEX + AGE_GROUP + TYPE ~ variable, value.var = 'value')
 tmp[, ROUND := paste0('R0', ROUND)]
-tmp[, TYPE := factor(TYPE, levels = c('HIV-1 prevalence', 'HIV+ with unsuppressed viral load'))]
+tmp[, TYPE := factor(TYPE, levels = c('HIV-1 prevalence', 'HIV-positive with unsuppressed viral load'))]
 
 # round labels
 df_round <- rbind(df_round_inland, df_round_fishing)
@@ -80,7 +80,7 @@ for(i in seq_along(communities)){
     guides(color = guide_legend(override.aes = list(shape = 16)))
   
   # unsuppressed
-  p2 <- ggplot(tmp1[TYPE == 'HIV+ with unsuppressed viral load'], aes(x = INDEX_ROUND, group = SEX_LABEL)) + 
+  p2 <- ggplot(tmp1[TYPE == 'HIV-positive with unsuppressed viral load'], aes(x = INDEX_ROUND, group = SEX_LABEL)) + 
     geom_line(aes(y = M), linetype = 'dotted', position=position_dodge(width = 0.5), alpha = 0.5) + 
     geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5, width = 0.5, position=position_dodge(width = 0.5)) + 
     geom_point(aes(y = M, col = SEX_LABEL), shape = 15, size = 2, position=position_dodge(width = 0.5)) + 
@@ -114,15 +114,15 @@ for(i in seq_along(communities)){
     geom_point(aes(y = M, col = SEX_LABEL, shape = TYPE), size = 2, position=position_dodge(width = 0.5), stroke = 1) + 
     facet_grid(.~AGE_LABEL) + 
     scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    scale_linetype_manual(values = c('HIV-1 prevalence' = 'dotted', 'HIV+ with unsuppressed viral load' = 'solid')) + 
-    scale_shape_manual(values = c('HIV-1 prevalence' = 1, 'HIV+ with unsuppressed viral load' = 16)) + 
+    scale_linetype_manual(values = c('HIV-1 prevalence' = 'dotted', 'HIV-positive with unsuppressed viral load' = 'solid')) + 
+    scale_shape_manual(values = c('HIV-1 prevalence' = 1, 'HIV-positive with unsuppressed viral load' = 16)) + 
     theme_bw() + 
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)), 
           plot.title = element_text(hjust = 0.5), 
           panel.grid.major.x = element_blank(), 
           panel.grid.minor.x = element_blank(), 
-          axis.text.x = element_text(angle = 40, hjust = 1), 
+          axis.text.x = element_text(angle = 60, hjust = 1), 
           axis.title.x = element_blank(), 
           legend.position = 'bottom', 
           legend.box = 'vertical', 
@@ -132,7 +132,7 @@ for(i in seq_along(communities)){
     labs(y = 'Percent in census eligible population', col= '', shape = '', linetype = '') + 
     scale_x_continuous(labels = df_round[COMM == communities[i], LABEL_ROUND], breaks =  df_round[COMM == communities[i], INDEX_ROUND]) + 
     guides(color = guide_legend(override.aes = list(shape = 16), order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '.png')), w = 7.5,h = 5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '.png')), w = 9,h = 5.5)
 }
 
 

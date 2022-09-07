@@ -11,15 +11,43 @@ indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
 file.census.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
-
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
+
+# round 15 to 18
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
+
+# round 14
+file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
-quest <- as.data.table(read.csv(file.path.quest))
 ncen <- as.data.table(read.csv(file.census.count))
+
+################################
+
+# COMBINE DATASETS ACROSS MULTIPLE ROUNDS
+
+################################
+
+# load datasets round 14 only
+quest.14<-as.data.table(read_dta(file.path.quest.614))
+quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate)]
+quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
+quest.14[, intdate := as.Date(intdate)]
+
+# load datasets ROUND 15 TO 18
+quest <- as.data.table(read.csv(file.path.quest))
+quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate)]
+quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
+quest <- rbind(quest.14, quest)
+
+
+################################
+
+# FIND PARTICIPATION
+
+################################
 
 # keep variable of interest
 rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, intdate)]
@@ -55,7 +83,7 @@ tmp[SEX== 'M', SEX_LABEL := 'Male']
 tmp[, COMM_LABEL := 'Fishing\n communities']
 tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
 
-p <- ggplot(tmp, aes(x = AGEYRS)) +
+p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS)) +
   geom_bar(aes(y = PARTICIPANT), stat = 'identity', fill = 'grey60') +
   labs(y = 'Participants', x = 'Age') +
   facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
@@ -66,7 +94,7 @@ p <- ggplot(tmp, aes(x = AGEYRS)) +
 p
 ggsave(p, file = file.path(outdir, 'Participants.png'), w = 8, h = 9)
 
-p <- ggplot(tmp, aes(x = AGEYRS)) +
+p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS)) +
   geom_line(aes(y = PARTICIPATION)) +
   labs(y = 'Participation among census eligible individuals', x = 'Age') +
   facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +

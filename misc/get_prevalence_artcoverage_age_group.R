@@ -9,7 +9,7 @@ indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
-file.nonsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.csv'))
+file.art.coverage <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_posterior_samples_220906.csv'))
 file.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
 
@@ -20,14 +20,14 @@ eligible_count <- as.data.table(read.csv(file.eligible.count))
 proportion_prevalence <- as.data.table(read.csv(file.prevalence))
 
 # load unsuppressed proportion 
-proportion_unsuppressed <- as.data.table(read.csv(file.nonsuppressed.prop))
+proportion_unsuppressed <- as.data.table(read.csv(file.art.coverage))
 
 
-####################
+#############################
 
 # FIND INFECTED UNSUPPRESSED
 
-###################
+#############################
 
 # define round
 df <- merge(proportion_prevalence, proportion_unsuppressed, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX', 'iterations'))
@@ -97,7 +97,7 @@ ggplot(sinf.age, aes(x = AGE_GROUP, group = SEX)) +
 
 #########################################
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_age_group_vl_1000_220830.csv'))
+file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_coverage_age_group_220906.csv'))
 write.csv(sing.age, file = file.name, row.names = F)
 
 file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_age_group_220830.csv'))

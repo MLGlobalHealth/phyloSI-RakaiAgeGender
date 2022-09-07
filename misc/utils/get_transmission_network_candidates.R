@@ -91,7 +91,7 @@ tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
 
 p <- ggplot(tmp, aes(x = AGEYRS)) +
   geom_bar(aes(y = SEQUENCE), stat = 'identity', fill = 'grey60') +
-  labs(y = 'Participants with virus sequenced', x = 'Age') +
+  labs(y = 'Count of HIV-positive participants with virus sequenced', x = 'Age') +
   facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
   theme_bw() +
   theme(legend.position = 'bottom', 
