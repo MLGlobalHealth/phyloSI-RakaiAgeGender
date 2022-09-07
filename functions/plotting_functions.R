@@ -1091,7 +1091,7 @@ plot_pairs <- function(pairs, outdir){
   
 } 
 
-plot.coherent.tsi.estimates.with.seroconversion <- function()
+plot.coherent.tsi.estimates.with.seroconversion <- function(outdir)
 {
         tmp <- meta_data[!is.na(date_infection)]
         cols <- grep('study_id|age|date', names(tmp), value=TRUE)
@@ -1197,7 +1197,7 @@ plot.coherent.tsi.estimates.with.seroconversion <- function()
 
 }
 
-plot.tsi.relationships.among.source.recipient.pairs <- function()
+plot.tsi.relationships.among.source.recipient.pairs <- function(outdir)
 {
         cols <- grep('AID|DATE_INFECTION',names(pairs.all), value=TRUE)
         tmp <- pairs.all[, ..cols] 
