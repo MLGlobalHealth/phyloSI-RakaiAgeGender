@@ -345,7 +345,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   # tmp[, type := factor(type , levels = c(type_cont,unique(unsuppressed_prop_sex$type), unique(prepare_prevalence_sex$type)))]
   # 
   tmp <- tmp[LABEL_DIRECTION == 'Male -> Female']
-  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 5, 0)]
+  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 7, 0)]
   # tmp <- tmp[ROUND != 'R014' & LABEL_DIRECTION == 'Male -> Female']
   
 
@@ -354,7 +354,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   tmp1 <- rbind(prevalence_prop_sex, unsuppressed_prop_sex, fill=TRUE)
   tmp1[, type := factor(type , levels = c(unique(prevalence_prop_sex$type), unique(unsuppressed_prop_sex$type)))]
   tmp1 <- tmp1[LABEL_DIRECTION == 'Male -> Female']
-  tmp1[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 5, 0)]
+  tmp1[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 7, 0)]
   
   tmp2 <- rbind(tmp, tmp1, fill=TRUE)
   tmp2[, type := factor(type , levels = c(unique(tmp$type), levels(tmp1$type)))]
@@ -467,6 +467,10 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
     if(is.null(lab)) lab =  'Contribution'
     ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 8, h = 9)
     
+    if(communities[i] == 'inland'){
+      ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 9.5, h = 12.5)
+      
+    }
   }
 }
 
@@ -484,9 +488,9 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
     tmp1 <- tmp[ COMM == communities[i]]
     
     if(communities[i] == 'inland'){
-      colors <- c('#374c80', '#7a5195',  '#ef5675', '#ff764a', '#ffa600')
+      colors <- palette_round_inland
     }else{
-      colors <- c( '#7a5195', '#bc5090', '#ef5675', '#ff764a', '#ffa600')
+      colors <- palette_round_fishing
     }
 
     p <- ggplot(tmp1, aes(x = AGE_GROUP_TRANSMISSION.SOURCE)) + 
@@ -523,9 +527,9 @@ plot_contribution_age_classification <- function(contribution_age_classification
   for(i in seq_along(communities)){
     
     if(communities[i] == 'inland'){
-      colors <- c('#374c80', '#7a5195',  '#ef5675', '#ff764a', '#ffa600')
+      colors <- palette_round_inland
     }else{
-      colors <- c( '#7a5195', '#bc5090', '#ef5675', '#ff764a', '#ffa600')
+      colors <- palette_round_fishing
     }
     
     tmp1 <- tmp[ COMM == communities[i]]
