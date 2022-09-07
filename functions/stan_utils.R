@@ -286,10 +286,18 @@ add_stan_data_base <- function(){
   stan_data[['N_AGE']] = df_age[, length(unique(AGE_INFECTION.RECIPIENT))]
   
   # number of rounds 
-  stan_data[['N_ROUND']] = df_round[, length(unique(INDEX_ROUND))]
+  tmp <- merge(df_round, df_community, by = 'COMM')[order(INDEX_COMMUNITY)]
+  stan_data[['N_ROUND']] = tmp[, length(unique(INDEX_ROUND)), by = 'COMM']$V1
+  stan_data[['N_ROUND_INLAND']] = df_round[COMM == 'inland', length(unique(INDEX_ROUND))]
+  stan_data[['N_ROUND_FISHING']] = df_round[COMM == 'fishing', length(unique(INDEX_ROUND))]
   
   # map from round to period
-  stan_data[['map_round_period']] = df_round[COMM == 'inland' & order(round), INDEX_TIME] # same for fishing and inland
+  stan_data[['map_round_period']] =   rbind(c(tmp[COMM ==  df_community[order(INDEX_COMMUNITY), COMM[1]] & order(round), INDEX_TIME], rep(-1,  max(stan_data[['N_ROUND']]) - stan_data[['N_ROUND']][1] )), 
+                                            c(tmp[COMM ==  df_community[order(INDEX_COMMUNITY), COMM[2]] & order(round), INDEX_TIME], rep(-1,  max(stan_data[['N_ROUND']]) - stan_data[['N_ROUND']][2] )))
+  
+  # number of period
+  stan_data[['N_ROUND_PER_PERIOD']] = rbind(tmp[order(INDEX_TIME) & COMM == df_community[order(INDEX_COMMUNITY), COMM[1]], length(unique(INDEX_ROUND)), by = 'INDEX_TIME']$V1, 
+                                            tmp[order(INDEX_TIME) & COMM == df_community[order(INDEX_COMMUNITY), COMM[2]], length(unique(INDEX_ROUND)), by = 'INDEX_TIME']$V1)
   
   return(stan_data)
 }
@@ -359,10 +367,16 @@ add_phylo_data <- function(stan_data, pairs){
 add_incidence_cases <- function(stan_data, incidence_cases_round){
   
   # save count in each entry
-  z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_ROUND']]))
+  z = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], max(stan_data[['N_ROUND']])))
+  
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(j in 1:stan_data[['N_COMMUNITY']]){
-      for(k in 1:stan_data[['N_ROUND']]){
+      for(k in 1:max(stan_data[['N_ROUND']])){
+        
+        if(k > stan_data[['N_ROUND']][j]){
+          z[, i, j, k] = -1;
+          next
+        }
         
         .SEX.RECIPIENT = substr(gsub('.* -> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
         .COMM = df_community[INDEX_COMMUNITY == j, COMM]
@@ -741,41 +755,46 @@ add_offset <- function(stan_data, eligible_count){
   eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
   eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
   
-  log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], stan_data[['N_ROUND']], stan_data[['N_PER_GROUP']])))
+  log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], max(stan_data[['N_ROUND']]), stan_data[['N_PER_GROUP']])))
   
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(j in 1:stan_data[['N_COMMUNITY']]){
-      for(k in 1:stan_data[['N_ROUND']]){
-          
-          log_offset = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
-
-          .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
-          .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
-          .COMM <- df_community[j, COMM]
-          .ROUND <- df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
-          
-          # add proportion of susceptible in recipient
-          tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & ROUND == .ROUND]
-          log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
-
-          # add number of infected unsuppressed in source
-          tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & ROUND == .ROUND]
-          log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
-
-          # add period in year
-          log_offset[, PERIOD_SPAN := df_round[ROUND == .ROUND & COMM == .COMM, ROUND_SPANYRS]]
-          
-          # make log offset
-          log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
-          
-          # check the order of ages is correct
-          log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
-          stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_offset[, AGE_INFECTION.RECIPIENT])
-          stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_offset[, AGE_TRANSMISSION.SOURCE])
-          
-          # add to array
-          log_offset_array[i, j, k,] = log_offset[, LOG_OFFSET]
-          
+      for(k in 1:max(stan_data[['N_ROUND']])){
+        
+        if(k > stan_data[['N_ROUND']][j]){
+          log_offset_array[i, j, k,] = -1
+          next
+        }
+        
+        log_offset = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
+        
+        .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+        .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM <- df_community[j, COMM]
+        .ROUND <- df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
+        
+        # add proportion of susceptible in recipient
+        tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & ROUND == .ROUND]
+        log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
+        
+        # add number of infected unsuppressed in source
+        tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & ROUND == .ROUND]
+        log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
+        
+        # add period in year
+        log_offset[, PERIOD_SPAN := df_round[ROUND == .ROUND & COMM == .COMM, ROUND_SPANYRS]]
+        
+        # make log offset
+        log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
+        
+        # check the order of ages is correct
+        log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
+        stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_offset[, AGE_INFECTION.RECIPIENT])
+        stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_offset[, AGE_TRANSMISSION.SOURCE])
+        
+        # add to array
+        log_offset_array[i, j, k,] = log_offset[, LOG_OFFSET]
+        
       }
     }
   }
@@ -843,22 +862,22 @@ add_init <- function(stan_data){
   stan_init <- list()
   
   # for fit inland and fishing together
-  # stan_init[['log_beta_baseline']] = 0
-  # stan_init[['log_beta_baseline_contrast_community']] = 0
-  # stan_init[['log_beta_baseline_contrast_direction']] =  0
-  # stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
-  # stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
-  # stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
-  # stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']]))
+  stan_init[['log_beta_baseline']] = 0
+  stan_init[['log_beta_baseline_contrast_community']] = 0
+  stan_init[['log_beta_baseline_contrast_direction']] =  0
+  stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
+  stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
+  stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
+  stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']]))
   # 
   ## for fit inland and fishing independetly
-  stan_init[['log_beta_baseline']] = array(0, dim = c(stan_data[['N_COMMUNITY']]))
-  stan_init[['log_beta_baseline_contrast_direction']] =  array(0, dim = c(stan_data[['N_COMMUNITY']]))
-  stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
-  stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
-  stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
-  stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
-  
+  # stan_init[['log_beta_baseline']] = array(0, dim = c(stan_data[['N_COMMUNITY']]))
+  # stan_init[['log_beta_baseline_contrast_direction']] =  array(0, dim = c(stan_data[['N_COMMUNITY']]))
+  # stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']],  stan_data[['N_COMMUNITY']]))
+  # stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
+  # stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
+  # stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']],stan_data[['N_COMMUNITY']]))
+  # 
   return(stan_init)
 }
 
