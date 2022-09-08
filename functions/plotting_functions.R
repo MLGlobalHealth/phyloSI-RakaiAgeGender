@@ -1,4 +1,5 @@
-palette_round <- scales::viridis_pal(option = 'A', end= 0.9)(8)
+# palette_round <- scales::viridis_pal(option = 'A', end= 0.9)(8)
+palette_round <- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(df_round[,length(unique(ROUND))])
 palette_round_inland <- palette_round[c(1:4, 6:8)]
 palette_round_fishing <- palette_round[c(4:8)]
 
