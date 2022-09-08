@@ -53,6 +53,10 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
+# temp
+palette_round <- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(df_round[,length(unique(ROUND))])
+palette_round_inland <- palette_round[c(1:4, 6:8)]
+palette_round_fishing <- palette_round[c(4:8)]
 
 #
 # offset
@@ -131,13 +135,6 @@ unsuppressed_prop_sex <- prepare_unsuppressed_proportion_by_round(file.unsuppres
 prevalence_prop_sex<- prepare_prevalence_proportion_by_round(file.prevalence.share, 'SEX')
 plot_contribution_sex_source(contribution_sex_source, unsuppressed_prop_sex, prevalence_prop_sex, outfile.figures)
 
-# age-specific contribution to transmission by sex
-contribution_age_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
-                                                         standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
-contribution_age_source[, is_among_5 := M %in% sort(M, decreasing = T)[1:5], by = c('LABEL_COMMUNITY', 'ROUND', 'LABEL_DIRECTION')]
-tmp <- contribution_age_source[is_among_5 == T, list(total_M = paste0(round(sum(M)*100, 2), '%'), age_group = paste0(min(AGE_TRANSMISSION.SOURCE), '-', max(AGE_TRANSMISSION.SOURCE))), by = c('LABEL_COMMUNITY', 'ROUND', 'LABEL_DIRECTION')]
-print(tmp[order(LABEL_DIRECTION, ROUND)][ROUND %in% c('R015', 'R018')])
-
 # age-specific contribution to transmission among all sources
 contribution_age_source2 <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                          standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
@@ -188,6 +185,7 @@ expected_contribution_age_classification_source <-  find_summary_output_by_round
 plot_contribution_age_classification(expected_contribution_age_classification_source, outfile.figures,'Expected_contribution')
 
 
+
 #
 # Transmission risk per unsuppressed
 #
@@ -211,6 +209,43 @@ transmission_risk_age_source<- find_summary_output_by_round(samples, 'log_beta',
                                                             per_unsuppressed = T)
 plot_transmission_risk_age_source(transmission_risk_age_source, outfile.figures)
 
+
+#
+# Relative incidence infection if male had the same art uptake as female
+#
+
+# find age groups that contribute the most 
+n_counterfactual <- 3
+spreaders <- find_spreaders(expected_contribution_age_source2)
+
+# find unsuppressed and relative incidence under counterfactual scenarios
+eligible_count_round.counterfactual <- relative_incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+for(i in 1:n_counterfactual){
+  
+  # select spreader for whcih the art coverage changes
+  selected.spreaders <- spreaders[spreader_category <= i]
+    
+  # find unsuppressed under counterfactual
+  eligible_count_round.counterfactual[[i]] <- find_counterfactual_unsuppressed_count(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data)
+  
+  # find offset under counterfactual
+  log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, eligible_count_round.counterfactual[[i]])
+  
+  # find relative incidence 
+  relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+                                                                              log_offset_round, log_offset_round.counterfactual,
+                                                                              transform = 'exp')
+  
+  # tag with the index of the counterfactual
+  relative_incidence_counterfactual[[i]][, counterfactual_index := i]
+  eligible_count_round.counterfactual[[i]][, counterfactual_index := i]
+}
+relative_incidence_counterfactual <- do.call('rbind', relative_incidence_counterfactual)
+eligible_count_round.counterfactual <- do.call('rbind', eligible_count_round.counterfactual)
+
+# plot
+plot_counterfactual_relative_incidence(eligible_count_round.counterfactual, relative_incidence_counterfactual, outfile.figures)
+  
 
 
 #
