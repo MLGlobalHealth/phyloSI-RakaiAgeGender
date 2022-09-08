@@ -935,3 +935,92 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
   }
 }
 
+plot_incidence_transmission <- function(incidence_tranmission, outdir){
+  tmp <- copy(incidence_tranmission)
+  
+  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 7, 0)]
+  tmp[, LABEL_ROUND2 := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
+  
+  
+  p <- vector(mode = 'list', length = length(tmp[, unique(INDEX_DIRECTION)]))
+  for(i in seq_along(tmp[, unique(INDEX_DIRECTION)])){
+    if(i == 1){
+      cols <- grDevices::colorRampPalette(c("#4C0033", '#790252', '#AF0171', '#E80F88', '#EE6983', "#FFC4C4"))(tmp[, length(unique(AGE_GROUP_TRANSMISSION.SOURCE))])
+      # cols <- gradient_color(c("#4C0033", "#E80F88"))(tmp[, length(unique(AGE_GROUP_TRANSMISSION.SOURCE))])
+      lab <- 'Female sources'
+    }else{
+      cols <- grDevices::colorRampPalette(c("#002B5B", '#0080bf', '#00acdf', '#55d0ff', '#7ce8ff'))(tmp[, length(unique(AGE_GROUP_TRANSMISSION.SOURCE))])
+      lab <- 'Male sources'
+    }
+    
+    tmp1 <- unique(tmp[, .(INDEX_ROUND2, LABEL_ROUND2)])
+    
+    p[[i]] <- ggplot(tmp[INDEX_DIRECTION == i], aes(x = INDEX_ROUND2, group = AGE_GROUP_TRANSMISSION.SOURCE)) +
+      geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
+      geom_line(aes(y = M, col = AGE_GROUP_TRANSMISSION.SOURCE), position = position_dodge(width = 0.2)) +
+      geom_point(aes(y = M, col = AGE_GROUP_TRANSMISSION.SOURCE), size= 1.7, position = position_dodge(width = 0.2)) + 
+      labs(x = '', y = 'HIV incident transmissions per year', col = lab) + 
+      theme_bw() +
+      facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
+      scale_color_manual(values = cols) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            axis.text.x = element_text(angle = 40, hjust = 1),
+            axis.title.x = element_blank(), 
+            legend.position = 'bottom',
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank(), 
+            legend.margin = margin())  + 
+      scale_x_continuous(labels = tmp1[order(INDEX_ROUND2), (LABEL_ROUND2)], breaks = tmp1[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
+      scale_y_continuous(expand = expansion(mult = c(0, 0.5))) 
+    
+  }
+  
+  pp <- ggarrange(plotlist = p, ncol = 1, legend = 'bottom')
+  ggsave(pp, file = paste0(outdir, '-output-', 'Incidencetransmission', '_sex.png'), w = 7, h = 8)
+  
+}
+
+plot_incidence_infection <- function(incidence_infection, outdir){
+  tmp <- copy(incidence_infection)
+  
+  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 7, 0)]
+  tmp[, LABEL_ROUND2 := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
+  
+  p <- vector(mode = 'list', length = length(tmp[, unique(INDEX_DIRECTION)]))
+  for(i in seq_along(tmp[, unique(INDEX_DIRECTION)])){
+    if(i == 1){
+      cols <- grDevices::colorRampPalette(c("#4C0033", '#790252', '#AF0171', '#E80F88', '#EE6983', "#FFC4C4"))(tmp[, length(unique(AGE_GROUP_INFECTION.RECIPIENT))])
+      lab <- 'Female recipients'
+    }else{
+      cols <- grDevices::colorRampPalette(c("#002B5B", '#0080bf', '#00acdf', '#55d0ff', '#7ce8ff'))(tmp[, length(unique(AGE_GROUP_INFECTION.RECIPIENT))])
+      lab <- 'Male recipients'
+    }
+    
+    tmp1 <- unique(tmp[, .(INDEX_ROUND2, LABEL_ROUND2)])
+    
+    p[[i]] <- ggplot(tmp[INDEX_DIRECTION == i], aes(x = INDEX_ROUND2, group = AGE_GROUP_INFECTION.RECIPIENT)) +
+      geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
+      geom_line(aes(y = M, col = AGE_GROUP_INFECTION.RECIPIENT), position = position_dodge(width = 0.2)) +
+      geom_point(aes(y = M, col = AGE_GROUP_INFECTION.RECIPIENT), size= 1.7, position = position_dodge(width = 0.2)) + 
+      labs(x = '', y = 'HIV incident infections per year', col = lab) + 
+      theme_bw() +
+      facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
+      scale_color_manual(values = cols) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            axis.text.x = element_text(angle = 40, hjust = 1),
+            axis.title.x = element_blank(), 
+            legend.position = 'bottom',
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank(), 
+            legend.margin = margin())  + 
+      scale_x_continuous(labels = tmp1[order(INDEX_ROUND2), (LABEL_ROUND2)], breaks = tmp1[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
+      scale_y_continuous(expand = expansion(mult = c(0, 0.5))) 
+    
+  }
+  
+  pp <- ggarrange(plotlist = p, ncol = 1, legend = 'bottom')
+  ggsave(pp, file = paste0(outdir, '-output-', 'Incidenceinfection', '_sex.png'), w = 7, h = 8)
+  
+}

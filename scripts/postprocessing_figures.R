@@ -211,6 +211,28 @@ plot_transmission_risk_age_source(transmission_risk_age_source, outfile.figures)
 
 
 #
+# Incidence infection 
+#
+
+# finer age bands
+df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+
+#find incidence transmission
+incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'), 
+                                                            transform = 'exp', 
+                                                            log_offset_round = log_offset_round, 
+                                                            log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+plot_incidence_transmission(incidence_tranmission, outfile.figures)
+
+#find incidence infection
+incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
+                                                      transform = 'exp', 
+                                                      log_offset_round = log_offset_round, 
+                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+plot_incidence_infection(incidence_infection, outfile.figures)
+
+
+#
 # Relative incidence infection if male had the same art uptake as female
 #
 
