@@ -217,7 +217,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
-                                         log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, posterior_samples){
+                                         log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, posterior_samples = F){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
