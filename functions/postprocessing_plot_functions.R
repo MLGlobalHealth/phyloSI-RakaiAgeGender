@@ -959,7 +959,7 @@ plot_incidence_transmission <- function(incidence_tranmission, outdir){
       geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
       geom_line(aes(y = M, col = AGE_GROUP_TRANSMISSION.SOURCE), position = position_dodge(width = 0.2)) +
       geom_point(aes(y = M, col = AGE_GROUP_TRANSMISSION.SOURCE), size= 1.7, position = position_dodge(width = 0.2)) + 
-      labs(x = '', y = 'HIV incident transmissions per year', col = lab) + 
+      labs(x = '', y = 'HIV incident transmissions per year\nrelative to first round', col = lab) + 
       theme_bw() +
       facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
       scale_color_manual(values = cols) + 
@@ -972,7 +972,7 @@ plot_incidence_transmission <- function(incidence_tranmission, outdir){
             panel.grid.minor.x = element_blank(), 
             legend.margin = margin())  + 
       scale_x_continuous(labels = tmp1[order(INDEX_ROUND2), (LABEL_ROUND2)], breaks = tmp1[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
-      scale_y_continuous(expand = expansion(mult = c(0, 0.5))) 
+      scale_y_continuous(expand = expansion(mult = c(0, 0.5)), labels = scales::percent, limits =  tmp[, range(CL, CU)]) 
     
   }
   
@@ -1003,7 +1003,7 @@ plot_incidence_infection <- function(incidence_infection, outdir){
       geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
       geom_line(aes(y = M, col = AGE_GROUP_INFECTION.RECIPIENT), position = position_dodge(width = 0.2)) +
       geom_point(aes(y = M, col = AGE_GROUP_INFECTION.RECIPIENT), size= 1.7, position = position_dodge(width = 0.2)) + 
-      labs(x = '', y = 'HIV incident infections per year', col = lab) + 
+      labs(x = '', y = 'HIV incident infections per year\nrelative to first round', col = lab) + 
       theme_bw() +
       facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
       scale_color_manual(values = cols) + 
@@ -1016,8 +1016,9 @@ plot_incidence_infection <- function(incidence_infection, outdir){
             panel.grid.minor.x = element_blank(), 
             legend.margin = margin())  + 
       scale_x_continuous(labels = tmp1[order(INDEX_ROUND2), (LABEL_ROUND2)], breaks = tmp1[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
-      scale_y_continuous(expand = expansion(mult = c(0, 0.5))) 
+      scale_y_continuous(expand = expansion(mult = c(0, 0.5)), labels = scales::percent, limits =  tmp[, range(CL, CU)]) 
     
+   
   }
   
   pp <- ggarrange(plotlist = p, ncol = 1, legend = 'bottom')
