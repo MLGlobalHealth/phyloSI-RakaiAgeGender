@@ -620,8 +620,3 @@ find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_
 }
 
 
-ggplot(proportion_unsuppressed.counterfactual, aes(x = AGEYRS)) + 
-  geom_line(aes(y = PROP_UNSUPPRESSED_M), col = 'black') + 
-  geom_line(aes(y = PROP_UNSUPPRESSED_M.FEMALE), col = 'red') + 
-  geom_line(aes(y = INCREASE_ART_COVERAGE), col = 'gold') + 
-  facet_grid(ROUND~COMM + SEX)
