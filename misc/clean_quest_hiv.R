@@ -1,0 +1,100 @@
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(lubridate)
+library(rstan)
+library("haven")
+
+indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+indir.repository <- '~/git/phyloflows'
+
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
+
+file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
+
+path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
+
+# round 15 to 18
+file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
+
+# round 14
+file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
+file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
+
+# load files
+community.keys <- as.data.table(read.csv(file.community.keys))
+
+
+
+################################
+
+# QUEST
+
+################################
+
+# load datasets round 14 only
+quest.14<-as.data.table(read_dta(file.path.quest.614))
+quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate, arvmed, cuarvmed)]
+quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
+quest.14[, intdate := as.Date(intdate)]
+
+# load datasets ROUND 15 TO 18
+quest <- as.data.table(read.csv(file.path.quest))
+quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate, birthdat, arvmed, cuarvmed)]
+quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
+
+# find age in quest (some old age were not correct taking month for year (e.g., H109070))
+quest[, birthdat2 := birthdat]
+quest[, birthdat2 := as.Date(birthdat2, format = '%d-%B-%y')]
+
+## use age at visit for one individual with incorrect birthdate 
+quest[birthdat == '18-Aug-18', birthdat2 := intdate - ageyrs*365]
+
+## year in two digits, so have to change 20 to 19 for crazy years, i.e. 2064, to 1964
+quest[!is.na(birthdat2) & birthdat2 > as.Date('2006',format = '%Y'), range(birthdat2)] 
+quest[!is.na(birthdat2) & birthdat2 > as.Date('2006',format = '%Y'), birthdat2 := birthdat2 - 100*365]
+quest[!is.na(birthdat2) , range(birthdat2)]
+
+# for non-missing birthdate use to detrmine age
+quest[!is.na(birthdat2), ageyrs := floor(as.numeric(intdate - birthdat2) / 365)]
+quest[, range(ageyrs)]
+
+# remove unecessary column
+set(quest, NULL, c('birthdat2', 'birthdat'), NULL)
+
+# merge to 14
+quest <- rbind(quest.14, quest)
+
+# `save
+file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
+write.csv(quest, file = file.name, row.names = F)
+
+
+
+################################
+
+# HIV
+
+################################
+
+# load datasets round 14 only
+hiv.14<-as.data.table(read_dta(file.path.hiv.614))
+hiv.14 <- hiv.14[, .(study_id, round, hiv, intdate)]
+setnames(hiv.14, 'intdate', 'hivdate')
+hiv.14 <- hiv.14[!round %in% paste0('R0', 15:18)]
+hiv.14[, hivdate := as.Date(hivdate)]
+
+# load datasets ROUND 15 TO 18
+hiv <- as.data.table(read.csv(file.path.hiv))
+hiv <- hiv[, .(study_id, round, hiv, hivdate)]
+hiv[, hivdate := as.Date(hivdate, format = '%d-%B-%y')]
+hiv <- rbind(hiv.14, hiv)
+hiv[, round := gsub(' ', '', round)] # remove space in string
+
+# `save
+file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
+write.csv(hiv, file = file.name, row.names = F)
+
