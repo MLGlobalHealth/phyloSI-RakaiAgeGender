@@ -318,6 +318,9 @@ stan_init <- add_init(stan_data)
 #
 
 if(1){
+  # find color palette of rounds
+  find_palette_round()
+  
   # plot count eligible susceptible / infected / infected unsuppressed and incident cases
   plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outfile.figures)
   plot_data_by_period(incidence_cases, outfile.figures)
