@@ -35,7 +35,8 @@ df_round <- rbind(df_round_inland, df_round_fishing)
 colnames(df_round) <- toupper(colnames(df_round))
 df_round[, MIN_SAMPLE_DATE_LABEL := format(MIN_SAMPLE_DATE, '%b %Y')]
 df_round[, MAX_SAMPLE_DATE_LABEL := format(MAX_SAMPLE_DATE - 31, '%b %Y')]
-df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
+# df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
+df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND))]
 df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(ROUND), LABEL_ROUND])]
 df_round[, INDEX_ROUND := 1:length(ROUND), by = 'COMM']
 
@@ -122,17 +123,18 @@ for(i in seq_along(communities)){
           plot.title = element_text(hjust = 0.5), 
           panel.grid.major.x = element_blank(), 
           panel.grid.minor.x = element_blank(), 
-          axis.text.x = element_text(angle = 60, hjust = 1), 
+          axis.text.x = element_text(angle = 30, hjust = 1), 
           axis.title.x = element_blank(), 
-          legend.position = 'bottom', 
-          legend.box = 'vertical', 
+          legend.position = c(0.165, 0.85), 
+          legend.key.size = unit(0.33, 'cm'),
+          # legend.box = 'vertical', 
           legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
     scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[, max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
-    labs(y = 'Percent in census eligible population', col= '', shape = '', linetype = '') + 
+    labs(y = paste0('Percent among census eligible population\nin ',communities[i], ' communities'), col= '', shape = '', linetype = '') + 
     scale_x_continuous(labels = df_round[COMM == communities[i], LABEL_ROUND], breaks =  df_round[COMM == communities[i], INDEX_ROUND]) + 
     guides(color = guide_legend(override.aes = list(shape = 16), order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '.png')), w = 9,h = 5.5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '.png')), w = 9,h = 4)
 }
 
 
