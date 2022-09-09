@@ -391,6 +391,9 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
 
 plot_contribution_age_source <- function(contribution_age_source, unsuppressed_prop_age, outdir, lab = NULL){
   
+  # restricted rounds
+  Rounds <- paste0('R0', c(14:18, '15S'))
+  
   # prepare dataset
   type_cont <- 'Contribution to HIV-1 infection'
   
@@ -403,7 +406,9 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
   tmp1[, type := 'Share among HIV-positive\nunsuppressed individuals']
   tmp1[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
   
-  tmp2 <- tmp[INDEX_ROUND == min(INDEX_ROUND)]
+  tmp2 <- tmp[ROUND %in% Rounds]
+  tmp2[, min_INDEX_ROUND :=  min(INDEX_ROUND), by = 'COMM']
+  tmp2 <- tmp2[INDEX_ROUND == min_INDEX_ROUND]
   tmp2[, type := paste0(type, '\nin ', gsub('\n', ', ', LABEL_ROUND))]
   tmp2 <- select(tmp2, -LABEL_ROUND)
   
@@ -452,7 +457,6 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
     p.all <- plot.p(tmp.p, tmp1.p, tmp2.p)
       
     ## from round 14 
-    Rounds <- paste0('R0', c(14:18, '15S'))
     p <- plot.p(tmp.p[ROUND %in% Rounds], tmp1.p[ROUND %in% Rounds], tmp2.p)
     
     ## legend
@@ -881,7 +885,7 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
   
   # counterfactual label
   counterfactual_label <- 'Counterfactual with higher ART coverage among male sources in'
-  counterfactual_labels <- paste0(c(5, 10, 20), ' age groups contributing the most to transmission')
+  counterfactual_labels <- paste0(c(5, 10, 20), ' main spreaders')
   rei[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = counterfactual_labels)]
   ecr[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = (counterfactual_labels))]
   
@@ -900,16 +904,20 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
     
     p1 <- ggplot(tmp1, aes(x = AGEYRS, y = INCREASE_ART_COVERAGE)) + 
       geom_bar(aes(fill = COUNTERFACTUAL_LABEL), stat = 'identity', position = 'identity') + 
-      labs(x = 'Age', y = 'Point increase in ART coverage\namong male sources', fill = '') + 
+      labs(x = 'Age', y = 'Point increase in ART coverage\namong male sources') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             panel.grid.major.x = element_blank(), 
             panel.grid.minor.x = element_blank(), 
-            legend.position = c(0.7, 0.85), 
-            legend.direction = 'vertical') +
+            legend.position = c(0.85, 0.83), 
+            legend.key.size = unit(0.4, 'cm'),
+            legend.direction = 'vertical', 
+            legend.title = element_blank(), ) +
       scale_fill_manual(values = cols) +
-      scale_y_continuous(expand = expansion(mult = c(0, .05))) 
+      scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
+      scale_x_continuous(expand = c(0,0)) 
+    
     
     p2 <- ggplot(tmp, aes(x = AGEYRS)) + 
       geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = COUNTERFACTUAL_LABEL)) + 
@@ -922,15 +930,15 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
             panel.grid.major.x = element_blank(), 
             panel.grid.minor.x = element_blank(), 
             axis.title.x = element_blank(), 
-            axis.text.x = element_blank(), 
+            # axis.text.x = element_blank(), 
             legend.position = 'none') +
       scale_color_manual(values = cols) +
       scale_fill_manual(values = cols) +
-      scale_y_reverse(labels = scales::percent) + 
-      scale_x_continuous(position = "top") 
+      scale_y_reverse(labels = scales::percent, limits = c(1,0)) + 
+      scale_x_continuous(position = "top", expand = c(0,0)) 
     
-    p <- grid.arrange(p1, p2, layout_matrix = rbind(c(NA, 1), c(2, 2)), widths = c(0.03, 0.95), heights = c(0.45, 0.55))
-    ggsave(p, file = paste0(outdir, '-Counterfactual_incidence_', communities[i], '.png'), w = 6.5, h = 7)
+    p <- grid.arrange(p1, p2, layout_matrix = rbind(c(NA, 1), c(2, 2)), widths = c(0.02, 0.95), heights = c(0.45, 0.55))
+    ggsave(p, file = paste0(outdir, '-output-counterfactual_incidence_', communities[i], '.png'), w = 6, h = 6)
     
   }
 }
