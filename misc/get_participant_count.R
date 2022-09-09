@@ -14,33 +14,12 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_c
 file.census.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
-# round 15 to 18
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
-
-# round 14
-file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
 ncen <- as.data.table(read.csv(file.census.count))
-
-################################
-
-# COMBINE DATASETS ACROSS MULTIPLE ROUNDS
-
-################################
-
-# load datasets round 14 only
-quest.14<-as.data.table(read_dta(file.path.quest.614))
-quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate)]
-quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
-quest.14[, intdate := as.Date(intdate)]
-
-# load datasets ROUND 15 TO 18
 quest <- as.data.table(read.csv(file.path.quest))
-quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate)]
-quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
-quest <- rbind(quest.14, quest)
 
 
 ################################
@@ -73,6 +52,7 @@ tmp <- select(ncen, c('AGEYRS', 'ROUND', 'SEX', 'COMM', 'ELIGIBLE_NOT_SMOOTH'))
 rinc[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
 rpr <- merge(rinc,tmp , by =  c('AGEYRS', 'ROUND', 'SEX', 'COMM'))
 rpr[, PARTICIPATION := PARTICIPANT / ELIGIBLE_NOT_SMOOTH]
+rpr[PARTICIPATION > 1, PARTICIPATION := 1]
 
 # PLOT
 tmp <- copy(rpr)
