@@ -118,6 +118,8 @@ dchain <- as.data.table(dchain)
 # load meta data and round timeline
 load(file.path.meta)
 load(file.path.round.timeline)
+df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
+df_round_fishing[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
 
 # load Tanya's estimate time since infection using phylogenetic data
 time.since.infection <- make.time.since.infection2(fread(file.path.tsiestimates))
