@@ -947,13 +947,15 @@ plot_transmission_events_over_time <- function(incidence_cases_round, pairs, out
     comm <- communities[i]
 
     # plot incidence cases
+    width.error.bar <- 230
+    if(comm == 'inland')  width.error.bar <- 500
     p2 <- ggplot(icr[COMM == comm], aes(x = INDEX_ROUND, group= SEX_LABEL)) + 
-      geom_errorbar(aes(ymin = INCIDENT_CASES_LB  / ROUND_SPANYRS, ymax = INCIDENT_CASES_UB / ROUND_SPANYRS, group = SEX_LABEL),
-                    alpha = 0.5, position=position_dodge(width = 0.5), width=0.5) +
-      geom_line(aes(y = INCIDENT_CASES  / ROUND_SPANYRS, group = SEX_LABEL), alpha = 0.5, position = position_dodge(0.5)) +
-      geom_point(aes(y = INCIDENT_CASES / ROUND_SPANYRS, col = SEX_LABEL), position = position_dodge(0.5), shape = 19, size = 2) +
+      geom_bar(aes(y = INCIDENT_CASES / ROUND_SPANYRS, fill = SEX_LABEL), stat = 'identity', 
+               position = position_dodge(width = 0.9)) +
+      geom_errorbar(aes(ymin = INCIDENT_CASES_LB / ROUND_SPANYRS, ymax = INCIDENT_CASES_UB / ROUND_SPANYRS, group = SEX_LABEL),
+                    col = 'grey50', position=position_dodge(width = 0.9),width = 0.5) +
       facet_grid(.~AGE_GROUP_LABEL) + 
-      scale_color_manual(values = c('Male'=male_color,'Female'=female_color)) + 
+      scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) + 
       labs(y = paste0('HIV incident cases per person-year\namong census eligible population\nin ', communities[i], ' communities'), x= '') + 
       theme_bw() + 
       theme(plot.title = element_text(hjust = 0.5), 
