@@ -219,16 +219,18 @@ df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34'
 
 #find incidence transmission
 incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'), 
-                                                            transform = 'exp', 
-                                                            log_offset_round = log_offset_round, 
-                                                            log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+                                                      transform = 'exp', 
+                                                      log_offset_round = log_offset_round, 
+                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                      relative_baseline = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
 
 #find incidence infection
 incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
-                                                      transform = 'exp', 
-                                                      log_offset_round = log_offset_round, 
-                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+                                                    transform = 'exp', 
+                                                    log_offset_round = log_offset_round, 
+                                                    log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
+                                                    relative_baseline = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
 
 
