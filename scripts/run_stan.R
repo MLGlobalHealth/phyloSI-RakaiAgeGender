@@ -85,7 +85,7 @@ file.path.tsiestimates <- file.path(dirname(indir.deepsequence_analyses), 'PANGE
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 # from EMODO_RAKAI repo
-file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220905.csv")
+file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220905b.csv")
 file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220825.csv")
 
 # from misc/
@@ -323,7 +323,7 @@ if(1){
   plot_data_by_period(incidence_cases, outfile.figures)
   
   # plot tansmission events over time
-  plot_transmission_events_over_time(eligible_count_round, incidence_cases_round, pairs, outfile.figures)
+  plot_transmission_events_over_time(incidence_cases_round, pairs, outfile.figures)
   save_statistics_transmission_events(pairs, outdir.table)
   
   # plot offset
