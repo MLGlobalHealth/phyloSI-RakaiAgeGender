@@ -960,6 +960,7 @@ plot_incidence_transmission <- function(incidence_tranmission, outdir){
       cols <- grDevices::colorRampPalette(c("#002B5B", '#0080bf', '#00acdf', '#55d0ff', '#7ce8ff'))(tmp[, length(unique(AGE_GROUP_TRANSMISSION.SOURCE))])
       lab <- 'Male sources'
     }
+    cols <- rev(cols)
     
     tmp1 <- unique(tmp[, .(INDEX_ROUND2, LABEL_ROUND2)])
     
@@ -980,7 +981,8 @@ plot_incidence_transmission <- function(incidence_tranmission, outdir){
             panel.grid.minor.x = element_blank(), 
             legend.margin = margin())  + 
       scale_x_continuous(labels = tmp1[order(INDEX_ROUND2), (LABEL_ROUND2)], breaks = tmp1[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
-      scale_y_continuous(expand = expansion(mult = c(0, 0.5)), labels = scales::percent, limits =  tmp[, range(CL, CU)]) 
+      scale_y_continuous(labels = scales::percent, limits =  tmp[, range(CL, CU)])  + 
+      coord_cartesian(ylim = c(NA, 3.50))
     
   }
   
@@ -1004,6 +1006,7 @@ plot_incidence_infection <- function(incidence_infection, outdir){
       cols <- grDevices::colorRampPalette(c("#002B5B", '#0080bf', '#00acdf', '#55d0ff', '#7ce8ff'))(tmp[, length(unique(AGE_GROUP_INFECTION.RECIPIENT))])
       lab <- 'Male recipients'
     }
+    cols <- rev(cols)
     
     tmp1 <- unique(tmp[, .(INDEX_ROUND2, LABEL_ROUND2)])
     
@@ -1024,7 +1027,8 @@ plot_incidence_infection <- function(incidence_infection, outdir){
             panel.grid.minor.x = element_blank(), 
             legend.margin = margin())  + 
       scale_x_continuous(labels = tmp1[order(INDEX_ROUND2), (LABEL_ROUND2)], breaks = tmp1[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
-      scale_y_continuous(expand = expansion(mult = c(0, 0.5)), labels = scales::percent, limits =  tmp[, range(CL, CU)]) 
+      scale_y_continuous(labels = scales::percent, limits =  tmp[, range(CL, CU)])  + 
+      coord_cartesian(ylim = c(NA, 2.00))
     
    
   }
