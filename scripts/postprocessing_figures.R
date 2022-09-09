@@ -238,12 +238,23 @@ plot_incidence_infection(incidence_infection, outfile.figures)
 # Relative incidence infection if male had the same art uptake as female
 #
 
+# age-specific contribution to transmission 
+expected_contribution_age_source <-  find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
+                                                                   transform = 'exp', 
+                                                                   standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
+
+# incidence actual 
+incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
+                                                      transform = 'exp', 
+                                                      log_offset_round = log_offset_round, 
+                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+
 # find age groups that contribute the most 
 n_counterfactual <- 3
-spreaders <- find_spreaders(expected_contribution_age_source2)
+spreaders <- find_spreaders(expected_contribution_age_source)
 
 # find unsuppressed and relative incidence under counterfactual scenarios
-eligible_count_round.counterfactual <- relative_incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+eligible_count_round.counterfactual <- relative_incidence_counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
 for(i in 1:n_counterfactual){
   
   # select spreader for whcih the art coverage changes
@@ -255,20 +266,29 @@ for(i in 1:n_counterfactual){
   # find offset under counterfactual
   log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, eligible_count_round.counterfactual[[i]])
   
+  # find incidence counterfactual
+  incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
+                                                                transform = 'exp', 
+                                                                log_offset_round = log_offset_round.counterfactual, 
+                                                                log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+  
   # find relative incidence 
   relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                               log_offset_round, log_offset_round.counterfactual,
                                                                               transform = 'exp')
   
   # tag with the index of the counterfactual
+  incidence_counterfactual[[i]][, counterfactual_index := i]
   relative_incidence_counterfactual[[i]][, counterfactual_index := i]
   eligible_count_round.counterfactual[[i]][, counterfactual_index := i]
 }
+incidence_counterfactual <- do.call('rbind', incidence_counterfactual)
 relative_incidence_counterfactual <- do.call('rbind', relative_incidence_counterfactual)
 eligible_count_round.counterfactual <- do.call('rbind', eligible_count_round.counterfactual)
 
 # plot
-plot_counterfactual_relative_incidence(eligible_count_round.counterfactual, relative_incidence_counterfactual, outfile.figures)
+plot_counterfactual_relative_incidence(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
+                                       incidence_factual, incidence_counterfactual, outfile.figures)
   
 
 

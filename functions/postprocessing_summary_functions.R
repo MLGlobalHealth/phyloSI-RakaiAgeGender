@@ -534,41 +534,57 @@ remove_first_round <- function(tmp){
 
 find_spreaders <- function(expected_contribution_age_source){
   
-  find.index.mass <- function(x, k){
+  find.index.mass <- function(x, p){
+
+    stopifnot(p <= sum(x))
     
     n <- length(x)
     
     index.max <- which.max(x)
+    index.groups <- index.max
+    enter <- T
     
-    start.index.min <- 1
-    stop.index.max <- n
+    while(enter){
+      if(max(index.groups) == n){
+        new.index = min(index.groups) - 1
+      }else if(min(index.groups) == 1){
+        new.index = max(index.groups) + 1
+      }else{
+        proposed.indices <- c(min(index.groups) - 1, max(index.groups) + 1)
+        new.index <- proposed.indices[which.max(x[proposed.indices])]
+      }
+      
+      new.index.groups <- c(index.groups, new.index)
+      if(sum(x[new.index.groups]) > p){
+        enter = F
+      }else if(sum(x[new.index.groups]) == p){
+        index.groups <- c(index.groups, new.index)
+        enter = F
+      } else{
+        index.groups <- c(index.groups, new.index)
+      }
+    }
     
-    start.index.group <- (index.max - k):index.max
-    stop.index.group <- index.max:(index.max + k)
-    index.group.viable <- start.index.group >= start.index.min & stop.index.group <= stop.index.max
-    start.index.group <- start.index.group[index.group.viable]
-    stop.index.group <- stop.index.group[index.group.viable]
-    n.index.group <- length(stop.index.group)
+    # check
+    stopifnot(x[index.groups] <= p)
     
-    sum.group <- sapply(1:n.index.group, function(i) sum(x[start.index.group[i]:stop.index.group[i]]))
-    max.group <- which.max(sum.group)
     
-    return(start.index.group[max.group]:stop.index.group[max.group])
+    return(sort(index.groups))
   }
   
-  # 5 age groups that contribute the most
-  spreaders <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, 5)]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
+  # age groups that contribute to 33%
+  spreaders <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, 1/3)]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
   spreaders[, first_main_spreader := T]
   
-  # 10 age groups that contribute the most
-  tmp <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, 10)]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
+  # age groups that contribute to 66%
+  tmp <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, 2/3)]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
   tmp[, second_main_spreader := T]
   spreaders <- merge(spreaders, tmp, by = c('COMM', 'ROUND', 'LABEL_DIRECTION', 'AGEYRS'), all.x = T, all.y = T)
   spreaders[is.na(first_main_spreader), first_main_spreader := F]
   stopifnot(nrow( spreaders[first_main_spreader == T & second_main_spreader == F]) == 0)
  
-  # 20 age groups that contribute the most
-  tmp <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, 20)]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
+  # age groups that contribute to 100%
+  tmp <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, sum(M))]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
   tmp[, third_main_spreader := T]
   spreaders <- merge(spreaders, tmp, by = c('COMM', 'ROUND', 'LABEL_DIRECTION', 'AGEYRS'), all.x = T, all.y = T)
   spreaders[is.na(first_main_spreader), first_main_spreader := F]
