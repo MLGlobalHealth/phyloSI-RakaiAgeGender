@@ -999,7 +999,7 @@ plot_incidence_transmission <- function(incidence_tranmission, outdir){
       geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
       geom_line(aes(y = M, col = AGE_GROUP_TRANSMISSION.SOURCE), position = position_dodge(width = 0.2)) +
       geom_point(aes(y = M, col = AGE_GROUP_TRANSMISSION.SOURCE), size= 1.7, position = position_dodge(width = 0.2)) + 
-      labs(x = '', y = 'HIV incident transmissions\nper year per unsuppressed\nrelative to first round', col = lab) + 
+      labs(x = '', y = 'HIV incident transmissions per person-year\nrelative to first round', col = lab) + 
       theme_bw() +
       facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
       scale_color_manual(values = cols) + 
@@ -1045,7 +1045,7 @@ plot_incidence_infection <- function(incidence_infection, outdir){
       geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
       geom_line(aes(y = M, col = AGE_GROUP_INFECTION.RECIPIENT), position = position_dodge(width = 0.2)) +
       geom_point(aes(y = M, col = AGE_GROUP_INFECTION.RECIPIENT), size= 1.7, position = position_dodge(width = 0.2)) + 
-      labs(x = '', y = 'HIV incident infections\nper year per susceptible\nrelative to first round', col = lab) + 
+      labs(x = '', y = 'HIV incident infections per person-year\nrelative to first round', col = lab) + 
       theme_bw() +
       facet_grid(.~LABEL_COMMUNITY, scale = 'free_x') + 
       scale_color_manual(values = cols) + 

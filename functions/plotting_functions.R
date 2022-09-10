@@ -916,9 +916,9 @@ plot_transmission_events_over_time <- function(incidence_cases_round, pairs, out
   #
   # Prepare incidence cases
   icr <- merge(incidence_cases_round, df_age_group, by = 'AGEYRS')
-  icr <- icr[, list(INCIDENT_CASES = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE), 
-                    INCIDENT_CASES_UB = sum(INCIDENT_CASES_UB)  / sum(SUSCEPTIBLE),
-                    INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'AGE_GROUP_LABEL')] 
+  icr <- icr[, list(INCIDENT_CASES = sum(INCIDENT_CASES) / sum(ELIGIBLE), 
+                    INCIDENT_CASES_UB = sum(INCIDENT_CASES_UB)  / sum(ELIGIBLE),
+                    INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB) / sum(ELIGIBLE)), by = c('SEX', 'ROUND', 'COMM', 'AGE_GROUP_LABEL')] 
   
   # merge labels
   icr <- merge(icr, df_timeline, by = c('ROUND', 'COMM'))
