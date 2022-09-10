@@ -1068,3 +1068,54 @@ plot_incidence_infection <- function(incidence_infection, outdir){
   ggsave(pp, file = paste0(outdir, '-output-', 'Incidenceinfection', '_sex.png'), w = 7, h = 8)
   
 }
+
+plot_NNT <- function(eligible_count_round.counterfactual, eligible_count_round, difference_incidence_counterfactual, outdir){
+  # select round
+  Round <- 'R018'
+  ecf <- eligible_count_round[ROUND == Round & SEX == 'M']
+  ecr <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
+  dic <- difference_incidence_counterfactual[ROUND == Round & IS_MF == T]
+  
+  # find number treated by community
+  setnames(ecr, 'INFECTED_NON_SUPPRESSED', 'INFECTED_NON_SUPPRESSED_COUNTERFACTUAL')
+  ec <- merge(ecf[, .(COMM, AGEYRS, INFECTED_NON_SUPPRESSED)], ecr[, .(COMM, AGEYRS, INFECTED_NON_SUPPRESSED_COUNTERFACTUAL, counterfactual_index)], by = c('COMM', 'AGEYRS'))
+  ec[, TREATED := INFECTED_NON_SUPPRESSED - INFECTED_NON_SUPPRESSED_COUNTERFACTUAL ]
+  ec <- ec[, list(TREATED = sum(TREATED)), by = c('COMM', 'counterfactual_index')]
+  
+  # find number
+  di <- merge(dic, ec, by = c('COMM', 'counterfactual_index'))
+  di[, NNT_M := TREATED / M ]
+  di[, NNT_CL := TREATED / CL ]
+  di[, NNT_CU := TREATED / CU ]
+  
+  # counterfactual label
+  counterfactual_label <- 'Counterfactual with higher ART\ncoverage among male sources'
+  counterfactual_labels <- paste0('Contributing to ', c(33, 66, 100), '% of transmissions')
+  di[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = counterfactual_labels)]
+  
+  cols <- c('#F2D388', '#C98474', '#874C62')
+  
+  # plot
+  p <- ggplot(di, aes(x = AGE_INFECTION.RECIPIENT)) + 
+    geom_line(aes(y = NNT_M, col = COUNTERFACTUAL_LABEL)) + 
+    geom_ribbon(aes(ymin= NNT_CL, ymax = NNT_CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.5) + 
+    labs(x = 'Age recipient', y = 'Number of HIV-positive male needed to treat\nto prevent one infection in female', 
+         fill = counterfactual_label, col = counterfactual_label) + 
+    theme_bw() +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          panel.grid.major.x = element_blank(), 
+          panel.grid.minor.x = element_blank(), 
+          # axis.title.x = element_blank(), 
+          # axis.text.x = element_blank(), 
+          legend.position = 'bottom',
+          legend.direction = 'vertical') +
+    scale_color_manual(values = cols) +
+    scale_fill_manual(values = cols) +
+    scale_y_continuous() + 
+    scale_x_continuous(expand = c(0,0)) + 
+    facet_grid(LABEL_COMMUNITY~.)
+  ggsave(p, file = paste0(outdir, '-output-counterfactual_NNT.png'), w = 6, h = 7)
+  
+}
+

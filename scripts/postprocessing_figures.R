@@ -223,7 +223,7 @@ incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('IN
                                                       log_offset_round = log_offset_round, 
                                                       log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                       relative_baseline = T, 
-                                                      per_unsuppressed = T)
+                                                      per_eligible = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
 
 #find incidence infection
@@ -232,7 +232,7 @@ incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDE
                                                     log_offset_round = log_offset_round, 
                                                     log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                     relative_baseline = T, 
-                                                    per_susceptible = T)
+                                                    per_eligible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
 
 #
@@ -255,7 +255,8 @@ n_counterfactual <- 3
 spreaders <- find_spreaders(expected_contribution_age_source)
 
 # find unsuppressed and relative incidence under counterfactual scenarios
-eligible_count_round.counterfactual <- relative_incidence_counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+eligible_count_round.counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+relative_incidence_counterfactual <- difference_incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
 for(i in 1:n_counterfactual){
   
   # select spreader for whcih the art coverage changes
@@ -273,23 +274,31 @@ for(i in 1:n_counterfactual){
                                                                 log_offset_round = log_offset_round.counterfactual, 
                                                                 log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
   
-  # find relative incidence 
+  # find relative difference incidence 
   relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                               log_offset_round, log_offset_round.counterfactual,
                                                                               transform = 'exp')
+  
+  # find absolute difference incidence 
+  difference_incidence_counterfactual[[i]] <- find_difference_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+                                                                                   log_offset_round, log_offset_round.counterfactual,
+                                                                                   transform = 'exp')
   
   # tag with the index of the counterfactual
   incidence_counterfactual[[i]][, counterfactual_index := i]
   relative_incidence_counterfactual[[i]][, counterfactual_index := i]
   eligible_count_round.counterfactual[[i]][, counterfactual_index := i]
+  difference_incidence_counterfactual[[i]][, counterfactual_index := i]
 }
 incidence_counterfactual <- do.call('rbind', incidence_counterfactual)
 relative_incidence_counterfactual <- do.call('rbind', relative_incidence_counterfactual)
 eligible_count_round.counterfactual <- do.call('rbind', eligible_count_round.counterfactual)
+difference_incidence_counterfactual <- do.call('rbind', difference_incidence_counterfactual)
 
 # plot
 plot_counterfactual_relative_incidence(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
                                        incidence_factual, incidence_counterfactual, outfile.figures)
+plot_NNT(eligible_count_round.counterfactual, eligible_count_round, difference_incidence_counterfactual, outfile.figures)
   
 
 

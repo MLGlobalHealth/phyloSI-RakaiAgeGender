@@ -381,6 +381,48 @@ find_relative_incidence_counterfactual <- function(samples, output, vars, log_of
   
   return(tmp1)
 }
+
+find_difference_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
+                                                   transform = NULL, log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  # incidence rate under original scenario
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
+  
+  # incidence rate under countefactual scenario
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
+  setnames(tmp, 'value', 'value_counterfactual')
+  
+  # find difference incidence
+  tmp1 <- merge(tmp, tmp1, by = c(vars, 'iterations'))
+  tmp1[, value := (value - value_counterfactual) ]
+  
+  #summarise
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
+  tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
+  
+  
+  if('INDEX_DIRECTION' %in% vars)
+    tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
+  if('INDEX_COMMUNITY' %in% vars)
+    tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
+  if('INDEX_ROUND' %in% vars)
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
+  if('INDEX_AGE' %in% vars)
+    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  if('INDEX_TIME' %in% vars)
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
+  
+  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')), '_diff_counterfactual')
+  
+  file = paste0(file, '.rds')
+  saveRDS(tmp1, file)
+  
+  return(tmp1)
+}
+
 find_median_age_source <- function(samples, var){
   
   ps <- c(0.5, 0.025, 0.975)
