@@ -1098,7 +1098,7 @@ plot_NNT <- function(eligible_count_round.counterfactual, eligible_count_round, 
   # plot
   p <- ggplot(di, aes(x = AGE_INFECTION.RECIPIENT)) + 
     geom_line(aes(y = NNT_M, col = COUNTERFACTUAL_LABEL)) + 
-    geom_ribbon(aes(ymin= NNT_CL, ymax = NNT_CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.5) + 
+    geom_ribbon(aes(ymin= NNT_CL, ymax = NNT_CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.2) + 
     labs(x = 'Age recipient', y = 'Number of HIV-positive male needed to treat\nto prevent one infection in female', 
          fill = counterfactual_label, col = counterfactual_label) + 
     theme_bw() +
@@ -1119,7 +1119,7 @@ plot_NNT <- function(eligible_count_round.counterfactual, eligible_count_round, 
   
   p <- ggplot(di, aes(x = AGE_INFECTION.RECIPIENT)) + 
     geom_line(aes(y = NNT_M, col = COUNTERFACTUAL_LABEL)) + 
-    geom_ribbon(aes(ymin= NNT_CL, ymax = NNT_CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.5) + 
+    geom_ribbon(aes(ymin= NNT_CL, ymax = NNT_CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.2) + 
     labs(x = 'Age recipient', y = 'Number of HIV-positive male needed to treat\nto prevent one infection in female', 
          fill = counterfactual_label, col = counterfactual_label) + 
     theme_bw() +
