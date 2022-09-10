@@ -217,7 +217,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
-                                         log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, posterior_samples = F, relative_baseline = F){
+                                         log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_susceptible = F, posterior_samples = F, relative_baseline = F){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -262,18 +262,15 @@ find_summary_output_by_round <- function(samples, output, vars,
     tmp1[, value := value / total_value]
   }
   
-  # relative to first round
-  if(relative_baseline){
-    vars.without.index.round <- vars[which(vars != 'INDEX_ROUND')]
-    tmp1[, value_baseline := value[INDEX_ROUND == min(INDEX_ROUND)], by = c('iterations', vars.without.index.round)]
-    tmp1[, value := value / value_baseline]
-  }
-  
   # divide by the number of unsuppressed
   if(per_unsuppressed){
     tmp <- copy(eligible_count_round)
     if('AGE_TRANSMISSION.SOURCE' %in% vars)
       setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
+    if('AGE_GROUP_TRANSMISSION.SOURCE' %in% vars){
+      setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
+      tmp <- merge(tmp, unique(df_age_aggregated[, .(AGE_TRANSMISSION.SOURCE, AGE_GROUP_TRANSMISSION.SOURCE)]), by = c('AGE_TRANSMISSION.SOURCE'))
+    }
     if('INDEX_DIRECTION' %in% vars)
       tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
     if('INDEX_COMMUNITY' %in% vars)
@@ -285,6 +282,33 @@ find_summary_output_by_round <- function(samples, output, vars,
     
     tmp1 <- merge(tmp, tmp1, by = vars)
     tmp1[, value := value / TOTAL_INFECTED_NON_SUPPRESSED]
+  }
+  
+  # divide by the number of susceptible
+  if(per_susceptible){
+    tmp <- copy(eligible_count_round)
+    if('AGE_GROUP_INFECTION.RECIPIENT' %in% vars){
+      setnames(tmp, 'AGEYRS', 'AGE_INFECTION.RECIPIENT')
+      tmp <- merge(tmp, unique(df_age_aggregated[, .(AGE_INFECTION.RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT)]), by = c('AGE_INFECTION.RECIPIENT'))
+    }
+    if('INDEX_DIRECTION' %in% vars)
+      tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
+    if('INDEX_COMMUNITY' %in% vars)
+      tmp <- merge(tmp, df_community, by = 'COMM')
+    if('INDEX_ROUND' %in% vars)
+      tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+    
+    tmp <- tmp[,list(TOTAL_SUSCEPTIBLE = sum(SUSCEPTIBLE)), by = vars]
+    
+    tmp1 <- merge(tmp, tmp1, by = vars)
+    tmp1[, value := value / TOTAL_SUSCEPTIBLE]
+  }
+  
+  # relative to first round
+  if(relative_baseline){
+    vars.without.index.round <- vars[which(vars != 'INDEX_ROUND')]
+    tmp1[, value_baseline := value[INDEX_ROUND == min(INDEX_ROUND)], by = c('iterations', vars.without.index.round)]
+    tmp1[, value := value / value_baseline]
   }
   
   if(posterior_samples == T){

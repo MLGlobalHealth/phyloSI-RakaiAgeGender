@@ -222,17 +222,18 @@ incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('IN
                                                       transform = 'exp', 
                                                       log_offset_round = log_offset_round, 
                                                       log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
-                                                      relative_baseline = T)
+                                                      relative_baseline = T, 
+                                                      per_unsuppressed = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
 
 #find incidence infection
 incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                                                     transform = 'exp', 
                                                     log_offset_round = log_offset_round, 
-                                                    log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
-                                                    relative_baseline = T)
+                                                    log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                    relative_baseline = T, 
+                                                    per_susceptible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
-
 
 #
 # Relative incidence infection if male had the same art uptake as female
