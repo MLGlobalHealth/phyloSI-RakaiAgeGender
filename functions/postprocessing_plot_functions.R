@@ -392,7 +392,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
 plot_contribution_age_source <- function(contribution_age_source, unsuppressed_prop_age, outdir, lab = NULL){
   
   # restricted rounds
-  Rounds <- paste0('R0', c(14:18, '15S'))
+  Rounds <- paste0('R0', c(15:18, '15S'))
   
   # prepare dataset
   type_cont <- 'Contribution to HIV-1 infection'
@@ -487,7 +487,7 @@ plot_contribution_age_source <- function(contribution_age_source, unsuppressed_p
     if(is.null(lab)) lab =  'Contribution'
     
     if(communities[i] == 'inland'){
-      ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 8, h = 9)
+      ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 8, h = 8)
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_entended_', communities[i], '.png'), w = 9.5, h = 12.5)
     }else{
       ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 8, h = 9)
@@ -930,9 +930,9 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
 
     p2 <- ggplot() + 
       geom_line(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = SEX), col = 'black') + 
-      geom_ribbon(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = SEX), alpha = 0.5) + 
+      geom_ribbon(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = SEX), alpha = 0.2) + 
       geom_line(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, y = M, col = COUNTERFACTUAL_LABEL)) + 
-      geom_ribbon(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.5) + 
+      geom_ribbon(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.2) + 
       labs(x = 'Age', y = '\nHIV incidence infections', 
            fill = counterfactual_label, col = counterfactual_label) + 
       theme_bw() +
@@ -1089,7 +1089,7 @@ plot_NNT <- function(eligible_count_round.counterfactual, eligible_count_round, 
   di[, NNT_CU := TREATED / CU ]
   
   # counterfactual label
-  counterfactual_label <- 'Counterfactual with higher ART\ncoverage among male sources'
+  counterfactual_label <- 'Among male sources'
   counterfactual_labels <- paste0('Contributing to ', c(33, 66, 100), '% of transmissions')
   di[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = counterfactual_labels)]
   
@@ -1117,5 +1117,25 @@ plot_NNT <- function(eligible_count_round.counterfactual, eligible_count_round, 
     facet_grid(LABEL_COMMUNITY~.)
   ggsave(p, file = paste0(outdir, '-output-counterfactual_NNT.png'), w = 6, h = 7)
   
+  p <- ggplot(di, aes(x = AGE_INFECTION.RECIPIENT)) + 
+    geom_line(aes(y = NNT_M, col = COUNTERFACTUAL_LABEL)) + 
+    geom_ribbon(aes(ymin= NNT_CL, ymax = NNT_CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.5) + 
+    labs(x = 'Age recipient', y = 'Number of HIV-positive male needed to treat\nto prevent one infection in female', 
+         fill = counterfactual_label, col = counterfactual_label) + 
+    theme_bw() +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          panel.grid.major.x = element_blank(), 
+          panel.grid.minor.x = element_blank(), 
+          # axis.title.x = element_blank(), 
+          # axis.text.x = element_blank(), 
+          legend.position = 'bottom',
+          legend.direction = 'vertical') +
+    scale_color_manual(values = cols) +
+    scale_fill_manual(values = cols) +
+    scale_y_log10() + 
+    scale_x_continuous(expand = c(0,0)) + 
+    facet_grid(LABEL_COMMUNITY~.)
+  ggsave(p, file = paste0(outdir, '-output-counterfactual_NNT_log.png'), w = 6, h = 7)
 }
 
