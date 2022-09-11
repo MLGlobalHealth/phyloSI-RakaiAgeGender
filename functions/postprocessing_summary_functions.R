@@ -291,8 +291,12 @@ find_summary_output_by_round <- function(samples, output, vars,
       setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
       tmp <- merge(tmp, unique(df_age_aggregated[, .(AGE_TRANSMISSION.SOURCE, AGE_GROUP_TRANSMISSION.SOURCE)]), by = c('AGE_TRANSMISSION.SOURCE'))
     }
-    if('INDEX_DIRECTION' %in% vars)
-      tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
+    if('INDEX_DIRECTION' %in% vars){
+      if('AGE_GROUP_TRANSMISSION.SOURCE' %in% vars)
+        tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
+      if('AGE_GROUP_INFECTION.RECIPIENT' %in% vars)
+        tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 0, INDEX_DIRECTION], df_direction[IS_MF == 1, INDEX_DIRECTION])]
+    }
     if('INDEX_COMMUNITY' %in% vars)
       tmp <- merge(tmp, df_community, by = 'COMM')
     if('INDEX_ROUND' %in% vars)

@@ -1045,7 +1045,7 @@ plot_incidence_infection <- function(incidence_infection, outdir){
   
   p <- vector(mode = 'list', length = length(tmp[, unique(INDEX_DIRECTION)]))
   for(i in seq_along(tmp[, unique(INDEX_DIRECTION)])){
-    if(i == 1){
+    if(i == 2){
       cols <- grDevices::colorRampPalette(c("#4C0033", '#790252', '#AF0171', '#E80F88', '#EE6983', "#FFC4C4"))(tmp[, length(unique(AGE_GROUP_INFECTION.RECIPIENT))])
       lab <- 'Female recipients'
     }else{
