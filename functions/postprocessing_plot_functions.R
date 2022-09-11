@@ -774,7 +774,7 @@ plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incide
   
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M/(ROUND_SPANYRS*ELIGIBLE), col = LABEL_ROUND)) +
-      geom_ribbon(aes(ymin = CL/(ROUND_SPANYRS*ELIGIBLE), ymax = CU/(ROUND_SPANYRS*ELIGIBLE), fill = LABEL_ROUND), alpha = 0.5) +
+      # geom_ribbon(aes(ymin = CL/(ROUND_SPANYRS*ELIGIBLE), ymax = CU/(ROUND_SPANYRS*ELIGIBLE), fill = LABEL_ROUND), alpha = 0.5) +
       theme_bw() + 
       labs(x = 'Age at infection recipient', y = 'Augmented transmission events (Z) per PY') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
