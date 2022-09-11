@@ -1175,7 +1175,7 @@ plot_NNT_group <- function(eligible_count_round.counterfactual, eligible_count_r
   di[, NNT_CU := TREATED / CU ]
   
   # counterfactual label
-  counterfactual_label <- 'Treating male'
+  counterfactual_label <- 'Among male sources'
   counterfactual_labels <- paste0('Contributing to ', c(33, 66, 100), '% of transmissions')
   di[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = counterfactual_labels)]
   
@@ -1193,7 +1193,7 @@ plot_NNT_group <- function(eligible_count_round.counterfactual, eligible_count_r
                   alpha = 0.5, width = 0.5) + 
     geom_line(aes(y = NNT_M, col = COUNTERFACTUAL_LABEL), position = position_dodge(0.5)) + 
     geom_point(aes(y = NNT_M, col = COUNTERFACTUAL_LABEL), position = position_dodge(0.5)) + 
-    labs(x = 'Age recipient', y = 'Number of HIV-positive male needed to treat\nto prevent one infection in female', 
+    labs(x = 'Age recipient', y = 'Number of HIV-positive male with ART uptake similar to female needed\nto prevent one infection in female', 
          fill = counterfactual_label, col = counterfactual_label) + 
     theme_bw() +
     theme(strip.background = element_rect(colour="white", fill="white"),
