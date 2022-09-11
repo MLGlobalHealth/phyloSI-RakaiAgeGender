@@ -400,7 +400,7 @@ add_incidence_cases <- function(stan_data, incidence_cases_round){
         cat(sum(tmp1$INCIDENT_CASES), 'incidence cases ', df_direction[i, LABEL_DIRECTION], 'towards', .COMM, 'in', .ROUND, '\n')
         
         # fill
-        z[, i, j, k] = ceiling(tmp$INCIDENT_CASES)
+        z[, i, j, k] = round(tmp$INCIDENT_CASES)
         
       }
     }
