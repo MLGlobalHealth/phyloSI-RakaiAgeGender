@@ -1139,3 +1139,64 @@ plot_NNT <- function(eligible_count_round.counterfactual, eligible_count_round, 
   ggsave(p, file = paste0(outdir, '-output-counterfactual_NNT_log.png'), w = 6, h = 7)
 }
 
+plot_NNT_group <- function(eligible_count_round.counterfactual, eligible_count_round, difference_incidence_groups_counterfactual, outdir){
+  
+  # select round
+  Round <- 'R018'
+  ecf <- eligible_count_round[ROUND == Round & SEX == 'M']
+  ecr <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
+  dic <- difference_incidence_groups_counterfactual[ROUND == Round & IS_MF == T]
+  
+  # find number treated by community
+  setnames(ecr, 'INFECTED_NON_SUPPRESSED', 'INFECTED_NON_SUPPRESSED_COUNTERFACTUAL')
+  ec <- merge(ecf[, .(COMM, AGEYRS, INFECTED_NON_SUPPRESSED)], ecr[, .(COMM, AGEYRS, INFECTED_NON_SUPPRESSED_COUNTERFACTUAL, counterfactual_index)], by = c('COMM', 'AGEYRS'))
+  ec[, TREATED := INFECTED_NON_SUPPRESSED - INFECTED_NON_SUPPRESSED_COUNTERFACTUAL ]
+  ec <- ec[, list(TREATED = sum(TREATED)), by = c('COMM', 'counterfactual_index')]
+  
+  # find number
+  di <- merge(dic, ec, by = c('COMM', 'counterfactual_index'))
+  di[, NNT_M := TREATED / M ]
+  di[, NNT_CL := TREATED / CL ]
+  di[, NNT_CU := TREATED / CU ]
+  
+  # counterfactual label
+  counterfactual_label <- 'Treating male'
+  counterfactual_labels <- paste0('Contributing to ', c(33, 66, 100), '% of transmissions')
+  di[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = counterfactual_labels)]
+  
+  # make index for groups
+  tmp_age_group <- unique(di[, .(AGE_GROUP_INFECTION.RECIPIENT)])
+  tmp_age_group[, INDEX_AGE_GROUP_INFECTION.RECIPIENT := 1:nrow(tmp_age_group)]
+  tmp_age_group <- tmp_age_group[order(INDEX_AGE_GROUP_INFECTION.RECIPIENT)]
+  di <- merge(di, tmp_age_group, by = 'AGE_GROUP_INFECTION.RECIPIENT')
+  
+  cols <- c('#F2D388', '#C98474', '#874C62')
+  
+  # plot
+  p <- ggplot(di, aes(x = INDEX_AGE_GROUP_INFECTION.RECIPIENT)) + 
+    geom_errorbar(aes(ymin= NNT_CL, ymax = NNT_CU, group = COUNTERFACTUAL_LABEL), position = position_dodge(0.5),
+                  alpha = 0.5, width = 0.5) + 
+    geom_line(aes(y = NNT_M, col = COUNTERFACTUAL_LABEL), position = position_dodge(0.5)) + 
+    geom_point(aes(y = NNT_M, col = COUNTERFACTUAL_LABEL), position = position_dodge(0.5)) + 
+    labs(x = 'Age recipient', y = 'Number of HIV-positive male needed to treat\nto prevent one infection in female', 
+         fill = counterfactual_label, col = counterfactual_label) + 
+    theme_bw() +
+    theme(strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1)),
+          panel.grid.major.x = element_blank(), 
+          panel.grid.minor.x = element_blank(), 
+          # axis.title.x = element_blank(), 
+          # axis.text.x = element_blank(), 
+          legend.position = 'bottom',
+          legend.direction = 'vertical') +
+    scale_color_manual(values = cols) +
+    scale_fill_manual(values = cols) +
+
+    scale_x_continuous(breaks = tmp_age_group[, INDEX_AGE_GROUP_INFECTION.RECIPIENT], labels = tmp_age_group[, AGE_GROUP_INFECTION.RECIPIENT]) + 
+    facet_grid(LABEL_COMMUNITY~.)
+  ggsave(p, file = paste0(outdir, '-output-counterfactual_group_NNT.png'), w = 5, h = 6)
+  
+  p <- p + scale_y_log10()
+  ggsave(p, file = paste0(outdir, '-output-counterfactual_group_NNT_log.png'), w = 5, h = 6)
+}
+
