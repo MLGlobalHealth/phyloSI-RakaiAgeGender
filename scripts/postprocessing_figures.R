@@ -215,6 +215,8 @@ plot_transmission_risk_age_source(transmission_risk_age_source, outfile.figures)
 # Incidence infection 
 #
 
+cat("\nPlot incidence infection and transmission\n")
+
 # finer age bands
 # df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
 df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
@@ -241,6 +243,8 @@ plot_incidence_infection(incidence_infection, outfile.figures)
 #
 # Relative incidence infection if male had the same art uptake as female
 #
+
+cat("\nPlot relative incidence infection if male had the same art uptake as female\n")
 
 # age-specific contribution to transmission 
 expected_contribution_age_source <-  find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
