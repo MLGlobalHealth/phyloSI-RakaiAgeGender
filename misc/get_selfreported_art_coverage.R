@@ -16,54 +16,14 @@ file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_U
 
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
-# round 15 to 18
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
-
-# round 14
-file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
-file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
+file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
-
-################################
-
-# COMBINE DATASETS ACROSS MULTIPLE ROUNDS
-
-################################
-
-#
-# Quest
-
-# load datasets round 14 only
-quest.14<-as.data.table(read_dta(file.path.quest.614))
-quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate, arvmed, cuarvmed)]
-quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
-quest.14[, intdate := as.Date(intdate)]
-
-# load datasets ROUND 15 TO 18
 quest <- as.data.table(read.csv(file.path.quest))
-quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate, arvmed, cuarvmed)]
-quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
-quest <- rbind(quest.14, quest)
-
-#
-# HIV
-
-# load datasets round 14 only
-hiv.14<-as.data.table(read_dta(file.path.hiv.614))
-hiv.14 <- hiv.14[, .(study_id, round, hiv, intdate)]
-setnames(hiv.14, 'intdate', 'hivdate')
-hiv.14 <- hiv.14[!round %in% paste0('R0', 15:18)]
-hiv.14[, hivdate := as.Date(hivdate)]
-
-# load datasets ROUND 15 TO 18
 hiv <- as.data.table(read.csv(file.path.hiv))
-hiv <- hiv[, .(study_id, round, hiv, hivdate)]
-hiv[, hivdate := as.Date(hivdate, format = '%d-%B-%y')]
-hiv <- rbind(hiv.14, hiv)
-hiv[, round := gsub(' ', '', round)] # remove space in string
+
 
 
 #################################
@@ -154,7 +114,7 @@ rart[, PROP_UNSUPPRESSED_EMPIRICAL := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC'
 
 # find smooth proportion
 for(round in c('R012', 'R013', 'R014', "R015", "R015S")){
-  round <- 'R015'
+  round <- 'R015S'
   
   DT <- copy(rart[ROUND == round] )
   DT <- DT[order(SEX, LOC, AGE_LABEL)]
@@ -201,7 +161,7 @@ for(round in c('R012', 'R013', 'R014', "R015", "R015S")){
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0('selfreportedart_gp_stanfit_round',gsub('R0', '', round),'_220906.rds')
+  filename <- paste0('selfreportedart_gp_stanfit_round',gsub('R0', '', round),'_220909.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
   
@@ -228,7 +188,7 @@ for(i in seq_along(rounds)){
   x_predict <- seq(rart[, min(AGE_LABEL)], rart[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0('selfreportedart_gp_stanfit_round',round,'_220906.rds')
+  filename <- paste0('selfreportedart_gp_stanfit_round',round,'_220909.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   

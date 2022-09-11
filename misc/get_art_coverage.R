@@ -42,7 +42,6 @@ stopifnot(nrow(art[COMM == 'inland']) == art[, length(unique(AGEYRS))] * art[, l
 stopifnot(nrow(art[COMM == 'fishing']) == art[, length(unique(AGEYRS))] * art[, length(unique(SEX))] * art[COMM == 'fishing', length(unique(ROUND))])
 
 # plot
-palette_round <- scales::viridis_pal(option = 'A', end= 0.9)(8)
 tmp <- copy(art)
 tmp[, ROUND_LABEL := paste0('ROUND: ', gsub('R0(.+)', '\\1', ROUND))]
 tmp[, SEX_LABEL := 'Female']
@@ -51,18 +50,18 @@ tmp[, COMM_LABEL := 'Fishing\n communities']
 tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
 tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
 ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_line(aes(y = 1-PROP_UNSUPPRESSED_M, col = ROUND_LABEL)) + 
-  geom_ribbon(aes(ymin = 1-PROP_UNSUPPRESSED_CL, ymax = 1-PROP_UNSUPPRESSED_CU, fill = ROUND_LABEL), alpha = 0.2) +
-  facet_grid(COMM_LABEL~SEX_LABEL) +
+  geom_line(aes(y = 1-PROP_UNSUPPRESSED_M, col = SEX_LABEL)) + 
+  geom_ribbon(aes(ymin = 1-PROP_UNSUPPRESSED_CL, ymax = 1-PROP_UNSUPPRESSED_CU, fill = SEX_LABEL), alpha = 0.7) +
+  facet_grid( ROUND_LABEL~COMM_LABEL) +
   labs(x = 'Age', y = 'ART coverage among HIV-positive participants', col = '', fill = '') +
   theme_bw() +
-  scale_fill_manual(values = palette_round) + 
-  scale_color_manual(values = palette_round) + 
+  scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+  scale_color_manual(values = c('Male'='royalblue3','Female'='deeppink')) + 
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
         strip.text = element_text(size = rel(1))) + 
   scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_artcoverage.png')), w=8, h=7)
+ggsave(file=file.path(outdir, paste0('smooth_artcoverage.png')), w=8, h=9)
 
 # save
 file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_estimates_220906.csv'))
