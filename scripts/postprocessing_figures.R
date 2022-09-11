@@ -76,9 +76,9 @@ intensity_PP_sampled <- find_summary_output(samples, 'log_lambda', c('INDEX_DIRE
 count_data <- prepare_count_data(stan_data)
 plot_intensity_PP(intensity_PP_sampled, count_data, outfile.figures)
 
-intensity_PP <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'), 
-                                             transform = 'exp', 
-                                             log_offset_round = log_offset_round, 
+intensity_PP <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'),
+                                             transform = 'exp',
+                                             log_offset_round = log_offset_round,
                                              log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 plot_intensity_PP_by_round(intensity_PP, outfile.figures)
 
@@ -91,8 +91,9 @@ predict_z_source <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_
 predict_z_source_round <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'))
 predict_z_recipient_round <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'))
 incidence_cases_recipient_round <- prepare_incidence_cases(incidence_cases_round)
-susceptible_recipient_count <- prepare_susceptible_count(eligible_count_round)
-plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round, susceptible_recipient_count, outfile.figures)
+eligible_count_recipient <- prepare_eligible_count(eligible_count_round)
+plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round, 
+                                   eligible_count_recipient, outfile.figures)
 
 unsuppressed_count <- prepare_unsuppressed(eligible_count)
 plot_observed_to_augmented(predict_y_source, predict_z_source, unsuppressed_count, outfile.figures)
@@ -215,14 +216,15 @@ plot_transmission_risk_age_source(transmission_risk_age_source, outfile.figures)
 #
 
 # finer age bands
-df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
+# df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
 
 #find incidence transmission
 incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'), 
                                                       transform = 'exp', 
                                                       log_offset_round = log_offset_round, 
-                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
-                                                      relative_baseline = T, 
+                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
+                                                      relative_baseline = T,
                                                       per_eligible = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
 
@@ -231,9 +233,10 @@ incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDE
                                                     transform = 'exp', 
                                                     log_offset_round = log_offset_round, 
                                                     log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
-                                                    relative_baseline = T, 
+                                                    relative_baseline = T,
                                                     per_eligible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
+
 
 #
 # Relative incidence infection if male had the same art uptake as female
@@ -254,52 +257,22 @@ incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_
 n_counterfactual <- 3
 spreaders <- find_spreaders(expected_contribution_age_source)
 
-# find unsuppressed and relative incidence under counterfactual scenarios
-eligible_count_round.counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
-relative_incidence_counterfactual <- difference_incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
-for(i in 1:n_counterfactual){
-  
-  # select spreader for whcih the art coverage changes
-  selected.spreaders <- spreaders[spreader_category <= i]
-    
-  # find unsuppressed under counterfactual
-  eligible_count_round.counterfactual[[i]] <- find_counterfactual_unsuppressed_count(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data)
-  
-  # find offset under counterfactual
-  log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, eligible_count_round.counterfactual[[i]])
-  
-  # find incidence counterfactual
-  incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
-                                                                transform = 'exp', 
-                                                                log_offset_round = log_offset_round.counterfactual, 
-                                                                log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
-  
-  # find relative difference incidence 
-  relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
-                                                                              log_offset_round, log_offset_round.counterfactual,
-                                                                              transform = 'exp')
-  
-  # find absolute difference incidence 
-  difference_incidence_counterfactual[[i]] <- find_difference_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
-                                                                                   log_offset_round, log_offset_round.counterfactual,
-                                                                                   transform = 'exp')
-  
-  # tag with the index of the counterfactual
-  incidence_counterfactual[[i]][, counterfactual_index := i]
-  relative_incidence_counterfactual[[i]][, counterfactual_index := i]
-  eligible_count_round.counterfactual[[i]][, counterfactual_index := i]
-  difference_incidence_counterfactual[[i]][, counterfactual_index := i]
-}
-incidence_counterfactual <- do.call('rbind', incidence_counterfactual)
-relative_incidence_counterfactual <- do.call('rbind', relative_incidence_counterfactual)
-eligible_count_round.counterfactual <- do.call('rbind', eligible_count_round.counterfactual)
-difference_incidence_counterfactual <- do.call('rbind', difference_incidence_counterfactual)
+# find unsuppressed and incidence under counterfactual
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
+counterfactuals <- make_counterfactual(samples, spreaders, log_offset_round, stan_data, 
+                                                   eligible_count_smooth, proportion_unsuppressed, proportion_prevalence)
+eligible_count_round.counterfactual <- counterfactuals$eligible_count_round.counterfactual 
+relative_incidence_counterfactual <- counterfactuals$relative_incidence_counterfactual 
+incidence_counterfactual <- counterfactuals$incidence_counterfactual 
+difference_incidence_counterfactual <- counterfactuals$difference_incidence_counterfactual 
+difference_incidence_groups_counterfactual <- counterfactuals$difference_incidence_groups_counterfactual 
 
 # plot
 plot_counterfactual_relative_incidence(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
                                        incidence_factual, incidence_counterfactual, outfile.figures)
 plot_NNT(eligible_count_round.counterfactual, eligible_count_round, difference_incidence_counterfactual, outfile.figures)
-  
+plot_NNT_group(eligible_count_round.counterfactual, eligible_count_round, difference_incidence_groups_counterfactual, outfile.figures)
+
 
 
 #
