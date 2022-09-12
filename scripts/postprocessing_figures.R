@@ -92,7 +92,7 @@ predict_z_source_round <- find_summary_output_by_round(samples, 'z_predict', c('
 predict_z_recipient_round <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'))
 incidence_cases_recipient_round <- prepare_incidence_cases(incidence_cases_round)
 eligible_count_recipient <- prepare_eligible_count(eligible_count_round)
-plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round, 
+plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round,
                                    eligible_count_recipient, outfile.figures)
 
 unsuppressed_count <- prepare_unsuppressed(eligible_count)
@@ -160,27 +160,27 @@ plot_contribution_age_classification(contribution_age_classification_source, out
 cat("\nPlot expected contribution\n")
 
 # sex-specific contribution to transmission
-expected_contribution_sex_source <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'), 
-                                                        transform = 'exp', 
+expected_contribution_sex_source <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'),
+                                                        transform = 'exp',
                                                         standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
 plot_contribution_sex_source(expected_contribution_sex_source, unsuppressed_prop_sex, prevalence_prop_sex, outfile.figures,'Expected_contribution')
 
 # age-specific contribution to transmission across sex
-expected_contribution_age_source2 <-  find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
-                                                                  transform = 'exp', 
+expected_contribution_age_source2 <-  find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
+                                                                  transform = 'exp',
                                                                   standardised.vars = c( 'INDEX_COMMUNITY', 'INDEX_ROUND'))
 plot_contribution_age_source(expected_contribution_age_source2, unsuppressed_prop_age, outfile.figures,'Expected_contribution')
 
 # aggregated by agr group
 expected_contribution_age_group_source <-  find_summary_output_by_round(samples, 'log_lambda_latent',
-                                                               c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
-                                                               transform = 'exp', 
+                                                               c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                               transform = 'exp',
                                                                standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
 plot_contribution_age_group(expected_contribution_age_group_source, outfile.figures,'Expected_contribution')
 
 # aggregated by agr group and classified
 expected_contribution_age_classification_source <-  find_summary_output_by_round(samples, 'log_lambda_latent',
-                                                                        c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'), 
+                                                                        c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                                         transform = 'exp',
                                                                         standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
 plot_contribution_age_classification(expected_contribution_age_classification_source, outfile.figures,'Expected_contribution')
@@ -195,17 +195,17 @@ cat("\nPlot transmission risk\n")
 
 
 # sex-specific transmission risk
-transmission_risk_sex_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'), 
-                                                             transform = 'exp', 
-                                                             log_offset_round = log_offset_round, 
-                                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
+transmission_risk_sex_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'),
+                                                             transform = 'exp',
+                                                             log_offset_round = log_offset_round,
+                                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                              per_unsuppressed = T)
 plot_transmission_risk_sex_source(transmission_risk_sex_source, outfile.figures)
 
 # age-specific  transmission risk
-transmission_risk_age_source<- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
-                                                            transform = 'exp', 
-                                                            log_offset_round = log_offset_round, 
+transmission_risk_age_source<- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
+                                                            transform = 'exp',
+                                                            log_offset_round = log_offset_round,
                                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                             per_unsuppressed = T)
 plot_transmission_risk_age_source(transmission_risk_age_source, outfile.figures)
@@ -226,7 +226,7 @@ incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('IN
                                                       transform = 'exp', 
                                                       log_offset_round = log_offset_round, 
                                                       log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
-                                                      relative_baseline = T,
+                                                      # relative_baseline = T,
                                                       per_eligible = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
 
@@ -235,7 +235,7 @@ incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDE
                                                     transform = 'exp', 
                                                     log_offset_round = log_offset_round, 
                                                     log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
-                                                    relative_baseline = T,
+                                                    # relative_baseline = T,
                                                     per_eligible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
 

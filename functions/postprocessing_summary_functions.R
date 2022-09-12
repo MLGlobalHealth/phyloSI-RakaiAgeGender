@@ -617,7 +617,7 @@ remove_first_round <- function(tmp){
   return(tmp)
 }
 
-find_spreaders <- function(expected_contribution_age_source){
+find_spreaders <- function(expected_contribution_age_source, outdir){
   
   find.index.mass <- function(x, p){
 
@@ -690,6 +690,12 @@ find_spreaders <- function(expected_contribution_age_source){
   spreaders[first_main_spreader == T, spreader_category := 1]
   set(spreaders, NULL, c('first_main_spreader', 'second_main_spreader', 'third_main_spreader'), NULL)
 
+  # save
+  file = paste0(outdir, '-output-spreaders.rds')
+  file = paste0(file, '.rds')
+  saveRDS(tmp1, file)
+  
+  
   return(spreaders)
 }
 
