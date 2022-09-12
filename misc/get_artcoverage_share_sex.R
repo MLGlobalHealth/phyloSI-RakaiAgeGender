@@ -30,7 +30,9 @@ proportion_unsuppressed <- as.data.table(read.csv(file.art.coverage))
 ############################
 
 # define round
-df <- merge(proportion_prevalence, proportion_unsuppressed, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX', 'iterations'))
+setnames(proportion_prevalence, 'iterations', 'iterations_prevalence')
+df <- merge(proportion_prevalence[iterations_prevalence %in% 9200:9500], # need to subsample otherwise internal vecseq reached physical limit
+            proportion_unsuppressed[iterations %in% 9200:9500], by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'), allow.cartesian = T)
 df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
 
 # merge number of eligible and the prevalence
@@ -42,7 +44,6 @@ df[, INFECTED := ELIGIBLE * PREVALENCE_POSTERIOR_SAMPLE]
 # find infected unsuppressed
 df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
-
 #####################################################
 
 # FIND SEX SHARE OF INFECTED UNSUPPRESSED ACROSS AGE
@@ -50,8 +51,8 @@ df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 #####################################################
 
 # find share of infected by sex across age
-df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations')]
-df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED, by = c('ROUND', 'COMM', 'AGEYRS', 'iterations')]
+df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations', 'iterations_prevalence')]
+df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED, by = c('ROUND', 'COMM', 'AGEYRS', 'iterations', 'iterations_prevalence')]
 
 # summarise
 ps <- c(0.025,0.5,0.975)
