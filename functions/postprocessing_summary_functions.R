@@ -692,8 +692,7 @@ find_spreaders <- function(expected_contribution_age_source, outdir){
 
   # save
   file = paste0(outdir, '-output-spreaders.rds')
-  file = paste0(file, '.rds')
-  saveRDS(tmp1, file)
+  saveRDS(spreaders, file)
   
   
   return(spreaders)
