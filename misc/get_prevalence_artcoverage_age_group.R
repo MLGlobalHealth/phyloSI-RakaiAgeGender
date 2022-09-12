@@ -62,9 +62,6 @@ df <- df[, list(INFECTED = sum(INFECTED),
                 UNSUPPRESSED = sum(UNSUPPRESSED), 
                 ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'COMM', 'AGE_GROUP', 'SEX', 'iterations')]
 
-# sum eligible across sex and age
-df[, ELIGIBLE := sum(ELIGIBLE), by = c('ROUND', 'COMM', 'iterations')]
-
 # find prevalence by age groups across age
 df[, PROP_UNSUPPRESSED := UNSUPPRESSED / ELIGIBLE]
 df[, PREVALENCE := INFECTED / ELIGIBLE]

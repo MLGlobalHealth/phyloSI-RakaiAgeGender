@@ -20,7 +20,7 @@ unsuppressed <- as.data.table(read.csv(infile.unsuppressed))
 
 # format
 tmp <- data.table(reshape2::melt(prevalence, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
-tmp[, TYPE := 'HIV-1 prevalence']
+tmp[, TYPE := 'HIV prevalence']
 tmp1 <- data.table(reshape2::melt(unsuppressed, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
 tmp1[, TYPE := 'HIV-positive with unsuppressed viral load']
 tmp <- rbind(tmp, tmp1)
@@ -28,7 +28,7 @@ tmp[, variable := stringi::stri_sub(variable,-2,-1)]
 tmp[variable == '_M', variable := 'M']
 tmp <- dcast.data.table(tmp, ROUND + COMM + SEX + AGE_GROUP + TYPE ~ variable, value.var = 'value')
 tmp[, ROUND := paste0('R0', ROUND)]
-tmp[, TYPE := factor(TYPE, levels = c('HIV-1 prevalence', 'HIV-positive with unsuppressed viral load'))]
+tmp[, TYPE := factor(TYPE, levels = c('HIV prevalence', 'HIV-positive with unsuppressed viral load'))]
 
 # round labels
 df_round <- rbind(df_round_inland, df_round_fishing)
@@ -57,7 +57,7 @@ for(i in seq_along(communities)){
   tmp1 <- tmp[COMM == communities[i]]
   
   # prevalence
-  p1 <- ggplot(tmp1[TYPE == 'HIV-1 prevalence'], aes(x = INDEX_ROUND, group = SEX_LABEL)) + 
+  p1 <- ggplot(tmp1[TYPE == 'HIV prevalence'], aes(x = INDEX_ROUND, group = SEX_LABEL)) + 
     geom_line(aes(y = M), linetype = 'dashed', position=position_dodge(width = 0.5), alpha = 0.5) + 
     geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5, width = 0.5, position=position_dodge(width = 0.5)) + 
     geom_point(aes(y = M, col = SEX_LABEL), shape = 17, size = 2, position=position_dodge(width = 0.5)) + 
@@ -75,8 +75,8 @@ for(i in seq_along(communities)){
           legend.box = 'vertical', 
           legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
-    scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[TYPE == 'HIV-1 prevalence', max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
-    labs(y = 'HIV-1 prevalence\nin census eligible population', col= '', shape = '') + 
+    scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[TYPE == 'HIV prevalence', max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
+    labs(y = 'HIV prevalence\nin census eligible population', col= '', shape = '') + 
     scale_x_continuous(labels = df_round[COMM == communities[i], LABEL_ROUND], breaks =  df_round[COMM == communities[i], INDEX_ROUND]) + 
     guides(color = guide_legend(override.aes = list(shape = 16)))
   
@@ -99,7 +99,7 @@ for(i in seq_along(communities)){
           legend.box = 'vertical', 
           legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
-    scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[TYPE == 'HIV-1 prevalence', max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
+    scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[TYPE == 'HIV prevalence', max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
     labs(y = 'HIV+ with unsuppressed viral load\nin census eligible population', col= '', shape = '') + 
     scale_x_continuous(labels = df_round[COMM == communities[i], LABEL_ROUND], breaks =  df_round[COMM == communities[i], INDEX_ROUND])
   
@@ -115,8 +115,8 @@ for(i in seq_along(communities)){
     geom_point(aes(y = M, col = SEX_LABEL, shape = TYPE), size = 2, position=position_dodge(width = 0.5), stroke = 1) + 
     facet_grid(.~AGE_LABEL) + 
     scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    scale_linetype_manual(values = c('HIV-1 prevalence' = 'dotted', 'HIV-positive with unsuppressed viral load' = 'solid')) + 
-    scale_shape_manual(values = c('HIV-1 prevalence' = 1, 'HIV-positive with unsuppressed viral load' = 16)) + 
+    scale_linetype_manual(values = c('HIV prevalence' = 'dotted', 'HIV-positive with unsuppressed viral load' = 'solid')) + 
+    scale_shape_manual(values = c('HIV prevalence' = 1, 'HIV-positive with unsuppressed viral load' = 16)) + 
     theme_bw() + 
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)), 
