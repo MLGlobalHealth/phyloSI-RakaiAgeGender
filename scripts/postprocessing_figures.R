@@ -259,7 +259,7 @@ incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_
 
 # find age groups that contribute the most 
 n_counterfactual <- 3
-spreaders <- find_spreaders(expected_contribution_age_source)
+spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
 
 # find unsuppressed and incidence under counterfactual
 df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
