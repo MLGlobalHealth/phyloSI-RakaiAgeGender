@@ -502,7 +502,7 @@ plot_contribution_age_group <- function(contribution_age_group_source, outdir, l
   
   tmp <- copy(contribution_age_group_source)
   tmp[, AGE_LABEL := paste0('Age recipient: ', AGE_GROUP_INFECTION.RECIPIENT)]
-  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
+  tmp[, SEX := paste0(gsub('.* -> (.+)', '\\1', LABEL_DIRECTION), ' recipients')]
   
   
   for(i in seq_along(communities)){
@@ -544,7 +544,7 @@ plot_contribution_age_classification <- function(contribution_age_classification
   tmp <- copy(contribution_age_classification_source)
   tmp[, AGE_CLASSIFICATION.SOURCE := factor(AGE_CLASSIFICATION.SOURCE, levels  = c('Younger', 'Same age', 'Older'))]
   tmp[, AGE_LABEL := paste0('Age recipient: ', AGE_GROUP_INFECTION.RECIPIENT)]
-  tmp[, SEX := paste0(gsub('(.+) ->.*', '\\1', LABEL_DIRECTION), ' sources')]
+  tmp[, SEX := paste0(gsub('.* -> (.+)', '\\1', LABEL_DIRECTION), ' recipients')]
   
   for(i in seq_along(communities)){
     
