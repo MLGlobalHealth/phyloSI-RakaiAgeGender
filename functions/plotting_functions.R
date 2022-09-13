@@ -1199,33 +1199,119 @@ plot.coherent.tsi.estimates.with.seroconversion <- function()
 
 plot.tsi.relationships.among.source.recipient.pairs <- function()
 {
-        cols <- grep('AID|DATE_INFECTION',names(pairs.all), value=TRUE)
-        tmp <- pairs.all[, ..cols] 
+        # Helpers #
+        # _________
+
+        .plot.pairs <- function(DT)
+        {
+                lab <- DT[, round(mean(DATE_INFECTION.SOURCE < DATE_INFECTION.RECIPIENT) * 100, 2)]
+                lab <- data.table(lab = paste0('\n\tCoherent dates of infection:\n\t', lab, '%'))
+
+                p <- ggplot(DT, aes(x=DATE_INFECTION.SOURCE, y=DATE_INFECTION.RECIPIENT)) +
+                        geom_abline(slope=1, color='red', linetype='dashed') +
+                        geom_point() +
+                        geom_text(data=lab, aes(label=lab, x=as.Date(-Inf), y=as.Date(Inf), hjust=0, vjust=1)) +
+                        scale_x_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
+                        scale_y_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
+                        theme_bw() +
+                        theme(legend.position='bottom',
+                              axis.text.x=element_text(angle=45, vjust=1, hjust=1)) +
+                        labs(x='Source',
+                             y='Recipient',
+                             linetype='', pch='',
+                             title='Transmission pairs: estimated dates of infection') 
+        }
+
+        adjust.filename <- function(x)
+        {
+                if( file.path.tsiestimates %like% 'adjusted')
+                        x <- gsub('tsi','tsi-adj', x )
+        }
+
+
+        # Start
+        # _____
+
+        cols <- grep('AID|DATE_INFECTION|PRED_DOI|BIRTH',names(pairs.all), value=TRUE)
+        pairs.tmp <- pairs.all[, ..cols] 
         # tmp[, uniqueN(.SD) == .N]
-        lab <- tmp[, round(mean(DATE_INFECTION.SOURCE < DATE_INFECTION.RECIPIENT) * 100, 2)]
-        lab <- data.table(lab = paste0('\n\tCoherent dates of infection:\n\t', lab, '%'))
 
-        # TSI are quite bad:
-        # in 69% of the cases, we expect the source to have been infected AFTER the recipient
-        p <- ggplot(tmp, aes(x=DATE_INFECTION.SOURCE, y=DATE_INFECTION.RECIPIENT)) +
-                geom_abline(slope=1, color='red', linetype='dashed') +
-                geom_point() +
-                geom_text(data=lab, aes(label=lab, x=as.Date(-Inf), y=as.Date(Inf), hjust=0, vjust=1)) +
-                scale_x_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
-                scale_y_date(breaks='6 months',expand=c(0,0), labels=scales:::date_format("%b %Y")) + 
-                theme_bw() +
-                theme(legend.position='bottom',
-                      axis.text.x=element_text(angle=45, vjust=1, hjust=1)) +
-                labs(x='Source',
-                     y='Recipient',
-                     linetype='', pch='',
-                     title='Transmission pairs: estimated dates of infection') 
-
-        file = paste0(outdir, '-tsi-source_vs_recipient_from_HIVphyloTSI.png')
-        if( file.path.tsiestimates %like% 'adjusted')
-                file <- gsub('tsi','tsi-adj',file)
-
+        # plot
+        p <- .plot.pairs(pairs.tmp)
+        file <- paste0(outdir, '-tsi-source_vs_recipient_from_HIVphyloTSI.png')
+        file <- adjust.filename(file)
         ggsave(p, file = file, w = 10, h = 10)
+
+        # Add 'rectangles'
+        # ________________
+
+        by_cols <- grep('^AID', names(pairs.tmp), value=TRUE)
+
+        tmp <- pairs.tmp[,  find.center.of.mass.plausible.region(
+                                xmin=PRED_DOI_MIN.SOURCE,
+                                xmax=PRED_DOI_MAX.SOURCE,
+                                ymin=PRED_DOI_MIN.RECIPIENT,
+                                ymax=PRED_DOI_MAX.RECIPIENT                                                            ) , by=by_cols]
+
+        stopifnot(tmp[, all(x < y, na.rm=TRUE)])
+
+        cat('Adjust transmission pair-incoherent DOI\n')
+        pairs.tmp <- merge(pairs.tmp, tmp, by=by_cols)
+
+        idx <- pairs.tmp[, !is.na(x) & !is.na(y) & DATE_INFECTION.RECIPIENT <= DATE_INFECTION.SOURCE]
+        pairs.tmp[idx, DATE_INFECTION.SOURCE := x]
+        pairs.tmp[idx, DATE_INFECTION.RECIPIENT := y]
+        pairs.tmp[, `:=` (x=NULL, y=NULL)]
+
+        # This seems too optimistic
+        g <- .plot.pairs(pairs.tmp)
+        file = paste0(outdir, '-tsi-source_vs_recipient_from_HIVphyloTSI_centerofmassadj.png')
+        file <- adjust.filename(file)
+        ggsave(g, file = file, w = 10, h = 10)
+
+        view.rectangle <- function(xmin2, xmax2, ymin2, ymax2)
+        {
+                dt <- data.table(xmin2=xmin2, xmax2=xmax2, ymin2=ymin2, ymax2=ymax2)
+                ggplot(dt, aes(xmin=xmin2, xmax=xmax2, ymin=ymin2, ymax=ymax2)) +
+                        geom_rect(fill=NA, color='black') +
+                        geom_abline(slope=1, linetype='dashed', color='red')
+        }
+
+        # split DF by source and recipient and compute ages
+        if(0)
+        {
+        
+                .get.age <- function(x, birth) round(as.integer(x - birth)/365.25, 1)
+
+                .get.CI.ages <- function(type)
+                {
+                        cols <- grep(type, names(tmp), value=TRUE)
+                        tmp1 <- tmp[, ..cols]
+                        names(tmp1) <- gsub(paste0('.', type), '', names(tmp1) )
+                        cols <- grep('PRED|INFECTION', names(tmp1), value=TRUE)
+                        newcols <- gsub('PRED|DATE', 'AGE', cols) 
+                        tmp1[, (newcols) := lapply(.SD, .get.age , birth=DATE_BIRTH) , .SDcols=cols]
+
+                        cols <- grep('AGE|AID', names(tmp1), value=TRUE)
+                        newcols <- paste0(cols, '.', type)
+                        tmp1[, ..cols]
+                }
+                
+                tmp1 <- lapply(c('SOURCE', 'RECIPIENT'), .get.CI.ages)
+                tmp1 <- rbindlist(tmp1)
+
+                # Merge back to pairs.all data
+                tmp2 <- copy(tmp1)
+                setnames(tmp1, names(tmp1), paste0(names(tmp1), '.SOURCE'))
+                setnames(tmp2, names(tmp2), paste0(names(tmp2), '.RECIPIENT'))
+                tmp <- merge(tmp, tmp1, by='AID.SOURCE')
+                tmp <- merge(tmp, tmp2, by='AID.RECIPIENT')
+
+                # rename
+                names(tmp) <- gsub('AGE_DOI', 'AGE_INFECTION', names(tmp))
+
+        }
+
 
         # However, is this partially due to very unlikely transmission pairs? 
         .p <- function(x) round(100*x, 2)

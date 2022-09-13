@@ -854,3 +854,161 @@ prepare.proportion.unsuppresed <- function(proportion_unsuppressed)
 
 
 
+find.center.of.mass.plausible.region <- function(xmin, xmax, ymin, ymax)
+{
+        # check
+        stopifnot(xmin < xmax)
+        stopifnot(ymin < ymax)
+
+        # helpers
+        find.center.of.mass.right.triangle.with.identity <- function( z )
+        {
+                x <- z[1]; y <- z[2]
+                dyx <- as.integer(y - x)
+                
+                com <- c(x + dyx/3, y - dyx/3 )
+
+                if(0) # just checking
+                {
+                        dt <- data.table(x=x, y=y)
+                        ggplot(dt) + 
+                                geom_abline(slope=1, color='red', linetype='dotted') +
+                                geom_point(aes(x=x, y=y)) + 
+                                geom_point(aes(x=y, y=y)) + 
+                                geom_point(aes(x=x, y=x)) + 
+                                geom_point(aes(x=dom[1], y=dom[2]), pch='X') +
+                                theme_bw()
+                }
+
+                return(list(com=com, A=dyx^2/2) )
+        }
+
+        find.center.of.mass.rectangle.from.segment.to.identity <- function(z0, z1) 
+        {
+
+                if(z0[1] == z1[1] & z0[2] == z1[2])
+                        stop('Two points specifying side should be distinct')
+
+                if(z0[2] < z0[1]) 
+                        stop('Segment must lie above identity y=x line')
+                if(z1[2] < z1[1])
+                        stop('Segment must lie above identity y=x line')
+
+                if(z0[1] != z1[1] & z0[2] != z1[2])
+                        stop('Input segment must be horizontal or vertical')
+
+                x <- z1[1]
+
+
+                ymin=min(z0[2], z1[2])
+                ymax=max(z0[2], z1[2])
+                xmin=min(z0[1], z1[1])
+                xmax=max(z0[1], z1[1])
+
+                # If input segment is horizontal
+                if(ymax==ymin)
+                {
+                        ymin <- xmax
+                        p3 <- c(xmin, ymin)
+                }
+                # If input segment is vertical
+                if(xmin==xmax)
+                {
+                        xmax <- ymin
+                        p3 <- c(xmax, ymax)
+                }
+
+                com <- c(xmin + .5 * as.integer(xmax - xmin), 
+                         ymin + .5 * as.integer(ymax - ymin))
+
+                if(0)
+                {
+                        dt <- data.table(
+                                         ymin=ymin, ymax=ymax, xmin=xmin, xmax=xmax
+                        )
+
+                        ggplot(dt, aes(ymin=ymin, ymax=ymax, xmin=xmin, xmax=xmax)) + 
+                                geom_rect(col='black') + 
+                                geom_point(aes(y=com[2], x=com[1])) +
+                                geom_abline(slope=1, color='red', linetype='dotted')
+                }
+                
+                Area = as.integer(ymax - ymin) * as.integer(xmax - xmin)
+                return(list(com=com, A=Area, p3=p3))
+        }
+
+        merge.centers.of.gravity <- function(input1, input2)
+        {
+                # input lists must contain Area A and Center of Gravity com
+                A = input1$A + input2$A
+                w1 <- input1$A/A 
+                w2 <- 1 - w1
+
+                # cog <- w1 * input1$com + w2 * input2$com 
+                cog <- c(
+                         weighted.mean( x=c(input1$com[1],input2$com[1]), w=c(input1$A, input2$A) ),
+                         weighted.mean( x=c(input1$com[2],input2$com[2]), w=c(input1$A, input2$A) )
+                )
+
+                return(cog)
+        }
+
+        if.case.1 <- function(z=c(xmin, ymax))
+                find.center.of.mass.right.triangle.with.identity(z)$com
+
+        if.case.2 <- function()
+        {
+                z1 <- c(xmin, ymax)
+                if(ymax > xmax){ # horizontal
+                        z2 <- c(xmax, ymax)
+                }else{           # vertical
+                        z2 <- c(xmin, ymin)
+                }
+
+                out1 <- find.center.of.mass.rectangle.from.segment.to.identity(z1, z2)
+                out2 <- find.center.of.mass.right.triangle.with.identity(out1$p3)
+
+                merge.centers.of.gravity(out1, out2)
+        }
+
+        if.case.3 <- function() 
+        {
+                # solve using COM equations
+                z <- c(xmax, ymin)
+                triangle <- find.center.of.mass.right.triangle.with.identity(z)
+
+                dx <- as.integer(xmax - xmin)
+                dy <- as.integer(ymax - ymin)
+                rect <- list(com = c(xmin + .5*dx, ymin + .5*dy), A=dx*dy)
+
+                w = c(rect$A, -triangle$A)
+
+                # com <- (rect$com * rect$A - triangle$com * triangle$A)/(rect$A - triangle$A)
+                cog <- c(
+                        weighted.mean( x=c(rect$com[1], triangle$com[1]), w=w),
+                        weighted.mean( x=c(rect$com[2], triangle$com[2]), w=w)
+                )
+
+                cog
+        }
+
+
+        # function to transform 2d vecs into lists as wanted
+        .f <- function(z)
+                list(x=z[1], y=z[2])
+
+        # classify geometric cases
+        count <- sum( ymax > xmin, ymax > xmax, ymin > xmin, ymin > xmax)
+        
+        if(count == 0){
+                cog <- list(NA_Date_, NA_Date_)
+        }else if(count == 1){
+                cog <- .f(if.case.1())
+        }else if(count == 2){
+                cog <- .f(if.case.2())
+        }else if(count == 3){
+                cog <- .f(if.case.3())
+        }else if(count == 4){
+                cog <- list(NA_Date_, NA_Date_)
+        }
+}
