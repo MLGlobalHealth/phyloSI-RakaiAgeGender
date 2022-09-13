@@ -67,7 +67,7 @@ if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 # indicators
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
-use.tsi.estimates <- T
+use.tsi.estimates <- F
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
 remove.missing.community.recipient <- T
@@ -80,13 +80,12 @@ only.transmission.same.community <- F
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
-file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
-tmp <- dirname(indir.deepsequence_analyses)
-file.path.tsiestimates <- file.path(tmp, 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_adjusted_TSI_with_estimated_dates.csv')
+# file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
+file.path.tsiestimates <- file.path(dirname(indir.deepsequence_analyses), 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_adjusted_TSI_with_estimated_dates.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 # from EMODO_RAKAI repo
-file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220905.csv")
+file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220905b.csv")
 file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220825.csv")
 
 # from misc/
@@ -119,6 +118,8 @@ dchain <- as.data.table(dchain)
 # load meta data and round timeline
 load(file.path.meta)
 load(file.path.round.timeline)
+df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
+df_round_fishing[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
 
 # load Tanya's estimate time since infection using phylogenetic data
 time.since.infection <- make.time.since.infection2(fread(file.path.tsiestimates))
@@ -132,10 +133,10 @@ proportion_prevalence <- fread(file.prevalence.prop)
 # load non-suppressed proportion 
 proportion_unsuppressed <- fread(file.unsuppressed.prop)
 
-
 # load incidence estimates from Adam
 incidence.inland <- fread(file.incidence.inland)
 incidence.fishing <- fread(file.incidence.fishing)
+
 
 #
 # Define start time, end time and cutoff
@@ -171,6 +172,7 @@ eligible_count_round[, table(ROUND, COMM)]
 
 # summarise by time period
 eligible_count <- summarise_eligible_count_period(eligible_count_round, cutoff_date, df_period)
+eligible_count[, table(PERIOD, COMM)]
 
 
 #
@@ -192,7 +194,6 @@ incidence_cases[, table(PERIOD, COMM)]
 
 # get time of infection (using Tanya's estimate if use.tsi.estimates == T)
 meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
-plot.coherent.tsi.estimates.with.seroconversion()
 
 # get likely transmission pairs
 chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
@@ -200,7 +201,10 @@ chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.
 # merge meta data to source and recipient
 pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
 
-plot.tsi.relationships.among.source.recipient.pairs()
+if(use.tsi.estimates){
+  plot.coherent.tsi.estimates.with.seroconversion(outfile.figures)
+  plot.tsi.relationships.among.source.recipient.pairs(outfile.figures)
+}
 
 if(include.only.heterosexual.pairs){
   cat('Keep only heterosexual pairs\n')
@@ -274,6 +278,7 @@ pairs[, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT := DATE_INFECTION.RECIPIENT < cut
 tab <- pairs[, list(count = .N), by = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT', 'SEX.RECIPIENT')]
 print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SEX.RECIPIENT)])
 
+
 #
 # Find probability of observing a transmissing event
 #
@@ -315,12 +320,15 @@ stan_init <- add_init(stan_data)
 #
 
 if(1){
+  # find color palette of rounds
+  find_palette_round()
+  
   # plot count eligible susceptible / infected / infected unsuppressed and incident cases
   plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outfile.figures)
   plot_data_by_period(incidence_cases, outfile.figures)
   
   # plot tansmission events over time
-  plot_transmission_events_over_time(eligible_count_round, incidence_cases_round, pairs, outfile.figures)
+  plot_transmission_events_over_time(incidence_cases_round, pairs, outfile.figures)
   save_statistics_transmission_events(pairs, outdir.table)
   
   # plot offset

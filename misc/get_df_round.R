@@ -18,7 +18,7 @@ file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_
 
 # round 14
 file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
-file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'verif_1.dta')
+file.path.flow.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'verif_1.dta')
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
@@ -33,17 +33,18 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 # Quest
 
 # load datasets round 14 only
-quest.14<-as.data.table(read_dta(file.path.quest.614))
-quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, locdate)]
-setnames(quest.14, 'locdate', 'intdate')
-quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
-quest.14[, intdate := as.Date(intdate, format = '%d/%m/%Y')]
+flow.14<-as.data.table(read_dta(file.path.flow.614))
+flow.14 <- flow.14[, .(round, study_id, ageyrs, sex, comm_num, locdate)]
+setnames(flow.14, 'locdate', 'intdate')
+flow.14 <- flow.14[!round %in% paste0('R0', 15:18)]
+flow.14[, intdate := as.Date(intdate, format = '%d/%m/%Y')]
 
 # load datasets ROUND 15 TO 18
 quest <- as.data.table(read.csv(file.path.quest))
 quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate)]
 quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
-quest <- rbind(quest.14, quest)
+quest <- rbind(flow.14, quest)
+
 
 #
 # HIV

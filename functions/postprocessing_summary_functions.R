@@ -217,7 +217,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
-                                         log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F){
+                                         log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_eligible = F, posterior_samples = F, relative_baseline = F){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -280,6 +280,45 @@ find_summary_output_by_round <- function(samples, output, vars,
     tmp1[, value := value / TOTAL_INFECTED_NON_SUPPRESSED]
   }
   
+  # divide by the number of susceptible
+  if(per_eligible){
+    tmp <- copy(eligible_count_round)
+    if('AGE_GROUP_INFECTION.RECIPIENT' %in% vars){
+      setnames(tmp, 'AGEYRS', 'AGE_INFECTION.RECIPIENT')
+      tmp <- merge(tmp, unique(df_age_aggregated[, .(AGE_INFECTION.RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT)]), by = c('AGE_INFECTION.RECIPIENT'))
+    }
+    if('AGE_GROUP_TRANSMISSION.SOURCE' %in% vars){
+      setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
+      tmp <- merge(tmp, unique(df_age_aggregated[, .(AGE_TRANSMISSION.SOURCE, AGE_GROUP_TRANSMISSION.SOURCE)]), by = c('AGE_TRANSMISSION.SOURCE'))
+    }
+    if('INDEX_DIRECTION' %in% vars){
+      if('AGE_GROUP_TRANSMISSION.SOURCE' %in% vars)
+        tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
+      if('AGE_GROUP_INFECTION.RECIPIENT' %in% vars)
+        tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 0, INDEX_DIRECTION], df_direction[IS_MF == 1, INDEX_DIRECTION])]
+    }
+    if('INDEX_COMMUNITY' %in% vars)
+      tmp <- merge(tmp, df_community, by = 'COMM')
+    if('INDEX_ROUND' %in% vars)
+      tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+    
+    tmp <- tmp[,list(TOTAL_ELIGIBLE = sum(ELIGIBLE)), by = vars]
+    
+    tmp1 <- merge(tmp, tmp1, by = vars)
+    tmp1[, value := value / TOTAL_ELIGIBLE]
+  }
+  
+  # relative to first round
+  if(relative_baseline){
+    vars.without.index.round <- vars[which(vars != 'INDEX_ROUND')]
+    tmp1[, value_baseline := value[INDEX_ROUND == min(INDEX_ROUND)], by = c('iterations', vars.without.index.round)]
+    tmp1[, value := value / value_baseline]
+  }
+  
+  if(posterior_samples == T){
+    return(tmp1)
+  }
+  
   #summarise
   tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
   tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
@@ -306,6 +345,87 @@ find_summary_output_by_round <- function(samples, output, vars,
   return(tmp1)
 }
 
+find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
+                                         transform = NULL, log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  # incidence rate under original scenario
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
+  
+  # incidence rate under countefactual scenario
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
+  setnames(tmp, 'value', 'value_counterfactual')
+  
+  # find relative incidence
+  tmp1 <- merge(tmp, tmp1, by = c(vars, 'iterations'))
+  tmp1[, value := (value - value_counterfactual) / value]
+  
+  #summarise
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
+  tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
+  
+  
+  if('INDEX_DIRECTION' %in% vars)
+    tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
+  if('INDEX_COMMUNITY' %in% vars)
+    tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
+  if('INDEX_ROUND' %in% vars)
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
+  if('INDEX_AGE' %in% vars)
+    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  if('INDEX_TIME' %in% vars)
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
+  
+  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')), '_counterfactual')
+
+  file = paste0(file, '.rds')
+  saveRDS(tmp1, file)
+  
+  return(tmp1)
+}
+
+find_difference_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
+                                                   transform = NULL, log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  # incidence rate under original scenario
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
+  
+  # incidence rate under countefactual scenario
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
+  setnames(tmp, 'value', 'value_counterfactual')
+  
+  # find difference incidence
+  tmp1 <- merge(tmp, tmp1, by = c(vars, 'iterations'))
+  tmp1[, value := (value - value_counterfactual) ]
+  
+  #summarise
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
+  tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
+  
+  
+  if('INDEX_DIRECTION' %in% vars)
+    tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
+  if('INDEX_COMMUNITY' %in% vars)
+    tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
+  if('INDEX_ROUND' %in% vars)
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
+  if('INDEX_AGE' %in% vars)
+    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  if('INDEX_TIME' %in% vars)
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
+  
+  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')), '_diff_counterfactual')
+  
+  file = paste0(file, '.rds')
+  saveRDS(tmp1, file)
+  
+  return(tmp1)
+}
 
 find_median_age_source <- function(samples, var){
   
@@ -372,6 +492,21 @@ prepare_susceptible_count <- function(eligible_count){
   tmp
 }
 
+prepare_eligible_count <- function(eligible_count){
+  
+  tmp <- copy(eligible_count)
+  if(!'ELIGIBLE' %in%names(eligible_count)){
+    tmp <- tmp[variable =='ELIGIBLE']
+    setnames(tmp, c('count'), c('ELIGIBLE'))
+  }
+  
+  setnames(tmp, c( 'AGEYRS'), c( 'AGE_INFECTION.RECIPIENT'))
+  tmp[, IS_MF := as.numeric(SEX == 'F')]
+  tmp <- merge(tmp, df_direction, by = 'IS_MF')
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  tmp
+}
+
 prepare_eligible_proportion <- function(eligible_count, vars, standardised.vars){
   tmp1 <- eligible_count[variable == 'ELIGIBLE', list(count = sum(count)), by = vars]
   tmp1[, M := count / sum(count), by = standardised.vars]
@@ -410,23 +545,14 @@ prepare_unsuppressed_proportion_by_round <- function(file.unsuppressed.share, va
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
 
-  # set round 14 to be the same as round 15 in inland
-  tmp <- tmp1[ROUND == 15 & COMM == 'inland']
-  tmp[, ROUND := 14]
-  tmp1 <- rbind(tmp, tmp1)
-  
-  # set round 15S to be the same as round 15 in fishing
-  tmp1[, ROUND := as.numeric(ROUND)]
-  tmp <- tmp1[ROUND == 15 & COMM == 'fishing']
-  tmp[, ROUND := 15.1]
-  tmp1 <- rbind(tmp, tmp1)
+  # find round label
+  tmp1[, ROUND := paste0('R0', ROUND)]
   
   # merge to index round
-  setnames(tmp1, 'ROUND', 'round')
-  tmp1 <- merge(tmp1, df_round[, .(COMM, round, ROUND, INDEX_ROUND, LABEL_ROUND)],  by = c('COMM', 'round'))
+  tmp1 <- merge(tmp1, df_round[, .(COMM, ROUND, INDEX_ROUND, LABEL_ROUND)],  by = c('COMM', 'ROUND'))
   
   # type
-  tmp1[, type := 'Share in the HIV+ unsuppressed census eligible individuals']
+  tmp1[, type := 'Share in the HIV-positive unsuppressed census eligible individuals']
   
   return(tmp1)
 }
@@ -450,11 +576,6 @@ prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
   tmp1[, ROUND := as.character(ROUND)]
   
-  # set round 14 to be the same as round 15 in inland
-  tmp <- tmp1[ROUND == '15' & COMM == 'inland']
-  tmp[, ROUND := '14']
-  tmp1 <- rbind(tmp, tmp1)
-  
   # find round label
   tmp1[, ROUND := paste0('R0', ROUND)]
   
@@ -462,7 +583,7 @@ prepare_prevalence_proportion_by_round <- function(file.prevalence.share, vars){
   tmp1 <- merge(tmp1, df_round[, .(COMM, ROUND, INDEX_ROUND)], by = c('COMM', 'ROUND'))
   
   # type
-  tmp1[, type := 'Share in the HIV+ census eligible individuals']
+  tmp1[, type := 'Share in the HIV-positive census eligible individuals']
   
   return(tmp1)
 }
@@ -475,7 +596,7 @@ prepare_prevalence_by_round <- function(eligible_count_round, vars, standardised
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
   
-  tmp1[, type := 'Share in the HIV+ census eligible individuals']
+  tmp1[, type := 'Share in the HIV-positive census eligible individuals']
 }
 
 
@@ -494,4 +615,180 @@ remove_first_round <- function(tmp){
   tmp <- merge(tmp, df_round, by = c('INDEX_ROUND', 'COMM'))
   
   return(tmp)
+}
+
+find_spreaders <- function(expected_contribution_age_source, outdir){
+  
+  find.index.mass <- function(x, p){
+
+    stopifnot(p <= sum(x))
+    
+    n <- length(x)
+    
+    index.max <- which.max(x)
+    index.groups <- index.max
+    enter <- T
+    
+    while(enter){
+      if(max(index.groups) == n){
+        new.index = min(index.groups) - 1
+      }else if(min(index.groups) == 1){
+        new.index = max(index.groups) + 1
+      }else{
+        proposed.indices <- c(min(index.groups) - 1, max(index.groups) + 1)
+        new.index <- proposed.indices[which.max(x[proposed.indices])]
+      }
+      
+      new.index.groups <- c(index.groups, new.index)
+      if(sum(x[new.index.groups]) > p){
+        enter = F
+      }else if(sum(x[new.index.groups]) == p){
+        index.groups <- c(index.groups, new.index)
+        enter = F
+      } else{
+        index.groups <- c(index.groups, new.index)
+      }
+    }
+    
+    # check
+    stopifnot(x[index.groups] <= p)
+    
+    
+    return(sort(index.groups))
+  }
+  
+  # age groups that contribute to 33%
+  spreaders <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, 1/3)]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
+  spreaders[, first_main_spreader := T]
+  
+  # age groups that contribute to 66%
+  tmp <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, 2/3)]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
+  tmp[, second_main_spreader := T]
+  spreaders <- merge(spreaders, tmp, by = c('COMM', 'ROUND', 'LABEL_DIRECTION', 'AGEYRS'), all.x = T, all.y = T)
+  spreaders[is.na(first_main_spreader), first_main_spreader := F]
+  stopifnot(nrow( spreaders[first_main_spreader == T & second_main_spreader == F]) == 0)
+ 
+  # age groups that contribute to 100%
+  tmp <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, sum(M))]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
+  tmp[, third_main_spreader := T]
+  spreaders <- merge(spreaders, tmp, by = c('COMM', 'ROUND', 'LABEL_DIRECTION', 'AGEYRS'), all.x = T, all.y = T)
+  spreaders[is.na(first_main_spreader), first_main_spreader := F]
+  spreaders[is.na(second_main_spreader), second_main_spreader := F]
+  
+  # make sex label
+  spreaders[, SEX := 'F']
+  spreaders[LABEL_DIRECTION == 'Male -> Female', SEX := 'M']
+  set(spreaders, NULL, 'LABEL_DIRECTION', NULL)
+  
+  # check
+  stopifnot(nrow( spreaders[first_main_spreader == T & (second_main_spreader == F | third_main_spreader == F)]) == 0)
+  stopifnot(nrow( spreaders[second_main_spreader == T & third_main_spreader == F]) == 0)
+  
+  # add category of spreader in one column
+  spreaders[third_main_spreader == T, spreader_category := 3]
+  spreaders[second_main_spreader == T, spreader_category := 2]
+  spreaders[first_main_spreader == T, spreader_category := 1]
+  set(spreaders, NULL, c('first_main_spreader', 'second_main_spreader', 'third_main_spreader'), NULL)
+
+  # save
+  file = paste0(outdir, '-output-spreaders.rds')
+  saveRDS(spreaders, file)
+  
+  
+  return(spreaders)
+}
+
+
+find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data){
+  
+  # find proportion of unsuppressed female
+  proportion_unsuppressed.counterfactual <- copy(proportion_unsuppressed)
+  proportion_unsuppressed.counterfactual[, PROP_UNSUPPRESSED_M.FEMALE := PROP_UNSUPPRESSED_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  
+  # find age group for which the unsuppressed level should change
+  selected.spreaders[, spreader := T]
+  proportion_unsuppressed.counterfactual <- merge(proportion_unsuppressed.counterfactual, selected.spreaders, all.x = T, by = c('AGEYRS', 'COMM', 'ROUND', 'SEX'))
+  proportion_unsuppressed.counterfactual[is.na(spreader), spreader := F]
+  
+  # find percentage of reduction ART coverage
+  proportion_unsuppressed.counterfactual[, INCREASE_ART_COVERAGE := 0]
+  proportion_unsuppressed.counterfactual[spreader == T, INCREASE_ART_COVERAGE := (1 - PROP_UNSUPPRESSED_M.FEMALE) - (1 - PROP_UNSUPPRESSED_M ) ]
+  
+  # set proportion unsuppressed of male to be the same as female for specific age groups
+  proportion_unsuppressed.counterfactual[spreader == T, PROP_UNSUPPRESSED_M := PROP_UNSUPPRESSED_M.FEMALE]
+  
+  # find unsuppressed 
+  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
+  eligible_count_round.counterfactual <- add_infected_unsuppressed(eligible_count_round.counterfactual, proportion_unsuppressed.counterfactual)
+  
+
+  return(eligible_count_round.counterfactual)
+}
+
+make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data, 
+                                eligible_count_smooth, proportion_unsuppressed, proportion_prevalence){
+  
+  n_counterfactual <- 3
+  
+  # find unsuppressed and relative incidence under counterfactual scenarios
+  eligible_count_round.counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+  relative_incidence_counterfactual <- difference_incidence_counterfactual <- difference_incidence_groups_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+  for(i in 1:n_counterfactual){
+    
+    # select spreader for whcih the art coverage changes
+    selected.spreaders <- spreaders[spreader_category <= i]
+    
+    # find unsuppressed under counterfactual
+    eligible_count_round.counterfactual[[i]] <- find_counterfactual_unsuppressed_count(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data)
+
+    # find offset under counterfactual
+    log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, eligible_count_round.counterfactual[[i]])
+    
+    # find incidence counterfactual
+    incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
+                                                                  transform = 'exp', 
+                                                                  log_offset_round = log_offset_round.counterfactual, 
+                                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+    
+    # find relative difference incidence 
+    relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+                                                                                     log_offset_round, log_offset_round.counterfactual,
+                                                                                     transform = 'exp')
+    
+    # find absolute difference incidence by age groupsz
+    difference_incidence_counterfactual[[i]] <- find_difference_incidence_counterfactual(samples, 'log_beta', 
+                                                                                         c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
+                                                                                         log_offset_round, log_offset_round.counterfactual,
+                                                                                         transform = 'exp') 
+
+    difference_incidence_groups_counterfactual[[i]] <- find_difference_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                                                log_offset_round, log_offset_round.counterfactual,
+                                                                                                transform = 'exp')
+    
+    # tag with the index of the counterfactual
+    incidence_counterfactual[[i]][, counterfactual_index := i]
+    relative_incidence_counterfactual[[i]][, counterfactual_index := i]
+    eligible_count_round.counterfactual[[i]][, counterfactual_index := i]
+    difference_incidence_counterfactual[[i]][, counterfactual_index := i]
+    difference_incidence_groups_counterfactual[[i]][, counterfactual_index := i]
+  }
+  incidence_counterfactual <- do.call('rbind', incidence_counterfactual)
+  relative_incidence_counterfactual <- do.call('rbind', relative_incidence_counterfactual)
+  eligible_count_round.counterfactual <- do.call('rbind', eligible_count_round.counterfactual)
+  difference_incidence_counterfactual <- do.call('rbind', difference_incidence_counterfactual)
+  difference_incidence_groups_counterfactual <- do.call('rbind', difference_incidence_groups_counterfactual)
+  
+  # group
+  counterfactuals <- list(incidence_counterfactual = incidence_counterfactual, 
+       relative_incidence_counterfactual = relative_incidence_counterfactual, 
+       eligible_count_round.counterfactual = eligible_count_round.counterfactual, 
+       difference_incidence_counterfactual = difference_incidence_counterfactual, 
+       difference_incidence_groups_counterfactual = difference_incidence_groups_counterfactual)
+  
+  # save
+  file = paste0(outdir, '-output-counterfactuals.rds')
+  saveRDS(counterfactuals, file)
+  
+  
+  return(counterfactuals)
 }

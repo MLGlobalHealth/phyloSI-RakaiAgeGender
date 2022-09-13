@@ -90,6 +90,9 @@ coord2 <- data.table(
 long_bounds=c(22, 43) # x
 lati_bounds=c(-10, 10)  # y
 
+long_bounds=c(25, 46) # x
+lati_bounds=c(-12, 10)  # y
+
 # get uganda borders + lakes
 # __________________________
 
@@ -102,9 +105,9 @@ uganda_sf <- ne_countries(scale=50, country=c('uganda', 'tanzania'), returnclass
 # Define bounding box:
 bb <- c(long_bounds[1], lati_bounds[1],
         long_bounds[2], lati_bounds[2])
-lakes <- opq(bbox=bb, timeout=150) |>
-  add_osm_feature(key='natural', value='water') |>
-  osmdata_sf()
+# lakes <- opq(bbox=bb, timeout=150) |>
+#   add_osm_feature(key='natural', value='water') |>
+#   osmdata_sf()
 
 # Download data of interest
 lakes10 <- ne_download(scale = 10, type = 'lakes', category = 'physical', returnclass='sf')
@@ -115,7 +118,7 @@ p1 <- ggplot() +
   geom_sf(data=africa_sf, fill='darkolivegreen4') + 
   geom_sf(data=lakes10,col= 'lightblue4', fill="lightblue") +
   geom_sf_text(data=africa_sf, aes(label=name), color = "black", fontface = "bold", check_overlap = FALSE) +
-  geom_rect(data=coord2, aes(xmin = x[1], xmax = x[2], ymin = y[1], ymax = y[2]), color = "gold", fill = NA)  +
+  geom_rect(data=coord2, aes(xmin = x[1], xmax = x[2], ymin = y[1], ymax = y[2]), color = "gold", fill = NA, size = 1.2)  +
   coord_sf(xlim=long_bounds, ylim=lati_bounds) +
   labs(x='', y='') + 
   mytheme + 
@@ -123,8 +126,8 @@ p1 <- ggplot() +
         axis.text.x = element_blank(), 
         axis.ticks.y = element_blank(), 
         axis.text.y = element_blank()) + 
-  annotation_scale(location = "tr", width_hint = 0.5) +
-  annotation_north_arrow(location = "tr", which_north = "true", 
+  annotation_scale(location = "tl", width_hint = 0.5) +
+  annotation_north_arrow(location = "tl", which_north = "true", 
                          pad_x = unit(0.3, "in"), pad_y = unit(0.5, "in"),
                          style = north_arrow_fancy_orienteering)
 
@@ -133,31 +136,31 @@ p2 <- ggplot() +
   geom_sf(data=rivers10, color="lightblue", fill="lightblue") +
   geom_sf(data=roads10, color="grey80") +
   geom_sf(data=lakes10,  color="lightblue4", fill="lightblue") +
-  geom_sf(data=ds_sf_t, aes(fill=FC, shape = FC),size=3) +
+  geom_sf(data=ds_sf_t, aes(shape = FC),size=3,fill='#876445') +
   coord_sf(xlim=coord2$x, ylim=coord2$y) +
-  geom_rect(data=coord2, aes(xmin = x[1], xmax = x[2], ymin = y[1], ymax = y[2]), color = "gold", fill = NA)  +
-  scale_fill_manual(values=c('fishing' = 'dodgerblue3', 'inland' = 'goldenrod3'), 
-                     labels = c('Fishing communities', 'Inland communities'))  + 
+  geom_rect(data=coord2, aes(xmin = x[1], xmax = x[2], ymin = y[1], ymax = y[2]), color = "gold", fill = NA, size = 1.75)  +
   scale_shape_manual(values=c('fishing' = 24, 'inland' = 21), 
                     labels = c('Fishing communities', 'Inland communities')) +
   mytheme +
-  theme(legend.position=c(0,0),
+  theme(legend.position=c(0.055,0.055),
         legend.background = element_rect(fill = "white", color = "grey50"),
         legend.justification = c("left", "bottom"),
         panel.background = element_rect(fill = 'lightblue', color='lightblue4')) +
-  labs(fill='Community type', shape='Community type')+ 
+  # labs(shape='')+ 
   theme(axis.ticks.x = element_blank(), 
         axis.text.x = element_blank(), 
         axis.title.x = element_blank(), 
         axis.ticks.y = element_blank(), 
-        axis.text.y = element_blank(), axis.title.y = element_blank())+
-  annotation_scale(location = "tr", width_hint = 0.5) 
+        axis.text.y = element_blank(), axis.title.y = element_blank(), 
+        legend.key = element_rect(fill = "white"),
+        legend.title = element_blank())+
+  annotation_scale(location = "tl", width_hint = 0.5, pad_x = unit(0.7, 'cm'), pad_y = unit(0.7, 'cm')) 
 
 # CAN I PUT THE LEGEND ON NORTH-EAST CORNER to save space?
-p <- gridExtra::grid.arrange(p1, p2, layout_matrix = rbind(c(NA,2), 
-                                                           c(1, 2), 
-                                                           c(NA, 2)), heights = c(0.09, 1.2, 0.03))
+# p <- gridExtra::grid.arrange(p1, p2, layout_matrix = rbind(c(NA,2), 
+#                                                            c(1, 2), 
+#                                                            c(NA, 2)), heights = c(0.09, 1.2, 0.03))
 
-ggsave(p, file = file.path(outdir, 'map_RCCS_communities.pdf'), w = 9, h = 4.7)
-
+ggsave(p1, file = file.path(outdir, 'map_RCCS_communities_1.pdf'), w = 8, h = 7)
+ggsave(p2, file = file.path(outdir, 'map_RCCS_communities_2.pdf'), w = 4, h = 4)
 

@@ -12,73 +12,17 @@ indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
-# file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
-# round 15 to 18
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
-
-# round 14
-file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
-file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
+file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
-# load(file.path.round.timeline)
-
-################################
-
-# PREPARE DF ROUND for figure
-
-################################
-# 
-# df_round <- rbind(df_round_fishing, df_round_inland)
-# colnames(df_round) <- toupper(colnames(df_round))
-# df_round[, MIN_SAMPLE_DATE_LABEL := format(MIN_SAMPLE_DATE, '%b %Y')]
-# df_round[, MAX_SAMPLE_DATE_LABEL := format(MAX_SAMPLE_DATE - 31, '%b %Y')]
-# df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
-# df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(ROUND), LABEL_ROUND])]
-
-################################
-
-# COMBINE DATASETS ACROSS MULTIPLE ROUNDS
-
-################################
-
-#
-# Quest
-
-# load datasets round 14 only
-quest.14<-as.data.table(read_dta(file.path.quest.614))
-quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate)]
-quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
-quest.14[, intdate := as.Date(intdate)]
-
-# load datasets ROUND 15 TO 18
 quest <- as.data.table(read.csv(file.path.quest))
-quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate)]
-quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
-quest <- rbind(quest.14, quest)
-
-#
-# HIV
-
-# load datasets round 14 only
-hiv.14<-as.data.table(read_dta(file.path.hiv.614))
-hiv.14 <- hiv.14[, .(study_id, round, hiv, intdate)]
-setnames(hiv.14, 'intdate', 'hivdate')
-hiv.14 <- hiv.14[!round %in% paste0('R0', 15:18)]
-hiv.14[, hivdate := as.Date(hivdate)]
-
-# load datasets ROUND 15 TO 18
 hiv <- as.data.table(read.csv(file.path.hiv))
-hiv <- hiv[, .(study_id, round, hiv, hivdate)]
-hiv[, hivdate := as.Date(hivdate, format = '%d-%B-%y')]
-hiv <- rbind(hiv.14, hiv)
-hiv[, round := gsub(' ', '', round)] # remove space in string
 
 
 #################################
@@ -144,7 +88,7 @@ if(1){
   p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
     labs(x = 'Age', y = 'Count participants', fill = 'HIV status') +
-    facet_grid(LABEL_ROUND~COMM_LABEL + SEX_LABEL) +
+    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
@@ -173,7 +117,7 @@ rprev[, EMPIRICAL_PREVALENCE := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC', 'SEX
 
 # find smooth proportion
 for(round in c('R012', 'R013', 'R014', "R015", "R016", "R017", "R018", "R015S")){
-  round <- 'R014'
+  round <- 'R018'
   
   DT <- copy(rprev[ROUND == round] )
   
@@ -186,14 +130,6 @@ for(round in c('R012', 'R013', 'R014', "R015", "R016", "R017", "R018", "R015S"))
   DT[is.na(COUNT), COUNT := 0]
   DT[is.na(TOTAL_COUNT), TOTAL_COUNT := 0]
   DT <- DT[order(SEX, LOC, AGE_LABEL)]
-  # account for rounds without fishing
-  #   if(nrow(DT[LOC == 1]) == 0){
-  #   DT.f <- copy(DT)
-  #   DT.f[, TOTAL_COUNT := 0]
-  #   DT.f[, COUNT := 0]
-  #   DT.f[, LOC := 1]
-  #   DT <- rbind(DT, DT.f)
-  # }
   
   # predicts age 
   x_predict <- seq(rprev[, min(AGE_LABEL)], rprev[, max(AGE_LABEL)+1], 0.5)
@@ -227,7 +163,7 @@ for(round in c('R012', 'R013', 'R014', "R015", "R016", "R017", "R018", "R015S"))
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0('hivprevalence_gp_stanfit_round',gsub('R0', '', round),'_220808.rds')
+  filename <- paste0('hivprevalence_gp_stanfit_round',gsub('R0', '', round),'_220909.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
   
@@ -246,7 +182,7 @@ for(i in seq_along(rounds)){
   x_predict <- seq(rprev[, min(AGE_LABEL)], rprev[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220808.rds')
+  filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220909.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -328,7 +264,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
         strip.text = element_text(size = rel(1))) + 
   labs(x = 'Age', y = 'HIV-1 prevalence among participants')+ 
   scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_prevalence.png')), w=8, h=9)
+ggsave(file=file.path(outdir, paste0('smooth_prevalence_220909.png')), w=8, h=9)
 
 
 ggplot(tmp, aes(x = AGEYRS)) + 
