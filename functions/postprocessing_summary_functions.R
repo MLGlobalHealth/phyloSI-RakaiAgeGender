@@ -727,6 +727,9 @@ find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_
 
 make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data, 
                                 eligible_count_smooth, proportion_unsuppressed, proportion_prevalence){
+  
+  n_counterfactual <- 3
+  
   # find unsuppressed and relative incidence under counterfactual scenarios
   eligible_count_round.counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
   relative_incidence_counterfactual <- difference_incidence_counterfactual <- difference_incidence_groups_counterfactual <- vector(mode = 'list', length = n_counterfactual)
@@ -737,7 +740,7 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
     
     # find unsuppressed under counterfactual
     eligible_count_round.counterfactual[[i]] <- find_counterfactual_unsuppressed_count(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data)
-    
+
     # find offset under counterfactual
     log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, eligible_count_round.counterfactual[[i]])
     
@@ -753,11 +756,12 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
                                                                                      transform = 'exp')
     
     # find absolute difference incidence by age groupsz
-    difference_incidence_counterfactual[[i]] <- find_difference_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+    difference_incidence_counterfactual[[i]] <- find_difference_incidence_counterfactual(samples, 'log_beta', 
+                                                                                         c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
                                                                                          log_offset_round, log_offset_round.counterfactual,
-                                                                                         transform = 'exp')
-    
-    difference_incidence_groups_counterfactual[[i]] <- find_difference_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                                         transform = 'exp') 
+
+    difference_incidence_groups_counterfactual[[i]] <- find_difference_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                                                                 log_offset_round, log_offset_round.counterfactual,
                                                                                                 transform = 'exp')
     
