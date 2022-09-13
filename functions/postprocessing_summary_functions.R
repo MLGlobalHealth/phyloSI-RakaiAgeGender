@@ -774,9 +774,17 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
   difference_incidence_counterfactual <- do.call('rbind', difference_incidence_counterfactual)
   difference_incidence_groups_counterfactual <- do.call('rbind', difference_incidence_groups_counterfactual)
   
-  return(list(incidence_counterfactual = incidence_counterfactual, 
-              relative_incidence_counterfactual = relative_incidence_counterfactual, 
-              eligible_count_round.counterfactual = eligible_count_round.counterfactual, 
-              difference_incidence_counterfactual = difference_incidence_counterfactual, 
-              difference_incidence_groups_counterfactual = difference_incidence_groups_counterfactual))
+  # group
+  counterfactuals <- list(incidence_counterfactual = incidence_counterfactual, 
+       relative_incidence_counterfactual = relative_incidence_counterfactual, 
+       eligible_count_round.counterfactual = eligible_count_round.counterfactual, 
+       difference_incidence_counterfactual = difference_incidence_counterfactual, 
+       difference_incidence_groups_counterfactual = difference_incidence_groups_counterfactual)
+  
+  # save
+  file = paste0(outdir, '-output-counterfactuals.rds')
+  saveRDS(counterfactuals, file)
+  
+  
+  return(counterfactuals)
 }
