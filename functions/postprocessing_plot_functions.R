@@ -913,7 +913,8 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
   icf[LABEL_DIRECTION == 'Female -> Male', SEX := 'Male']
   
   communities <- rei[, unique(COMM)]
-  cols <- c('#F2D388', '#C98474', '#874C62')
+  cols <- c('#F08A5D', '#B83B5E', '#6A2C70')
+  
   
   for(i in seq_along(communities)){
     
@@ -928,7 +929,7 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
     
     p1 <- ggplot(tmp1, aes(x = AGEYRS, y = INCREASE_ART_COVERAGE)) + 
       geom_bar(aes(fill = COUNTERFACTUAL_LABEL), stat = 'identity', position = 'identity') + 
-      labs(x = 'Age source', y = 'Point increase in ART coverage\namong male sources', fill = counterfactual_label) + 
+      labs(x = 'Age source', y = 'Percentage point increase in ART coverage\namong male sources', fill = counterfactual_label) + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
@@ -945,9 +946,9 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
 
     p2 <- ggplot() + 
       geom_line(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = SEX), col = 'black') + 
-      geom_ribbon(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = SEX), alpha = 0.2) + 
+      geom_ribbon(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = SEX), alpha = 0.5) + 
       geom_line(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, y = M, col = COUNTERFACTUAL_LABEL)) + 
-      geom_ribbon(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.2) + 
+      geom_ribbon(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.15) + 
       labs(x = 'Age', y = '\nHIV incidence infections', 
            fill = counterfactual_label, col = counterfactual_label) + 
       theme_bw() +
