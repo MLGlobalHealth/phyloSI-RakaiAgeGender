@@ -1105,7 +1105,7 @@ plot_NNT <- function(eligible_count_round.counterfactual, eligible_count_round, 
   di[, NNT_CU := TREATED / CU ]
   
   # select age
-  Ageyrs <- seq(15, 49, 5)
+  Ageyrs <- seq(20, 49, 5)
   di <- di[AGE_TRANSMISSION.SOURCE %in% Ageyrs]
   di[, AGE_TRANSMISSION.SOURCE := as.character(AGE_TRANSMISSION.SOURCE)]
   
@@ -1115,7 +1115,7 @@ plot_NNT <- function(eligible_count_round.counterfactual, eligible_count_round, 
   # plot
   p <- ggplot(di, aes(x = AGE_INFECTION.RECIPIENT)) + 
     geom_line(aes(y = NNT_M, col = AGE_TRANSMISSION.SOURCE)) + 
-    geom_ribbon(aes(ymin= NNT_CL, ymax = NNT_CU, fill = AGE_TRANSMISSION.SOURCE), alpha = 0.2) + 
+    geom_ribbon(aes(ymin= NNT_CL, ymax = NNT_CU, fill = AGE_TRANSMISSION.SOURCE), alpha = 0.1) + 
     labs(x = 'Age recipient', y = 'Number of HIV-positive male needed to treat\nto prevent one infection in female', 
          fill = counterfactual_label, col = counterfactual_label) + 
     theme_bw() +
@@ -1156,7 +1156,7 @@ plot_NNT_group <- function(eligible_count_round.counterfactual, eligible_count_r
   di[, NNT_CU := TREATED / CU ]
   
   # select age
-  Ageyrs <- seq(15, 49, 5)
+  Ageyrs <- seq(20, 49, 5)
   di <- di[AGE_TRANSMISSION.SOURCE %in% Ageyrs]
   di[, AGE_TRANSMISSION.SOURCE := as.character(AGE_TRANSMISSION.SOURCE)]
   
