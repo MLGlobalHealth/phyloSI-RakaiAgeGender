@@ -892,7 +892,7 @@ plot_observed_to_augmented <- function(predict_y, predict_z, unsuppressed_count,
 }
 
 plot_counterfactual_relative_incidence <- function(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
-                                                   incidence_factual, incidence_counterfactual, outdir){
+                                                   incidence_factual, incidence_counterfactual, outdir, only_participant= F){
   
   # restrict to one round
   Round <- 'R018'
@@ -909,6 +909,10 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
   cols <- c('#CC3636', '#F57328', '#367E18')
   counterfactual_compared <- list(c(1,4,3), c(2,5,3))
   
+  # label male
+  male_label = ''
+  if(only_participant) male_label = 'participants'
+  
   for(i in seq_along(communities)){
     for(j in 1:length(counterfactual_compared)){
       Counterfactual <- counterfactual_compared[[j]]
@@ -919,11 +923,11 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
       tmp3 <- icc[COMM == communities[i] & counterfactual_index %in% Counterfactual]
       
       # counterfactual label
-      counterfactual_label <- 'Counterfactual with higher ART\ncoverage among male sources'
+      counterfactual_label <- paste0('Counterfactual with higher ART\ncoverage among male ', male_label)
       contributions <- spreaders[spreader_category %in% 1:2, sort(unique(label))]
       artdiff <- noncomplier[ROUND == Round & COMM == communities[i] & spreader_category %in% 4:5, round(sort(unique(label), decreasing = T), 2)]
-      counterfactual_labels <- c(paste0('Male sources contributing to ', contributions, '% of transmissions'),
-                                 'All male sources', 
+      counterfactual_labels <- c(paste0('Males contributing to ', contributions, '% of transmissions'),
+                                 paste0('All male ', male_label), 
                                  paste0('Males with ART coverage difference compared to\nfemale of at least ', artdiff))
       counterfactual_labels_index <- c(1, 2, 4, 5, 3)
       
@@ -935,7 +939,7 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
       tmp1[, index_plot := which(Counterfactual == counterfactual_index), by = 'counterfactual_index']
       p1 <- ggplot(tmp1, aes(x = AGEYRS)) + 
         geom_step(aes(col = COUNTERFACTUAL_LABEL, y = INCREASE_ART_COVERAGE + 0.005*index_plot)) + 
-        labs(x = 'Age source', y = 'Percentage point increase in ART\ncoverage among male sources', col = counterfactual_label) + 
+        labs(x = 'Age source', y = paste0('Percentage point increase in ART\ncoverage among male ', male_label), col = counterfactual_label) + 
         theme_bw() +
         theme(strip.background = element_rect(colour="white", fill="white"),
               strip.text = element_text(size = rel(1)),
@@ -991,7 +995,12 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
         scale_x_continuous(expand = c(0,0)) 
 
       p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA, 1), c(NA, 2), c(3,3)), widths = c(0.02, 0.95), heights = c(0.33, 0.33, 0.33))
-      ggsave(p, file = paste0(outdir, '-output-counterfactual_incidence_panel_', j, '_', communities[i], '.png'), w = 8, h = 9)
+      
+      file = paste0(outdir, '-output-counterfactual_incidence_panel_', j, '_', communities[i], '.png')
+      if(only_participant){
+        file = paste0(outdir, '-output-counterfactual_incidence_panel_', j, '_', 'only_participant', '_', communities[i], '.png')
+      }
+      ggsave(p, file = file, w = 8, h = 9)
       
       
     }

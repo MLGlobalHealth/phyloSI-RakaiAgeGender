@@ -724,7 +724,8 @@ find_spreaders <- function(expected_contribution_age_source, outdir){
 }
 
 
-find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data){
+find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data, 
+                                                   only_participant = F){
   
   # find proportion of unsuppressed female
   proportion_unsuppressed.counterfactual = copy(proportion_unsuppressed)
@@ -740,18 +741,33 @@ find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_
   proportion_unsuppressed.counterfactual[spreader == T, INCREASE_ART_COVERAGE := (1 - PROP_UNSUPPRESSED_M.FEMALE) - (1 - PROP_UNSUPPRESSED_M ) ]
   
   # set proportion unsuppressed of male to be the same as female for specific age groups
-  proportion_unsuppressed.counterfactual[spreader == T, PROP_UNSUPPRESSED_M := PROP_UNSUPPRESSED_M.FEMALE]
+  proportion_unsuppressed.counterfactual[, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_M]
+  proportion_unsuppressed.counterfactual[spreader == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_M.FEMALE]
   
   # find unsuppressed 
   eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
-  eligible_count_round.counterfactual <- add_infected_unsuppressed(eligible_count_round.counterfactual, proportion_unsuppressed.counterfactual, fishing_15S_as_15 = F)
-  
+  eligible_count_round.counterfactual[, ROUND := paste0('R0', ROUND)]
+  df <- merge(eligible_count_round.counterfactual, proportion_unsuppressed.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
 
-  return(eligible_count_round.counterfactual)
+  if(only_participant){
+    par <- copy(participation)
+    par[, ROUND := paste0('R0', ROUND)]
+    df <- merge(df, par, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+    
+    df[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_M.COUNTERFACTUAL + 
+                                    INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_M]
+  }else{
+    df[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_M.COUNTERFACTUAL]
+    
+  }
+
+
+  return(df)
 }
 
 make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data, 
-                                eligible_count_smooth, proportion_unsuppressed, proportion_prevalence){
+                                eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
+                                only_participant = F){
   
   n_counterfactual <- spreaders_noncompliers[, length(unique(spreader_category))]
   df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
@@ -765,7 +781,8 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
     selected.spreaders <- spreaders_noncompliers[spreader_category == i]
     
     # find unsuppressed under counterfactual
-    eligible_count_round.counterfactual[[i]] <- find_counterfactual_unsuppressed_count(selected.spreaders, copy(eligible_count_smooth), copy(proportion_unsuppressed), copy(proportion_prevalence), stan_data)
+    eligible_count_round.counterfactual[[i]] <- find_counterfactual_unsuppressed_count(selected.spreaders, copy(eligible_count_smooth), copy(proportion_unsuppressed), 
+                                                                                       copy(proportion_prevalence), stan_data, only_participant)
 
     # find offset under counterfactual
     log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]))
@@ -798,6 +815,9 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
   
   # save
   file = paste0(outdir, '-output-counterfactuals.rds')
+  if(only_participant){
+    file = paste0(outdir, '-output-counterfactuals_only_participant.rds')
+  }
   saveRDS(counterfactuals, file)
   
   

@@ -57,6 +57,8 @@ samples <- rstan::extract(fit)
 palette_round <- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(df_round[,length(unique(ROUND))])
 palette_round_inland <- palette_round[c(1:4, 6:8)]
 palette_round_fishing <- palette_round[c(4:8)]
+file.participation <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
+participation <- fread(file.participation)
 
 #
 # offset
@@ -225,8 +227,8 @@ df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
 incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'), 
                                                       transform = 'exp', 
                                                       log_offset_round = log_offset_round, 
-                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
-                                                      # relative_baseline = T,
+                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                      relative_baseline = T,
                                                       per_eligible = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
 
@@ -235,7 +237,7 @@ incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDE
                                                     transform = 'exp', 
                                                     log_offset_round = log_offset_round, 
                                                     log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
-                                                    # relative_baseline = T,
+                                                    relative_baseline = T,
                                                     per_eligible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
 
@@ -245,12 +247,7 @@ plot_incidence_infection(incidence_infection, outfile.figures)
 #
 
 cat("\nPlot relative incidence infection if male had the same art uptake as female\n")
-
-# age-specific contribution to transmission 
-expected_contribution_age_source <-  find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
-                                                                   transform = 'exp', 
-                                                                   standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
-
+source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
 # incidence actual 
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                       transform = 'exp', 
@@ -258,24 +255,67 @@ incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_
                                                       log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 
 # find age groups that contribute the most 
-n_counterfactual <- 3
+expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'), 
+                                                                  transform = 'exp', 
+                                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
 spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
 
-# find unsuppressed and incidence under counterfactual
-df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
-counterfactuals <- make_counterfactual(samples, spreaders, log_offset_round, stan_data, 
-                                                   eligible_count_smooth, proportion_unsuppressed, proportion_prevalence)
+# find age groups with the largest difference in art uptake compared to frmale
+noncomplier <- find_male_with_greatest_art_diff(proportion_unsuppressed, spreaders, eligible_count_smooth)
+
+# combine spreader and noncompliers
+spreaders_noncompliers <- rbind(spreaders, noncomplier)
+
+# find unsuppressed and incidence under counterfactual 
+# if male had the same art uptake as female among all census eligible 
+counterfactuals <- make_counterfactual(samples, spreaders_noncompliers, log_offset_round, stan_data, 
+                                        eligible_count_smooth, proportion_unsuppressed, proportion_prevalence)
 eligible_count_round.counterfactual <- counterfactuals$eligible_count_round.counterfactual 
 relative_incidence_counterfactual <- counterfactuals$relative_incidence_counterfactual 
 incidence_counterfactual <- counterfactuals$incidence_counterfactual 
-difference_incidence_counterfactual <- counterfactuals$difference_incidence_counterfactual 
-difference_incidence_groups_counterfactual <- counterfactuals$difference_incidence_groups_counterfactual 
 
 # plot
-plot_counterfactual_relative_incidence(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
-                                       incidence_factual, incidence_counterfactual, outfile.figures)
-plot_NNT(eligible_count_round.counterfactual, eligible_count_round, difference_incidence_counterfactual, outfile.figures)
-plot_NNT_group(eligible_count_round.counterfactual, eligible_count_round, difference_incidence_groups_counterfactual, outfile.figures)
+plot_counterfactual_relative_incidence(eligible_count_round.counterfactual, 
+                                                 relative_incidence_counterfactual, 
+                                                 incidence_factual, incidence_counterfactual, outfile.figures)
+
+# find unsuppressed and incidence under counterfactual 
+# if male had the same art uptake as female among all participants
+counterfactuals <- make_counterfactual(samples, spreaders_noncompliers, log_offset_round, stan_data, 
+                                       eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
+                                       only_participant = T)
+eligible_count_round.counterfactual <- counterfactuals$eligible_count_round.counterfactual 
+relative_incidence_counterfactual <- counterfactuals$relative_incidence_counterfactual 
+incidence_counterfactual <- counterfactuals$incidence_counterfactual 
+
+# plot
+plot_counterfactual_relative_incidence(eligible_count_round.counterfactual, 
+                                       relative_incidence_counterfactual, 
+                                       incidence_factual, incidence_counterfactual, outfile.figures, 
+                                       only_participant = T)
+
+#
+# Find NNT
+#
+
+cat("\nPlot NNT\n")
+
+# NNT by 1 year age band
+NNT <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'), 
+                                                  transform = 'exp', 
+                                                  log_offset_round = log_offset_round, 
+                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE', 
+                                                  invert = T)
+plot_NNT(NNT, outfile.figures)
+
+# NNT by age groups
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
+NNT_grouped <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'), 
+                                    transform = 'exp', 
+                                    log_offset_round = log_offset_round, 
+                                    log_offset_formula = 'log_PROP_SUSCEPTIBLE', 
+                                    invert = T)
+plot_NNT_group(NNT_grouped, outfile.figures)
 
 
 
