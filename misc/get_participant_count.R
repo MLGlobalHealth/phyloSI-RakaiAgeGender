@@ -90,7 +90,8 @@ ggsave(p, file = file.path(outdir, 'Participation.png'), w = 8, h = 9)
 tmp <- rpr[, list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]
 saveRDS(tmp, file.path(outdir, 'Participation.rds'))
 
-
+file <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
+write.csv(rpr[, .(AGEYRS, ROUND, SEX, COMM, PARTICIPANT, PARTICIPATION)], file = file, row.names = F)
 
 
 

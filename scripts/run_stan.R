@@ -93,6 +93,7 @@ file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pange
 file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
 
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
+file.participation <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
 file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "RCCS_artcoverage_estimates_220906.csv")
 file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
 file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220811.csv')
@@ -126,6 +127,9 @@ time.since.infection <- make.time.since.infection2(fread(file.path.tsiestimates)
 
 # load census eligible ount
 eligible_count_smooth <- fread(file.eligible.count)
+
+# load participation (% of census eligible population)
+participation <- fread(file.participation)
 
 # load proportion prevalence
 proportion_prevalence <- fread(file.prevalence.prop)
