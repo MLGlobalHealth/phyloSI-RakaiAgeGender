@@ -24,11 +24,11 @@ if(dir.exists('/rds/general/user/'))
   indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 }
 
-if(dir.exists('/Users/dalma'))
+if(dir.exists('/Users/dalma/'))
 {
-  indir.repository <- TODO
-  indir.deepsequence_analyses   <-  TODO
-  indir.deepsequencedata <- TODO
+  indir.repository <- '/Users/dalma/Desktop/IMPERIAL PROJECT/Code/IMP'
+  #indir.deepsequence_analyses   <-  TODO
+  #indir.deepsequencedata <- TODO
 }
 
 # file paths keys
