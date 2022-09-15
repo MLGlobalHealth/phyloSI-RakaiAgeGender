@@ -33,7 +33,7 @@ make.date.first.positive <- function(allhiv)
 {
   
   # Check whether there are hidden NAs 
-  .f <- as.function(x) nchar(as.character(x)) != 9 
+  .f <- function(x) nchar(as.character(x)) != 9 
   stopifnot(allhiv[.f(date_coll) , .N == 0])
   allhiv[.f(firstpos_diagnosis_dt) , firstpos_diagnosis_dt := NA]
   allhiv[.f(lastnegvd) , lastnegvd := NA]
