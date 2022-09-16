@@ -1009,7 +1009,7 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
   }
 }
 
-plot_counterfactual_relative_incidence <- function(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
+plot_counterfactual_relative_incidence_old <- function(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
                                                    incidence_factual, incidence_counterfactual, outdir){
   
   # restrict to one round
