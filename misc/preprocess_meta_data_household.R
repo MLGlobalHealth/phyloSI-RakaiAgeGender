@@ -27,8 +27,8 @@ if(dir.exists('/rds/general/user/'))
 if(dir.exists('/Users/dalma/'))
 {
   indir.repository <- '/Users/dalma/Desktop/IMPERIAL PROJECT/Code/IMP'
-  #indir.deepsequence_analyses   <-  TODO
-  #indir.deepsequencedata <- TODO
+  indir.deepsequence_analyses   <-  'R:/projects/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepsequencedata <- 'R:/projects/ratmann_pangea_deepsequencedata/live'
 }
 
 # file paths keys
@@ -175,4 +175,6 @@ if(meta_data[sex.x != sex.y, .N == 0])
 # SAVE META DATA
 #
 
-save(meta_data, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_Pangea2_RCCS_Metadata_household_20220913.RData"), row.names = F)
+#save(meta_data, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_Pangea2_RCCS_Metadata_household_202209XX.RData"), row.names = F)
+#NB. you are saving it to the supercomputer now!
+
