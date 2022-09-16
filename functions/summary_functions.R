@@ -430,12 +430,19 @@ add_susceptible_infected <- function(eligible_count, proportion_prevalence)
   return(df)
 }
 
-add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed)
+add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed, fishing_15S_as_15 = F)
 {
   
   # ensure that the data are data.table objects
   di <- as.data.table(eligible_count_round)
   pu <- as.data.table(proportion_unsuppressed)
+    
+  if(fishing_15S_as_15){#set unsuppressed 15S as 15 for fishing
+    pu.15 <- pu[COMM == 'fishing' & ROUND == 'R015']
+    pu.15[, ROUND := 'R015S']
+    pu <- rbind(pu[!(COMM == 'fishing' & ROUND == 'R015S')], pu.15)
+    proportion_unsuppressed <<- pu
+  }
     
   # select variabel
   di <- di[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE, INFECTED, SUSCEPTIBLE)]
@@ -826,30 +833,6 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round)
   res[, log_PERIOD_SPAN:= log(PERIOD_SPAN)]
   
   return(res)
-}
-
-prepare.proportion.unsuppresed <- function(proportion_unsuppressed)
-{
-  
-  # use round 15 for round 16
-  proportion_unsuppressed <- proportion_unsuppressed[!ROUND %in% c('R016', 'R015S')]
-  proportion_unsuppressed15 <- proportion_unsuppressed[ROUND == 'R015']
-  proportion_unsuppressed15[, ROUND := 'R016']
-  proportion_unsuppressed <- rbind(proportion_unsuppressed, proportion_unsuppressed15)
-  proportion_unsuppressed <- proportion_unsuppressed[order(ROUND)]
-  
-  if(0){
-    # plot
-    ggplot(proportion_unsuppressed, aes(x = AGEYRS)) + 
-      geom_point(aes(y = PROP_NON_SUPPRESSED_EMPIRICAL, col = ROUND), alpha = 0.25) +
-      geom_line(aes(y = M, col = ROUND)) + 
-      # geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX), alpha = 0.5) + 
-      facet_grid(COMM~SEX)+
-      theme_bw() + 
-      theme(legend.position='bottom')
-  }
-  
-  return(proportion_unsuppressed)
 }
 
 
