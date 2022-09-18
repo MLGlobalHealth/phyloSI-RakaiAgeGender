@@ -956,7 +956,7 @@ plot_counterfactual_relative_incidence <- function(eligible_count_round.counterf
       
       p2 <- ggplot() + 
         geom_line(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = SEX), col = 'black') + 
-        geom_ribbon(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = SEX), alpha = 0.5) + 
+        geom_ribbon(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = SEX), alpha = 0.15) + 
         geom_line(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, y = M, col = COUNTERFACTUAL_LABEL)) + 
         geom_ribbon(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.15) + 
         labs(x = 'Age', y = '\nHIV incidence infections', 
