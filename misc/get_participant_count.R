@@ -44,15 +44,26 @@ colnames(rinc) <- toupper(colnames(rinc))
 # restric age
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 
-# GET COUNT
+# GET PARTICIPANT
 rinc <- rinc[, list(PARTICIPANT  = .N), by = c('AGEYRS', 'ROUND', 'SEX', 'COMM')]
 
+# GET PARTICIPANT SMOOTH with loess smooth
+rinc <- rinc[order(COMM, ROUND, SEX, AGEYRS)]
+rinc <- rinc[, {
+  loessMod50 <- loess(PARTICIPANT ~ AGEYRS, span=0.5)
+  smoothed50 <- predict(loessMod50, new_data = AGEYRSPREDICT) 
+
+  list(AGEYRS = AGEYRS, PARTICIPANT_SMOOTH = smoothed50, PARTICIPANT = PARTICIPANT)
+}, by = c('COMM', 'SEX', 'ROUND')]
+
 # GET PROPORTION OF PARITCIPATION
-tmp <- select(ncen, c('AGEYRS', 'ROUND', 'SEX', 'COMM', 'ELIGIBLE_NOT_SMOOTH'))
+tmp <- select(ncen, c('AGEYRS', 'ROUND', 'SEX', 'COMM', 'ELIGIBLE_NOT_SMOOTH', 'ELIGIBLE'))
 rinc[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
 rpr <- merge(rinc,tmp , by =  c('AGEYRS', 'ROUND', 'SEX', 'COMM'))
 rpr[, PARTICIPATION := PARTICIPANT / ELIGIBLE_NOT_SMOOTH]
+rpr[, PARTICIPATION_SMOOTH := PARTICIPANT_SMOOTH / ELIGIBLE]
 rpr[PARTICIPATION > 1, PARTICIPATION := 1]
+rpr[PARTICIPATION_SMOOTH > 1, PARTICIPATION_SMOOTH := 1]
 
 # PLOT
 tmp <- copy(rpr)
@@ -86,12 +97,25 @@ p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEY
 p
 ggsave(p, file = file.path(outdir, 'Participation.png'), w = 8, h = 9)
 
+ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS)) +
+  geom_line(aes(y = PARTICIPATION)) +
+  geom_line(aes(y = PARTICIPATION_SMOOTH), col = 'red') +
+  labs(y = 'Participation among census eligible individuals', x = 'Age') +
+  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+  theme_bw() +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white"),
+        strip.text = element_text(size = rel(1))) + 
+  scale_y_continuous(labels = scales::percent, limits = c(0,1)) 
+
 ## save
 tmp <- rpr[, list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]
 saveRDS(tmp, file.path(outdir, 'Participation.rds'))
 
 file <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
-write.csv(rpr[, .(AGEYRS, ROUND, SEX, COMM, PARTICIPANT, PARTICIPATION)], file = file, row.names = F)
+tmp <- rpr[, .(AGEYRS, ROUND, SEX, COMM, PARTICIPANT, PARTICIPATION_SMOOTH)]
+setnames(tmp, 'PARTICIPATION_SMOOTH', 'PARTICIPATION')
+write.csv(tmp, file = file, row.names = F)
 
 
 
