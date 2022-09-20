@@ -33,7 +33,7 @@ if(dir.exists('/home/andrea'))
   outdir <- '~/Documents/Box/2021/phyloflows'
 
   jobname <- 'test'
-  stan_model <- 'gp_220901a'
+  stan_model <- 'gp_220911a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -77,6 +77,7 @@ only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
+only.participant.treated <- T
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -171,7 +172,7 @@ df_round <- make.df.round(df_round_inland, df_round_fishing, df_period)
 
 # by round
 eligible_count_round <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
-eligible_count_round <- add_infected_unsuppressed(eligible_count_round, proportion_unsuppressed)
+eligible_count_round <- add_infected_unsuppressed(eligible_count_round, proportion_unsuppressed, participation, only.participant.treated)
 eligible_count_round[, table(ROUND, COMM)]
 
 # summarise by time period
@@ -281,7 +282,6 @@ pairs <- pairs.all[!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPI
 pairs[, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT := DATE_INFECTION.RECIPIENT < cutoff_date]
 tab <- pairs[, list(count = .N), by = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT', 'SEX.RECIPIENT')]
 print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SEX.RECIPIENT)])
-
 
 #
 # Find probability of observing a transmissing event

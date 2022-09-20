@@ -430,19 +430,13 @@ add_susceptible_infected <- function(eligible_count, proportion_prevalence)
   return(df)
 }
 
-add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed, fishing_15S_as_15 = F)
+add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed, participation, only.participant.treated)
 {
   
   # ensure that the data are data.table objects
   di <- as.data.table(eligible_count_round)
   pu <- as.data.table(proportion_unsuppressed)
-    
-  if(fishing_15S_as_15){#set unsuppressed 15S as 15 for fishing
-    pu.15 <- pu[COMM == 'fishing' & ROUND == 'R015']
-    pu.15[, ROUND := 'R015S']
-    pu <- rbind(pu[!(COMM == 'fishing' & ROUND == 'R015S')], pu.15)
-    proportion_unsuppressed <<- pu
-  }
+  pa <- as.data.table(participation)
     
   # select variabel
   di <- di[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE, INFECTED, SUSCEPTIBLE)]
@@ -451,13 +445,24 @@ add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppres
   # find proportion of unsuppressed by round
   df <- merge(di, pu, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
-  # get infected non suppressed
-  df[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_M]
-  df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PROP_UNSUPPRESSED_CL]
-  df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PROP_UNSUPPRESSED_CU]
+  # find participation
+  pa <- pa[, .(ROUND, COMM, AGEYRS, SEX, PARTICIPATION)]
+  pa[, ROUND := paste0('R0', ROUND)]
+  df <- merge(df, pa, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
+  # get infected non suppressed
+  if(only.participant.treated){
+    df[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_M + INFECTED * (1-PARTICIPATION) * 1]
+    df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_CL + INFECTED * (1-PARTICIPATION) * 1]
+    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_CU + INFECTED * (1-PARTICIPATION) * 1]
+  }else{
+    df[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_M]
+    df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PROP_UNSUPPRESSED_CL]
+    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PROP_UNSUPPRESSED_CU]
+  }
+
   # rm unecessary variable
-  df <- select(df, -c('PROP_UNSUPPRESSED_M', "PROP_UNSUPPRESSED_CL", "PROP_UNSUPPRESSED_CU"))
+  df <- select(df, -c('PROP_UNSUPPRESSED_M', "PROP_UNSUPPRESSED_CL", "PROP_UNSUPPRESSED_CU", 'PARTICIPATION'))
   
   return(df)
 }
