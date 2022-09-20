@@ -568,13 +568,22 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   ggsave(paste0(outdir, '-data-period-round.png'), w = 7, h = 8)
   
   # Census eligible count 
-  ggplot(eligible_count_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = ELIGIBLE, col = SEX)) +
-    labs(y = 'Census eligible count', x = 'Age') +
-    facet_grid(ROUND~COMM, label = 'label_both') +
+  tmp <- copy(eligible_count_round)
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+  tmp[, LABEL_ROUND := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
+  tmp[, SEX_LABEL := 'Female']
+  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  ggplot(tmp, aes(x = AGEYRS)) +
+    geom_line(aes(y = ELIGIBLE, col = SEX_LABEL)) +
+    labs(y = 'Census eligible population count', x = 'Age', col = '') +
+    facet_grid(LABEL_COMMUNITY~LABEL_ROUND) +
     theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_count_round_sex.png'), w = 7, h = 9)
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"),
+          strip.text = element_text(size = rel(1))) +
+    scale_color_manual(values = c('Male'='royalblue3','Female'='deeppink')) 
+  ggsave(paste0(outdir, '-data-census_eligible_count_round_sex.png'), w = 12, h = 7)
   
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
     geom_line(aes(y = ELIGIBLE, col = ROUND)) +
@@ -727,24 +736,48 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
           strip.background = element_rect(colour="white", fill="white"))
   ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 6)
   
-  # incidence cases
+  ggplot(tmp, aes(x = AGEYRS)) +
+    geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
+    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
+    labs(y = 'Incidence rate per 100 person-year', x = 'Age', fill = '', col = '') +
+    facet_grid(LABEL_COMMUNITY~LABEL_ROUND, scale = 'free_y') +
+    theme_bw() +
+    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"))
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex.png'), w = 12, h = 7)
+  
+  # incidence cases among census eligible
   tmp <- copy(incidence_cases_round)
   tmp <- merge(tmp, df_community, by = 'COMM')
-  tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+  tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND', 'ROUND_SPANYRS'))
   tmp[, LABEL_ROUND := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
   tmp[, SEX_LABEL := 'Female']
   tmp[SEX== 'M', SEX_LABEL := 'Male']
-  ggplot(tmp, aes(x = AGEYRS)) +
-    geom_line(aes(y = SUSCEPTIBLE * INCIDENCE, col = LABEL_ROUND)) +
-    # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = LABEL_ROUND), alpha = 0.5) +
-    labs(y = 'Number of incident cases per year', x = 'Age', col= '') +
-    facet_grid(LABEL_COMMUNITY~SEX_LABEL) +
+  tmp[, type := 'Census eligible population']
+  
+  pa <- copy(participation)
+  pa[, ROUND := paste0('R0', ROUND)]
+  tmp1 <- merge(tmp,pa, by = c('ROUND', 'SEX', 'AGEYRS', 'COMM'))
+  tmp1[, `:=` (INCIDENT_CASES = INCIDENT_CASES * PARTICIPATION, 
+               INCIDENT_CASES_LB = INCIDENT_CASES_LB * PARTICIPATION, 
+               INCIDENT_CASES_UB = INCIDENT_CASES_UB * PARTICIPATION)]
+  tmp1[, type := 'Participants']
+  tmp <- rbind(tmp, tmp1, fill=TRUE)
+  ggplot(tmp, aes(x = AGEYRS, group = interaction(SEX_LABEL, type))) +
+    geom_line(aes(y = INCIDENT_CASES/ROUND_SPANYRS, col = SEX_LABEL, linetype = type)) +
+    geom_ribbon(aes(ymin = INCIDENT_CASES_LB /ROUND_SPANYRS, ymax = INCIDENT_CASES_UB /ROUND_SPANYRS, 
+                    fill = SEX_LABEL, group = interaction(SEX_LABEL, type)), alpha = 0.25)  +
+    labs(y = 'Number of incident cases per year', x = 'Age', col= '', fill = '', linetype = 'Among') +
+    facet_grid(LABEL_COMMUNITY~LABEL_ROUND) +
     theme_bw() +
-    scale_color_manual(values = palette_round) + 
+    scale_color_manual(values = c('Male'='royalblue3','Female'='deeppink')) + 
+    scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"))
-  ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 7, h = 6)
-
+  ggsave(paste0(outdir, '-data-incidence_case_round.png'), w = 12, h = 7)
+  
   # empirical contribution and transmisison risk 
   tmp <- copy(incidence_cases_round)
   tmp <- tmp[, list(INCIDENT_CASES = sum(INCIDENT_CASES), 
@@ -916,9 +949,12 @@ plot_transmission_events_over_time <- function(incidence_cases_round, pairs, out
   #
   # Prepare incidence cases
   icr <- merge(incidence_cases_round, df_age_group, by = 'AGEYRS')
-  icr <- icr[, list(INCIDENT_CASES = sum(INCIDENT_CASES) / sum(ELIGIBLE), 
-                    INCIDENT_CASES_UB = sum(INCIDENT_CASES_UB)  / sum(ELIGIBLE),
-                    INCIDENT_CASES_LB = sum(INCIDENT_CASES_LB) / sum(ELIGIBLE)), by = c('SEX', 'ROUND', 'COMM', 'AGE_GROUP_LABEL')] 
+  icr <- icr[, list(INCIDENT_CASES_ELIGIBLE = sum(INCIDENT_CASES) / sum(ELIGIBLE), 
+                    INCIDENT_CASES_UB_ELIGIBLE = sum(INCIDENT_CASES_UB)  / sum(ELIGIBLE),
+                    INCIDENT_CASES_LB_ELIGIBLE = sum(INCIDENT_CASES_LB) / sum(ELIGIBLE),
+                    INCIDENT_CASES_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE), 
+                    INCIDENT_CASES_UB_SUSCEPTIBLE = sum(INCIDENT_CASES_UB)  / sum(SUSCEPTIBLE),
+                    INCIDENT_CASES_LB_SUSCEPTIBLE = sum(INCIDENT_CASES_LB) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'AGE_GROUP_LABEL')] 
   
   # merge labels
   icr <- merge(icr, df_timeline, by = c('ROUND', 'COMM'))
@@ -950,9 +986,9 @@ plot_transmission_events_over_time <- function(incidence_cases_round, pairs, out
     width.error.bar <- 230
     if(comm == 'inland')  width.error.bar <- 500
     p2 <- ggplot(icr[COMM == comm], aes(x = INDEX_ROUND, group= SEX_LABEL)) + 
-      geom_bar(aes(y = INCIDENT_CASES / ROUND_SPANYRS, fill = SEX_LABEL), stat = 'identity', 
+      geom_bar(aes(y = INCIDENT_CASES_ELIGIBLE / ROUND_SPANYRS, fill = SEX_LABEL), stat = 'identity', 
                position = position_dodge(width = 0.9)) +
-      geom_errorbar(aes(ymin = INCIDENT_CASES_LB / ROUND_SPANYRS, ymax = INCIDENT_CASES_UB / ROUND_SPANYRS, group = SEX_LABEL),
+      geom_errorbar(aes(ymin = INCIDENT_CASES_LB_ELIGIBLE / ROUND_SPANYRS, ymax = INCIDENT_CASES_UB_ELIGIBLE / ROUND_SPANYRS, group = SEX_LABEL),
                     col = 'grey50', position=position_dodge(width = 0.9),width = 0.5) +
       facet_grid(.~AGE_GROUP_LABEL) + 
       scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) + 
@@ -970,6 +1006,28 @@ plot_transmission_events_over_time <- function(incidence_cases_round, pairs, out
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
       scale_x_continuous(breaks = df_round[COMM == comm, INDEX_ROUND], labels = df_round[COMM == comm, paste0('Round ', gsub('R0(.+)', '\\1', ROUND))])
     ggsave(p2, file =  paste0(outdir, '-data-incidence_cases_py_', communities[i], '.png'), w = 9, h = 4)
+    
+    p2 <- ggplot(icr[COMM == comm], aes(x = INDEX_ROUND, group= SEX_LABEL)) + 
+      geom_bar(aes(y = INCIDENT_CASES_SUSCEPTIBLE / ROUND_SPANYRS, fill = SEX_LABEL), stat = 'identity', 
+               position = position_dodge(width = 0.9)) +
+      geom_errorbar(aes(ymin = INCIDENT_CASES_LB_SUSCEPTIBLE / ROUND_SPANYRS, ymax = INCIDENT_CASES_UB_SUSCEPTIBLE / ROUND_SPANYRS, group = SEX_LABEL),
+                    col = 'grey50', position=position_dodge(width = 0.9),width = 0.5) +
+      facet_grid(.~AGE_GROUP_LABEL) + 
+      scale_fill_manual(values = c('Male'=male_color,'Female'=female_color)) + 
+      labs(y = paste0('HIV incident cases per person-year\namong census eligible susceptible\nin ', communities[i], ' communities'), x= '') + 
+      theme_bw() + 
+      theme(plot.title = element_text(hjust = 0.5), 
+            axis.text.x = element_text(hjust = 1, angle = 30),
+            strip.background = element_rect(colour="white", fill="white"),
+            # axis.text.x = element_text(angle= 70, hjust = 1),
+            strip.text = element_text(size = rel(1)), 
+            legend.position = c(0.93, 0.86), 
+            panel.grid.minor.x = element_blank(),
+            panel.grid.major.x = element_blank(),
+            legend.title = element_blank()) + 
+      scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05))) + 
+      scale_x_continuous(breaks = df_round[COMM == comm, INDEX_ROUND], labels = df_round[COMM == comm, paste0('Round ', gsub('R0(.+)', '\\1', ROUND))])
+    ggsave(p2, file =  paste0(outdir, '-data-incidence_cases_py_susceptible_', communities[i], '.png'), w = 9, h = 4)
     
     # plot pairs 
     p3 <- ggplot(dp[COMM == comm]) + 
