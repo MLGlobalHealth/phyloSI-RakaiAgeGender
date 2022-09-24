@@ -1077,8 +1077,8 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
       
       # incidence rate
       p2 <- ggplot(tmp2) + 
-        geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M*100, linetype = label, col = LABEL_TARGET)) + 
-        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, group = interaction(label, LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.5) + 
+        geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M*100, col = LABEL_TARGET)) + 
+        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
         labs(x = 'Age female recipient', y = 'Incidence rate per 100 person-year\nin female recipient') + 
         theme_bw() +
         theme(strip.background = element_rect(colour="white", fill="white"),
@@ -1090,12 +1090,13 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
         scale_color_manual(values = cols) +
         scale_fill_manual(values = cols) +
         scale_y_continuous() + 
-        scale_x_continuous(expand = c(0,0)) 
+        scale_x_continuous(expand = c(0,0)) + 
+        facet_grid(.~label)
 
       # reduction infection
       p3 <- ggplot(tmp3, aes(x = AGEYRS)) + 
-        geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = label, col = LABEL_TARGET)) + 
-        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(label, LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.5) + 
+        geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
+        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
         labs(x = 'Age female recipient', y = '% reduction in incidence infections\namong female recipients', 
              fill = '', col = '') + 
         theme_bw() +
@@ -1104,14 +1105,15 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
               panel.grid.major.x = element_blank(), 
               panel.grid.minor.x = element_blank(), 
               legend.title = element_blank(), 
-              legend.direction = 'vertical',
+              # legend.direction = 'vertical',
               # axis.title.x = element_blank(), 
               # axis.text.x = element_blank(), 
               legend.position = 'bottom') +
         scale_color_manual(values = cols) +
         scale_fill_manual(values = cols) +
         scale_y_continuous(labels = scales::percent, limits = c(0,1)) + 
-        scale_x_continuous(expand = c(0,0)) 
+        scale_x_continuous(expand = c(0,0)) + 
+        facet_grid(.~label)
 
       p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA, 1), c(NA, 2), c(3,3)), widths = c(0.02, 0.95), heights = c(0.3, 0.3, 0.42))
       
