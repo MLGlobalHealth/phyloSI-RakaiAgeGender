@@ -62,7 +62,9 @@ participation <- fread(file.participation)
 source(file.path(indir, 'functions', 'summary_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
-
+if(!exists('only.participant.treated')){
+  only.participant.treated = F
+}
 #
 # offset
 #
@@ -299,7 +301,7 @@ counterfactuals_p_a <- make_counterfactual(samples, spreaders, log_offset_round,
                                            only_participant = T, art_up_to_female = F)
 
 # plot
-plot_counterfactual(counterfactuals_p_f, counterfactuals_p_a, eligible_count_round, "Diagnosed unsuppressed", outfile.figures)
+plot_counterfactual(counterfactuals_p_f, counterfactuals_p_a, eligible_count_round, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
 
 # counterfactual all males 
@@ -314,9 +316,7 @@ counterfactuals_a_a <- make_counterfactual(samples, spreaders, log_offset_round,
                                            only_participant = F, art_up_to_female = F)
 
 # plot
-plot_counterfactual(counterfactuals_a_f, counterfactuals_a_a, eligible_count_round, "Unsuppressed", outfile.figures)
-
-
+plot_counterfactual(counterfactuals_a_f, counterfactuals_a_a, eligible_count_round, incidence_factual, "Unsuppressed", outfile.figures)
 
 
 #

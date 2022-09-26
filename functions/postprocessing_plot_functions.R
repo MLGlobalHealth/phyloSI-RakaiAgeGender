@@ -986,7 +986,7 @@ plot_observed_to_augmented <- function(predict_y, predict_z, unsuppressed_count,
   
 }
 
-plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligible_count_round, lab, outdir){
+plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligible_count_round, incidence_factual, lab, outdir){
   
   # target label
   df_target = data.table(variable = c('TREATED.SPREADERS', 'TREATED.NONCOMPLIER', 'TREATED.RANDOM'), 
@@ -1022,6 +1022,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
   budget.counterfactual <- budget.counterfactual[ROUND == Round & SEX == 'M']
   relative_incidence_counterfactual <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
   incidence_counterfactual <- incidence_counterfactual[ROUND == Round & IS_MF == T]
+  icf <- incidence_factual[ROUND == Round & IS_MF == T]
   
   # format budget
   bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM', 'label'))
@@ -1039,6 +1040,13 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
   ic[, CU := CU / SUSCEPTIBLE]
   ic <- merge(ic, df_target, by = 'counterfactual_index')
   
+  icf <- merge(icf, tmp, 
+               by.x = c('ROUND', 'COMM', 'AGE_INFECTION.RECIPIENT', 'IS_MF'), 
+               by.y = c('ROUND', 'COMM', 'AGEYRS', 'IS_MF'))
+  icf[, M := M / SUSCEPTIBLE]
+  icf[, CL := CL / SUSCEPTIBLE]
+  icf[, CU := CU / SUSCEPTIBLE]
+  
   # reduction in incidence
   ric <- merge(relative_incidence_counterfactual, df_target, by = 'counterfactual_index')
     
@@ -1055,6 +1063,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
       tmp1 <- bc[COMM == communities[i]]
       tmp2 <- ic[COMM == communities[i]]
       tmp3 <- ric[COMM == communities[i]]
+      tmp4 <- icf[COMM == communities[i]]
       
       # budget
       p1 <- ggplot(tmp1, aes(x = label)) + 
@@ -1077,15 +1086,17 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
       
       # incidence rate
       p2 <- ggplot(tmp2) + 
+        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.2) + 
+        geom_ribbon(data = tmp4, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, linetype = 'Fit to data'), alpha = 0.2) + 
+        geom_line(data = tmp4, aes(x = AGE_INFECTION.RECIPIENT, y = M*100, linetype = 'Fit to data'), col = 'black') +
         geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M*100, col = LABEL_TARGET)) + 
-        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
         labs(x = 'Age female recipient', y = 'Incidence rate per 100 person-year\nin female recipient') + 
         theme_bw() +
         theme(strip.background = element_rect(colour="white", fill="white"),
               strip.text = element_text(size = rel(1)),
               panel.grid.major.x = element_blank(), 
               panel.grid.minor.x = element_blank(), 
-              legend.position = 'none',
+              legend.position = 'bottom',
               legend.title = element_blank()) +
         scale_color_manual(values = cols) +
         scale_fill_manual(values = cols) +
@@ -1108,14 +1119,17 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
               # legend.direction = 'vertical',
               # axis.title.x = element_blank(), 
               # axis.text.x = element_blank(), 
-              legend.position = 'bottom') +
+              legend.position = 'none') +
         scale_color_manual(values = cols) +
         scale_fill_manual(values = cols) +
         scale_y_continuous(labels = scales::percent, limits = c(0,1)) + 
         scale_x_continuous(expand = c(0,0)) + 
         facet_grid(.~label)
+      
+      p3 <- ggarrange(p3, legend.grob = get_legend(p2), legend = 'bottom')
+      p2 <- p2 + theme(legend.position= 'none')
 
-      p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA, 1), c(NA, 2), c(3,3)), widths = c(0.02, 0.95), heights = c(0.3, 0.3, 0.42))
+      p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA, 1), c(NA, 2), c(3,3)), widths = c(0.02, 0.95), heights = c(0.3, 0.3, 0.4))
       
       file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.png')
       ggsave(p, file = file, w = 7, h = 9)
