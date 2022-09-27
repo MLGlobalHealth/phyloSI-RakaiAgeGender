@@ -569,7 +569,7 @@ plot_contribution_age_source_sex_ratio <- function(expected_contribution_age_sou
     ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
       geom_hline(yintercept = 1, linetype = 'dashed', alpha = 0.5) +
       geom_line(aes(y = M, col = LABEL_ROUND)) + 
-      geom_ribbon(aes(ymin = CL, ymax = CU, fill = LABEL_ROUND), alpha = 0.5) +
+      # geom_ribbon(aes(ymin = CL, ymax = CU, fill = LABEL_ROUND), alpha = 0.5) +
       labs(x = 'Age of the source', y = 'Contribution to HIV infection male to female ratio') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
@@ -602,7 +602,7 @@ plot_contribution_age_source_sex_ratio <- function(expected_contribution_age_sou
       guides(color = guide_legend(byrow = T, nrow = 2), fill = guide_legend(byrow = T, nrow = 2))
     
     ## round 15 and 18
-    pp <- plot.p(tmp.p[ROUND %in% Rounds])+ theme(legend.position =  c(0.85,0.93)) + 
+    pp <- plot.p(tmp.p[ROUND %in% Rounds])+ theme(legend.position =  c(0.15,0.93)) + 
       scale_color_manual(values =colors_reduced) +
       scale_fill_manual(values = colors_reduced) 
     
