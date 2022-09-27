@@ -832,6 +832,7 @@ plot_transmission_risk_sex_source <- function(transmission_risk_sex_source_round
 
 plot_median_age_source <- function(median_age_source, outdir){
   
+  median_age_source <- median_age_source[quantile == 'C50']
   p <- ggplot(median_age_source) + 
     geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = ROUND)) + 
     geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = ROUND), alpha = 0.15) + 
@@ -860,13 +861,17 @@ plot_median_age_source_group <- function(median_age_source_group, outdir){
   median_age_source_group[, mean_age_group := mean(c(as.numeric(gsub('(.+)-.*', '\\1', AGE_GROUP_INFECTION.RECIPIENT)), 
                                                     as.numeric(gsub('.*-(.+)', '\\1', AGE_GROUP_INFECTION.RECIPIENT)))), by = 'AGE_GROUP_INFECTION.RECIPIENT']
   cols <- palette_round_inland[c(4, 7)]
+  mag <- dcast.data.table(median_age_source_group, LABEL_ROUND + mean_age_group + COMM + AGE_GROUP_INFECTION.RECIPIENT + SEX_LABEL~ quantile, value.var = 'M')
   
   for(i in seq_along(communities)){
-    tmp <- median_age_source_group[COMM == communities[i]]
+    tmp <- mag[COMM == communities[i]]
     
-    p <- ggplot(tmp) + 
-      geom_point(aes(x = mean_age_group, y = M, col = LABEL_ROUND), position = position_dodge(2)) + 
-      geom_errorbar(aes(x = mean_age_group, ymin= CL, ymax = CU, col = LABEL_ROUND), alpha = 0.5, position = position_dodge(2), width = 1) + 
+    p <- ggplot(tmp, aes(x = mean_age_group, col = LABEL_ROUND)) + 
+      facet_grid(.~SEX_LABEL) + 
+      geom_boxplot(stat = "identity", aes(lower  = C25,upper  = C75,middle = C50,ymin   = C10, ymax   = C90, group= interaction(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT)), 
+                   width = 2) + 
+      # geom_point(aes(x = mean_age_group, y = M, col = LABEL_ROUND), position = position_dodge(2)) + 
+      # geom_errorbar(aes(x = mean_age_group, ymin= CL, ymax = CU, col = LABEL_ROUND), alpha = 0.5, position = position_dodge(2), width = 1) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
       theme_bw() + 
       labs(x = 'Age recipient', y = 'Median age source') +
@@ -875,7 +880,6 @@ plot_median_age_source_group <- function(median_age_source_group, outdir){
             legend.position = 'bottom', 
             panel.grid.minor.x = element_blank(), 
             legend.title = element_blank()) +
-      facet_grid(.~SEX_LABEL) + 
       scale_color_manual(values = cols) + 
       scale_y_continuous(expand = c(0,0), 
                          breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
@@ -885,7 +889,7 @@ plot_median_age_source_group <- function(median_age_source_group, outdir){
                          labels = median_age_source_group[order(median_age_source_group), unique(AGE_GROUP_INFECTION.RECIPIENT)], 
                          expand = c(0,0))
     
-    
+
     ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.png'), w = 7, h = 4.5)
     
   }

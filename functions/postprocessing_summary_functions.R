@@ -218,7 +218,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
                                          log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_eligible = F, posterior_samples = F, relative_baseline = F, 
-                                         invert = F, median_age_source = F, sex_ratio = F){
+                                         invert = F, median_age_source = F, quantile_age_source = F, sex_ratio = F){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -267,9 +267,20 @@ find_summary_output_by_round <- function(samples, output, vars,
   if(median_age_source){
     setnames(tmp1, 'value', 'delta')
     vars <- standardised.vars
-    tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta )), by = c('iterations', vars)]
+    tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta ), 
+                        quantile = c('C50')), by = c('iterations', vars)]
+    vars = c(vars, 'quantile')
   }
   
+  if(quantile_age_source){
+    setnames(tmp1, 'value', 'delta')
+    vars <- standardised.vars
+    tmp1 <- tmp1[, list(value = Hmisc::wtd.quantile(x = AGE_TRANSMISSION.SOURCE, weight = delta,
+                                                        probs = c(0.1, 0.25, 0.5, 0.75, 0.9), normwt = TRUE),
+                        quantile = c('C10', 'C25', 'C50', 'C75', 'C90')), by = c('iterations', vars)]
+    vars = c(vars, 'quantile')
+  }
+
   # divide by the number of unsuppressed
   if(per_unsuppressed){
     tmp <- copy(eligible_count_round)
