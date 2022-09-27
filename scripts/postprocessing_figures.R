@@ -275,9 +275,8 @@ df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34'
 median_age_source_group <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
                                                   standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
-                                                  median_age_source = T)
+                                                  quantile_age_source = T)
 plot_median_age_source_group(median_age_source_group, outfile.figures)
-
 
 #
 # Relative incidence infection if male had the same art uptake as female
