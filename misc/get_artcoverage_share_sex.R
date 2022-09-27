@@ -50,7 +50,7 @@ df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
 #####################################################
 
-# find share of infected by sex across age
+# find share of unsuppressed by sex across age
 df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations', 'iterations_prevalence')]
 df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED, by = c('ROUND', 'COMM', 'AGEYRS', 'iterations', 'iterations_prevalence')]
 
@@ -77,7 +77,7 @@ ggplot(sing.age, aes(x = AGEYRS)) +
 
 #########################################
 
-# find share of infected by sex across age
+# find share of unsuppressed by sex across age
 tmp <- df[, list(UNSUPPRESSED = sum(UNSUPPRESSED)), by = c('ROUND', 'COMM', 'iterations', 'SEX')]
 tmp[, UNSUPPRESSED_SHARE := UNSUPPRESSED / sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations')]
 
@@ -104,6 +104,5 @@ ggplot(sing, aes(x = ROUND)) +
 #########################################
 
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
-
 file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
 write.csv(tmp, file = file.name, row.names = F)
