@@ -512,9 +512,9 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
   # prepare function
   plot.p <- function(tmp.p){
     ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
-      geom_bar(aes(y = M, fill = SEX), stat = 'identity', position = position_dodge(0.9)) + 
-      geom_errorbar(aes(ymin = CL, ymax = CU, group = SEX), alpha = 0.6, position = position_dodge(0.9), width = 0.5) +
-      # scale_fill_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) + 
+      geom_line(aes(y = M, col = SEX)) + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX), alpha = 0.5) +
+      scale_color_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) +
       scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
       labs(x = 'Age of the source', y = 'Contribution to HIV infection') + 
       theme_bw() +
@@ -554,6 +554,71 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
   }
 }
 
+plot_contribution_age_source_sex_ratio <- function(expected_contribution_age_source_sex_ratio, outdir, lab = NULL){
+  
+  # restricted rounds
+  Rounds <- paste0('R0', c(15,18))
+  
+  # prepare dataset
+  tmp <- copy(expected_contribution_age_source_sex_ratio)
+
+  communities <- tmp[, unique(COMM)]
+  
+  # prepare function
+  plot.p <- function(tmp.p){
+    ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
+      geom_line(aes(y = M, col = LABEL_ROUND)) + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = LABEL_ROUND), alpha = 0.5) +
+      labs(x = 'Age of the source', y = 'Contribution to HIV infection male to female ratio') + 
+      theme_bw() +
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.title = element_blank(), 
+            panel.grid.minor = element_blank()) + 
+      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
+      scale_x_continuous(breaks = c(seq(min(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]), max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]), 5), 
+                                    max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]))) 
+  }
+  
+  
+  # make plots
+  for(i in seq_along(communities)){
+    
+    if(communities[i] == 'inland'){
+      colors <- palette_round_inland
+      colors_reduced <- colors[c(4, 7)]
+    }else{
+      colors <- palette_round_fishing
+      colors_reduced <- colors[c(1, 5)]
+    }
+    
+    tmp.p <- tmp[COMM == communities[i]]
+    
+    ## all rounds
+    pp.all <- plot.p(tmp.p) + theme(legend.position = 'bottom') + 
+      scale_color_manual(values =colors) +
+      scale_fill_manual(values = colors) +
+      guides(color = guide_legend(byrow = T, nrow = 2), fill = guide_legend(byrow = T, nrow = 2))
+    
+    ## round 15 and 18
+    pp <- plot.p(tmp.p[ROUND %in% Rounds])+ theme(legend.position =  c(0.85,0.93)) + 
+      scale_color_manual(values =colors_reduced) +
+      scale_fill_manual(values = colors_reduced) 
+    
+
+    if(is.null(lab)) lab =  'Contribution_Sex_Ratio'
+    
+    if(communities[i] == 'inland'){
+      ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_entended_', communities[i], '.png'), w = 6, h = 6)
+    }else{
+      ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_entended_', communities[i], '.png'), w = 6, h = 6)
+      
+    }
+    
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 6, h = 6)
+    
+  }
+}
 
 plot_contribution_age_group <- function(contribution_age_group_source, outdir, lab = NULL){
   
@@ -991,6 +1056,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
   # target label
   df_target = data.table(variable = c('TREATED.SPREADERS', 'TREATED.NONCOMPLIER', 'TREATED.RANDOM'), 
                        counterfactual_index = 1:3, 
+                       type = c('main spreaders', 'non compliers', 'random'),
                        LABEL_TARGET = c('Main spreaders', 'Greatest difference with\nfemale ART uptake', 'Random'))
   df_target[, LABEL_TARGET := factor(LABEL_TARGET, levels = df_target[, LABEL_TARGET])]
   
@@ -999,23 +1065,28 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
   budget.counterfactual <- counterfactuals_p_f$budget 
   relative_incidence_counterfactual <- counterfactuals_p_f$relative_incidence_counterfactual 
   incidence_counterfactual <- counterfactuals_p_f$incidence_counterfactual 
+  eligible_count_round.counterfactual <- counterfactuals_p_f$eligible_count_round.counterfactual
   budget.counterfactual[, label := label.f]
   relative_incidence_counterfactual[, label := label.f]
   incidence_counterfactual[, label := label.f]
+  eligible_count_round.counterfactual[, label := label.f]
   
   # unlist all
   label.a = 'ART all'
   budget.counterfactual.a <- counterfactuals_p_a$budget 
   relative_incidence_counterfactual.a <- counterfactuals_p_a$relative_incidence_counterfactual 
   incidence_counterfactual.a <- counterfactuals_p_a$incidence_counterfactual 
+  eligible_count_round.counterfactual.a <- counterfactuals_p_a$eligible_count_round.counterfactual
   budget.counterfactual.a[, label := label.a]
   relative_incidence_counterfactual.a[, label := label.a]
   incidence_counterfactual.a[, label := label.a]
+  eligible_count_round.counterfactual.a[, label := label.a]
   
   # combine
   budget.counterfactual <- rbind(budget.counterfactual, budget.counterfactual.a)
   relative_incidence_counterfactual <- rbind(relative_incidence_counterfactual, relative_incidence_counterfactual.a)
   incidence_counterfactual <- rbind(incidence_counterfactual, incidence_counterfactual.a)
+  eligible_count_round.counterfactual <- rbind(eligible_count_round.counterfactual, eligible_count_round.counterfactual.a)
   
   # restrict to one round
   Round <- 'R018'
@@ -1023,11 +1094,14 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
   relative_incidence_counterfactual <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
   incidence_counterfactual <- incidence_counterfactual[ROUND == Round & IS_MF == T]
   icf <- incidence_factual[ROUND == Round & IS_MF == T]
+  ecf <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
   
   # format budget
   bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM', 'label'))
   bc <- merge(bc, df_target, by = 'variable')
   bc[, lab := lab]
+  
+  ecf <- merge(ecf, df_target, by = 'type')
   
   # find incidence rate
   tmp <- copy(eligible_count_round[, .(ROUND, SEX, COMM, AGEYRS, SUSCEPTIBLE)])
@@ -1049,7 +1123,8 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
   
   # reduction in incidence
   ric <- merge(relative_incidence_counterfactual, df_target, by = 'counterfactual_index')
-    
+  
+
   # sex label
   # icf[, SEX := 'Female']
   # icf[LABEL_DIRECTION == 'Female -> Male', SEX := 'Male']
@@ -1064,8 +1139,23 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_a, eligib
       tmp2 <- ic[COMM == communities[i]]
       tmp3 <- ric[COMM == communities[i]]
       tmp4 <- icf[COMM == communities[i]]
+      tmp5 <- ecf[COMM == communities[i]]
       
-      # budget
+      # budget by age group
+      p <- ggplot(tmp5, aes(x = AGEYRS)) +
+        geom_bar(aes(y = TREATED, fill = LABEL_TARGET), stat = 'identity') +  
+        facet_grid(LABEL_TARGET~label) + 
+        scale_fill_manual(values = cols) + 
+        theme_bw() + 
+        labs(y = 'Number of male treated', x = 'Age') + 
+        theme(legend.title = element_blank(),
+              legend.position = 'bottom',
+              strip.background = element_rect(colour="white", fill="white"),
+              strip.text = element_text(size = rel(1)))
+      file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
+      ggsave(p, file = file, w = 7, h = 7)
+      
+      # budget total
       p1 <- ggplot(tmp1, aes(x = label)) + 
         geom_bar(aes(fill = LABEL_TARGET, y = value), stat = 'identity', position = position_dodge(0.7), width = 0.6) + 
         labs(x = '', y = paste0('\nNumber of male treated'), fill = '') + 

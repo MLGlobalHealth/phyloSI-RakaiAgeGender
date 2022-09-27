@@ -218,7 +218,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
                                          log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_eligible = F, posterior_samples = F, relative_baseline = F, 
-                                         invert = F, median_age_source = F){
+                                         invert = F, median_age_source = F, sex_ratio = F){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
@@ -326,6 +326,15 @@ find_summary_output_by_round <- function(samples, output, vars,
   # invert
   if(invert){
     tmp1[, value := 1 / value ]
+  }
+  
+  # take ratio by sex
+  if(sex_ratio){
+    tmp1 <- select(tmp1, - 'total_value')
+    tmp1 <- dcast(tmp1, ... ~ INDEX_DIRECTION, value.var = 'value')
+    setnames(tmp1, c('1', '2'), c('value_FM', 'value_MF'))
+    tmp1[, value := value_MF / value_FM]
+    vars <- vars[-which(vars == 'INDEX_DIRECTION')]
   }
   
   if(posterior_samples == T){
@@ -779,7 +788,7 @@ find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_
 
 make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data, 
                                 eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
-                                only_participant = F, art_up_to_female = F){
+                                only_participant = F, art_up_to_female = F, outdir){
   
   df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
   

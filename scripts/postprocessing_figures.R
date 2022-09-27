@@ -180,6 +180,14 @@ expected_contribution_age_source2 <-  find_summary_output_by_round(samples, 'log
 plot_contribution_age_source_unsuppressed(expected_contribution_age_source2, unsuppressed_prop_age, outfile.figures,'Expected_contribution')
 plot_contribution_age_source(expected_contribution_age_source2, outfile.figures,'Expected_contribution_Sex')
 
+# age-specific sex ration contribution to transmission 
+expected_contribution_age_source_sex_ratio <-  find_summary_output_by_round(samples, 'log_lambda_latent',
+                                                                   c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
+                                                                   transform = 'exp',
+                                                                   standardised.vars = c( 'INDEX_COMMUNITY', 'INDEX_ROUND'), 
+                                                                   sex_ratio= T)
+plot_contribution_age_source_sex_ratio(expected_contribution_age_source_sex_ratio, outfile.figures,'Expected_contribution_Sex_Ratio')
+
 # aggregated by agr group
 expected_contribution_age_group_source <-  find_summary_output_by_round(samples, 'log_lambda_latent',
                                                                c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
@@ -293,12 +301,12 @@ spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
 ## treated as much as female
 counterfactuals_p_f <- make_counterfactual(samples, spreaders, log_offset_round, stan_data, 
                                        eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
-                                       only_participant = T, art_up_to_female = T)
+                                       only_participant = T, art_up_to_female = T, outdir.table)
 
 ## all treated
 counterfactuals_p_a <- make_counterfactual(samples, spreaders, log_offset_round, stan_data, 
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
-                                           only_participant = T, art_up_to_female = F)
+                                           only_participant = T, art_up_to_female = F, outdir.table)
 
 # plot
 plot_counterfactual(counterfactuals_p_f, counterfactuals_p_a, eligible_count_round, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
@@ -308,12 +316,12 @@ plot_counterfactual(counterfactuals_p_f, counterfactuals_p_a, eligible_count_rou
 ## treated as much as female
 counterfactuals_a_f <- make_counterfactual(samples, spreaders, log_offset_round, stan_data, 
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
-                                           only_participant = F, art_up_to_female = T)
+                                           only_participant = F, art_up_to_female = T, outdir.table)
 
 ## all treated
 counterfactuals_a_a <- make_counterfactual(samples, spreaders, log_offset_round, stan_data, 
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
-                                           only_participant = F, art_up_to_female = F)
+                                           only_participant = F, art_up_to_female = F, outdir.table)
 
 # plot
 plot_counterfactual(counterfactuals_a_f, counterfactuals_a_a, eligible_count_round, incidence_factual, "Unsuppressed", outfile.figures)
