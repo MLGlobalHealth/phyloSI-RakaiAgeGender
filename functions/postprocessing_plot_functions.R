@@ -567,6 +567,7 @@ plot_contribution_age_source_sex_ratio <- function(expected_contribution_age_sou
   # prepare function
   plot.p <- function(tmp.p){
     ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
+      geom_hline(yintercept = 1, linetype = 'dashed', alpha = 0.5) +
       geom_line(aes(y = M, col = LABEL_ROUND)) + 
       geom_ribbon(aes(ymin = CL, ymax = CU, fill = LABEL_ROUND), alpha = 0.5) +
       labs(x = 'Age of the source', y = 'Contribution to HIV infection male to female ratio') + 
@@ -575,7 +576,7 @@ plot_contribution_age_source_sex_ratio <- function(expected_contribution_age_sou
             strip.text = element_text(size = rel(1)),
             legend.title = element_blank(), 
             panel.grid.minor = element_blank()) + 
-      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
+      scale_y_continuous(expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
       scale_x_continuous(breaks = c(seq(min(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]), max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]), 5), 
                                     max(tmp.p[, unique(AGE_TRANSMISSION.SOURCE)]))) 
   }
