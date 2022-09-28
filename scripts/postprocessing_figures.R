@@ -65,6 +65,7 @@ source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
 if(!exists('only.participant.treated')){
   only.participant.treated = F
 }
+
 #
 # offset
 #
@@ -144,11 +145,11 @@ prevalence_prop_sex<- prepare_prevalence_proportion_by_round(file.prevalence.sha
 plot_contribution_sex_source(contribution_sex_source, unsuppressed_prop_sex, prevalence_prop_sex, outfile.figures)
 
 # age-specific contribution to transmission among all sources
-contribution_age_source2 <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
+contribution_age_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                          standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
 unsuppressed_prop_age <- prepare_unsuppressed_proportion_by_round(file.unsuppressed.share, c('SEX', 'AGEYRS'))
-plot_contribution_age_source_unsuppressed(contribution_age_source2, unsuppressed_prop_age, outfile.figures)
-plot_contribution_age_source(contribution_age_source2, outfile.figures)
+plot_contribution_age_source_unsuppressed(contribution_age_source, unsuppressed_prop_age, outfile.figures)
+plot_contribution_age_source(contribution_age_source, outfile.figures)
 
 # aggregated by agr group
 contribution_age_group_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
@@ -276,7 +277,11 @@ median_age_source_group <- find_summary_output_by_round(samples, 'log_lambda_lat
                                                   transform = 'exp',
                                                   standardised.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                                                   quantile_age_source = T)
-plot_median_age_source_group(median_age_source_group, outfile.figures)
+expected_contribution_age_group_source2 <-  find_summary_output_by_round(samples, 'log_lambda_latent',
+                                                                        c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                        transform = 'exp',
+                                                                        standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
+plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, outfile.figures)
 
 #
 # Relative incidence infection if male had the same art uptake as female
