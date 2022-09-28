@@ -1,5 +1,5 @@
-
-find_palette_round <- function(){
+find_palette_round <- function()
+{
   # palette_round <- scales::viridis_pal(option = 'A', end= 0.9)(8)
   palette_round <<- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(df_round[,length(unique(ROUND))])
   palette_round_inland <<- palette_round[c(1:4, 6:8)]
@@ -7,7 +7,8 @@ find_palette_round <- function(){
 }
 
 
-plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = NULL){
+plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = NULL)
+{
   
   plots = list()
   
@@ -127,7 +128,8 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
   return(plots)
 }
 
-plot_hist_age_infection <- function(pairs, outdir = NULL){
+plot_hist_age_infection <- function(pairs, outdir = NULL)
+{
   
   pairs[, Sex := SEX.SOURCE]
   p1 <- ggplot(pairs, aes(x = AGE_TRANSMISSION.SOURCE)) + 
@@ -156,7 +158,8 @@ plot_hist_age_infection <- function(pairs, outdir = NULL){
   return(p)
 }
 
-plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
+plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL)
+{
   
   pairs <- copy(pairs.all)
   
@@ -213,7 +216,8 @@ plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL){
   return(p)
 }
 
-plot_CI_age_infection <- function(pairs, outdir = NULL){
+plot_CI_age_infection <- function(pairs, outdir = NULL)
+{
   
   data <- copy(pairs)
   data[, AGE_TRANSMISSION.SOURCE := floor(AGE_TRANSMISSION.SOURCE)]
@@ -296,7 +300,8 @@ plot_CI_age_infection <- function(pairs, outdir = NULL){
   
 }
 
-plot_CI_age_transmission <- function(pairs, outdir = NULL){
+plot_CI_age_transmission <- function(pairs, outdir = NULL)
+{
   
   data <- copy(pairs)
   data[, AGE_TRANSMISSION.SOURCE := floor(AGE_TRANSMISSION.SOURCE)]
@@ -551,7 +556,8 @@ phsc.plot.transmission.network<- function(dchain, dc, pairs, outdir=NULL, point.
 }
 
 
-plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outdir){
+plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outdir)
+{
   
   level_rounds <- c('R012', 'R013', 'R014', 'R015', 'R015S', 'R016', 'R017', 'R018')
   
@@ -826,7 +832,8 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   
 }
 
-plot_data_by_period <- function(incidence_cases, outdir){
+plot_data_by_period <- function(incidence_cases, outdir)
+{
   
   # incidence cases
   ggplot(incidence_cases, aes(x = AGEYRS)) +
@@ -839,7 +846,8 @@ plot_data_by_period <- function(incidence_cases, outdir){
   ggsave(paste0(outdir, '-data-incidence_case_period.png'), w = 7, h = 6)
 }
 
-plot_offset <- function(stan_data, outdir){
+plot_offset <- function(stan_data, outdir)
+{
   
   tmp <- as.data.table(reshape2::melt(stan_data[['log_offset']]))
   setnames(tmp, 1:4, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
@@ -863,7 +871,8 @@ plot_offset <- function(stan_data, outdir){
   ggsave(paste0(outdir, '-offset-value.png'), w = 10, h = 12 )
 }
 
-plot_crude_force_infection <- function(crude_force_infection, outdir){
+plot_crude_force_infection <- function(crude_force_infection, outdir)
+{
   
   communities <- crude_force_infection[, unique(COMM)]
   for(i in seq_along(communities)){
@@ -918,7 +927,8 @@ plot_crude_force_infection <- function(crude_force_infection, outdir){
   
 }
 
-plot_transmission_events_over_time <- function(incidence_cases_round, pairs, outdir){
+plot_transmission_events_over_time <- function(incidence_cases_round, pairs, outdir)
+{
   
   # timeline
   df_timeline <- copy(df_round)
@@ -1051,7 +1061,8 @@ plot_transmission_events_over_time <- function(incidence_cases_round, pairs, out
 }
 
 
-plot_transmission_events_over_time_old <- function(eligible_count_round, incidence_cases_round, pairs, outdir){
+plot_transmission_events_over_time_old <- function(eligible_count_round, incidence_cases_round, pairs, outdir)
+{
   
   # timeline
   df_timeline <- copy(df_round)
@@ -1204,7 +1215,8 @@ plot_transmission_events_over_time_old <- function(eligible_count_round, inciden
 }
 
 
-plot_pairs <- function(pairs, outdir){
+plot_pairs <- function(pairs, outdir)
+{
   
   tmp <- merge(pairs, df_period, by.x = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT'), by.y = c('BEFORE_CUTOFF', 'COMM'))
   tmp[, DIRECTION := 'Male -> Female' ]
@@ -1517,4 +1529,82 @@ plot.tsi.relationships.among.source.recipient.pairs <- function(outdir)
                 file <- gsub('tsi','tsi-adj',file)
 
         ggsave(p, file = file, w = 8, h = 10)
+}
+
+plot.phylopair.dates.scores <- function(DT, 
+                                        add.rects=TRUE, add.dots=TRUE,
+                                        only.rect.pairs=TRUE, only.contradict=FALSE, only.crossing=FALSE, only.coherent=FALSE, title=NULL, 
+                                        daterange.vars=c('date_last_negative','date_first_positive'),
+                                        doi.center.var='date_infection',
+                                        return.DT=FALSE
+)
+{
+        # DT <- copy(chain2)
+        rgx <- paste0(daterange.vars, collapse='|')
+
+        if(only.rect.pairs)
+        {
+                cols <- grep(rgx, names(DT), value=TRUE)
+                tmp <- DT[, lapply(.SD, function(x) !is.na(x) ) , .SDcols=cols]
+                idx <- which(apply(tmp, 1, all))
+                DT <- DT[idx,]
+                rm(idx)
+        }
+
+        # rename var
+        vxmin <- paste0( daterange.vars[1], '.SOURCE')
+        vxmax <- paste0( daterange.vars[2], '.SOURCE')
+        vymin <- paste0( daterange.vars[1], '.RECIPIENT')
+        vymax <- paste0( daterange.vars[2], '.RECIPIENT')
+
+        idx <- 1:nrow(DT)
+        if(only.contradict)
+        {
+                # the source cannot have been infected following the recipient
+                idx <- DT[, ..vxmin][[1]] >= DT[, ..vymax][[1]]
+        }else if(only.crossing){
+                # 
+                idx.1 <- DT[, ..vymax][[1]] >= DT[, ..vxmin][[1]]
+                idx.2 <- DT[, ..vxmax][[1]] >= DT[, ..vymin][[1]]
+                idx <- idx.1 & idx.2
+        }else if(only.coherent){
+                # 
+                idx <- DT[, ..vxmax][[1]] <= DT[, ..vymin][[1]]
+        }
+        DT <- DT[idx, ]
+
+        if(return.DT)
+                return(DT)
+
+        g <- ggplot(DT, aes(col=SCORE_DIR_SR, fill=SCORE_DIR_SR)) +
+                theme_bw() + 
+                #                 scale_fill_viridis_c( begin=0.5, end=1 )  + 
+                #                 scale_color_viridis_c( begin=0.5, end=1 )  + 
+                scale_fill_viridis_c( limits=c(.5, 1)) +
+                scale_color_viridis_c( limits=c(.5, 1)) +
+                theme(legend.position='bottom') +
+                labs(x='date of infection(source)', y='date of infection(recipient)')
+
+        if(add.rects)
+        {
+                g <- g + geom_rect(aes_string(ymin=vymin,
+                                              ymax=vymax,
+                                              xmin=vxmin,
+                                              xmax=vxmax), 
+                                   alpha=.2, color=NA)
+        }
+        
+        if(add.dots)
+        {
+                vars <- paste0(doi.center.var, c('.SOURCE', '.RECIPIENT'))
+                g <- g + 
+                        geom_point(aes_string(x=vars[1],
+                                              y=vars[2])) 
+        }
+
+        if(!is.null(title))
+                g <- g + labs(title=title)
+
+        g + 
+                geom_abline(slope=1,linetype='dotted', color='red') 
 }

@@ -68,6 +68,8 @@ if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
+use.network.derived.infection.dates <- T
+use.tsi.oneyear.before.first.positive <- F
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
 remove.missing.community.recipient <- T
@@ -110,6 +112,9 @@ source(file.path(indir, 'functions', 'statistics_functions.R'))
 source(file.path(indir, 'functions', 'stan_utils.R'))
 source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 
+# check args
+stopifnot( use.tsi.estimates + use.network.derived.infection.dates + use.tsi.oneyear.before.first.positive == 1)
+
 # load anonymous aid
 aik <- .read(file.anonymisation.keys); aik$X <- NULL
 
@@ -124,7 +129,8 @@ df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_d
 df_round_fishing[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
 
 # load Tanya's estimate time since infection using phylogenetic data
-time.since.infection <- make.time.since.infection2(fread(file.path.tsiestimates))
+if(use.tsi.estimates)
+        time.since.infection <- make.time.since.infection2(fread(file.path.tsiestimates))
 
 # load census eligible ount
 eligible_count_smooth <- fread(file.eligible.count)
@@ -211,12 +217,50 @@ if(use.tsi.estimates){
   plot.tsi.relationships.among.source.recipient.pairs(outfile.figures)
 }
 
-if(include.only.heterosexual.pairs){
+if(include.only.heterosexual.pairs)
+{
   cat('Keep only heterosexual pairs\n')
   cat('Removing ', nrow(pairs.all[! ((SEX.RECIPIENT == 'M' & SEX.SOURCE == 'F') | (SEX.RECIPIENT == 'F' & SEX.SOURCE == 'M'))]), ' pairs\n')
   pairs.all <- pairs.all[(SEX.RECIPIENT == 'M' & SEX.SOURCE == 'F') | (SEX.RECIPIENT == 'F' & SEX.SOURCE == 'M')]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
+
+  # remove from chain too for later step.
+  setkey(chain, SOURCE, RECIPIENT)
+  chain <- chain[pairs.all[, .(SOURCE, RECIPIENT)]]
 }
+
+# this below changes the values of metadata, chain & pairs.all
+if(use.network.derived.infection.dates)
+{
+        cat('Assign infection dates according to network relationships...\n')
+
+        # helper functions here are in helpers.
+        filename <- paste0('network_attributed_doi',
+                           '_chains', .assign.code.meta(file.path.meta),
+                           '_meta',  .assign.code.chain(file.path.chains.data),
+                           '_onlyhetero', as.integer(include.only.heterosexual.pairs),
+                           '.rds')
+        if(filename %like% 'NA')
+                stop('Updated path for chains/meta? Need to update .assign.code.meta/meta\n')
+
+        filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', filename)
+
+        out <- update.meta.pairs.after.doi.attribution(path=filename)
+        stopifnot(nrow(meta_data) == nrow(out$meta_data))
+        
+
+        cat('\t Because of plausible dates of infection inconsistencies:\n')
+        .f <- function(DT){DT[, .(SOURCE, RECIPIENT)]}
+        tmp <- setdiff(.f(out$pairs.all), .f(pairs.all))[, .N]
+        cat('\t - switched direction of transmission for', tmp,'couples.\n')
+        tmp <- nrow(pairs.all) - nrow(out$pairs.all)
+        cat('\t - Removed', tmp,' couples.\n\n')
+
+        pairs.all <- out$pairs.all
+        chain <- out$chain
+        meta_data <- out$meta_data
+}
+
 if(remove.inconsistent.infection.dates){
   cat('Remove infections for which estimated date at infection of source is after the estimated date at infection of the recipient.\n ')
   cat('Removing ', nrow(pairs.all[ DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]), ' pairs\n')
@@ -230,7 +274,6 @@ if(remove.young.individuals){
   pairs.all <- pairs.all[AGE_TRANSMISSION.SOURCE >= 15 & AGE_INFECTION.RECIPIENT >= 15]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
-
 
 # plot time of infection
 plot_hist_time_infection(copy(pairs.all), cutoff_date, outfile.figures)
@@ -246,6 +289,7 @@ if(only.transmission.after.start.observational.period){
   
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
+
 if(only.transmission.before.stop.observational.period){
   cat('\nFor inland excluding recipients infected after ', as.character(stop_observational_period_inland), '\n')
   cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT > stop_observational_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
@@ -288,7 +332,6 @@ print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SE
 #
 
 proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures)
-
 
 #
 # PREPARE MAPS
@@ -378,5 +421,3 @@ if(0){
 file = paste0(outfile, "-stanout_", jobname, ".rds")
 cat("Save file ", file)
 saveRDS(fit,file = file)
-
-
