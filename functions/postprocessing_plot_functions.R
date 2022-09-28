@@ -900,7 +900,7 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
     tmp1 <- reported_contact[COMM == communities[i]]
 
     widths <- tmp[order(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT, SEX_LABEL), M_CONTRIBUTION]
-    widths <- widths * 10 / max(widths)
+    widths <- widths * 5 / max(widths)
     
     p <- ggplot(tmp) + 
       facet_grid(.~SEX_LABEL) + 
