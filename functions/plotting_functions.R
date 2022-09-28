@@ -721,12 +721,12 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   tmp <- copy(incidence_cases_round)
   tmp <- merge(tmp, df_community, by = 'COMM')
   tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
-  tmp[, LABEL_ROUND := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
+  tmp[, LABEL_ROUND2 := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
   tmp[, SEX_LABEL := 'Female']
   tmp[SEX== 'M', SEX_LABEL := 'Male']
   ggplot(tmp, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENCE*100, col = LABEL_ROUND)) +
-    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = LABEL_ROUND),  alpha = 0.1) +
+    geom_line(aes(y = INCIDENCE*100, col = LABEL_ROUND2)) +
+    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = LABEL_ROUND2),  alpha = 0.1) +
     labs(y = 'Incidence rate per 100 person-year', x = 'Age', fill = '', col = '') +
     facet_grid(LABEL_COMMUNITY~SEX_LABEL,  scale = 'free_y') +
     theme_bw() +
@@ -736,9 +736,13 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
           strip.background = element_rect(colour="white", fill="white"))
   ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 6)
   
+  tmp[, WEIGHTED_INCIDENCE := INCIDENCE / sum(INCIDENCE), by = c('COMM', 'ROUND', 'SEX')]
+  tmp1 <- tmp[, list(MEDIAN_AGEYRS =matrixStats::weightedMedian(AGEYRS, WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND')]
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
     geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
+    geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'], -'LABEL_ROUND'), aes(y = 0.02, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 24, fill = 'grey50',  size =4) + 
+    geom_point(data = tmp1[COMM == 'inland'], aes(y = 0.02, x = MEDIAN_AGEYRS, fill = SEX_LABEL), shape = 24, col = 'grey70', size =4) +
     labs(y = 'Incidence rate per 100 person-year', x = 'Age') +
     facet_grid(.~LABEL_ROUND, scale = 'free_y') +
     theme_bw() +
@@ -747,7 +751,8 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
     theme(legend.position = c(0.95, 0.87), 
           strip.background = element_rect(colour="white", fill="white"), 
           legend.title = element_blank()) + 
-    scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5)))
+    scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05)))
   ggsave(paste0(outdir, '-data-incidence_rate_round_sex.png'), w = 12, h = 4)
   
   # incidence cases among census eligible
@@ -934,7 +939,7 @@ plot_transmission_events_over_time <- function(pairs, outdir){
   df_age_group[AGEYRS < 35, index_age_group := 2]
   df_age_group[AGEYRS < 25, index_age_group := 1]
   df_age_group[, age_group := age_groups[index_age_group]]
-  df_age_group[, AGE_GROUP_LABEL := paste0('Age: ', age_group)]
+  df_age_group[, AGE_GROUP_LABEL := paste0('Age recipient: ', age_group)]
   
   # sex
   df_sex <- data.table(SEX = c('M', 'F'), SEX_LABEL = c('Male', 'Female'))
@@ -971,14 +976,16 @@ plot_transmission_events_over_time <- function(pairs, outdir){
     # plot pairs 
     p3 <- ggplot(dp[COMM == comm]) + 
       geom_histogram(aes(x = DATE, fill = DIRECTION), bins = 30) + 
+      geom_vline(aes(xintercept = pairs[, min(SAMPLE_DATE.RECIPIENT, SAMPLE_DATE.SOURCE)], linetype='Start deep-sequencing'), color = 'grey50') + 
       facet_grid(.~AGE_GROUP_LABEL) + 
-      labs(y = paste0('Detected transmissions\nfrom deep-sequence data\nin ', communities[i], ' communities'), x = 'Date at transmission') + 
+      labs(y = paste0('Detected transmissions\nfrom deep-sequence data'), x = 'Date at transmission') + 
       theme_bw() + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             # axis.text.x = element_text(angle= 70, hjust = 1),
             strip.text = element_text(size = rel(1)), 
-            legend.position = c(0.90, 0.86), 
+            legend.position = 'bottom',
             legend.title = element_blank()) + 
+      scale_linetype_manual(values = 'dashed') + 
       scale_fill_manual(values = c('Male -> Female'=male_color,'Female -> Male'=female_color)) +
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05)),
                          breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) + 
@@ -1113,10 +1120,10 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   
   #
   # Prepare incidence cases
-  icr <- merge(incidence_cases_round, df_age_group, by = 'AGEYRS')
-  icr <- icr[, list(INCIDENT_RATE_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE), 
+  # icr <- merge(incidence_cases_round, df_age_group, by = 'AGEYRS')
+  icr <- incidence_cases_round[, list(INCIDENT_RATE_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE), 
                     INCIDENT_RATE_UB_SUSCEPTIBLE = sum(INCIDENT_CASES_UB)  / sum(SUSCEPTIBLE),
-                    INCIDENT_RATE_LB_SUSCEPTIBLE = sum(INCIDENT_CASES_LB) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'AGE_GROUP_LABEL')] 
+                    INCIDENT_RATE_LB_SUSCEPTIBLE = sum(INCIDENT_CASES_LB) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM')] 
   
   # merge labels
   icr <- merge(icr, df_timeline, by = c('ROUND', 'COMM'))
@@ -1125,14 +1132,14 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   icr[, INCIDENT_RATE_REF := INCIDENT_RATE_SUSCEPTIBLE / INCIDENT_RATE_SUSCEPTIBLE[INDEX_ROUND == min(INDEX_ROUND)], by = 'COMM']
   
   # find incident cases ratio
-  icr <- dcast(icr, ROUND + INDEX_ROUND + COMM + AGE_GROUP_LABEL ~ SEX, value.var = 'INCIDENT_RATE_REF')
+  icr <- dcast(icr, ROUND + INDEX_ROUND + COMM ~ SEX, value.var = 'INCIDENT_RATE_REF')
   setnames(icr, c("M", 'F'), c('INCIDENT_RATE_REF_M', 'INCIDENT_RATE_REF_F'))
   icr[, INCIDENT_RATE_RATIO_REF := INCIDENT_RATE_REF_F / INCIDENT_RATE_REF_M]
 
 
   #
   # merge to unsuppressed rate ratio
-  urr <- unique(unsuppressed_rate_ratio[, .(ROUND, COMM, UNSUPPRESSION_RATE_RATIO_RATIO_M, UNSUPPRESSION_RATE_RATIO_RATIO_CL, UNSUPPRESSION_RATE_RATIO_RATIO_CU)])
+  urr <- unique(unsuppressed_rate_ratio[, .(ROUND, COMM, UNSUPPRESSION_RATE_RATIO_BY_AGE_M, UNSUPPRESSION_RATE_RATIO_BY_AGE_CL, UNSUPPRESSION_RATE_RATIO_BY_AGE_CU, AGE_GROUP)])
   urr[, ROUND := paste0('R0', ROUND)]
   ic <- merge(icr, urr, by = c('ROUND', 'COMM'))
   ic[, ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1',  ROUND))]
@@ -1153,15 +1160,16 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       colors <- palette_round_fishing[-1]
     }
     
-    p<-ggplot(tmp[INDEX_ROUND != min(INDEX_ROUND)], aes(x = UNSUPPRESSION_RATE_RATIO_RATIO_M)) + 
+    p<-ggplot(tmp[INDEX_ROUND != min(INDEX_ROUND)]) + 
       geom_hline(yintercept = 1, linetype = 'dashed', alpha = 0.5) + 
       geom_vline(xintercept = 1, linetype = 'dashed', alpha = 0.5) + 
-      geom_point(aes(col = ROUND_LABEL, shape = AGE_GROUP_LABEL, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
+      geom_point(aes(col = ROUND_LABEL, shape = AGE_GROUP, x = UNSUPPRESSION_RATE_RATIO_BY_AGE_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_color_manual(values = colors) + 
-      labs(col = '', shape = 'Age group\nincidence rate', 
-           x = 'ART naive (unsuppressed) rate male to female ratio', 
+      labs(col = '', shape = 'Age group', 
+           x = 'Unsuppression rate male to female ratio', 
            y = paste0('Incidence rate relative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))], '\nfemale to male ratio')) + 
       theme_bw() 
+    p
     ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.png'), w = 6, h = 4.5)
 
   }
