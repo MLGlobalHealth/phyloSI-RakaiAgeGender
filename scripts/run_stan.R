@@ -101,6 +101,7 @@ file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_
 file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
 file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220811.csv')
 file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
+file.unsuppressed_rate_ratio <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_ratio_sex_220926.csv'))
 
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
@@ -147,6 +148,9 @@ proportion_unsuppressed <- fread(file.unsuppressed.prop)
 # load incidence estimates from Adam
 incidence.inland <- fread(file.incidence.inland)
 incidence.fishing <- fread(file.incidence.fishing)
+
+#for plots
+unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio)
 
 
 #
@@ -375,9 +379,13 @@ if(1){
   plot_data_by_period(incidence_cases, outfile.figures)
   
   # plot tansmission events over time
-  plot_transmission_events_over_time(incidence_cases_round, pairs, outfile.figures)
+  plot_transmission_events_over_time(pairs, outfile.figures)
   save_statistics_transmission_events(pairs, outdir.table)
   
+  # plot incident cases over time
+  plot_incident_cases_over_time(incidence_cases_round, outfile.figures)
+  plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures)
+    
   # plot offset
   plot_offset(stan_data, outfile.figures)
   

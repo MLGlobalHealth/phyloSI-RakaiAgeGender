@@ -97,16 +97,44 @@ p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEY
 p
 ggsave(p, file = file.path(outdir, 'Participation.png'), w = 8, h = 9)
 
-ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS)) +
-  geom_line(aes(y = PARTICIPATION)) +
-  geom_line(aes(y = PARTICIPATION_SMOOTH), col = 'red') +
-  labs(y = 'Participation among census eligible individuals', x = 'Age') +
-  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
-  theme_bw() +
+# sum over age
+tmp1 <- tmp[, list(PARTICIPANT = sum(PARTICIPANT), ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'SEX_LABEL', 'COMM')]
+tmp1[, VARIABLE := paste0(SEX_LABEL, ' in ', COMM, ' communities')]
+tmp1[, ROUND_LABEL := paste0('Round ', ROUND)]
+# tmp1 <- melt.data.table(tmp1, id.vars = c('ROUND', 'SEX_LABEL', 'COMM', 'VARIABLE', 'ROUND_LABEL'))
+# tmp1[, variable := ifelse(variable == 'PARTICIPATION', 'Participant', 'Census eligible population')]
+tmp1 <- tmp1[!ROUND %in% c("06", "07", "08", "09", "10", "11")]
+df_round <- data.table(ROUND = tmp1[, unique(ROUND)])
+df_round[, ROUND_INDEX := 1:length(ROUND)]
+tmp1 <- merge(tmp1, df_round, by = 'ROUND')
+
+p <- ggplot(tmp1) +
+  geom_bar(aes(x = as.numeric(ROUND_INDEX) + 0.17, y = PARTICIPANT, fill = VARIABLE, size = 'Participant'), stat = 'identity', width=0.3) +
+  geom_bar(aes(x = as.numeric(ROUND_INDEX) - 0.17, y = ELIGIBLE, col = VARIABLE, size = 'Census eligible population'), stat = 'identity', alpha = 0, width=0.3) +
+  labs(y = 'Count') +
+  scale_fill_manual(values = c('Female in inland communities' = 'lightpink', 
+                               'Female in fishing communities' = 'deeppink', 
+                               'Male in inland communities' = 'lightblue', 
+                               'Male in fishing communities' = 'royalblue')) + 
+  scale_color_manual(values = c('Female in inland communities' = 'lightpink', 
+                               'Female in fishing communities' = 'deeppink', 
+                               'Male in inland communities' = 'lightblue', 
+                               'Male in fishing communities' = 'royalblue')) + 
+  scale_size_manual(values = c(0.9, 0.9)) + 
+  theme_bw() + 
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1))) + 
-  scale_y_continuous(labels = scales::percent, limits = c(0,1)) 
+        strip.text = element_text(size = rel(1)), 
+        panel.grid.major = element_blank(), 
+        panel.grid.minor.x = element_blank(), 
+        axis.text.x = element_text(angle = 40, hjust =1), 
+        axis.title.x = element_blank(), 
+        legend.title = element_blank()) + 
+  scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
+  scale_x_continuous(breaks = tmp1[, unique(ROUND_INDEX)], label =  tmp1[, unique(ROUND_LABEL)] )+ 
+  guides(fill = guide_legend(byrow = T, nrow = 2, order = 2),color = guide_legend(byrow = T, nrow = 2, order = 2),
+         size = guide_legend(order = 1, nrow = 2, byrow = T))
+ggsave(p, file = file.path(outdir, 'Participants_aggregated_age.png'), w = 6.75, h = 6.75)
 
 ## save
 tmp <- rpr[, list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]
