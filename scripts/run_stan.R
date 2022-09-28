@@ -102,6 +102,7 @@ file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate
 file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220811.csv')
 file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
 file.unsuppressed_rate_ratio <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_ratio_sex_220926.csv'))
+file.reported.sexual.partnerships <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('cont_age-R015.rds'))
 
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
@@ -151,6 +152,7 @@ incidence.fishing <- fread(file.incidence.fishing)
 
 #for plots
 unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio)
+df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships))
 
 
 #

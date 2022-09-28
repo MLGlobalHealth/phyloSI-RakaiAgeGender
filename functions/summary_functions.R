@@ -1422,3 +1422,19 @@ study_infection_pairs_dates <- function(CHAIN)
 
         list(pairs= .double.merge(DT1=chain2, dpairs_doi), age=dage)
 }
+
+
+clean_reported_contact <- function(df_reported_contact){
+  
+  # change name of variables
+  setnames(df_reported_contact, c('part.comm', 'part.round', 'part.age', 'part.sex'), c('COMM', 'ROUND', 'AGEYRS', 'SEX'))
+  
+  # create variables
+  df_reported_contact[, SEX_LABEL := ifelse(SEX == 'F', 'Female recipients', 'Male recipients')]
+  
+  # find round label
+  reported_contact <- merge(df_reported_contact , df_round, by = c('COMM', 'ROUND'))
+  
+  return(reported_contact)
+}
+

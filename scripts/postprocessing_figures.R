@@ -58,6 +58,7 @@ palette_round <- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", 
 palette_round_inland <- palette_round[c(1:4, 6:8)]
 palette_round_fishing <- palette_round[c(4:8)]
 file.participation <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
+file.reported.sexual.partnerships <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('cont_age-R015.rds'))
 participation <- fread(file.participation)
 source(file.path(indir, 'functions', 'summary_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
@@ -65,6 +66,8 @@ source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
 if(!exists('only.participant.treated')){
   only.participant.treated = F
 }
+df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships))
+
 
 #
 # offset
@@ -281,7 +284,8 @@ expected_contribution_age_group_source2 <-  find_summary_output_by_round(samples
                                                                         c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                                         transform = 'exp',
                                                                         standardised.vars = c('INDEX_COMMUNITY', 'INDEX_ROUND'))
-plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, outfile.figures)
+reported_contact <- clean_reported_contact(df_reported_contact)
+plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
 
 #
 # Relative incidence infection if male had the same art uptake as female

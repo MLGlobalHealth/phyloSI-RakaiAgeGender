@@ -875,7 +875,7 @@ plot_median_age_source <- function(median_age_source, outdir){
   
 }
 
-plot_median_age_source_group <- function(median_age_source_group, expected_contribution_age_group_source2, outdir){
+plot_median_age_source_group <- function(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outdir){
   
   communities <- median_age_source_group[, unique(COMM)]
   median_age_source_group[, SEX_LABEL := paste0(gsub('.* -> (.+)', '\\1', LABEL_DIRECTION), ' recipients')]
@@ -895,16 +895,20 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
   mac <- merge(mag, eca, by =  c('LABEL_ROUND', 'mean_age_group', 'COMM', 'AGE_GROUP_INFECTION.RECIPIENT', 'SEX_LABEL'))
 
   for(i in seq_along(communities)){
+    
     tmp <- mac[COMM == communities[i]]
+    tmp1 <- reported_contact[COMM == communities[i]]
 
     widths <- tmp[order(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT, SEX_LABEL), M_CONTRIBUTION]
     widths <- widths * 10 / max(widths)
     
-    p <- ggplot(tmp, aes(x = mean_age_group, col = LABEL_ROUND)) + 
+    p <- ggplot(tmp) + 
       facet_grid(.~SEX_LABEL) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+      geom_line(data = tmp1, aes(x = AGEYRS, y = cont.age.mean, linetype= 'Mean age of reported sexual partners\nin Round 15')) + 
       geom_boxplot(stat = "identity", 
-                   aes(lower  = C25,upper = C75, middle = C50, ymin = C10, ymax = C90, group= interaction(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT)),
+                   aes(x = mean_age_group, col = LABEL_ROUND, 
+                       lower  = C25,upper = C75, middle = C50, ymin = C10, ymax = C90, group= interaction(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT)),
                    width = widths, varwidth = T) +
       theme_bw() + 
       labs(x = 'Age recipient', y = 'Age source') +
