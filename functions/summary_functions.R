@@ -156,8 +156,10 @@ find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate)
   return(meta)
 }
 
-pairs.get.meta.data <- function(chain, meta, aik)
+pairs.get.meta.data <- function(chain, metadata, aik)
 {
+
+  meta <- copy(metadata)
 
   # individuals without meta data
   idx <- chain[, unique(c(SOURCE, RECIPIENT)) ]
@@ -171,7 +173,6 @@ pairs.get.meta.data <- function(chain, meta, aik)
   
   # stopifnot(unique(dchain$SOURCE) %in% unique(meta_data$aid))
   # stopifnot(unique(dchain$RECIPIENT) %in% unique(meta_data$aid))
-  meta <- copy(meta_data); 
   
   # remove neuro individual
   meta <- meta[round != 'neuro']
@@ -840,8 +841,6 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round)
   return(res)
 }
 
-
-
 find.center.of.mass.plausible.region <- function(xmin, xmax, ymin, ymax)
 {
         # check
@@ -999,4 +998,427 @@ find.center.of.mass.plausible.region <- function(xmin, xmax, ymin, ymax)
         }else if(count == 4){
                 cog <- list(NA_Date_, NA_Date_)
         }
+}
+
+update.meta.pairs.after.doi.attribution <- function(path)
+{
+        if(!file.exists(path))
+        {
+                cat('\tRunning infection dates estimation...\n\n\n')
+                output <- study_infection_pairs_dates(CHAIN=chain)
+                saveRDS(output, path)
+        }else{
+                cat('\tLoading previously estimated dates of infection...\n')
+                output <- readRDS(path)
+        }
+
+        # extract info
+        dinfrange <- output$pairs
+        dage <- output$age
+
+        # plot
+        g <- plot.phylopair.dates.scores(dinfrange,
+                                         add.dots=TRUE,
+                                         daterange.vars=c('MIN','MAX'),
+                                         doi.center.var='DOI',
+                                         title='Midpoint/Network Attribution')
+        filename=file.path(outdir, 'phylopairs_dates_scores_after_networkattribution.png')
+        ggsave(filename, g, w=15, h=15, units='cm')
+
+        # fix meta data
+        aik2 <- copy(aik)
+        names(aik2) <- tolower(names(aik2))
+
+        dage[, AID := .pt2aid(study_id, aik2)]
+
+        meta_data <- merge(meta_data[, -c('date_infection', 'age_infection')],
+                           dage[, .(date_infection=DOI, age_infection=age_at_infection, aid=AID)],
+                           by='aid', all.x=T)
+
+        cols <- grep('^RECIPIENT$|^SOURCE$|SCORE|CLU', names(dinfrange), value=TRUE)
+        chain <- dinfrange[, ..cols,]
+        cols <- c('SOURCE', 'RECIPIENT')
+        chain[, (cols) := lapply(.SD, function(x) .pt2aid(x, aik2)) , .SDcols=cols, by=cols]
+        
+        pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
+
+        list(pairs.all=pairs.all, chain=chain, meta_data=meta_data)
+}
+
+study_infection_pairs_dates <- function(CHAIN)
+{
+        cat('== Estimating network-coherent infection dates == \n')
+        .is.mrc <- function(x)
+                grepl('^MRC',x)
+
+
+        .aid.2.studyid <- function(DT, by_var)
+        {
+                tmp <- merge(DT, aik, all.x=TRUE, by.x=by_var, by.y='AID' )
+                stopifnot(tmp[, all(!is.na(PT_ID))])
+                tmp[, (by_var) := NULL]
+                setnames(tmp, 'PT_ID', by_var )
+                tmp
+        }
+
+        .double.merge <- function(DT1, DT2, by_var='study_id')
+        {
+                cols <- setdiff(names(DT2), c('AID', 'study_id'))
+                cols.SOURCE <- paste0(cols, '.SOURCE')
+                cols.RECIPIENT <- paste0(cols, '.RECIPIENT')
+                tmp <- merge(DT1, DT2, by.x='SOURCE', by.y=by_var, all.x=TRUE)
+                setnames(tmp, cols, cols.SOURCE)
+                tmp <- merge(tmp, DT2, by.x='RECIPIENT', by.y=by_var, all.x=TRUE)
+                setnames(tmp, cols, cols.RECIPIENT)
+                tmp
+        }
+
+        # Get dates and ages data
+        .select <- function(cols)
+                unique(meta_data[, ..cols])
+        ddates <- .select(c('study_id', 'date_last_negative', 'date_infection', 'date_first_positive')) 
+        dage <- .select(c('study_id', 'age_first_positive', 'date_birth')) 
+
+        .check <- function(DT)
+                DT[, .N, by='study_id'][, all(N == 1)]
+        stopifnot(.check(dage) & .check(ddates))
+
+        dage <- merge(dage, aik, all.x=TRUE, by.x='study_id', by.y='PT_ID')
+        ddates <- merge(ddates, aik, all.x=TRUE, by.x='study_id', by.y='PT_ID')
+
+        chain2 <- copy(CHAIN)
+
+        # remove uninteresting cols
+        chain2[, CNTRL_ANY := CNTRL1 | CNTRL2]
+        cols <- grep('CATEGORISATION|PTY_RUN|CNTRL[0-9]', names(chain2), value=TRUE)
+        cols1 <- grep('^LINK|EST_DIR',names(chain2), value=TRUE)
+        chain2[,  (cols) := NULL ]
+        chain2[SCORE_DIR_12 == SCORE_DIR_21, cat('- There are ', .N, 'pairs where direction of transmission is exactly equally likely\n') ]
+        # if(0) chain2[SCORE_DIR_12 > SCORE_DIR_21 , unique(.SD), .SDcols=cols1]
+        chain2[, (cols1) := NULL]
+        chain2[, all(round(SCORE_DIR_12 + SCORE_DIR_21, 2) == 1)]
+        chain2[, SCORE_DIR_SR := pmax(SCORE_DIR_12, SCORE_DIR_21)]
+        cols <- grep('SCORE_NW|SCORE_DIR_[0-9][0-9]', names(chain2), value=TRUE)
+        chain2[, (cols):= NULL ]
+
+        # round entries for readability
+        cols <- names(which( unlist(lapply(chain2, is.numeric)) ))
+        chain2[, (cols) := lapply(.SD, function(x) round(x,2)) , .SDcols=cols]
+
+        # Translate AIDs to study_ids
+        chain2 <- .aid.2.studyid(chain2, by_var='SOURCE')
+        chain2 <- .aid.2.studyid(chain2, by_var='RECIPIENT')
+
+        # merge with dates
+        chain2 <- .double.merge(DT1=chain2, DT2=ddates[, -'AID'])
+        stopifnot(
+                chain2[is.na(date_infection.RECIPIENT), all(.is.mrc(RECIPIENT))],
+                chain2[is.na(date_infection.SOURCE), all(.is.mrc(SOURCE))]
+        ); cat('- CHECK: All individuals in infection pairs without ddates are in the MRC\n')
+        cat('\t(removing them...)\n')
+        chain2 <- chain2[! (.is.mrc(SOURCE) | .is.mrc(RECIPIENT))]
+
+        if(0)
+        {
+                plot.phylopair.dates.scores(chain2, title='Testing history')
+                plot.phylopair.dates.scores(chain2, only.coherent=TRUE)
+                plot.phylopair.dates.scores(chain2, only.contradict=TRUE)
+                plot.phylopair.dates.scores(chain2, only.crossing=TRUE)
+                plot.phylopair.dates.scores(chain2, only.contradict=TRUE, only.rect.pairs=FALSE)
+        }
+
+        tmp <- chain2[, date_last_negative.SOURCE >= date_first_positive.RECIPIENT]
+        cat('- There are ', sum(tmp == TRUE, na.rm=TRUE), ' couples with inconsistent first positive and last negative dates...\n')
+
+        # Use age to give a min bound 
+        # setting date of last negative to be the minimum of 15th birthday and age first pos
+        chain2 <- .double.merge(DT1=chain2, DT2=dage[, -c('AID', 'age_first_positive')])
+        cols <- grep('date_birth', names(chain2), value=TRUE)
+        cols1 <- gsub('birth', '15yr', cols)
+        chain2[, (cols) := lapply(.SD, function(x) x+as.integer(365.25*15)) , .SDcols=cols]
+        setnames(chain2, cols, cols1)
+        cols <- grep('date_last', names(chain2), value=TRUE)
+        chain2[, date_last_negative.SOURCE := pmax(date_last_negative.SOURCE, date_15yr.SOURCE, na.rm=T) , by='SOURCE']
+        chain2[, date_last_negative.RECIPIENT := pmax(date_last_negative.RECIPIENT, date_15yr.RECIPIENT, na.rm=T) , by='RECIPIENT']
+        
+        # check
+        # cols <- grep('date_first|date_last', names(chain2), value=TRUE)
+        # chain2[, lapply(.SD,is.na) , .SDcols=cols][, lapply(.SD, sum) , .SDcols=cols]
+        cols_src <- grep('SOURCE', names(chain2), value=TRUE)
+        cols_rcp <- grep('RECIPIENT', names(chain2), value=TRUE)
+        stopifnot(chain2[, all(date_first_positive.RECIPIENT >= date_last_negative.RECIPIENT, na.rm=T)])
+        stopifnot(chain2[, all(date_first_positive.SOURCE >= date_last_negative.SOURCE, na.rm=T)])
+
+        if(0) # date of infection does may not fall in range if we use "1 yr prior" DoI.
+        {
+                chain2[date_infection.RECIPIENT < date_last_negative.RECIPIENT, ..cols_rcp]
+                chain2[date_infection.SOURCE < date_last_negative.SOURCE, ..cols_src]
+                plot.phylopair.dates.scores(chain2[date_infection.SOURCE < date_last_negative.SOURCE])
+                plot.phylopair.dates.scores(chain2, only.coherent=TRUE)
+                plot.phylopair.dates.scores(chain2, only.contradict=TRUE)
+                plot.phylopair.dates.scores(chain2, only.crossing=TRUE)
+                plot.phylopair.dates.scores(chain2, only.contradict=TRUE, only.rect.pairs=FALSE)
+        }
+
+        cat('- Change direction of tranmsission for couple with contradicting times of infection...\n')
+
+        cols <- grep('SOURCE|RECIPIENT', names(chain2), value=TRUE)
+        .swap.src.rec <- function(x)
+        {
+                y <- copy(x)
+                src <- grep('SOURCE',x)
+                rcp <- grep('RECIPIENT', x)
+                y[src] <- gsub('SOURCE','RECIPIENT',x[src])
+                y[rcp] <- gsub('RECIPIENT','SOURCE',x[rcp])
+                y
+        }
+        cols1 <- .swap.src.rec(cols)
+        # chain2[, (uniqueN(RECIPIENT) == .N) ]
+        idx <- chain2[ date_last_negative.SOURCE >= date_first_positive.RECIPIENT, SOURCE]
+        idx0 <- idx[! idx %in% chain2$RECIPIENT]
+        idx1 <- idx[ idx %in% chain2$RECIPIENT]
+        cat('\tonly if the SOURCE does not appear as a RECIPIENT elsewhere(',length(idx1),'\n')
+        chain2[ date_last_negative.SOURCE >= date_first_positive.RECIPIENT & SOURCE %in% idx0,
+               (cols1) := (.SD), .SDcols=cols]
+        cat('\t(exclude those others)')
+        chain2 <- chain2[ date_last_negative.SOURCE < date_first_positive.RECIPIENT ]
+
+        # individuals involved in multiple events:
+        # SOURCEs should be infected 
+
+        cat('- Attribute date of infections based on transmission network structure...\n')
+
+        shrink.ranges.doi.coherently.to.network <- function(CHAIN)
+        {
+                cat('Shrinking date of infection dates based on network relationships...\n')
+                get_range_doi_by_studyid <- function(DT)
+                {
+                        cols <- c('ID', 'MIN', 'MAX')
+                        cols0 <- c('SOURCE', "date_last_negative.SOURCE", "date_first_positive.SOURCE")
+                        cols1 <- c('RECIPIENT', "date_last_negative.RECIPIENT", "date_first_positive.RECIPIENT")
+                        tmp0 <- DT[, unique(.SD) , .SDcols=cols0]
+                        tmp1 <- DT[, unique(.SD) , .SDcols=cols1]
+                        setnames(tmp0, cols0, cols)
+                        setnames(tmp1, cols1, cols)
+                        tmp0[, uniqueN(ID) == .N]; tmp1[, uniqueN(ID) == .N]
+                        tmp <- unique(rbind(tmp0, tmp1))
+                        stopifnot(tmp[, uniqueN(ID) == .N])
+                        return(tmp)
+                }
+
+                get_doi <- function(s, col)
+                {
+                        stopifnot(length(col)==1)
+                        dpairs_doi[ID %in% s, ..col ][[1]]
+                }
+
+                shrink_max_doi_source <- function(PAIR, DATE)
+                {
+                        # for each source, the MAX doi must preceed the MAX doi of the recipients
+                        tmp <- PAIR[, list(MAX2 = min(get_doi(RECIPIENT, "MAX"))) ,by=SOURCE]
+                        DATE <- merge( DATE, tmp, all.x=T, by.y='SOURCE', by.x='ID')
+
+                        if(DATE[ MAX2 < MAX, .N == 0])
+                        {
+                                DATE[, MAX2 := NULL]
+                                return(list(DATE=DATE, done=TRUE))
+                        }
+
+                        DATE[ MAX2 < MAX, MAX := MAX2]
+                        DATE[, MAX2 := NULL]
+                        list(DATE=DATE, done=FALSE)
+                }
+
+                shrink_min_doi_recipient <- function(PAIR, DATE)
+                {
+                        # for each recipient, the MIN doi must succeed the MIN doi of the source
+                        tmp <- PAIR[, list(MIN2 = get_doi(SOURCE, "MIN")), by=RECIPIENT]
+                        DATE <- merge(DATE,tmp, all.x=T, by.y='RECIPIENT', by.x='ID')
+
+                        if(DATE[ MIN2 > MIN, .N == 0])
+                        {
+                                DATE[, MIN2 := NULL]
+                                return(list(DATE=DATE, done=TRUE))
+                        }
+
+                        DATE[ MIN2 > MIN, MIN:=MIN2]
+                        DATE[, MIN2 := NULL]
+                        list(DATE=DATE, done=FALSE)
+                }
+                
+                dpairs <- chain2[, .(SOURCE, RECIPIENT)] 
+                dpairs_doi <- get_range_doi_by_studyid(CHAIN)
+
+                if(dpairs_doi[, any(is.na(MAX))])
+                {
+                        warning('Setting unknown date first positives as max date. Need changing\n')
+                        tmp <- dpairs_doi[, max(MAX, na.rm=T)]
+                        dpairs_doi[is.na(MAX), MAX := tmp]
+                }
+
+                done <- FALSE; count=0
+                while(done==FALSE)
+                {
+                        count <- count + 1
+                        cat('\tIteration number:',count,'...\n')
+                        tmp <- shrink_max_doi_source(dpairs, dpairs_doi)
+                        dpairs_doi <- tmp$DATE
+                        done <- tmp$done
+                        tmp <- shrink_min_doi_recipient(dpairs, dpairs_doi)
+                        dpairs_doi <- tmp$DATE
+                        done <- done & tmp$done
+                }
+
+                return(list(P=dpairs, D=dpairs_doi))
+        }
+
+        tmp <- shrink.ranges.doi.coherently.to.network(chain2)
+        dpairs <- copy(tmp$P)
+        dpairs_doi <- copy(tmp$D)
+        rm(tmp)
+        setnames(dpairs_doi, 'ID', 'study_id')
+
+        if(0)
+        {
+                tmp <- .double.merge(DT1=chain2, dpairs_doi)
+                idx <- tmp[, .N, by='SOURCE'][N==2, SOURCE]
+                plot.phylopair.dates.scores(tmp[SOURCE%in%idx[3]], daterange.vars=c('MIN', 'MAX'), add.dots=FALSE)
+                plot.phylopair.dates.scores(tmp[SOURCE%in%idx[3]], add.dots=FALSE)
+                plot.phylopair.dates.scores(tmp, daterange.vars = c('MIN', 'MAX'), add.dots=FALSE) 
+                plot.phylopair.dates.scores(tmp, daterange.vars = c('MIN', 'MAX'), add.dots=FALSE)
+                plot.phylopair.dates.scores(tmp,daterange.vars = c('MIN', 'MAX'), only.contradict = T, add.dots=FALSE)
+                plot.phylopair.dates.scores(tmp,daterange.vars = c('MIN', 'MAX'), only.coherent=T, add.dots=FALSE)
+        }
+
+
+        # now need to think about how to attribute the date of infection...
+        # for simple case: midpoint attribution
+        # for sources with multiple recipients: generalisation averaging pfds
+        # for chains of A -> B -> C ... attribute the last DoI, and then "backpropagate" with midpoint assignment
+
+        assign_dates_of_infection <- function(dpairs, dpairs_doi)
+        {
+                # attribute "depth" of transmission chain
+                depth <- 1
+                dpairs[, DEPTH := depth]
+                tmp <- dpairs[DEPTH == depth, unique(SOURCE)]
+                while(length(tmp))
+                {
+                        depth <- depth + 1
+                        dpairs[ RECIPIENT %in% tmp, DEPTH := depth]
+                        tmp <- dpairs[DEPTH == depth, unique(SOURCE)]
+                }
+                dpairs[, table(DEPTH)]
+
+                traceback_depth <- function(src, rcp, arrows=F, df=T)
+                {
+                        tmp <- dpairs[SOURCE == src & RECIPIENT == rcp]
+                        if(tmp$DEPTH == 1)
+                        {
+                                if(df)
+                                        return(data.frame(SOURCE=scr, RECIPIENT=rcp, DEPTH=tmp$DEPTH))
+                                out <- c(src, rcp)
+                                if(arrows)
+                                        out <- paste0(out, collapse=' -> ')
+                                return(out)
+                        }
+
+                        tmp <- dpairs[SOURCE == rcp & DEPTH == tmp$DEPTH-1, .(SOURCE, RECIPIENT)]
+
+                        if(df)
+                                return( rbind(
+                                              data.frame(SOURCE=src, RECIPIENT=rcp, DEPTH=tmp$DEPTH),
+                                              traceback_depth(tmp$SOURCE, tmp$RECIPIENT, df=T))
+                                )
+
+                        out <- c( rcp, traceback_depth(tmp$SOURCE, tmp$RECIPIENT) )
+                        if(arrows)
+                                out <- paste0(out, collapse=' -> ')
+                        return(out)
+                }
+
+                # get doi source | recipients bounds, and then assign midpoint for recps.
+                assign.date.infection.sources <- function(src, d, precision=50)
+                {
+
+                        # src <- dpairs[,.N, by='SOURCE'][N==2, SOURCE[1]]
+                        # cat(src, '\n')
+                        tmp <- dpairs[SOURCE == src & DEPTH == d, -"DEPTH"]
+                        tmp <- .double.merge(tmp, dpairs_doi)
+
+                        # if any source has a known date of infection, 
+                        # assign midpoint of plausible interval
+                        if(tmp[!is.na(DOI.RECIPIENT), .N])
+                        {
+                                x_max <- tmp[!is.na(DOI.RECIPIENT), min(DOI.RECIPIENT)]
+                                return(tmp[, mean.Date(c(MIN.SOURCE[1], x_max))])
+                        }
+
+                        # there may be some analytic formula, but lets just use numeric integration
+                        x_range <- tmp[, seq(from=MIN.SOURCE[1], to=MAX.SOURCE[1], length.out = precision)]
+                        rcp_cross_section_length <- function(x)
+                        {
+                                tmp1 <- tmp[, .(L = as.numeric(MAX.RECIPIENT - max(MIN.RECIPIENT, x))/365.25), by='RECIPIENT']
+                                tmp1[, prod(L)]
+                        }
+                        x_pdf <- sapply(x_range, rcp_cross_section_length)
+                        x_cdf <- cumsum(x_pdf)/sum(x_pdf)
+                        x_range[which.min(abs(x_cdf - .5))]
+                }
+
+                assign.date.infection.recipient <- function(rcp, d)
+                {
+                        # rcp <- idx[1]
+                        # cat(rcp, '\n')
+                        src <- dpairs[RECIPIENT == rcp, SOURCE]
+                        dsrc <- dpairs_doi[study_id == src]
+                        drcp <- dpairs_doi[study_id == rcp]
+                        x_min = dsrc$DOI
+                        x_min = max(x_min, drcp$MIN)
+                        x_mid = mean.Date(c(x_min, drcp$MAX))
+                        x_mid
+                }
+
+
+                dpairs_doi[, DOI := NA_Date_]
+                depth <- dpairs[, max(DEPTH)] + 1
+
+                while(depth > 0 & dpairs_doi[, any(is.na(DOI))])
+                {
+                        depth <- depth - 1
+                        cat('Assigning dates of infection for pairs at depth:', depth,'...\n')
+
+                        dpairs_doi[study_id %in% dpairs[DEPTH==depth, SOURCE] & is.na(DOI),
+                                   DOI := assign.date.infection.sources(study_id, depth),
+                                   by='study_id']
+                        cat(dpairs_doi[!is.na(DOI), .N], '\n')
+
+                        dpairs_doi[study_id %in% dpairs[DEPTH==depth, RECIPIENT] & is.na(DOI),
+                                   DOI := assign.date.infection.recipient(study_id, depth),
+                                   by='study_id']
+                        cat(dpairs_doi[!is.na(DOI), .N ],'\n')
+
+                        .check <- function(src, rcp)
+                        {
+                                tmp_s0 <- dpairs_doi[study_id == src, DOI >= MIN & DOI <= MAX]
+                                tmp_r0 <- dpairs_doi[study_id == rcp, DOI >= MIN & DOI <= MAX]
+                                tmp_s1 <- dpairs_doi[study_id == src, DOI]
+                                tmp_r1 <- dpairs_doi[study_id == rcp, DOI]
+                                tmp_s0 & tmp_r0 & (tmp_s1 <= tmp_r1)
+                        }
+                        tmp <- dpairs[, .check(SOURCE, RECIPIENT), by=c('SOURCE', 'RECIPIENT')]
+                        stopifnot(tmp[, all(V1==T, na.rm=T)])
+                }
+                dpairs_doi
+        }
+
+        # prepare output
+
+        dpairs_doi <- assign_dates_of_infection(dpairs, dpairs_doi)
+
+        dage <- merge(dage[, .(study_id, date_birth)], 
+                      dpairs_doi[, .(study_id, DOI)], by='study_id')
+        dage[, age_at_infection := .year.diff(DOI, date_birth)]
+
+        list(pairs= .double.merge(DT1=chain2, dpairs_doi), age=dage)
 }

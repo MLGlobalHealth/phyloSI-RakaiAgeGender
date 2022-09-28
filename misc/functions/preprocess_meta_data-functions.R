@@ -1,5 +1,19 @@
 print_table <- function(table) print(knitr::kable(table))
 
+.plot.testing.history <- function(DT, col_lab='')
+{
+
+  ggplot(DT, aes(y=reorder(study_id, DUMMY)) ) + 
+          geom_point(aes(x=date_coll, col=POS), pch='+') + 
+          geom_point(aes(x=firstpos_diagnosis_dt), color='red') + 
+          geom_point(aes(x=lastnegvd), color='blue') + 
+          theme_bw() + 
+          theme( axis.text.y=element_blank(),
+                 axis.ticks.y=element_blank(),
+                 legend.position='bottom') +
+          labs(x='Testing dates', y='Participants', col=col_lab)
+}
+
 process.quest <- function(quest)
 {
   
@@ -32,13 +46,13 @@ process.quest <- function(quest)
 make.date.first.positive <- function(allhiv)
 {
   
-  # Check whether there are hidden NAs 
+  # Set empty strings to NA (after check)
   .f <- function(x) nchar(as.character(x)) != 9 
   stopifnot(allhiv[.f(date_coll) , .N == 0])
   allhiv[.f(firstpos_diagnosis_dt) , firstpos_diagnosis_dt := NA]
   allhiv[.f(lastnegvd) , lastnegvd := NA]
-  cols <- c('visitno','copies', 'new_copies', 'rct', 
-            'lastnegv', 'lastnegvd', 'firstpos_diagnosis_vis')
+
+  cols <- c('visitno','copies', 'new_copies', 'rct', 'lastnegv', 'lastnegvd', 'firstpos_diagnosis_vis')
   allhiv[, (cols):=lapply(.SD, .remove.spaces), .SDcols = cols]
   
   # Format dates
@@ -53,6 +67,59 @@ make.date.first.positive <- function(allhiv)
   tmp <- allhiv[is.na(firstpos_diagnosis_dt), unique(study_id)]
   cat("There are ", length(tmp), " study_ids without date of first positive\n")
   cat("- these had visit rounds in ", allhiv[study_id %in% tmp, paste0(unique(visitno), collapse = ', ')], '\n')
+
+  if(make.hiv.history.plots)
+  {
+          library(ggplot2)
+          
+          # order according to first/last ... dates
+          tmp <- unique(allhiv[, .(study_id, firstpos_diagnosis_dt, lastnegvd)])
+          setkey(tmp, firstpos_diagnosis_dt, lastnegvd, study_id)
+          tmp[, DUMMY := 1:.N]
+
+          tmp1 <- copy(allhiv)
+          tmp1 <- merge(allhiv, tmp[, .(study_id, DUMMY)], by='study_id')
+
+          .f <- function(cps)
+          {
+                  cps <- gsub('<|>|,','', cps)
+                  cps[cps %like% '[0-9]']
+                  cps[cps %like% '[A-z]'] <- '0'
+                  cps <- as.integer(cps)
+          }
+
+          # hist(tmp1[.f(copies) <= 100, .f(copies)])
+          tmp1[, POS := .f(copies) > 20  ]
+
+
+          plot.testing.timeline <- .plot.testing.history(tmp1, col_lab='Viremic test')
+          plot.testing.timeline.firstpos <- .plot.testing.history(tmp1[! is.na(firstpos_diagnosis_dt)], col_lab='Viremic test')
+
+          filename <- file.path(outdir, 'testing_timeline.png')
+          ggsave(plot.testing.timeline, file=filename, w=10, h=15)
+          filename <- file.path(outdir, 'testing_timeline_firstpos.png')
+          ggsave(plot.testing.timeline.firstpos, file=filename, w=10, h=15)
+
+          # it seems there are some participants with positive tests predating the first pos.
+          tmp1[POS==T & date_coll < firstpos_diagnosis_dt,
+          {
+               cat('There are ', .N, ' visits with positive test preceding the reported first positive,\n')
+               cat('accounting for', uniqueN(study_id),'participants. \n')
+               cat(sum(visitno %like% '^R0'), 'of these visits were part of the RCCS.\n')
+          }]
+
+          # maybe firstpositive diagnosis is not the same as first positive date.
+          # it could be that previous blood samples are sequenced...
+          idx <- tmp1[POS==T & date_coll < firstpos_diagnosis_dt & visitno %like% '^R0', study_id]
+
+          cat('Update first positive date in allhiv for', length(idx),' participants...\n')
+          allhiv[study_id %in% idx, firstpos_diagnosis_dt := {
+                  z <- as.integer(copies) > 20
+                  z <- !is.na(z) & z == TRUE
+                  z <- min(c(date_coll[z], unique(firstpos_diagnosis_dt)) )
+                  z
+          } ,by='study_id']
+  }
   
   # rename
   setnames(allhiv,
@@ -68,6 +135,7 @@ make.date.first.positive <- function(allhiv)
 process.hiv <- function(hiv)
 {
   HIV <- copy(hiv)
+  # hiv <- copy(HIV)
   
   # check hidden NAs
   cols <- colnames(hiv)
@@ -78,13 +146,32 @@ process.hiv <- function(hiv)
   hiv[, (cols) := lapply(.SD, .dates), .SDcols=cols, by = c('study_id', 'round')]
   hiv[,  (cols) := lapply(.SD, function(x){as.Date(x, format='%d-%b-%Y')}), .SDcols=cols]
   
-  if(0)
+  if(make.hiv.history.plots)
   {
-    tmp <- hiv[, .(hivdate, firstpos_diagnosis_dt, lastnegvd)]; tmp <- melt(tmp)
-    tmp[, range(value, na.rm = T), by='variable']
-    ggplot(tmp[value >= '1980-01-01'], aes(fill=variable)) + 
-      geom_histogram(aes(value)) + 
-      theme_bw() + labs(x='date', y='count') 
+          tmp <- hiv[, .(hivdate, firstpos_diagnosis_dt, lastnegvd)]; tmp <- melt(tmp)
+          tmp[, range(value, na.rm = T), by='variable']
+          ggplot(tmp[value >= '1980-01-01'], aes(fill=variable)) + 
+                  geom_histogram(aes(value)) + 
+                  theme_bw() + labs(x='date', y='count') 
+
+          tmp <- copy(hiv)
+          setnames(tmp, c('hivdate'), c('date_coll'))
+          tmp[, POS := hiv == 'P']
+
+          tmp1 <- unique(hiv[, .(study_id, firstpos_diagnosis_dt, lastnegvd, hivdate=min(hivdate)), by='study_id'])
+          setkey(tmp1, firstpos_diagnosis_dt, lastnegvd, hivdate, study_id)
+          tmp1
+          tmp1[, DUMMY := 1:.N] 
+          # tmp1[, uniqueN(DUMMY), by='study_id'][, all(V1==1)]
+          tmp <- merge(tmp, tmp1[, .(study_id, DUMMY)], by='study_id')
+
+          tmp[, all(is.na(firstpos_diagnosis_dt)), by='study_id'][, mean(V1)]
+          idx <- tmp[, uniqueN(DUMMY), by='study_id'][V1 > 1, study_id ]
+          tmp[study_id %in% idx]
+
+          plot.testing.timeline.include.negs <- .plot.testing.history(tmp, col_lab='Positive participant')
+          filename <- file.path(outdir, 'testing_timeline_with_negatives.png')
+          ggsave(plot.testing.timeline.include.negs, file=filename, w=10, h=15)
   }
   
   tmp <- hiv[revertor == 'YES', study_id]
@@ -93,25 +180,33 @@ process.hiv <- function(hiv)
   tmp <- hiv[, any(hiv == 'N') & any(hiv == 'P'), by = 'study_id']
   tmp <- tmp[V1 == TRUE, study_id]
   cat(
-    'Among ',
-    length(tmp),
+    'Among ', length(tmp),
     ' individuals with at least one negative and one positive diagnosis:\n'
   )
   tmp <- hiv[study_id %in% tmp,]
   tmp1 <- tmp[is.na(lastnegvd)]
-  cat('- ', tmp1[, .N], ' have undefined last negative visit date\n')
+
+  if(any(tmp1$study_id %in% allhiv$study_id))
+          print('allhiv has some extra info on date last neg')
+
+  cat('-\t ', tmp1[, uniqueN(study_id)], ' have undefined last negative visit date\n')
+
+  tmp1 <- tmp1[, ! (min(hiv[hiv =='P']) < max(hiv[hiv=='N'])), by='study_id']
+  cat('-\t but', tmp1[, .N], ' have a neg test following a pos\n')
+
   tmp1 <- tmp[is.na(firstpos_diagnosis_dt)]
-  cat('- ', tmp1[, .N], ' have undefined first positive visit date\n')
-  
-  cat('Imputing values given visits and status reported:\n\n')
+  cat('-\t', tmp1[, uniqueN(study_id)], 'participants have NA first pos diag\n')
+
+  cat('Imputing values given visits and status reported...\n\n')
   setkey(tmp, 'study_id', 'hivdate')
-  tmp <- tmp[, {
+  tmp1 <- tmp1[, {
     z.min <- min(which(hiv == 'P'))
     z.max <- max(which(hiv == 'N'))
+
     list(lastnegvd = hivdate[z.max], firstpos_diagnosis_dt = hivdate[z.min])
   }, by = study_id]
   
-  hiv <- merge(tmp, hiv, by='study_id', all.y=T)
+  hiv <- merge(tmp1, hiv, by='study_id', all.y=T)
   hiv[is.na(firstpos_diagnosis_dt.x), firstpos_diagnosis_dt.x := firstpos_diagnosis_dt.y]
   hiv[is.na(lastnegvd.x), lastnegv.x := lastnegvd.y]
   hiv[, `:=` (firstpos_diagnosis_dt=firstpos_diagnosis_dt.x,
@@ -143,6 +238,10 @@ compare.hiv.allhiv.firstpositivedates <- function(hiv, allhiv)
   hiv1 <- unique(hiv1)
   allhiv1 <- unique(allhiv1)
   
+  # check
+  .c <- function(DT) DT[, .N, by='study_id'][, all(N == 1)]
+  stopifnot( .c(hiv1), .c(allhiv1) )
+  
   # compare
   cat('\nFIRST POSITIVE ROUND:\n')
   tmp <- merge(hiv1, allhiv1, by='study_id', all.x=T, all.y=T)
@@ -155,6 +254,7 @@ compare.hiv.allhiv.firstpositivedates <- function(hiv, allhiv)
   tmp1 <- tmp[date_first_positive.x != date_first_positive.y]
   if(0)
   { # based on this plots .y seems to be correct as rounds are separated through time
+
     ggplot(tmp1[date_first_positive.y >= '2000-01-01']) + 
       geom_histogram(aes(date_first_positive.x), fill='red') +
       geom_histogram(aes(date_first_positive.y), fill='green')

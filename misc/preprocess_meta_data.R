@@ -3,6 +3,8 @@ library(lubridate)
 library(dplyr)
 
 # change as appropriate
+make.hiv.history.plots <- 0
+
 if(dir.exists('/Users/melodiemonod'))
 {
   indir.repository <- '~/git/phyloflows'
@@ -13,8 +15,10 @@ if(dir.exists('/Users/melodiemonod'))
 if(dir.exists('/home/andrea'))
 {
   indir.repository <-'~/git/phyloflows'
+  make.hiv.history.plots <- 1
   indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
+  outdir <- '/home/andrea/Documents/Box/2021/phyloflows/testing_history/'
 }
 
 if(dir.exists('/rds/general/user/'))
@@ -78,8 +82,6 @@ invisible(lapply(list(hiv, allhiv, quest, raw_metadata, raw_neuro_metadata),
                  function(dt) {
                    dt[!grepl('RK-', study_id), study_id := paste0('RK-', study_id)]
                  }))
-
-
 
 # process quest and make date.birth
 quest <- process.quest(quest)
