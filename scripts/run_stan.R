@@ -79,7 +79,7 @@ only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
-only.participant.treated <- T
+only.participant.treated <- F
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
