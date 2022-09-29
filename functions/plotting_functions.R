@@ -747,8 +747,8 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
     geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
-    geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'], -'LABEL_ROUND'), aes(y = 0.02, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 24, fill = 'grey50',  size =4) + 
-    geom_point(data = tmp1[COMM == 'inland'], aes(y = 0.02, x = MEDIAN_AGEYRS, fill = SEX_LABEL), shape = 24, col = 'grey70', size =4) +
+    geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'], -'LABEL_ROUND'), aes(y = 0.06, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
+    geom_point(data = tmp1[COMM == 'inland'], aes(y = 0.06, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
     labs(y = 'Incidence rate per 100 person-year', x = 'Age') +
     facet_grid(.~LABEL_ROUND, scale = 'free_y') +
     theme_bw() +
@@ -1185,13 +1185,8 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   
 }
 
-<<<<<<< HEAD
-
 plot_transmission_events_over_time_old <- function(eligible_count_round, incidence_cases_round, pairs, outdir)
 {
-=======
-plot_transmission_events_over_time_old <- function(eligible_count_round, incidence_cases_round, pairs, outdir){
->>>>>>> f2e346136a1de8957df2494cf748b2209a949881
   
   # timeline
   df_timeline <- copy(df_round)
