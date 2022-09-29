@@ -109,8 +109,8 @@ incidence_cases_recipient_round <- prepare_incidence_cases(incidence_cases_round
 eligible_count_recipient <- prepare_eligible_count(eligible_count_round)
 plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round,
                                    eligible_count_recipient, outfile.figures)
-plot_PPC_augmented_recipient_round(predict_lambda_recipient_round, incidence_cases_recipient_round,
-                                   eligible_count_recipient, outfile.figures, 'expected_')
+plot_PPC_incidence_rate_round(predict_lambda_recipient_round, incidence_cases_recipient_round,
+                                   eligible_count_recipient, outfile.figures)
 
 unsuppressed_count <- prepare_unsuppressed(eligible_count)
 plot_observed_to_augmented(predict_y_source, predict_z_source, unsuppressed_count, outfile.figures)

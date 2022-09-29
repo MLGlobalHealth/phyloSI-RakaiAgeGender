@@ -942,11 +942,11 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
   }
 }
 
-plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incidence_cases_recipient_round, eligible_count_recipient, outdir, lab = ''){
+plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incidence_cases_recipient_round, eligible_count_recipient, outdir){
   
   predict_z <- merge(predict_z_recipient_round, incidence_cases_recipient_round[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, INCIDENT_CASES, INCIDENT_CASES_UB, INCIDENT_CASES_LB)], 
                      by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'))
-  predict_z <- merge(predict_z, eligible_count_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, ELIGIBLE)], 
+  predict_z <- merge(predict_z, eligible_count_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, SUSCEPTIBLE)], 
                      by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'))
   
   communities <- predict_z[, unique(COMM)]
@@ -967,13 +967,13 @@ plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incide
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_recipient_byround_', lab, communities[i], '.png'), w = 10, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_recipient_byround_', communities[i], '.png'), w = 10, h = 7)
     
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
-      geom_line(aes(y = M/(ROUND_SPANYRS*ELIGIBLE))) +
-      geom_ribbon(aes(ymin = CL/(ROUND_SPANYRS*ELIGIBLE), ymax = CU/(ROUND_SPANYRS*ELIGIBLE)), alpha = 0.5) +
-      geom_point(aes(y = INCIDENT_CASES/(ROUND_SPANYRS*ELIGIBLE)), col = 'darkred') +
-      geom_errorbar(aes(ymax = INCIDENT_CASES_UB/(ROUND_SPANYRS*ELIGIBLE), ymin = INCIDENT_CASES_LB/(ROUND_SPANYRS*ELIGIBLE)), col = 'darkred', width = 0.2) +
+      geom_line(aes(y = M/(ROUND_SPANYRS*SUSCEPTIBLE))) +
+      geom_ribbon(aes(ymin = CL/(ROUND_SPANYRS*SUSCEPTIBLE), ymax = CU/(ROUND_SPANYRS*SUSCEPTIBLE)), alpha = 0.5) +
+      geom_point(aes(y = INCIDENT_CASES/(ROUND_SPANYRS*SUSCEPTIBLE)), col = 'darkred') +
+      geom_errorbar(aes(ymax = INCIDENT_CASES_UB/(ROUND_SPANYRS*SUSCEPTIBLE), ymin = INCIDENT_CASES_LB/(ROUND_SPANYRS*SUSCEPTIBLE)), col = 'darkred', width = 0.2) +
       theme_bw() + 
       labs(x = 'Age at infection recipient', y = 'Augmented transmission events (Z) per PY') +
       # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
@@ -982,10 +982,10 @@ plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incide
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_perPY_recipient_byround_', lab, communities[i], '.png'), w = 10, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_perPY_recipient_byround_', communities[i], '.png'), w = 10, h = 7)
   
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
-      geom_line(aes(y = M/(ROUND_SPANYRS*ELIGIBLE), col = LABEL_ROUND)) +
+      geom_line(aes(y = M/(ROUND_SPANYRS*SUSCEPTIBLE), col = LABEL_ROUND)) +
       # geom_ribbon(aes(ymin = CL/(ROUND_SPANYRS*ELIGIBLE), ymax = CU/(ROUND_SPANYRS*ELIGIBLE), fill = LABEL_ROUND), alpha = 0.5) +
       theme_bw() + 
       labs(x = 'Age at infection recipient', y = 'Augmented transmission events (Z) per PY') +
@@ -995,12 +995,44 @@ plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incide
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-augmented_perPY_recipient_byround_', lab, communities[i], '.png'), w = 7, h = 10)
+    ggsave(p, file = paste0(outdir, '-output-augmented_perPY_recipient_byround_', communities[i], '.png'), w = 7, h = 10)
     
     
     }
   
 }
+
+plot_PPC_incidence_rate_round <- function(predict_z_recipient_round, incidence_cases_recipient_round, eligible_count_recipient, outdir){
+  
+  predict_z <- merge(predict_z_recipient_round, incidence_cases_recipient_round[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, INCIDENT_CASES, INCIDENT_CASES_UB, INCIDENT_CASES_LB)], 
+                     by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'))
+  predict_z <- merge(predict_z, eligible_count_recipient[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, SUSCEPTIBLE)], 
+                     by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'))
+  
+  communities <- predict_z[, unique(COMM)]
+  for(i in seq_along(communities)){
+    
+    tmp <- predict_z[ COMM == communities[i]]
+  
+    p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
+      geom_line(aes(y = M*100/SUSCEPTIBLE)) +
+      geom_ribbon(aes(ymin = CL*100/SUSCEPTIBLE, ymax = CU*100/SUSCEPTIBLE), alpha = 0.5) +
+      geom_point(aes(y = INCIDENT_CASES*100/(ROUND_SPANYRS*SUSCEPTIBLE)), col = 'darkred') +
+      geom_errorbar(aes(ymax = INCIDENT_CASES_UB*100/(ROUND_SPANYRS*SUSCEPTIBLE), ymin = INCIDENT_CASES_LB*100/(ROUND_SPANYRS*SUSCEPTIBLE)), col = 'darkred', width = 0.2) +
+      theme_bw() + 
+      labs(x = 'Age at infection recipient', y = 'Incidence rate per 100 PY') +
+      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+      facet_grid(LABEL_DIRECTION~ROUND) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
+    ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_recipient_byround_', communities[i], '.png'), w = 10, h = 7)
+    
+  }
+  
+}
+
 
 plot_PPC_observed_recipient <- function(predict_y, count_data, outdir){
   
