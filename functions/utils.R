@@ -89,3 +89,8 @@ print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
              }
              , .SDcols=cols]
 }
+
+.assign.code.meta <- function(x)
+        fcase( x %like% 'Rakai_Pangea2_RCCS_Metadata_20220329.RData', 1)
+.assign.code.chain <- function(x)
+        fcase( x %like% '211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd', 1)
