@@ -101,10 +101,16 @@ plot_PPC_observed_recipient(predict_y_recipient, count_data, outfile.figures)
 predict_z_source <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'))
 predict_z_source_round <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'))
 predict_z_recipient_round <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'))
+predict_lambda_recipient_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
+                                                               transform = 'exp', 
+                                                               log_offset_round = log_offset_round, 
+                                                               log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 incidence_cases_recipient_round <- prepare_incidence_cases(incidence_cases_round)
 eligible_count_recipient <- prepare_eligible_count(eligible_count_round)
 plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round,
                                    eligible_count_recipient, outfile.figures)
+plot_PPC_augmented_recipient_round(predict_lambda_recipient_round, incidence_cases_recipient_round,
+                                   eligible_count_recipient, outfile.figures, 'expected_')
 
 unsuppressed_count <- prepare_unsuppressed(eligible_count)
 plot_observed_to_augmented(predict_y_source, predict_z_source, unsuppressed_count, outfile.figures)

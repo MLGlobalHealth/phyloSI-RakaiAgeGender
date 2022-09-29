@@ -420,19 +420,29 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   communities <- tmp[, unique(COMM)]
   
   # prepare function
-  plot.p <- function(tmp.p, tmp1.p, tmp2.p, tmp3.p){
+  plot.p <- function(tmp.p, tmp1.p, tmp2.p, tmp3.p, level_y){
     ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
       geom_ribbon(data = tmp1.p, aes(ymin = CL, ymax = CU, linetype=type), alpha = 0.3, fill='grey50')+
       geom_line(data = tmp1.p, aes(y = M,linetype = type)) + 
       geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX, size = type), alpha = 0.6) + 
       geom_line(aes(y = M, col = SEX, size = type), stat = 'identity', position = "identity") + 
       scale_color_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) + 
+      scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
+      new_scale_fill() +
       new_scale_color() +
-      geom_point(data = select(tmp3.p[INDEX_ROUND == min(INDEX_ROUND)], -'LABEL_ROUND'), aes(x = AGE_MEDIAN_CONTRIBUTION, y = 0.002, col = SEX), size = 3,  shape = 17) + 
+      geom_point(data = select(tmp3.p[INDEX_ROUND == min(INDEX_ROUND)], -'LABEL_ROUND'), aes(x = AGE_MEDIAN_CONTRIBUTION, y = level_y, col = SEX, fill = SEX), size = 3,  shape = 25) + 
       scale_color_manual(values = c('Male sources'='paleturquoise4','Female sources'='pink4')) +
+      scale_fill_manual(values = c('Male sources'='paleturquoise4','Female sources'='pink4')) + 
       new_scale_color() +
-      geom_point(data = tmp3.p, aes(x = AGE_MEDIAN_CONTRIBUTION, y = 0.002, col = SEX), size = 3,  shape = 17) + 
+      new_scale_fill() +
+      geom_point(data = tmp3.p, aes(x = AGE_MEDIAN_CONTRIBUTION, y = level_y, col = SEX, fill = SEX), size = 3,  shape = 25) + 
       scale_color_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) + 
+      scale_fill_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) + 
+      new_scale_color() +
+      new_scale_fill() +
+      geom_point(data = tmp3.p[INDEX_ROUND == min(INDEX_ROUND)], aes(x = AGE_MEDIAN_CONTRIBUTION, y = level_y, col = SEX, fill = SEX), size = 3,  shape = 25) + 
+      scale_color_manual(values = c('Male sources'='paleturquoise4','Female sources'='pink4')) +
+      scale_fill_manual(values = c('Male sources'='paleturquoise4','Female sources'='pink4')) + 
       new_scale_color() +
       geom_line(data = tmp2.p, aes(y = M, col = SEX, alpha=type), linetype ='solid') +  
       scale_color_manual(values = c('Male sources'='paleturquoise4','Female sources'='pink4')) +
@@ -442,7 +452,6 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       # scale_color_manual(values = c('#FF4949')) + 
       scale_alpha_manual(values = 1) + 
       scale_size_manual(values = 0.5) + 
-      scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
       # scale_fill_manual(values = c('Male source'='#C6DCE4','Female source'='#F2D1D1')) + 
       scale_linetype_manual(values  = 'dashed') +
       theme(strip.background = element_rect(colour="white", fill="white"),
@@ -466,10 +475,10 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     tmp3.p <- stat_tmp[COMM == communities[i]]
     
     ## all rounds
-    p.all <- plot.p(tmp.p, tmp1.p, tmp2.p, tmp3.p)
+    p.all <- plot.p(tmp.p, tmp1.p, tmp2.p, tmp3.p, 0.003)
       
     ## round 15 and 18
-    p <- plot.p(tmp.p[ROUND %in% Rounds], tmp1.p[ROUND %in% Rounds], tmp2.p, tmp3.p[ROUND %in% Rounds])
+    p <- plot.p(tmp.p[ROUND %in% Rounds], tmp1.p[ROUND %in% Rounds], tmp2.p, tmp3.p[ROUND %in% Rounds], 0.002)
     
     ## legend
     p_legend <- ggplot(tmp.p[SEX == 'Female sources'], aes(x = AGE_TRANSMISSION.SOURCE)) + 
@@ -528,11 +537,13 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
   communities <- tmp[, unique(COMM)]
   
   # prepare function
-  plot.p <- function(tmp.p, tmp1.p){
+  plot.p <- function(tmp.p, tmp1.p, level_y){
     ggplot(tmp.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
       geom_line(aes(y = M, col = SEX)) + 
+      geom_point(data = tmp1.p, aes(x = AGE_MEDIAN_CONTRIBUTION, y = level_y, col = SEX, fill = SEX), size = 3, shape = 25) + 
+      scale_fill_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) +
+      new_scale_fill() + 
       geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX), alpha = 0.5) +
-      geom_point(data = tmp1.p, aes(x = AGE_MEDIAN_CONTRIBUTION, y = 0.002, col = SEX), size = 3, shape = 17) + 
       scale_color_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) +
       scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
       labs(x = 'Age of the source', y = 'Contribution to HIV infection') + 
@@ -556,10 +567,10 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
     tmp1.p <- stat_tmp[COMM == communities[i]]
     
     ## all rounds
-    pp.all <- plot.p(tmp.p, tmp1.p) + theme(legend.position = 'bottom')
+    pp.all <- plot.p(tmp.p, tmp1.p, 0.003) + theme(legend.position = 'bottom')
     
     ## round 15 and 18
-    pp <- plot.p(tmp.p[ROUND %in% Rounds], tmp1.p[ROUND %in% Rounds])+ theme(legend.position =  c(0.85,0.93))
+    pp <- plot.p(tmp.p[ROUND %in% Rounds], tmp1.p[ROUND %in% Rounds], 0.0015)+ theme(legend.position =  c(0.85,0.93))
 
     if(is.null(lab)) lab =  'Contribution_Sex'
     
@@ -900,12 +911,12 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
     tmp1 <- reported_contact[COMM == communities[i]]
 
     widths <- tmp[order(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT, SEX_LABEL), M_CONTRIBUTION]
-    widths <- widths * 5 / max(widths)
+    widths <- widths * 4 / max(widths)
     
     p <- ggplot(tmp) + 
       facet_grid(.~SEX_LABEL) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
-      geom_line(data = tmp1, aes(x = AGEYRS, y = cont.age.mean, linetype= 'Mean age of reported sexual partners\nin Round 15')) + 
+      geom_line(data = tmp1, aes(x = AGEYRS, y = cont.age.median, linetype= 'Median age of reported sexual partners\nin Round 15')) + 
       geom_boxplot(stat = "identity", 
                    aes(x = mean_age_group, col = LABEL_ROUND, 
                        lower  = C25,upper = C75, middle = C50, ymin = C10, ymax = C90, group= interaction(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT)),
@@ -931,7 +942,7 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
   }
 }
 
-plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incidence_cases_recipient_round, eligible_count_recipient, outdir){
+plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incidence_cases_recipient_round, eligible_count_recipient, outdir, lab = ''){
   
   predict_z <- merge(predict_z_recipient_round, incidence_cases_recipient_round[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, AGE_INFECTION.RECIPIENT, INCIDENT_CASES, INCIDENT_CASES_UB, INCIDENT_CASES_LB)], 
                      by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'))
@@ -956,7 +967,7 @@ plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incide
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_recipient_byround_', communities[i], '.png'), w = 10, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_recipient_byround_', lab, communities[i], '.png'), w = 10, h = 7)
     
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M/(ROUND_SPANYRS*ELIGIBLE))) +
@@ -971,7 +982,7 @@ plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incide
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_perPY_recipient_byround_', communities[i], '.png'), w = 10, h = 7)
+    ggsave(p, file = paste0(outdir, '-output-PPC_augmented_perPY_recipient_byround_', lab, communities[i], '.png'), w = 10, h = 7)
   
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M/(ROUND_SPANYRS*ELIGIBLE), col = LABEL_ROUND)) +
@@ -984,7 +995,7 @@ plot_PPC_augmented_recipient_round <- function(predict_z_recipient_round, incide
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom') +
       ggtitle(tmp[,unique(LABEL_COMMUNITY)])
-    ggsave(p, file = paste0(outdir, '-output-augmented_perPY_recipient_byround_', communities[i], '.png'), w = 7, h = 10)
+    ggsave(p, file = paste0(outdir, '-output-augmented_perPY_recipient_byround_', lab, communities[i], '.png'), w = 7, h = 10)
     
     
     }
