@@ -4,6 +4,9 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library(rstan)
+#remotes::install_github("coolbutuseless/ggpattern")
+library(ggpattern)
+
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
@@ -98,43 +101,54 @@ p
 ggsave(p, file = file.path(outdir, 'Participation.png'), w = 8, h = 9)
 
 # sum over age
-tmp1 <- tmp[, list(PARTICIPANT = sum(PARTICIPANT), ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'SEX_LABEL', 'COMM')]
-tmp1[, VARIABLE := paste0(SEX_LABEL, ' in ', COMM, ' communities')]
-tmp1[, ROUND_LABEL := paste0('Round ', ROUND)]
-# tmp1 <- melt.data.table(tmp1, id.vars = c('ROUND', 'SEX_LABEL', 'COMM', 'VARIABLE', 'ROUND_LABEL'))
-# tmp1[, variable := ifelse(variable == 'PARTICIPATION', 'Participant', 'Census eligible population')]
+tmp1 <- tmp[, list(PARTICIPANT = sum(PARTICIPANT), ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'SEX_LABEL', 'COMM_LABEL', 'COMM')]
+tmp1[, NON_PARTICIPANT := ELIGIBLE - PARTICIPANT]
+tmp1 <- melt.data.table(tmp1, id.vars = c('SEX_LABEL', 'COMM_LABEL', 'ROUND', 'COMM'))
+tmp1 <- tmp1[variable != 'ELIGIBLE']
 tmp1 <- tmp1[!ROUND %in% c("06", "07", "08", "09", "10", "11")]
+tmp1[, ROUND_LABEL := paste0('Round ', ROUND)]
+tmp1[, VARIABLE_LABEL := ifelse(variable == 'PARTICIPANT', 'Participant', 'Non-participant')]
+tmp1[, COMM_LABEL := gsub('\n', '', COMM_LABEL)]
 df_round <- data.table(ROUND = tmp1[, unique(ROUND)])
 df_round[, ROUND_INDEX := 1:length(ROUND)]
 tmp1 <- merge(tmp1, df_round, by = 'ROUND')
 
-p <- ggplot(tmp1) +
-  geom_bar(aes(x = as.numeric(ROUND_INDEX) + 0.17, y = PARTICIPANT, fill = VARIABLE, size = 'Participant'), stat = 'identity', width=0.3) +
-  geom_bar(aes(x = as.numeric(ROUND_INDEX) - 0.17, y = ELIGIBLE, col = VARIABLE, size = 'Census eligible population'), stat = 'identity', alpha = 0, width=0.3) +
-  labs(y = 'Count') +
-  scale_fill_manual(values = c('Female in inland communities' = 'lightpink', 
-                               'Female in fishing communities' = 'deeppink', 
-                               'Male in inland communities' = 'lightblue', 
-                               'Male in fishing communities' = 'royalblue')) + 
-  scale_color_manual(values = c('Female in inland communities' = 'lightpink', 
-                               'Female in fishing communities' = 'deeppink', 
-                               'Male in inland communities' = 'lightblue', 
-                               'Male in fishing communities' = 'royalblue')) + 
-  scale_size_manual(values = c(0.9, 0.9)) + 
+p <- ggplot(NULL) +
+  geom_bar_pattern(data = tmp1[SEX_LABEL == 'Male'], aes(x = as.numeric(ROUND_INDEX) - 0.21, y = value, fill = 'Male', alpha = VARIABLE_LABEL, pattern = COMM_LABEL), stat = 'identity', width=0.4, 
+                   color = 'grey60',
+                   pattern_fill = "white",
+                   pattern_colour = 'grey50',
+                   pattern_angle = 45,
+                   pattern_density = 0.01,
+                   pattern_spacing = 0.035,
+                   pattern_key_scale_factor = 0.6) +
+  geom_bar_pattern(data = tmp1[SEX_LABEL == 'Female'], aes(x = as.numeric(ROUND_INDEX) + 0.21, y = value, fill = 'Female', alpha = VARIABLE_LABEL, pattern = COMM_LABEL), stat = 'identity', width=0.4, 
+                   color = 'grey60',
+                    pattern_fill = "white",
+                   pattern_colour = 'grey50',
+                   pattern_angle = 45,
+                   pattern_density = 0.01,
+                   pattern_spacing = 0.035,
+                   pattern_key_scale_factor = 0.6) +
+  labs(y = 'Census eligible population') +
+  scale_fill_manual(values = c('Female' = 'lightpink', 'Male' = 'lightblue'))+
+  scale_pattern_manual(values = c('Inland communities' = "none", 'Fishing communities' = "stripe")) +
+  scale_alpha_manual(values = c('Participant' = 1, 'Non-participant' = 0.5)) + 
   theme_bw() + 
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
         strip.text = element_text(size = rel(1)), 
         panel.grid.major = element_blank(), 
         panel.grid.minor.x = element_blank(), 
-        axis.text.x = element_text(angle = 40, hjust =1), 
+        axis.text.x = element_text(angle = 30, hjust =1), 
         axis.title.x = element_blank(), 
         legend.title = element_blank()) + 
   scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
-  scale_x_continuous(breaks = tmp1[, unique(ROUND_INDEX)], label =  tmp1[, unique(ROUND_LABEL)] )+ 
-  guides(fill = guide_legend(byrow = T, nrow = 2, order = 2),color = guide_legend(byrow = T, nrow = 2, order = 2),
-         size = guide_legend(order = 1, nrow = 2, byrow = T))
-ggsave(p, file = file.path(outdir, 'Participants_aggregated_age.png'), w = 6.75, h = 6.75)
+  scale_x_continuous(breaks = tmp1[, unique(ROUND_INDEX)], label =  tmp1[, unique(ROUND_LABEL)] )  + 
+  guides(alpha = guide_legend(byrow = T, nrow = 2, order = 1, override.aes = list(pattern = "none", col = 'white')),
+         fill = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
+         pattern = guide_legend(byrow = T, nrow = 2, override.aes = list(fill = "white", col = 'black'), order = 3))
+ggsave(p, file = file.path(outdir, 'Participants_aggregated_age.png'), w = 5, h = 5)
 
 ## save
 tmp <- rpr[, list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]

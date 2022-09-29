@@ -37,8 +37,9 @@ df_round[, MIN_SAMPLE_DATE_LABEL := format(MIN_SAMPLE_DATE, '%b %Y')]
 df_round[, MAX_SAMPLE_DATE_LABEL := format(MAX_SAMPLE_DATE - 31, '%b %Y')]
 # df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
 df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND))]
-df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(ROUND), LABEL_ROUND])]
+df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = unique(df_round[order(ROUND), LABEL_ROUND]))]
 df_round[, INDEX_ROUND := 1:length(ROUND), by = 'COMM']
+df_round[, MIDPOINT_DATE := MIN_SAMPLE_DATE + as.numeric(MAX_SAMPLE_DATE - MIN_SAMPLE_DATE)/2]
 
 tmp <- merge(tmp, df_round, by = c('ROUND', 'COMM'))
 
@@ -55,64 +56,11 @@ communities <- tmp[, unique(COMM)]
 
 for(i in seq_along(communities)){
   tmp1 <- tmp[COMM == communities[i]]
-  
-  # prevalence
-  p1 <- ggplot(tmp1[TYPE == 'HIV prevalence'], aes(x = INDEX_ROUND, group = SEX_LABEL)) + 
-    geom_line(aes(y = M), linetype = 'dashed', position=position_dodge(width = 0.5), alpha = 0.5) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5, width = 0.5, position=position_dodge(width = 0.5)) + 
-    geom_point(aes(y = M, col = SEX_LABEL), shape = 17, size = 2, position=position_dodge(width = 0.5)) + 
-    facet_grid(.~AGE_LABEL) + 
-    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    theme_bw() + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)), 
-          axis.text.x = element_blank(),, 
-          axis.title.x = element_blank(), 
-          plot.title = element_text(hjust = 0.5), 
-          panel.grid.major.x = element_blank(), 
-          panel.grid.minor.x = element_blank(), 
-          legend.position = 'bottom', 
-          legend.box = 'vertical', 
-          legend.title = element_blank(), 
-          legend.spacing.y= unit(0.00001, 'cm')) + 
-    scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[TYPE == 'HIV prevalence', max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
-    labs(y = 'HIV prevalence\nin census eligible population', col= '', shape = '') + 
-    scale_x_continuous(labels = df_round[COMM == communities[i], LABEL_ROUND], breaks =  df_round[COMM == communities[i], INDEX_ROUND]) + 
-    guides(color = guide_legend(override.aes = list(shape = 16)))
-  
-  # unsuppressed
-  p2 <- ggplot(tmp1[TYPE == 'HIV-positive with unsuppressed viral load'], aes(x = INDEX_ROUND, group = SEX_LABEL)) + 
-    geom_line(aes(y = M), linetype = 'dotted', position=position_dodge(width = 0.5), alpha = 0.5) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5, width = 0.5, position=position_dodge(width = 0.5)) + 
-    geom_point(aes(y = M, col = SEX_LABEL), shape = 15, size = 2, position=position_dodge(width = 0.5)) + 
-    facet_grid(.~AGE_LABEL) + 
-    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    theme_bw() + 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_blank(), 
-          axis.text.x = element_text(angle = 50, hjust = 1), 
-          axis.title.x = element_blank(), 
-          plot.title = element_text(hjust = 0.5), 
-          panel.grid.major.x = element_blank(), 
-          panel.grid.minor.x = element_blank(), 
-          legend.position = 'bottom', 
-          legend.box = 'vertical', 
-          legend.title = element_blank(), 
-          legend.spacing.y= unit(0.00001, 'cm')) + 
-    scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[TYPE == 'HIV prevalence', max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
-    labs(y = 'HIV+ with unsuppressed viral load\nin census eligible population', col= '', shape = '') + 
-    scale_x_continuous(labels = df_round[COMM == communities[i], LABEL_ROUND], breaks =  df_round[COMM == communities[i], INDEX_ROUND])
-  
-  
-  p <- ggarrange(p1, p2, ncol = 1, heights = c(0.45, 0.55), common.legend = T, legend = 'bottom')
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '2.png')), w = 7.5,h = 7)
-  
-  
-  ### try to combine them
-  p <- ggplot(tmp1, aes(x = INDEX_ROUND, group = interaction(TYPE, SEX_LABEL))) + 
-    geom_line(aes(y = M, linetype = TYPE), position=position_dodge(width = 0.5), alpha = 0.5) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5, width = 0.5, position=position_dodge(width = 0.5)) + 
-    geom_point(aes(y = M, col = SEX_LABEL, shape = TYPE), size = 2, position=position_dodge(width = 0.5), stroke = 1) + 
+
+  p <- ggplot(tmp1, aes(x = MIDPOINT_DATE, group = interaction(TYPE, SEX_LABEL))) + 
+    geom_line(aes(y = M, linetype = TYPE), position=position_dodge(width = 300), alpha = 0.5) + 
+    geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5, width = 300, position=position_dodge(width = 300)) + 
+    geom_point(aes(y = M, col = SEX_LABEL, shape = TYPE), size = 2, position=position_dodge(width = 300), stroke = 1) + 
     facet_grid(.~AGE_LABEL) + 
     scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
     scale_linetype_manual(values = c('HIV prevalence' = 'dotted', 'HIV-positive with unsuppressed viral load' = 'solid')) + 
@@ -120,19 +68,20 @@ for(i in seq_along(communities)){
     theme_bw() + 
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)), 
-          plot.title = element_text(hjust = 0.5), 
+          # plot.title = element_text(hjust = 0.5), 
           panel.grid.major.x = element_blank(), 
           panel.grid.minor.x = element_blank(), 
-          axis.text.x = element_text(angle = 30, hjust = 1), 
-          axis.title.x = element_blank(), 
+          # axis.text.x = element_text(angle = 30, hjust = 1), 
+          # axis.title.x = element_blank(), 
           legend.position = c(0.165, 0.85), 
           legend.key.size = unit(0.33, 'cm'),
           # legend.box = 'vertical', 
           legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
     scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[, max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
-    labs(y = paste0('Percent among census eligible population\nin ',communities[i], ' communities'), col= '', shape = '', linetype = '') + 
-    scale_x_continuous(labels = df_round[COMM == communities[i], LABEL_ROUND], breaks =  df_round[COMM == communities[i], INDEX_ROUND]) + 
+    labs(y = paste0('Percent among census eligible population'), col= '', shape = '', linetype = '', 
+         x = 'Date (midpoint of survey interval)') + 
+    scale_x_date(expand = c(0.03,0.03)) +
     guides(color = guide_legend(override.aes = list(shape = 16), order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
   ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '.png')), w = 9,h = 4)
 }
