@@ -19,7 +19,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
-  jobname <- 'test_new'
+  jobname <- 'new_incidence'
   stan_model <- 'gp_220905a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
@@ -68,8 +68,8 @@ if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
-use.network.derived.infection.dates <- T
-use.tsi.oneyear.before.first.positive <- F
+use.network.derived.infection.dates <- F
+use.tsi.oneyear.before.first.positive <- T
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
 remove.missing.community.recipient <- T
@@ -88,8 +88,8 @@ file.path.tsiestimates <- file.path(dirname(indir.deepsequence_analyses), 'PANGE
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 # from EMODO_RAKAI repo
-file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220905b.csv")
-file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220825.csv")
+file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220930.csv")
+file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220930.csv")
 
 # from misc/
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
@@ -251,7 +251,7 @@ if(use.network.derived.infection.dates)
 
         filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', filename)
 
-        out <- update.meta.pairs.after.doi.attribution(path=filename)
+        out <- update.meta.pairs.after.doi.attribution(path=filename, outfile.figures)
         stopifnot(nrow(meta_data) == nrow(out$meta_data))
         
 
