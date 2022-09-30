@@ -1000,7 +1000,7 @@ find.center.of.mass.plausible.region <- function(xmin, xmax, ymin, ymax)
         }
 }
 
-update.meta.pairs.after.doi.attribution <- function(path)
+update.meta.pairs.after.doi.attribution <- function(path, outdir)
 {
         if(!file.exists(path))
         {
@@ -1022,7 +1022,7 @@ update.meta.pairs.after.doi.attribution <- function(path)
                                          daterange.vars=c('MIN','MAX'),
                                          doi.center.var='DOI',
                                          title='Midpoint/Network Attribution')
-        filename=file.path(outdir, 'phylopairs_dates_scores_after_networkattribution.png')
+        filename=paste0(outdir, 'phylopairs_dates_scores_after_networkattribution.png')
         ggsave(filename, g, w=15, h=15, units='cm')
 
         # fix meta data
