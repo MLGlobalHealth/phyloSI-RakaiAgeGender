@@ -747,8 +747,10 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
     geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
-    geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'], -'LABEL_ROUND'), aes(y = 0.06, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
-    geom_point(data = tmp1[COMM == 'inland'], aes(y = 0.06, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
+    # geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'& SEX_LABEL=='Male'], -'LABEL_ROUND'), aes(y = 0.12, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
+    # geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'& SEX_LABEL=='Female'], -'LABEL_ROUND'), aes(y = 0.06, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
+    # geom_point(data = tmp1[COMM == 'inland' & SEX_LABEL=='Male'], aes(y = 0.12, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
+    # geom_point(data = tmp1[COMM == 'inland' & SEX_LABEL=='Female'], aes(y = 0.06, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
     labs(y = 'Incidence rate per 100 person-year', x = 'Age') +
     facet_grid(.~LABEL_ROUND, scale = 'free_y') +
     theme_bw() +
@@ -1177,7 +1179,8 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       labs(col = '', shape = 'Age group', 
            x = 'Unsuppression rate male to female ratio', 
            y = paste0('Incidence rate relative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))], '\nfemale to male ratio')) + 
-      theme_bw() 
+      theme_bw()  
+      # scale_y_log10()
     p
     ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.png'), w = 6, h = 4.5)
 
