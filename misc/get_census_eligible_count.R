@@ -156,7 +156,7 @@ if(0){
   ggsave(p, file = file.path(outdir, 'Smooth_census_eligible_count_round15.png'), w = 6, h = 6)
 }
 
-# choose smoothing 15
+# choose smoothing 50
 ncen[, ELIGIBLE_SMOOTH := ELIGIBLE_SMOOTH.50]
 ncen <- select(ncen, -c('ELIGIBLE_SMOOTH.25', 'ELIGIBLE_SMOOTH.50', 'ELIGIBLE_SMOOTH.75'))
 
@@ -167,14 +167,14 @@ knitr::kable(tmp[order(COMM,SEX,ROUND)])
 
 if(1){
   tmp <- copy(ncen)
-  tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+  tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
   tmp <- tmp[!(ROUND == '15S' & COMM == 'inland')]
   tmp[, SEX_LABEL := 'Female']
   tmp[SEX== 'M', SEX_LABEL := 'Male']
   tmp[, COMM_LABEL := 'Fishing\n communities']
   tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
-  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS)) +
+  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS)) +
     geom_bar(aes(y = ELIGIBLE_SMOOTH), stat = 'identity', fill = 'grey70') +
     geom_line(aes(y = ELIGIBLE), col = 'darkred', alpha  = 0.6) +
     labs(y = 'Census eligible individuals', x = 'Age') +
@@ -184,7 +184,7 @@ if(1){
           strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)))
   p
-  ggsave(p, file = file.path(outdir, 'CensusEligibleIndividuals.png'), w = 8, h = 9)
+  ggsave(p, file = file.path(outdir, 'CensusEligibleIndividuals.png'), w = 8, h = 10)
 
 }
 
