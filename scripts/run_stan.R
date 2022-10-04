@@ -20,7 +20,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'new_incidence'
-  stan_model <- 'gp_220905a'
+  stan_model <- 'gp_220911b'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -101,7 +101,7 @@ file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_
 file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
 file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220811.csv')
 file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
-file.unsuppressed_rate_ratio <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_ratio_sex_220926.csv'))
+file.unsuppressed_rate_ratio <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_ratio_sex_220926.csv'))
 file.reported.sexual.partnerships <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('cont_age-R015.rds'))
 
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
@@ -159,10 +159,10 @@ df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships))
 # Define start time, end time and cutoff
 #
 
-start_observational_period_inland <- df_round_inland[round == 'R012', min_sample_date] #"2006-08-30" 
+start_observational_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
 stop_observational_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
 
-start_observational_period_fishing <- start_observational_period_inland 
+start_observational_period_fishing <- df_round_inland[round == 'R012', min_sample_date]
 stop_observational_period_fishing <- df_round_fishing[round == 'R018', max_sample_date] #  "2017-08-14"
 
 cutoff_date <- df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"

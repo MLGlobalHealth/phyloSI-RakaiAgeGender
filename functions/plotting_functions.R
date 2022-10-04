@@ -1,9 +1,9 @@
 find_palette_round <- function()
 {
   # palette_round <- scales::viridis_pal(option = 'A', end= 0.9)(8)
-  palette_round <<- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(df_round[,length(unique(ROUND))])
-  palette_round_inland <<- palette_round[c(1:4, 6:8)]
-  palette_round_fishing <<- palette_round[c(4:8)]
+  palette_round <<- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(10)
+  palette_round_inland <<- palette_round[c(1:6, 8:10)]
+  palette_round_fishing <<- palette_round[c(6:10)]
 }
 
 
@@ -559,7 +559,7 @@ phsc.plot.transmission.network<- function(dchain, dc, pairs, outdir=NULL, point.
 plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outdir)
 {
   
-  level_rounds <- c('R012', 'R013', 'R014', 'R015', 'R015S', 'R016', 'R017', 'R018')
+  level_rounds <- c('R010', 'R011', 'R012', 'R013', 'R014', 'R015', 'R015S', 'R016', 'R017', 'R018')
   
   # round periods
   tmp <- rbind(df_round_inland, df_round_fishing)

@@ -325,7 +325,7 @@ add_phylo_data <- function(stan_data, pairs){
         tmp <- tmp[COMM.RECIPIENT == df_community[j, COMM]]
         
         # time group
-        tmp <- tmp[DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT == df_period[k, BEFORE_CUTOFF]]
+        tmp <- tmp[DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT == df_period[COMM == df_community[j, COMM] & INDEX_TIME == k, BEFORE_CUTOFF]]
         
         # count number of observation
         tmp <- tmp[, list(count = .N), by = c('AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT')]
@@ -335,7 +335,7 @@ add_phylo_data <- function(stan_data, pairs){
         
         setkey(tmp, AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)
         
-        tmp1 <- pairs[SEX.SOURCE == .SEX.SOURCE  & COMM.RECIPIENT == df_community[j, COMM] & DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT == df_period[k, BEFORE_CUTOFF]]
+        tmp1 <- pairs[SEX.SOURCE == .SEX.SOURCE  & COMM.RECIPIENT == df_community[j, COMM] & DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT == df_period[COMM == df_community[j, COMM] & INDEX_TIME == k, BEFORE_CUTOFF]]
         stopifnot(sum(tmp$count) == nrow(tmp1))
         
         # check the order of ages is correct
@@ -343,7 +343,7 @@ add_phylo_data <- function(stan_data, pairs){
         stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == tmp[, AGE_INFECTION.RECIPIENT])
         stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == tmp[, AGE_TRANSMISSION.SOURCE])
         
-        cat(nrow(tmp1), 'pairs with infection', df_direction[i, LABEL_DIRECTION], 'towards', df_community[j, COMM], 'in', df_period[k, PERIOD], '\n')
+        cat(nrow(tmp1), 'pairs with infection', df_direction[i, LABEL_DIRECTION], 'towards', df_community[j, COMM], 'in', df_period[COMM == df_community[j, COMM] & INDEX_TIME == k, PERIOD], '\n')
         
         y[, i, j, k] = matrix(tmp$count, ncol = 1)
         

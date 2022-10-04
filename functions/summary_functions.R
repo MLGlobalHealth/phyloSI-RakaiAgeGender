@@ -527,7 +527,7 @@ get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligi
   setnames(inc.inland, 'ROUND_LABEL', 'ROUND')
   inc.inland[, COMM := 'inland']
   inc.inland[, SEX := substring(SEX, 1, 1)]
-  inc.inland <- inc.inland[ROUND >= 12]
+  inc.inland <- inc.inland[ROUND >= 10]
   inc.inland[, ROUND := paste0('R0', as.character(ROUND))]
   inc.inland <- inc.inland[, .(SEX, ROUND, AGEYRS, INCIDENCE, LB, UB, COMM)]
   
@@ -711,7 +711,7 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period)
   #
   # for inland
   df_round_inland[, INDEX_TIME := 0]
-  df_round_inland[round%in%paste0('R0', 12:15), INDEX_TIME := 1]
+  df_round_inland[round%in%paste0('R0', 10:15), INDEX_TIME := 1]
   df_round_inland[round %in% paste0('R0',16:18), INDEX_TIME := 2]
 
   # keep original min and max sample date
@@ -719,6 +719,8 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period)
   df_round_inland[, min_sample_date_original := min_sample_date]
   
   # fill missing months
+  df_round_inland[round == 'R010', max_sample_date := df_round_inland[round == 'R011', min_sample_date]]
+  df_round_inland[round == 'R011', max_sample_date := df_round_inland[round == 'R012', min_sample_date]]
   df_round_inland[round == 'R012', max_sample_date := df_round_inland[round == 'R013', min_sample_date]]
   df_round_inland[round == 'R013', max_sample_date := df_round_inland[round == 'R014', min_sample_date]]
   df_round_inland[round == 'R014', max_sample_date := df_round_inland[round == 'R015', min_sample_date]]
