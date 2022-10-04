@@ -63,7 +63,7 @@ make_convergence_diagnostics_stats(fit, samples, outdir.table)
 #
 # Trace plots
 #
-p <- bayesplot::mcmc_trace(fit, regex_pars = c('beta_baseline', 'rho_gp', 'alpha_gp')) + theme_bw()
+p <- bayesplot::mcmc_trace(fit, regex_pars = c('rho_gp', 'alpha_gp')) + theme_bw()
 ggsave(p, file = paste0(outfile.figures, '-mcmc-trace_plots.png'), w  = 8, h = 8)
 
 
@@ -72,7 +72,7 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-trace_plots.png'), w  = 8, h = 8
 #
 
 # baseline parameters and hyperparameters
-p <- bayesplot::mcmc_intervals(fit, regex_pars = c('beta_baseline', 'rho_gp', 'alpha_gp')) + theme_bw()
+p <- bayesplot::mcmc_intervals(fit, regex_pars = c('rho_gp', 'alpha_gp')) + theme_bw()
 ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots.png'), w  = 8, h = 8)
 
 
@@ -80,7 +80,7 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots.png'), w  = 8, h
 # Pairs plot
 #
 
-p <- bayesplot::mcmc_pairs(fit, regex_pars = c('beta_baseline', 'rho_gp', 'alpha_gp')) + theme_bw()
+p <- bayesplot::mcmc_pairs(fit, regex_pars = c('rho_gp', 'alpha_gp')) + theme_bw()
 ggsave(p, file = paste0(outfile.figures, '-mcmc-pairs_plots.png'), w  = 8, h = 8)
 
 
