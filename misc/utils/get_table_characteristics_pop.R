@@ -25,7 +25,7 @@ file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_inciden
 community.keys <- as.data.table(read.csv(file.community.keys))
 
 # rounds of interest
-df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 12:18)), 
+df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 10:18)), 
                   data.table(COMM = 'fishing', ROUND = paste0('R0', c(15, '15S', 16:18))))
 
 #################################
@@ -291,5 +291,3 @@ stopifnot(nrow(tab[HIV  < INFECTED_TESTED ]) == 0)
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
 saveRDS(tab, file.path(outdir, 'characteristics_study_population.rds'))
 
-
-tab[COMM == 'inland']
