@@ -74,7 +74,7 @@ if(1){
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'COMM', 'SEX', 'AGEYRS', 'TOTAL_COUNT'))
   tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
   tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
-  tmp[, ROUND_LABEL := paste0('ROUND: ', ROUND)]
+  tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
   tmp[, SEX_LABEL := 'Female']
   tmp[SEX== 'M', SEX_LABEL := 'Male']
   tmp[, COMM_LABEL := 'Fishing\n communities']
@@ -82,14 +82,15 @@ if(1){
   tmp <- tmp[!(ROUND == '15')]
   
   # plot
-  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS, y = value)) +
+  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
     labs(x = 'Age', y = 'Count HIV-positive participants', fill = 'Self-reported ART use') +
     facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)))
+          strip.text = element_text(size = rel(1))) +
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
   p
   ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age.png')), w=8, h=8)
   
@@ -113,8 +114,8 @@ rart[, ROW_ID:= seq_len(nrow(rart))]
 rart[, PROP_UNSUPPRESSED_EMPIRICAL := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC', 'SEX', 'AGE')]
 
 # find smooth proportion
-for(round in c('R012', 'R013', 'R014', "R015", "R015S")){
-  round <- 'R015S'
+for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S")){
+  round <- 'R010'
   
   DT <- copy(rart[ROUND == round] )
   DT <- DT[order(SEX, LOC, AGE_LABEL)]
@@ -168,7 +169,7 @@ for(round in c('R012', 'R013', 'R014', "R015", "R015S")){
 }
 
 # load results 
-rounds <- c(12:15, '15S')
+rounds <- c(10:15, '15S')
 nsinf <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <- vector(mode = 'list', length = length(rounds))
 for(i in seq_along(rounds)){
@@ -256,7 +257,7 @@ tmp <- copy(nsinf)
 tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
 tmp <- tmp[!(ROUND == 'R015')]
 tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
-tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
 tmp[, SEX_LABEL := 'Female']
 tmp[SEX== 'M', SEX_LABEL := 'Male']
 tmp[, COMM_LABEL := 'Fishing\n communities']

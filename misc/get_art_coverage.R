@@ -43,7 +43,7 @@ stopifnot(nrow(art[COMM == 'fishing']) == art[, length(unique(AGEYRS))] * art[, 
 
 # plot
 tmp <- copy(art)
-tmp[, ROUND_LABEL := paste0('ROUND: ', gsub('R0(.+)', '\\1', ROUND))]
+tmp[, ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
 tmp[, SEX_LABEL := 'Female']
 tmp[SEX== 'M', SEX_LABEL := 'Male']
 tmp[, COMM_LABEL := 'Fishing\n communities']
@@ -61,7 +61,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
         strip.background = element_rect(colour="white", fill="white"),
         strip.text = element_text(size = rel(1))) + 
   scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_artcoverage.png')), w=8, h=9)
+ggsave(file=file.path(outdir, paste0('smooth_artcoverage.png')), w=8, h=10)
 
 # save
 file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_estimates_220906.csv'))
