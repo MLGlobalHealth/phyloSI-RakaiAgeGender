@@ -849,6 +849,7 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
   n_counterfactual <- male_to_treat[, length(unique(type))]
   eligible_count_round.counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
   relative_incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+  incidence_counterfactual_all <- relative_incidence_counterfactual_all <- vector(mode = 'list', length = n_counterfactual)
   for(i in 1:n_counterfactual){
     
     Type = c("main spreaders", "non compliers", "random" )[i]
@@ -862,31 +863,47 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
     # find offset under counterfactual
     log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]))
     
-    # find incidence counterfactual
+    # find incidence counterfactual by age of the recipient
     incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                   transform = 'exp', 
                                                                   log_offset_round = log_offset_round.counterfactual, 
                                                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
     
-    # find relative difference incidence 
+    # find incidence counterfactual
+    incidence_counterfactual_all[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'), 
+                                                                  transform = 'exp', 
+                                                                  log_offset_round = log_offset_round.counterfactual, 
+                                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+    
+    # find relative difference incidence  by age of the recipient
     relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                                      log_offset_round, log_offset_round.counterfactual,
                                                                                      transform = 'exp')
     
-
+    # find relative difference incidence 
+    relative_incidence_counterfactual_all[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'),
+                                                                                     log_offset_round, log_offset_round.counterfactual,
+                                                                                     transform = 'exp')
+    
     # tag with the index of the counterfactual
     incidence_counterfactual[[i]][, counterfactual_index := i]
     relative_incidence_counterfactual[[i]][, counterfactual_index := i]
     eligible_count_round.counterfactual[[i]][, counterfactual_index := i]
+    incidence_counterfactual_all[[i]][, counterfactual_index := i]
+    relative_incidence_counterfactual_all[[i]][, counterfactual_index := i]
   }
   incidence_counterfactual <- do.call('rbind', incidence_counterfactual)
   relative_incidence_counterfactual <- do.call('rbind', relative_incidence_counterfactual)
   eligible_count_round.counterfactual <- do.call('rbind', eligible_count_round.counterfactual)
-
+  incidence_counterfactual_all <- do.call('rbind', incidence_counterfactual_all)
+  relative_incidence_counterfactual_all <- do.call('rbind', relative_incidence_counterfactual_all)
+  
   # group
   counterfactuals <- list(incidence_counterfactual = incidence_counterfactual, 
        relative_incidence_counterfactual = relative_incidence_counterfactual, 
        eligible_count_round.counterfactual = eligible_count_round.counterfactual, 
+       incidence_counterfactual_all = incidence_counterfactual_all, 
+       relative_incidence_counterfactual_all = relative_incidence_counterfactual_all,
        budget = budget)
   
   # save
