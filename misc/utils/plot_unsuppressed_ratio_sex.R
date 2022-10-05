@@ -57,7 +57,7 @@ for(i in seq_along(communities)){
     scale_y_continuous( limits = c(0,  NA), expand = expansion(mult = c(0, 0.1))) + 
     labs(y = 'Unsuppression rate male to female ratio', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '.png')), w = 5,h = 5)
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_220930.png')), w = 5,h = 5)
   
 
 }

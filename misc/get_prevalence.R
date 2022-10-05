@@ -78,23 +78,24 @@ if(1){
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'COMM', 'SEX', 'AGEYRS', 'TOTAL_COUNT')) #,'LABEL_ROUND'
   tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
   tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
-  tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+  tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
   tmp[, SEX_LABEL := 'Female']
   tmp[SEX== 'M', SEX_LABEL := 'Male']
   tmp[, COMM_LABEL := 'Fishing\n communities']
   tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
   # plot
-  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS, y = value)) +
+  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
     labs(x = 'Age', y = 'Count participants', fill = 'HIV status') +
     facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)))
+          strip.text = element_text(size = rel(1))) + 
+    scale_y_continuous(expand = expansion(mult = c(0, .1)))
   p
-  ggsave(p, file=file.path(outdir, paste0('count_participants_by_gender_loc_age.png')), w=8, h=9)
+  ggsave(p, file=file.path(outdir, paste0('count_participants_by_gender_loc_age.png')), w=8, h=10)
   
 }
 
@@ -116,8 +117,8 @@ rprev[, ROW_ID:= seq_len(nrow(rprev))]
 rprev[, EMPIRICAL_PREVALENCE := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# prevalence
 
 # find smooth proportion
-for(round in c('R012', 'R013', 'R014', "R015", "R016", "R017", "R018", "R015S")){
-  round <- 'R018'
+for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R016", "R017", "R018", "R015S")){
+  round <- 'R010'
   
   DT <- copy(rprev[ROUND == round] )
   
@@ -170,7 +171,7 @@ for(round in c('R012', 'R013', 'R014', "R015", "R016", "R017", "R018", "R015S"))
 }
 
 # load results 
-rounds <- c(12:15, '15S', 16:18)
+rounds <- c(10:15, '15S', 16:18)
 nsinf <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <- vector(mode = 'list', length = length(rounds))
 for(i in seq_along(rounds)){
@@ -247,7 +248,7 @@ stopifnot(nrow(nsinf[COMM == 'fishing']) == nsinf[, length(unique(AGEYRS))] * ns
 tmp <- copy(nsinf)
 tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
 tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
-tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
 tmp[, SEX_LABEL := 'Female']
 tmp[SEX== 'M', SEX_LABEL := 'Male']
 tmp[, COMM_LABEL := 'Fishing\n communities']

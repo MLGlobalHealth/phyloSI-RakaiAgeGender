@@ -634,21 +634,27 @@ plot_contribution_age_source_sex_ratio <- function(expected_contribution_age_sou
       scale_fill_manual(values = colors) +
       guides(color = guide_legend(byrow = T, nrow = 3), fill = guide_legend(byrow = T, nrow = 3))
     
+    ## all round with CI
+    pp.allCI <- pp.all + 
+      geom_ribbon(aes(ymin = CL, ymax = CU, fill = LABEL_ROUND), alpha = 0.5) +
+      facet_grid(LABEL_ROUND~.)
+    
     ## round 15 and 18
     pp <- plot.p(tmp.p[ROUND %in% Rounds])+ theme(legend.position =  c(0.15,0.93)) + 
       scale_color_manual(values =colors_reduced) +
       scale_fill_manual(values = colors_reduced) 
     
-
+  
     if(is.null(lab)) lab =  'Contribution_Sex_Ratio'
-    
+
     if(communities[i] == 'inland'){
-      ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_entended_', communities[i], '.png'), w = 6, h = 6)
+      ggsave(pp.allCI, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.png'), w = 6, h = 12)
     }else{
-      ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_entended_', communities[i], '.png'), w = 6, h = 6)
+      ggsave(pp.allCI, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.png'), w = 6, h = 9)
       
     }
     
+    ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_all_', communities[i], '.png'), w = 6, h = 6)
     ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 6, h = 6)
     
   }

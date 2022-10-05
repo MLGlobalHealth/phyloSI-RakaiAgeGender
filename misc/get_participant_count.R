@@ -70,14 +70,14 @@ rpr[PARTICIPATION_SMOOTH > 1, PARTICIPATION_SMOOTH := 1]
 
 # PLOT
 tmp <- copy(rpr)
-tmp[, ROUND_LABEL := paste0('ROUND:', ROUND)]
+tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
 tmp <- tmp[!(ROUND == '15S' & COMM == 'inland')]
 tmp[, SEX_LABEL := 'Female']
 tmp[SEX== 'M', SEX_LABEL := 'Male']
 tmp[, COMM_LABEL := 'Fishing\n communities']
 tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
 
-p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS)) +
+p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS)) +
   geom_bar(aes(y = PARTICIPANT), stat = 'identity', fill = 'grey60') +
   labs(y = 'Participants', x = 'Age') +
   facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
@@ -88,7 +88,7 @@ p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEY
 p
 ggsave(p, file = file.path(outdir, 'Participants.png'), w = 8, h = 9)
 
-p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10", "11")], aes(x = AGEYRS)) +
+p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS)) +
   geom_line(aes(y = PARTICIPATION)) +
   labs(y = 'Participation among census eligible individuals', x = 'Age') +
   facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
@@ -105,7 +105,7 @@ tmp1 <- tmp[, list(PARTICIPANT = sum(PARTICIPANT), ELIGIBLE = sum(ELIGIBLE)), by
 tmp1[, NON_PARTICIPANT := ELIGIBLE - PARTICIPANT]
 tmp1 <- melt.data.table(tmp1, id.vars = c('SEX_LABEL', 'COMM_LABEL', 'ROUND', 'COMM'))
 tmp1 <- tmp1[variable != 'ELIGIBLE']
-tmp1 <- tmp1[!ROUND %in% c("06", "07", "08", "09", "10", "11")]
+tmp1 <- tmp1[!ROUND %in% c("06", "07", "08", "09")]
 tmp1[, ROUND_LABEL := paste0('Round ', ROUND)]
 tmp1[, VARIABLE_LABEL := ifelse(variable == 'PARTICIPANT', 'Participant', 'Non-participant')]
 tmp1[, COMM_LABEL := gsub('\n', '', COMM_LABEL)]
@@ -151,7 +151,7 @@ p <- ggplot(NULL) +
 ggsave(p, file = file.path(outdir, 'Participants_aggregated_age.png'), w = 5, h = 5)
 
 ## save
-tmp <- rpr[, list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]
+tmp <- rpr[!ROUND %in% c("06", "07", "08", "09"), list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]
 saveRDS(tmp, file.path(outdir, 'Participation.rds'))
 
 file <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
