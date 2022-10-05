@@ -15,8 +15,9 @@ library(gridExtra)
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 {
   indir <- '~/git/phyloflows'
-  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
-  indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
+  indir.deepsequence_xiaoyue <- '~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'test_new'
@@ -28,8 +29,9 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 if(dir.exists('/home/andrea'))
 {
   indir <-'~/git/phyloflows'
-  indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
+  indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live'
+  indir.deepsequence_xiaoyue   <- '~/Documents/Box/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
   outdir <- '~/Documents/Box/2021/phyloflows'
 
   jobname <- 'test'
@@ -40,8 +42,9 @@ if(dir.exists('/home/andrea'))
 
 if(dir.exists('/rds/general'))
 {
-  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_deepseq_analyses/live'
+  indir.deepsequence_xiaoyue   <- '/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
 }
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
@@ -82,10 +85,10 @@ only.transmission.same.community <- F
 only.participant.treated <- F
 
 # file paths
-file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
+file.path.chains.data <- file.path(indir.deepsequence_xiaoyue,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
 # file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
-file.path.tsiestimates <- file.path(dirname(indir.deepsequence_analyses), 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_adjusted_TSI_with_estimated_dates.csv')
-file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
+file.path.tsiestimates <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_adjusted_TSI_with_estimated_dates.csv')
+file.anonymisation.keys <- file.path(indir.deepsequence_xiaoyue,'important_anonymisation_keys_210119.csv')
 
 # from EMODO_RAKAI repo
 file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220905b.csv")
