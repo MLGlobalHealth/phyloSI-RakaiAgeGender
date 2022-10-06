@@ -286,6 +286,7 @@ expected_contribution_age_group_source2 <-  find_summary_output_by_round(samples
 reported_contact <- clean_reported_contact(df_reported_contact)
 plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
 
+
 #
 # Relative incidence infection if male had the same art uptake as female
 #
@@ -342,7 +343,9 @@ plot_counterfactual_all(counterfactuals_a_f, counterfactuals_a_a, eligible_count
 #
 # Find NNT
 #
+
 cat("\nPlot NNT\n")
+
 # NNT by 1 year age band
 NNT <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'),
                                    transform = 'exp',
