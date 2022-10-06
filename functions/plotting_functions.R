@@ -743,8 +743,9 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
   ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 6)
   
   tmp[, WEIGHTED_INCIDENCE := INCIDENCE / sum(INCIDENCE), by = c('COMM', 'ROUND', 'SEX')]
+  tmp[, LABEL_ROUND := paste0('Inland communities\n',LABEL_ROUND)]
   tmp1 <- tmp[, list(MEDIAN_AGEYRS =matrixStats::weightedMedian(AGEYRS, WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND')]
-  ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
+  ggplot(tmp[COMM == 'inland' & round %in% c(12, 14, 16, 18)], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
     geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
     # geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'& SEX_LABEL=='Male'], -'LABEL_ROUND'), aes(y = 0.12, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
@@ -756,12 +757,69 @@ plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, pr
     theme_bw() +
     scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
     scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    theme(legend.position = c(0.95, 0.87), 
+    theme(legend.position = c(0.9, 0.83), 
           strip.background = element_rect(colour="white", fill="white"), 
           legend.title = element_blank()) + 
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
-    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05)))
-  ggsave(paste0(outdir, '-data-incidence_rate_round_sex.png'), w = 12, h = 4)
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
+    coord_cartesian(ylim= c(0, 2.1))
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex.png'), w = 6.5, h = 3.2)
+  
+  # incidence rate relative to first round per person per round
+  N = 10000
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  set.seed(12)
+  tmp <- incidence_cases_round[, list(INCIDENCE.DRAW = exp(rnorm(N, log(INCIDENCE), (log(INCIDENCE) - log(LB)) / 1.96)), 
+                                      iterations = 1:N), by = c('COMM', 'ROUND', 'AGEYRS', 'SEX')]
+  tmp[COMM == 'fishing', REF.ROUND := 'R015']
+  tmp[COMM == 'inland', REF.ROUND := 'R012']
+  tmp[, INCIDENCE_REL := INCIDENCE.DRAW / INCIDENCE.DRAW[ROUND == REF.ROUND], by = c('COMM', 'AGEYRS', 'SEX', 'iterations')]
+  tmp = tmp[, list(q= quantile(INCIDENCE_REL, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND', 'AGEYRS', 'SEX')]	
+  tmp = dcast(tmp, ... ~ q_label, value.var = "q")
+  tmp <- merge(tmp, df_community, by = 'COMM')
+  tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+  tmp[, LABEL_ROUND2 := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
+  tmp[, SEX_LABEL := 'Female']
+  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  
+  ggplot(tmp[COMM == 'inland' & round %in% c(14, 16, 18)], aes(x = AGEYRS)) +
+    geom_hline(yintercept = 1, alpha = 0.2) + 
+    geom_line(aes(y = M, col = SEX_LABEL)) +
+    geom_ribbon(aes(ymin =CL, ymax = CU, fill = SEX_LABEL),  alpha = 0.3) +
+    # geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'& SEX_LABEL=='Male'], -'LABEL_ROUND'), aes(y = 0.12, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
+    # geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'& SEX_LABEL=='Female'], -'LABEL_ROUND'), aes(y = 0.06, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
+    # geom_point(data = tmp1[COMM == 'inland' & SEX_LABEL=='Male'], aes(y = 0.12, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
+    # geom_point(data = tmp1[COMM == 'inland' & SEX_LABEL=='Female'], aes(y = 0.06, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
+    labs(y = 'Incidence rate relative to round 12\nin inland communities', x = 'Age') +
+    facet_grid(.~LABEL_ROUND, scale = 'free_y') +
+    theme_bw() +
+    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    theme(legend.position = c(0.9, 0.83), 
+          strip.background = element_rect(colour="white", fill="white"), 
+          legend.title = element_blank()) + 
+    scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
+    coord_cartesian(ylim= c(0, 2.1))
+  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex.png'), w = 6.5, h = 3.2)
+  
+  ggplot(tmp[COMM == 'inland' & round %in% c(14,16,18)], aes(x = AGEYRS)) +
+    geom_hline(yintercept = 1, alpha = 0.2) + 
+    geom_line(aes(y = M, col = LABEL_ROUND, linetype = SEX_LABEL)) +
+    geom_ribbon(data = tmp[COMM == 'inland' & round %in% c(18) & SEX == 'F'], aes(ymin = CL, ymax = CU, fill = LABEL_ROUND, group = interaction(LABEL_ROUND, SEX_LABEL)),  alpha = 0.3) +
+    labs(y = 'Incidence rate relative to round 12\nin inland communities', x = 'Age', col = '', fill = '') +
+    theme_bw() +
+    scale_color_manual(values = palette_round_inland[c(5,7,9)]) + 
+    scale_fill_manual(values =  palette_round_inland[c(9)]) + 
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"), 
+          legend.title = element_blank(), 
+          legend.direction = 'vertical') + 
+    scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
+    guides(fill = 'none')
+  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex2.png'), w = 5, h = 5)
   
   # incidence cases among census eligible
   tmp <- copy(incidence_cases_round)
@@ -987,7 +1045,7 @@ plot_transmission_events_over_time <- function(pairs, outdir){
     # plot pairs 
     p3 <- ggplot(dp[COMM == comm]) + 
       geom_histogram(aes(x = DATE, fill = DIRECTION), bins = 30) + 
-      geom_vline(aes(xintercept = pairs[, min(SAMPLE_DATE.RECIPIENT, SAMPLE_DATE.SOURCE)], linetype='Start deep-sequencing'), color = 'grey50') + 
+      # geom_vline(aes(xintercept = pairs[, min(SAMPLE_DATE.RECIPIENT, SAMPLE_DATE.SOURCE)], linetype='Start deep-sequencing'), color = 'grey50') + 
       facet_grid(.~AGE_GROUP_LABEL) + 
       labs(y = paste0('Detected transmissions\nfrom deep-sequence data'), x = 'Date at transmission') + 
       theme_bw() + 
@@ -1139,8 +1197,13 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   # merge labels
   icr <- merge(icr, df_timeline, by = c('ROUND', 'COMM'))
   
+  # reference round
+  icr[COMM == 'fishing', REFERENCE_ROUND := 'R015']
+  icr[COMM == 'inland', REFERENCE_ROUND := 'R012']
+  
   # take decline since first round
-  icr[, INCIDENT_RATE_REF := INCIDENT_RATE_SUSCEPTIBLE / INCIDENT_RATE_SUSCEPTIBLE[INDEX_ROUND == min(INDEX_ROUND)], by = 'COMM']
+  icr[, INCIDENT_RATE_REF := INCIDENT_RATE_SUSCEPTIBLE / INCIDENT_RATE_SUSCEPTIBLE[ROUND == REFERENCE_ROUND], by = 'COMM']
+  icr <- icr[!(COMM == 'inland' & ROUND %in% c('R010', 'R011'))]
   
   # find incident cases ratio
   icr <- dcast(icr, ROUND + INDEX_ROUND + COMM ~ SEX, value.var = 'INCIDENT_RATE_REF')
@@ -1176,13 +1239,16 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       geom_vline(xintercept = 1, linetype = 'dashed', alpha = 0.5) + 
       geom_point(aes(col = ROUND_LABEL, shape = AGE_GROUP, x = UNSUPPRESSION_RATE_RATIO_BY_AGE_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_color_manual(values = colors) + 
-      labs(col = '', shape = 'Age group', 
-           x = 'Unsuppression rate male to female ratio', 
+      labs(x = 'Unsuppression rate\nmale to female ratio', 
            y = paste0('Incidence rate relative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))], '\nfemale to male ratio')) + 
-      theme_bw()  
+      theme_bw()  +
+      theme(legend.position = c(0.8, 0.3), 
+            legend.title = element_blank(), 
+            legend.key.size = unit(0.4, 'pt')) + 
+      guides(shape='none')
       # scale_y_log10()
     p
-    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.png'), w = 6, h = 4.5)
+    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.png'), w = 3, h = 2.9)
 
   }
   
