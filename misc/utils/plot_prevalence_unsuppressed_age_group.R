@@ -51,12 +51,16 @@ tmp[COMM == 'fishing', COMM_LABEL := 'Fishing communities']
 tmp[, COMM_LABEL := factor(COMM_LABEL, levels = c('Inland communities', 'Fishing communities'))]
 tmp[, AGE_LABEL := paste0('Age: ', AGE_GROUP)]
 
+if(0){
+  tmp <- tmp[!(COMM == 'inland' & ROUND %in% c('R010', 'R011'))]
+}
+
 # plot
 communities <- tmp[, unique(COMM)]
 
 for(i in seq_along(communities)){
   tmp1 <- tmp[COMM == communities[i]]
-
+  
   p <- ggplot(tmp1, aes(x = MIDPOINT_DATE, group = interaction(TYPE, SEX_LABEL))) + 
     geom_line(aes(y = M, linetype = TYPE), position=position_dodge(width = 300), alpha = 0.5) + 
     geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.5, width = 300, position=position_dodge(width = 300)) + 
@@ -71,11 +75,13 @@ for(i in seq_along(communities)){
           # plot.title = element_text(hjust = 0.5), 
           panel.grid.major.x = element_blank(), 
           panel.grid.minor.x = element_blank(), 
-          # axis.text.x = element_text(angle = 30, hjust = 1), 
+          axis.text.x = element_text(angle = 30, hjust = 1),
           # axis.title.x = element_blank(), 
-          legend.position = c(0.165, 0.85), 
+          # legend.position = c(0.165, 0.85), 
+          legend.position = 'bottom', 
           legend.key.size = unit(0.33, 'cm'),
-          # legend.box = 'vertical', 
+          # legend.box = 'vertical',
+          legend.direction = 'vertical',
           legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
     scale_y_continuous(labels = scales::percent, limits = c(0,  tmp1[, max(CU)]), expand = expansion(mult = c(0, 0.1))) + 
@@ -83,7 +89,7 @@ for(i in seq_along(communities)){
          x = 'Date (midpoint of survey interval)') + 
     scale_x_date(expand = c(0.03,0.03)) +
     guides(color = guide_legend(override.aes = list(shape = 16), order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_220930.png')), w = 9,h = 4)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_220930.png')), w = 5.5,h = 4)
 }
 
 
