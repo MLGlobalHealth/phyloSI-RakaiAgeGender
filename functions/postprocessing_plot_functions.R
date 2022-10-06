@@ -343,7 +343,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   tmp[, type  := type_cont]
 
   tmp <- tmp[LABEL_DIRECTION == 'Male -> Female']
-  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 7, 0)]
+  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 9, 0)]
   tmp[, LABEL_ROUND2 := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
 
   prevalence_prop_sex[, type  := 'Share of males among HIV-positive\nindividuals']
@@ -351,12 +351,12 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   tmp1 <- rbind(prevalence_prop_sex, unsuppressed_prop_sex, fill=TRUE)
   tmp1[, type := factor(type , levels = c(unique(prevalence_prop_sex$type), unique(unsuppressed_prop_sex$type)))]
   tmp1 <- tmp1[LABEL_DIRECTION == 'Male -> Female']
-  tmp1[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 7, 0)]
+  tmp1[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 9, 0)]
   
   tmp2 <- rbind(tmp, tmp1, fill=TRUE)
   tmp2[, type := factor(type , levels = c(unique(tmp$type), levels(tmp1$type)))]
   
-  p <-  ggplot(tmp2, aes(x = INDEX_ROUND2, group = type)) +
+  p <-   ggplot(tmp2, aes(x = INDEX_ROUND2, group = type)) +
       geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0, size = 0.5, position = position_dodge(width = 0.2))  +
     geom_line(aes(y = M, linetype = type), col = 'black', position = position_dodge(width = 0.2)) +
     geom_point(aes(y = M, shape = type, col = type), size= 1.7, position = position_dodge(width = 0.2)) + 
@@ -380,7 +380,8 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
           panel.grid.minor.y = element_blank(), 
           legend.margin = margin(),
           legend.title = element_blank())  + 
-     scale_x_continuous(labels = tmp[order(INDEX_ROUND2), (LABEL_ROUND2)], breaks = tmp[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
+     scale_x_continuous(labels = tmp[order(INDEX_ROUND2), (LABEL_ROUND2)], 
+                        breaks = tmp[order(INDEX_ROUND2), unique(INDEX_ROUND2)]) + 
      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1)) + 
      guides(color = guide_legend(order = 1), linetype = guide_legend(order = 1), shape = guide_legend(order = 1))
    
@@ -1714,7 +1715,7 @@ plot_counterfactual_relative_incidence_old <- function(eligible_count_round.coun
 plot_incidence_transmission <- function(incidence_tranmission, outdir){
   tmp <- copy(incidence_tranmission)
   
-  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 7, 0)]
+  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 9, 0)]
   tmp[, LABEL_ROUND2 := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
   
   
@@ -1762,7 +1763,7 @@ plot_incidence_transmission <- function(incidence_tranmission, outdir){
 plot_incidence_infection <- function(incidence_infection, outdir){
   tmp <- copy(incidence_infection)
   
-  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 7, 0)]
+  tmp[, INDEX_ROUND2 := INDEX_ROUND + ifelse(COMM == 'fishing', 9, 0)]
   tmp[, LABEL_ROUND2 := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
   
   p <- vector(mode = 'list', length = length(tmp[, unique(INDEX_DIRECTION)]))
