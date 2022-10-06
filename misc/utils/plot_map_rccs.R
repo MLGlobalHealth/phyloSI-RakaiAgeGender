@@ -93,6 +93,9 @@ lati_bounds=c(-10, 10)  # y
 long_bounds=c(25, 46) # x
 lati_bounds=c(-12, 10)  # y
 
+long_bounds=c(27, 40) # x
+lati_bounds=c(-8, 6)  # y
+
 # get uganda borders + lakes
 # __________________________
 
@@ -115,35 +118,38 @@ roads10 <- ne_download(scale = 10, type = 'roads', category = 'cultural', return
 rivers10 <- ne_download(scale=10, type='rivers_lake_centerlines', category='physical', returnclass='sf')
 
 p1 <- ggplot() +
-  geom_sf(data=africa_sf, fill='darkolivegreen4') + 
+  geom_sf(data=africa_sf, fill='palegoldenrod') + 
   geom_sf(data=lakes10,col= 'lightblue4', fill="lightblue") +
   geom_sf_text(data=africa_sf, aes(label=name), color = "black", fontface = "bold", check_overlap = FALSE) +
-  geom_rect(data=coord2, aes(xmin = x[1], xmax = x[2], ymin = y[1], ymax = y[2]), color = "gold", fill = NA, size = 1.2)  +
+  geom_rect(data=coord2, aes(xmin = x[1], xmax = x[2], ymin = y[1], ymax = y[2]), color = "red", fill = NA, size = 1.2)  +
   coord_sf(xlim=long_bounds, ylim=lati_bounds) +
   labs(x='', y='') + 
   mytheme + 
   theme(axis.ticks.x = element_blank(), 
         axis.text.x = element_blank(), 
         axis.ticks.y = element_blank(), 
-        axis.text.y = element_blank()) + 
-  annotation_scale(location = "tl", width_hint = 0.5) +
-  annotation_north_arrow(location = "tl", which_north = "true", 
-                         pad_x = unit(0.3, "in"), pad_y = unit(0.5, "in"),
-                         style = north_arrow_fancy_orienteering)
+        axis.text.y = element_blank()) 
 
+ # m <- leaflet::leaflet() %>%
+ #          setView(lng = mean(coord2$x), lat = mean(coord2$y), zoom = 12) %>%
+ #         addTiles() %>%
+ #         addProviderTiles(providers$CartoDB.Positron)
+ # m
+ 
 p2 <- ggplot() +
-  geom_sf(data=africa_sf, fill='darkolivegreen4', color = 'darkolivegreen4') +
+  geom_sf(data=africa_sf, fill='palegoldenrod', color = 'palegoldenrod') +
   geom_sf(data=rivers10, color="lightblue", fill="lightblue") +
   geom_sf(data=roads10, color="grey80") +
   geom_sf(data=lakes10,  color="lightblue4", fill="lightblue") +
   geom_sf(data=ds_sf_t, aes(shape = FC),size=3,fill='#876445') +
   coord_sf(xlim=coord2$x, ylim=coord2$y) +
-  geom_rect(data=coord2, aes(xmin = x[1], xmax = x[2], ymin = y[1], ymax = y[2]), color = "gold", fill = NA, size = 1.75)  +
+  geom_rect(data=coord2, aes(xmin = x[1], xmax = x[2], ymin = y[1], ymax = y[2]), color = "red", fill = NA, size = 1.75)  +
   scale_shape_manual(values=c('fishing' = 24, 'inland' = 21), 
                     labels = c('Fishing communities', 'Inland communities')) +
   mytheme +
-  theme(legend.position=c(0.055,0.055),
-        legend.background = element_rect(fill = "white", color = "grey50"),
+  theme(legend.position=c(0.6,0.85),
+        legend.key.size = unit(0.6, 'pt'),
+        legend.background = element_rect(fill = "white", color = "white"),
         legend.justification = c("left", "bottom"),
         panel.background = element_rect(fill = 'lightblue', color='lightblue4')) +
   # labs(shape='')+ 
@@ -154,13 +160,12 @@ p2 <- ggplot() +
         axis.text.y = element_blank(), axis.title.y = element_blank(), 
         legend.key = element_rect(fill = "white"),
         legend.title = element_blank())+
-  annotation_scale(location = "tl", width_hint = 0.5, pad_x = unit(0.7, 'cm'), pad_y = unit(0.7, 'cm')) 
+  annotation_scale(location = "br", width_hint = 0.5, pad_x = unit(0.1, 'cm'), pad_y = unit(0.05, 'cm')) +
+  annotation_north_arrow(location = "br", which_north = "true", 
+                         pad_x = unit(0.3, "in"), pad_y = unit(0.5, "in"),
+                         style = north_arrow_fancy_orienteering)
 
-# CAN I PUT THE LEGEND ON NORTH-EAST CORNER to save space?
-# p <- gridExtra::grid.arrange(p1, p2, layout_matrix = rbind(c(NA,2), 
-#                                                            c(1, 2), 
-#                                                            c(NA, 2)), heights = c(0.09, 1.2, 0.03))
 
-ggsave(p1, file = file.path(outdir, 'map_RCCS_communities_1.pdf'), w = 8, h = 7)
+ggsave(p1, file = file.path(outdir, 'map_RCCS_communities_1.pdf'), w = 2.5, h = 2.5)
 ggsave(p2, file = file.path(outdir, 'map_RCCS_communities_2.pdf'), w = 4, h = 4)
 
