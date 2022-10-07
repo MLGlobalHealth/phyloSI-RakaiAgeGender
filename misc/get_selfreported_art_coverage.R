@@ -8,11 +8,12 @@ library("haven")
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+indir.deepsequence_xiaoyue <- '~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/'
 indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
+file.community.keys <- file.path(indir.deepsequence_xiaoyue,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 

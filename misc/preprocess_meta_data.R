@@ -8,7 +8,7 @@ make.hiv.history.plots <- 0
 if(dir.exists('/Users/melodiemonod'))
 {
   indir.repository <- '~/git/phyloflows'
-  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
+  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI/'
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 }
 
@@ -16,7 +16,7 @@ if(dir.exists('/home/andrea'))
 {
   indir.repository <-'~/git/phyloflows'
   make.hiv.history.plots <- 1
-  indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
   outdir <- '/home/andrea/Documents/Box/2021/phyloflows/testing_history/'
 }
@@ -24,7 +24,7 @@ if(dir.exists('/home/andrea'))
 if(dir.exists('/rds/general/user/'))
 {
   indir.repository <-'~/git/phyloflows'
-  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 }
 
