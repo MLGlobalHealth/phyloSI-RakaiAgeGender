@@ -413,6 +413,106 @@ add_incidence_cases <- function(stan_data, incidence_cases_round){
   
 }
 
+add_incidence_rates <- function(stan_data, incidence_cases_round){
+  
+  # save count in each entry
+  ir = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], max(stan_data[['N_ROUND']])))
+  
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in 1:max(stan_data[['N_ROUND']])){
+        
+        if(k > stan_data[['N_ROUND']][j]){
+          ir[, i, j, k] = 0;
+          next
+        }
+        
+        .SEX.RECIPIENT = substr(gsub('.* -> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM = df_community[INDEX_COMMUNITY == j, COMM]
+        .ROUND = df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
+        
+        # direction group
+        tmp <- incidence_cases_round[SEX == .SEX.RECIPIENT]
+        
+        # community group
+        tmp <- tmp[COMM == .COMM]
+        
+        # round
+        tmp <- tmp[ROUND == .ROUND]
+        
+        # order by age
+        tmp <- tmp[order(AGEYRS)] 
+        
+        # sanity check
+        tmp1 <- incidence_cases_round[SEX == .SEX.RECIPIENT  & COMM == .COMM & ROUND == .ROUND]
+        stopifnot(sum(tmp$INCIDENCE) == sum(tmp1$INCIDENCE))
+        cat(mean(tmp1$INCIDENCE), 'incidence rates ', df_direction[i, LABEL_DIRECTION], 'towards', .COMM, 'in', .ROUND, '\n')
+        
+        # fill
+        ir[, i, j, k] = tmp$INCIDENCE
+        
+      }
+    }
+  }
+  
+  stan_data[['ir']] = ir
+  
+  
+  return(stan_data)
+  
+}
+
+add_incidence_rates_lognormal_parameters <- function(stan_data, incidence_cases_round){
+  
+  # save count in each entry
+  ir_lognorm_mean = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], max(stan_data[['N_ROUND']])))
+  ir_lognorm_sd = array(NA, c(stan_data[['N_AGE']], stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], max(stan_data[['N_ROUND']])))
+  
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in 1:max(stan_data[['N_ROUND']])){
+        
+        if(k > stan_data[['N_ROUND']][j]){
+          ir[, i, j, k] = 0;
+          next
+        }
+        
+        .SEX.RECIPIENT = substr(gsub('.* -> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM = df_community[INDEX_COMMUNITY == j, COMM]
+        .ROUND = df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
+        
+        # direction group
+        tmp <- incidence_cases_round[SEX == .SEX.RECIPIENT]
+        
+        # community group
+        tmp <- tmp[COMM == .COMM]
+        
+        # round
+        tmp <- tmp[ROUND == .ROUND]
+        
+        # order by age
+        tmp <- tmp[order(AGEYRS)] 
+        
+        # sanity check
+        tmp1 <- incidence_cases_round[SEX == .SEX.RECIPIENT  & COMM == .COMM & ROUND == .ROUND]
+        stopifnot(sum(tmp$INCIDENCE) == sum(tmp1$INCIDENCE))
+        cat(mean(tmp1$INCIDENCE), 'incidence rates ', df_direction[i, LABEL_DIRECTION], 'towards', .COMM, 'in', .ROUND, '\n')
+        
+        # fill
+        lognorm_parms <- lognorm::getParmsLognormForMedianAndUpper(median = tmp$INCIDENCE, upper = tmp$UB, sigmaFac=2)
+        ir_lognorm_mean[, i, j, k] = lognorm_parms[, 1]
+        ir_lognorm_sd[, i, j, k] = lognorm_parms[, 2]
+      }
+    }
+  }
+  
+  stan_data[['ir_lognorm_mean']] = ir_lognorm_mean
+  stan_data[['ir_lognorm_sd']] = ir_lognorm_sd
+  
+  return(stan_data)
+  
+}
+
 add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows = 8, n_knots_columns = 8, X, Y)
 {
   
@@ -781,11 +881,8 @@ add_offset <- function(stan_data, eligible_count){
         tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & ROUND == .ROUND]
         log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
         
-        # add period in year
-        log_offset[, PERIOD_SPAN := df_round[ROUND == .ROUND & COMM == .COMM, ROUND_SPANYRS]]
-        
         # make log offset
-        log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
+        log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED)]
         
         # check the order of ages is correct
         log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
@@ -801,6 +898,97 @@ add_offset <- function(stan_data, eligible_count){
   
   stan_data[['log_offset']] = log_offset_array
 
+  return(stan_data)
+}
+
+add_offset_time <- function(stan_data, eligible_count){
+  
+  eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
+  
+  log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], max(stan_data[['N_ROUND']]), stan_data[['N_PER_GROUP']])))
+  
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in 1:max(stan_data[['N_ROUND']])){
+        
+        if(k > stan_data[['N_ROUND']][j]){
+          log_offset_array[i, j, k,] = -1
+          next
+        }
+        
+        log_offset = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
+        
+        .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+        .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM <- df_community[j, COMM]
+        .ROUND <- df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
+        
+        # add period in year
+        log_offset[, PERIOD_SPAN := df_round[ROUND == .ROUND & COMM == .COMM, ROUND_SPANYRS]]
+        
+        # make log offset time
+        log_offset[, LOG_OFFSET_TIME :=  log(PERIOD_SPAN)]
+        
+        # check the order of ages is correct
+        log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
+        stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_offset[, AGE_INFECTION.RECIPIENT])
+        stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_offset[, AGE_TRANSMISSION.SOURCE])
+        
+        # add to array
+        log_offset_array[i, j, k,] = log_offset[, LOG_OFFSET_TIME]
+        
+      }
+    }
+  }
+  
+  stan_data[['log_offset_time']] = log_offset_array
+  
+  return(stan_data)
+}
+
+add_offset_susceptible <- function(stan_data, eligible_count){
+  
+  eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
+
+  log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_COMMUNITY']], max(stan_data[['N_ROUND']]), stan_data[['N_PER_GROUP']])))
+  
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(j in 1:stan_data[['N_COMMUNITY']]){
+      for(k in 1:max(stan_data[['N_ROUND']])){
+        
+        if(k > stan_data[['N_ROUND']][j]){
+          log_offset_array[i, j, k,] = -1
+          next
+        }
+        
+        log_offset = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
+        
+        .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+        .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+        .COMM <- df_community[j, COMM]
+        .ROUND <- df_round[INDEX_ROUND == k & COMM == .COMM, ROUND]
+        
+        # add number of susceptible in recipient
+        tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & ROUND == .ROUND]
+        log_offset <- merge(log_offset, tmp[, .(AGEYRS, SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
+        
+        # make log offset
+        log_offset[, LOG_OFFSET_SUSCEPTIBLE := log(SUSCEPTIBLE) ]
+        
+        # check the order of ages is correct
+        log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
+        stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_offset[, AGE_INFECTION.RECIPIENT])
+        stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_offset[, AGE_TRANSMISSION.SOURCE])
+        
+        # add to array
+        log_offset_array[i, j, k,] = log_offset[, LOG_OFFSET_SUSCEPTIBLE]
+        
+      }
+    }
+  }
+  
+  stan_data[['log_offset_susceptible']] = log_offset_array
+  
   return(stan_data)
 }
 

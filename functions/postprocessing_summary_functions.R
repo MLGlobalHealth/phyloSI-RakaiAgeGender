@@ -237,6 +237,14 @@ find_summary_output_by_round <- function(samples, output, vars,
     tmp1 <- merge(tmp1, df_age_aggregated, by = c('AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'))
   }
   
+  if('INDEX_AGE_TRANSMISSION.SOURCE' %in% names(tmp1)){
+    tmp1[, AGE_TRANSMISSION.SOURCE:=unique(df_age[order(AGE_TRANSMISSION.SOURCE), .(AGE_TRANSMISSION.SOURCE)])$AGE_TRANSMISSION.SOURCE[INDEX_AGE_TRANSMISSION.SOURCE]]
+  }
+  
+  if('INDEX_AGE_INFECTION.RECIPIENT' %in% names(tmp1)){
+    tmp1[, AGE_INFECTION.RECIPIENT:=unique(df_age[order(AGE_INFECTION.RECIPIENT), .(AGE_INFECTION.RECIPIENT)])$AGE_INFECTION.RECIPIENT[INDEX_AGE_INFECTION.RECIPIENT]]
+  }
+  
   if('INDEX_ROUND' %in% names(tmp1)){
     tmp <- merge(df_round, df_community, by = c('COMM'))
     tmp1 <- merge(tmp1, tmp, by = c('INDEX_ROUND', 'INDEX_COMMUNITY'))

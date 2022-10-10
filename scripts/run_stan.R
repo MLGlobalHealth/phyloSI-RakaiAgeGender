@@ -68,8 +68,8 @@ if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 include.only.heterosexual.pairs <- T
 threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
-use.network.derived.infection.dates <- F
-use.tsi.oneyear.before.first.positive <- T
+use.network.derived.infection.dates <- T
+use.tsi.oneyear.before.first.positive <- F
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
 remove.missing.community.recipient <- T
@@ -363,7 +363,11 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_data <- add_incidence_cases(stan_data, incidence_cases_round)
+stan_data <- add_incidence_rates(stan_data, incidence_cases_round)
+stan_data <- add_incidence_rates_lognormal_parameters(stan_data, incidence_cases_round)
 stan_data <- add_offset(stan_data, eligible_count_round)
+stan_data <- add_offset_time(stan_data, eligible_count_round)
+stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
 stan_init <- add_init(stan_data)
 

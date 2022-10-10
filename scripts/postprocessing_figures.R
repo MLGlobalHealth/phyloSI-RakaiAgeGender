@@ -10,7 +10,7 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'notsi'
+jobname <- 'firstrun'
 stan_model <- 'gp_221002a'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
@@ -92,17 +92,14 @@ plot_PPC_observed_source(predict_y_source, count_data, outfile.figures)
 plot_PPC_observed_recipient(predict_y_recipient, count_data, outfile.figures)
 
 predict_z_source <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'))
-predict_z_source_round <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'))
 predict_z_recipient_round <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'))
-predict_lambda_recipient_round <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
-                                                               transform = 'exp',
-                                                               log_offset_round = log_offset_round,
-                                                               log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+predict_incidence_rate_round <- find_summary_output_by_round(samples, 'ir_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+                                                             names = c('INDEX_AGE_INFECTION.RECIPIENT', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND')) 
 incidence_cases_recipient_round <- prepare_incidence_cases(incidence_cases_round)
 eligible_count_recipient <- prepare_eligible_count(eligible_count_round)
 plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round,
                                    eligible_count_recipient, outfile.figures)
-plot_PPC_incidence_rate_round(predict_lambda_recipient_round, incidence_cases_recipient_round,
+plot_PPC_incidence_rate_round(predict_incidence_rate_round, incidence_cases_recipient_round,
                                    eligible_count_recipient, outfile.figures)
 
 unsuppressed_count <- prepare_unsuppressed(eligible_count)
@@ -320,6 +317,7 @@ counterfactuals_p_a <- make_counterfactual(samples, spreaders, log_offset_round,
                                            only_participant = T, art_up_to_female = F, outdir.table)
 
 # plot
+plot_counterfactual_one(counterfactuals_p_a, eligible_count_round, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 plot_counterfactual(counterfactuals_p_f, counterfactuals_p_a, eligible_count_round, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 plot_counterfactual_all(counterfactuals_p_f, counterfactuals_p_a, eligible_count_round, incidence_factual_all, "Diagnosed unsuppressed", outfile.figures)
 
@@ -336,6 +334,7 @@ counterfactuals_a_a <- make_counterfactual(samples, spreaders, log_offset_round,
                                            only_participant = F, art_up_to_female = F, outdir.table)
 
 # plot
+plot_counterfactual_one(counterfactuals_a_a, eligible_count_round, incidence_factual, "Unsuppressed", outfile.figures)
 plot_counterfactual(counterfactuals_a_f, counterfactuals_a_a, eligible_count_round, incidence_factual, "Unsuppressed", outfile.figures)
 plot_counterfactual_all(counterfactuals_a_f, counterfactuals_a_a, eligible_count_round, incidence_factual_all, "Unsuppressed", outfile.figures)
 
