@@ -51,17 +51,17 @@ for(i in seq_along(communities)){
           strip.text = element_text(size = rel(1)), 
           # axis.title.x = element_blank(), 
           # axis.text.x = element_text(angle = 30, hjust = 1), 
+          axis.text.x = element_text(angle = 30, hjust = 1),
           plot.title = element_text(hjust = 0.5), 
           panel.grid.major.x = element_blank(), 
           panel.grid.minor.x = element_blank(), 
-          legend.position = 'bottom', 
-          legend.box = 'vertical', 
+          legend.position = 'none', 
           # legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
     scale_y_continuous( limits = c(NA,  3.7), expand = expansion(mult = c(0.02, 0.1))) + 
-    labs(y = 'Unsuppression rate male to female ratio', col= 'Age', shape= 'Age', 
+    labs(y = 'Male-female ratio of the rate of infected\nindividuals that remain unsuppressed', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_220930.png')), w = 3.5,h = 4)
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_220930.png')), w = 3.5,h = 3.15)
   
 
 }

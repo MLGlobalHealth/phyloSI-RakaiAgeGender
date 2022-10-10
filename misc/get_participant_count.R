@@ -117,7 +117,6 @@ df_round <- data.table(ROUND = tmp1[, unique(ROUND)])
 df_round[, ROUND_INDEX := 1:length(ROUND)]
 df_round_inland[, ROUND := gsub('R0(.+)', '\\1', round)]
 df_round_inland <- df_round_inland[ROUND %in% df_round$ROUND]
-df_round_inland[, ROUND_LABEL := paste0('Round ', ROUND)]
 df_round_fishing[, ROUND := gsub('R0(.+)', '\\1', round)]
 df_round_location <- rbind(df_round_inland[ROUND != '15'], df_round_fishing[ROUND %in% c('15', '15S')])
 df_round_location[, midpoint_sample_date := min_sample_date + (max_sample_date - min_sample_date)/2]
@@ -126,26 +125,28 @@ df_round <- merge(df_round, df_round_location, by = 'ROUND')
 
 tmp1 <- merge(tmp1, df_round, by = 'ROUND')
 tmp1 <- tmp1[order(COMM_LABEL, SEX_LABEL, variable)]
+df_round_inland[, ROUND_LABEL := paste0('Round ', ROUND)]
 
 if(0){
   tmp1 <- tmp1[!(COMM == 'inland' & ROUND %in% 10:11)]
-  df_round_inland <- df_round_inland[ROUND %in% 10:11]
+  df_round_inland <- df_round_inland[!ROUND %in% 10:11]
 }
 
 p <- ggplot(tmp1) +
-  geom_bar_pattern(aes(x = midpoint_sample_date, y = value, pattern = COMM_LABEL, fill = SEX_LABEL, alpha = VARIABLE_LABEL), stat = 'identity', 
-                   width=250, 
-                   color = 'grey60',
+  geom_bar_pattern(aes(x = midpoint_sample_date, y = value, pattern = COMM_LABEL, fill = SEX_LABEL, alpha = VARIABLE_LABEL,
+                       color = SEX_LABEL), stat = 'identity', width=250, 
                    pattern_fill = "white",
                    pattern_colour = 'grey50',
                    pattern_angle = 45,
                    pattern_density = 0.01,
                    pattern_spacing = 0.035,
-                   pattern_key_scale_factor = 0.6) +
+                   pattern_key_scale_factor = 0.6, 
+                   size = 1) +
   labs(y = 'Census eligible population') +
   scale_fill_manual(values = c('Female' = 'lightpink', 'Male' = 'lightblue'))+
+  scale_color_manual(values = c('Female' = 'lightpink', 'Male' = 'lightblue'))+
   scale_pattern_manual(values = c('Inland communities' = "none", 'Fishing communities' = "stripe")) +
-  scale_alpha_manual(values = c('Participant' = 1, 'Non-participant' = 0.5)) + 
+  scale_alpha_manual(values = c('Participant' = 1, 'Non-participant' = 0)) + 
   theme_bw() + 
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
@@ -159,6 +160,7 @@ p <- ggplot(tmp1) +
   # scale_x_continuous(breaks = tmp1[, unique(ROUND_INDEX)], label =  tmp1[, unique(ROUND_LABEL)] )  + 
   guides(alpha = guide_legend(byrow = T, nrow = 2, order = 1, override.aes = list(pattern = "none", col = 'white')),
          fill = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
+         color = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
          pattern = guide_legend(byrow = T, nrow = 2, override.aes = list(fill = "white", col = 'black'), order = 3))
 ggsave(p, file = file.path(outdir, 'Participants_aggregated_age.png'), w = 5, h = 4)
 
@@ -172,25 +174,29 @@ if(0){
   palette_round_inland <<- palette_round[c(1:4, 6:8)]
 }
 
+# for readibility
+df_round_inland[round == 'R012', max_sample_date := as.Date('2008-05-15')]
+df_round_inland[round == 'R015', max_sample_date := as.Date('2013-06-01')]
 p <- ggplot(tmp1) +
-  geom_rect(data = df_round_inland, aes(ymin = -Inf, ymax = Inf, xmin = min_sample_date,
-                                        xmax = max_sample_date, fill = ROUND_LABEL), alpha = 0.3) +
-   scale_fill_manual(values= palette_round_inland)+
-  guides(         fill = guide_legend(byrow = T, nrow = 3, order = 2, override.aes = list(pattern = "none", col = 'white')))+
-  new_scale_fill() +
-  geom_bar_pattern(aes(x = midpoint_sample_date, y = value, pattern = COMM_LABEL, fill = SEX_LABEL, alpha = VARIABLE_LABEL), stat = 'identity', 
-                   width=250, 
-                   color = 'grey60',
+  geom_rect(data = df_round_inland, aes(ymin = 200, ymax = 32000, xmin = min_sample_date,
+                                        xmax = max_sample_date, col = ROUND_LABEL), alpha = 0.3, fill = 'white', size = 0.8) +
+   scale_color_manual(values= palette_round_inland)+
+  guides(color = guide_legend(byrow = T, ncol = 2, order = 4, override.aes = list(pattern = "none", col = 'white')))+
+  new_scale_color() +
+  geom_bar_pattern(aes(x = midpoint_sample_date, y = value, pattern = COMM_LABEL, fill = SEX_LABEL, alpha = VARIABLE_LABEL,
+                       color = SEX_LABEL), stat = 'identity', width=200, 
                    pattern_fill = "white",
                    pattern_colour = 'grey50',
                    pattern_angle = 45,
                    pattern_density = 0.01,
                    pattern_spacing = 0.035,
-                   pattern_key_scale_factor = 0.6) +
+                   pattern_key_scale_factor = 0.6, 
+                   size = 0.8) +
   labs(y = 'Census eligible population') +
-  scale_fill_manual(values = c('Female' = 'hotpink', 'Male' = 'royalblue'))+
+  scale_fill_manual(values = c('Female' = 'lightpink', 'Male' = 'lightblue'))+
+  scale_color_manual(values = c('Female' = 'lightpink', 'Male' = 'lightblue'))+
   scale_pattern_manual(values = c('Inland communities' = "none", 'Fishing communities' = "stripe")) +
-  scale_alpha_manual(values = c('Participant' = 1, 'Non-participant' = 0.5)) + 
+  scale_alpha_manual(values = c('Participant' = 1, 'Non-participant' = 0)) + 
   theme_bw() + 
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
@@ -201,13 +207,14 @@ p <- ggplot(tmp1) +
         axis.title.x = element_blank(), 
         legend.title = element_blank(), 
         legend.box = 'vertical') + 
-  scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
-  scale_x_date(expand = expansion(mult = c(0.01, .01))) + 
+  scale_y_continuous(expand = expansion(mult = c(0, 0.01))) + 
+  scale_x_date(expand = expansion(mult = c(0.005, 0.005))) + 
   # scale_x_continuous(breaks = tmp1[, unique(ROUND_INDEX)], label =  tmp1[, unique(ROUND_LABEL)] )  + 
   guides(alpha = guide_legend(byrow = T, nrow = 2, order = 1, override.aes = list(pattern = "none", col = 'white')),
          fill = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
+         color = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
          pattern = guide_legend(byrow = T, nrow = 2, override.aes = list(fill = "white", col = 'black'), order = 3))
-ggsave(p, file = file.path(outdir, 'Participants_aggregated_age2.png'), w = 4.5, h = 6)
+ggsave(p, file = file.path(outdir, 'Participants_aggregated_age2.png'), w = 4.2, h = 7)
 
 
 
