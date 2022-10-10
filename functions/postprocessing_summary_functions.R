@@ -732,7 +732,8 @@ find_spreaders <- function(expected_contribution_age_source, outdir){
 }
 
 
-find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data, 
+
+find_counterfactual_unsuppressed_count_target <- function(selected.spreaders, eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, stan_data, 
                                                    only_participant = F, art_up_to_female = F){
   
   # find proportion of unsuppressed female
@@ -755,11 +756,11 @@ find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_
   }
   
   # set proportion unsuppressed of male to be the same as female for specific age groups
-  proportion_unsuppressed.counterfactual[, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_M]
+  proportion_unsuppressed.counterfactual[, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := 1 - (1-PROP_UNSUPPRESSED_M)*0.95 ]
   if(art_up_to_female){
-    proportion_unsuppressed.counterfactual[spreader == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_M.FEMALE]
+    proportion_unsuppressed.counterfactual[spreader == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := 1 - (1-PROP_UNSUPPRESSED_M.FEMALE)*0.95] 
   } else{
-    proportion_unsuppressed.counterfactual[spreader == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := 0]
+    proportion_unsuppressed.counterfactual[spreader == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := 0.05]
   }
   
   # find infected 
@@ -767,8 +768,8 @@ find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_
   eligible_count_round.counterfactual[, ROUND := paste0('R0', ROUND)]
   df <- merge(eligible_count_round.counterfactual, proportion_unsuppressed.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
-  # find unsuppressed factual
-  tmp <- eligible_count_round[, .(ROUND, SEX, COMM, AGEYRS, INFECTED_NON_SUPPRESSED)]
+  # find unsuppressed factual but add the proportion of being unsuppressed given ART
+  tmp <- eligible_count_round_95suppression_given_ART[, .(ROUND, SEX, COMM, AGEYRS, INFECTED_NON_SUPPRESSED)]
   setnames(tmp, 'INFECTED_NON_SUPPRESSED', 'INFECTED_NON_SUPPRESSED.FACTUAL')
   df <- merge(df, tmp, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
@@ -805,23 +806,91 @@ find_counterfactual_unsuppressed_count <- function(selected.spreaders, eligible_
   return(df)
 }
 
-make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data, 
+find_counterfactual_unsuppressed_count <- function(targeted_males, eligible_count_smooth, 
+                                                   proportion_unsuppressed, proportion_prevalence, stan_data, 
+                                                   only_participant = F, art_up_to_female = F){
+  
+  # find proportion of unsuppressed female
+  proportion_unsuppressed.counterfactual = copy(proportion_unsuppressed)
+  proportion_unsuppressed.counterfactual[, PROP_UNSUPPRESSED_M.FEMALE := PROP_UNSUPPRESSED_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  
+  # find age group for which the unsuppressed level should change
+  targeted_males[, target := T]
+  proportion_unsuppressed.counterfactual <- merge(proportion_unsuppressed.counterfactual, targeted_males, all.x = T, by = c('AGEYRS', 'COMM', 'ROUND', 'SEX'))
+  proportion_unsuppressed.counterfactual[is.na(target), target := F]
+
+  # find percentage of reduction ART coverage
+  proportion_unsuppressed.counterfactual[, INCREASE_ART_COVERAGE := 0]
+  if(art_up_to_female){
+    proportion_unsuppressed.counterfactual[target == T, INCREASE_ART_COVERAGE := (1 - PROP_UNSUPPRESSED_M.FEMALE) - (1 - PROP_UNSUPPRESSED_M ) ]
+  }else{
+    proportion_unsuppressed.counterfactual[target == T, INCREASE_ART_COVERAGE := (1 - 0) - (1 - PROP_UNSUPPRESSED_M ) ]
+  }
+  
+  # set proportion unsuppressed of male to be the same as female for specific age groups
+  proportion_unsuppressed.counterfactual[, PROP_UNSUPPRESSED_M := 1 - (1-PROP_UNSUPPRESSED_M)*0.95 ]
+  proportion_unsuppressed.counterfactual[, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_M]
+  if(art_up_to_female){
+    proportion_unsuppressed.counterfactual[target == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := 1 - (1-PROP_UNSUPPRESSED_M.FEMALE)*0.95] 
+  } else{
+    proportion_unsuppressed.counterfactual[target == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := 0.05]
+  }
+  
+  # find infected 
+  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
+  eligible_count_round.counterfactual[, ROUND := paste0('R0', ROUND)]
+  df <- merge(eligible_count_round.counterfactual, proportion_unsuppressed.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  
+  # find unsuppressed factual but add the proportion of being unsuppressed given ART
+  tmp <- eligible_count_round_95suppression_given_ART[, .(ROUND, SEX, COMM, AGEYRS, INFECTED_NON_SUPPRESSED)]
+  setnames(tmp, 'INFECTED_NON_SUPPRESSED', 'INFECTED_NON_SUPPRESSED.FACTUAL')
+  df <- merge(df, tmp, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  
+  # find unsuppressed counterfactual
+  par <- copy(participation)
+  par[, ROUND := paste0('R0', ROUND)]
+  df <- merge(df, par, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  
+  if(only_participant){# counterfactual
+    
+    if(only.participant.treated){ # baseline assumption
+      df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * (1 - 0.95^2 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL)) + 
+           INFECTED * (1-PARTICIPATION) * 1]
+    }else{
+      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  * (1 - 0.95^2 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL)) + 
+           INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_M]
+    }
+    
+  }else{
+    
+    df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * (1 - 0.95^2 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL)) ]
+    
+  }
+  
+  df[target == F|SEX == 'F', INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL]
+  
+  
+  # find difference in unsuppressed
+  df[, TREATED := INFECTED_NON_SUPPRESSED.FACTUAL - INFECTED_NON_SUPPRESSED]
+  
+  return(df)
+}
+
+make_counterfactual_target <- function(samples, spreaders, log_offset_round, stan_data, 
                                 eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
                                 only_participant = F, art_up_to_female = F, outdir){
-  
-  df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39', '40-49'))
   
   # find treated male if they were all treated
   all.males <- spreaders[spreader_category == 3]
   all.males[, PROPORTION_TO_CONSIDER := 1]
-  eligible_count_round.all <- find_counterfactual_unsuppressed_count(all.males, copy(eligible_count_smooth), copy(proportion_unsuppressed), 
-                                                                                     copy(proportion_prevalence), stan_data, only_participant, art_up_to_female)
+  eligible_count_round.all <- find_counterfactual_unsuppressed_count_target(all.males, copy(eligible_count_smooth), copy(proportion_unsuppressed), 
+                                                                     copy(proportion_prevalence), stan_data, only_participant, art_up_to_female)
   
   # select spreader that contributes to 33% 
   selected.spreaders <- spreaders[spreader_category == 1, .(COMM, ROUND, AGEYRS, SEX, type)]
   selected.spreaders[, PROPORTION_TO_CONSIDER := 1]
   # find budget 
-  eligible_count_round.spreaders <- find_counterfactual_unsuppressed_count(copy(selected.spreaders), copy(eligible_count_smooth), copy(proportion_unsuppressed), 
+  eligible_count_round.spreaders <- find_counterfactual_unsuppressed_count_target(copy(selected.spreaders), copy(eligible_count_smooth), copy(proportion_unsuppressed), 
                                                                            copy(proportion_prevalence), stan_data, only_participant, art_up_to_female)
   selected.spreaders <- merge(selected.spreaders,  eligible_count_round.spreaders[, .(ROUND, SEX, COMM, AGEYRS, TREATED)], by= c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   budget <- selected.spreaders[, list(TREATED.SPREADERS = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM')]
@@ -829,7 +898,7 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
   
   # find age groups with the largest difference in art uptake compared to frmale
   noncomplier <- find_male_with_greatest_art_diff(proportion_unsuppressed, eligible_count_round.all, only_participant, only.participant.treated, budget)
-  eligible_count_round.noncomplier <- find_counterfactual_unsuppressed_count(copy(noncomplier), copy(eligible_count_smooth), copy(proportion_unsuppressed), 
+  eligible_count_round.noncomplier <- find_counterfactual_unsuppressed_count_target(copy(noncomplier), copy(eligible_count_smooth), copy(proportion_unsuppressed), 
                                                                              copy(proportion_prevalence), stan_data, only_participant, art_up_to_female)
   tmp <- eligible_count_round.noncomplier[, list(TREATED.NONCOMPLIER = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM')]
   budget <- merge(budget, tmp, by = c('ROUND', 'SEX', 'COMM'))
@@ -838,7 +907,7 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
   # find random selection of age groups
   set.seed(12)
   random_male <- find_random_male(eligible_count_round.all, only_participant, only.participant.treated, budget)
-  eligible_count_round.random <- find_counterfactual_unsuppressed_count(copy(random_male), copy(eligible_count_smooth), copy(proportion_unsuppressed), 
+  eligible_count_round.random <- find_counterfactual_unsuppressed_count_target(copy(random_male), copy(eligible_count_smooth), copy(proportion_unsuppressed), 
                                                                              copy(proportion_prevalence), stan_data, only_participant, art_up_to_female)
   tmp <- eligible_count_round.random[, list(TREATED.RANDOM = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM')]
   budget <- merge(budget, tmp, by = c('ROUND', 'SEX', 'COMM'))
@@ -857,7 +926,7 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
   n_counterfactual <- male_to_treat[, length(unique(type))]
   eligible_count_round.counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
   relative_incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
-  incidence_counterfactual_all <- relative_incidence_counterfactual_all <- vector(mode = 'list', length = n_counterfactual)
+  relative_incidence_counterfactual_all <- vector(mode = 'list', length = n_counterfactual)
   for(i in 1:n_counterfactual){
     
     Type = c("main spreaders", "non compliers", "random" )[i]
@@ -876,13 +945,6 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
                                                                   transform = 'exp', 
                                                                   log_offset_round = log_offset_round.counterfactual, 
                                                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
-    
-    # find incidence counterfactual
-    incidence_counterfactual_all[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'), 
-                                                                  transform = 'exp', 
-                                                                  log_offset_round = log_offset_round.counterfactual, 
-                                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
-    
     # find relative difference incidence  by age of the recipient
     relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                                      log_offset_round, log_offset_round.counterfactual,
@@ -897,22 +959,95 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
     incidence_counterfactual[[i]][, counterfactual_index := i]
     relative_incidence_counterfactual[[i]][, counterfactual_index := i]
     eligible_count_round.counterfactual[[i]][, counterfactual_index := i]
-    incidence_counterfactual_all[[i]][, counterfactual_index := i]
     relative_incidence_counterfactual_all[[i]][, counterfactual_index := i]
   }
   incidence_counterfactual <- do.call('rbind', incidence_counterfactual)
   relative_incidence_counterfactual <- do.call('rbind', relative_incidence_counterfactual)
   eligible_count_round.counterfactual <- do.call('rbind', eligible_count_round.counterfactual)
-  incidence_counterfactual_all <- do.call('rbind', incidence_counterfactual_all)
   relative_incidence_counterfactual_all <- do.call('rbind', relative_incidence_counterfactual_all)
   
   # group
   counterfactuals <- list(incidence_counterfactual = incidence_counterfactual, 
        relative_incidence_counterfactual = relative_incidence_counterfactual, 
        eligible_count_round.counterfactual = eligible_count_round.counterfactual, 
-       incidence_counterfactual_all = incidence_counterfactual_all, 
        relative_incidence_counterfactual_all = relative_incidence_counterfactual_all,
        budget = budget)
+  
+  # save
+  file = paste0(outdir, '-output-counterfactuals-target')
+  if(only_participant){
+    file <- paste0(file, '_only_participant')
+  }
+  if(art_up_to_female){
+    file <- paste0(file, '_art_up_to_female')
+  }
+  file <- paste0(file, '.rds')
+  
+  saveRDS(counterfactuals, file)
+  
+  return(counterfactuals)
+}
+
+make_counterfactual <- function(samples, targeted.males, log_offset_round, stan_data, 
+                                eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
+                                only_participant = F, art_up_to_female = F, outdir){
+  
+  # find unsuppressed and relative incidence under counterfactual scenarios
+  n_counterfactual <- targeted.males[, length(unique(category))]
+  eligible_count_round.counterfactual <- incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+  relative_incidence_counterfactual <- vector(mode = 'list', length = n_counterfactual)
+  relative_incidence_counterfactual_all <- budget <- vector(mode = 'list', length = n_counterfactual)
+  for(i in 1:n_counterfactual){
+    
+    # target
+    selected_males <- targeted.males[category == i, .(COMM, ROUND, AGEYRS, SEX)]
+    
+    # find unsuppressed under counterfactual
+    eligible_count_round.counterfactual[[i]] <- find_counterfactual_unsuppressed_count(copy(selected_males), copy(eligible_count_smooth), copy(proportion_unsuppressed), 
+                                                                                  copy(proportion_prevalence), stan_data, only_participant, art_up_to_female)
+
+    # budget
+    selected_males <- merge(selected_males,  eligible_count_round.counterfactual[[i]][, .(ROUND, SEX, COMM, AGEYRS, TREATED)], by= c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+    budget[[i]] <- selected_males[, list(TREATED = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM')]
+    print(selected_males[TREATED < 0 & ROUND == 'R018'])
+    
+    # find offset under counterfactual
+    log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]))
+    
+    # find incidence counterfactual by age of the recipient
+    incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
+                                                                  transform = 'exp', 
+                                                                  log_offset_round = log_offset_round.counterfactual, 
+                                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+    # find relative difference incidence  by age of the recipient
+    relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+                                                                                     log_offset_round, log_offset_round.counterfactual,
+                                                                                     transform = 'exp')
+    
+    # find relative difference incidence 
+    relative_incidence_counterfactual_all[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'),
+                                                                                         log_offset_round, log_offset_round.counterfactual,
+                                                                                         transform = 'exp')
+    
+    # tag with the index of the counterfactual
+    incidence_counterfactual[[i]][, counterfactual_index := i]
+    relative_incidence_counterfactual[[i]][, counterfactual_index := i]
+    eligible_count_round.counterfactual[[i]][, counterfactual_index := i]
+    relative_incidence_counterfactual_all[[i]][, counterfactual_index := i]
+    budget[[i]][, counterfactual_index := i]
+  }
+  incidence_counterfactual <- do.call('rbind', incidence_counterfactual)
+  relative_incidence_counterfactual <- do.call('rbind', relative_incidence_counterfactual)
+  eligible_count_round.counterfactual <- do.call('rbind', eligible_count_round.counterfactual)
+  relative_incidence_counterfactual_all <- do.call('rbind', relative_incidence_counterfactual_all)
+  budget <- do.call('rbind', budget)
+  
+  # group
+  counterfactuals <- list(incidence_counterfactual = incidence_counterfactual, 
+                          relative_incidence_counterfactual = relative_incidence_counterfactual, 
+                          eligible_count_round.counterfactual = eligible_count_round.counterfactual, 
+                          relative_incidence_counterfactual_all = relative_incidence_counterfactual_all,
+                          budget = budget)
   
   # save
   file = paste0(outdir, '-output-counterfactuals')
@@ -928,6 +1063,7 @@ make_counterfactual <- function(samples, spreaders, log_offset_round, stan_data,
   
   return(counterfactuals)
 }
+
 
 find_male_with_greatest_art_diff <- function(proportion_unsuppressed, eligible_count_round.all, only_participant, only.participant.treated, budget){
   
@@ -1011,4 +1147,120 @@ find_random_male <- function(eligible_count_round.all,only_participant, only.par
   ppc[, type := 'random']
   
   return(ppc)
+}
+
+find_eligible_count_round_95suppression_given_ART <- function(eligible_count_smooth, proportion_prevalence, proportion_unsuppressed){
+  
+  eligible_count_round_95suppression_given_ART <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
+  eligible_count_round_95suppression_given_ART[, ROUND := paste0('R0', ROUND)]
+  
+  tmp <- copy(proportion_unsuppressed)
+  tmp[, PROP_UNSUPPRESSED_M := 1 - (1-PROP_UNSUPPRESSED_M)*0.95 ]
+  
+  tmp <- merge(eligible_count_round_95suppression_given_ART, tmp, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  if(only.participant.treated){
+    tmp[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_M + INFECTED * (1-PARTICIPATION) * 1]
+  }else{
+    tmp[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_M]
+  }
+  return(tmp)
+}
+
+
+find_male_with_greatest_art_difference_category <- function(eligible_count_round_95suppression_given_ART, outdir){
+  
+  find.index.mass <- function(x, y, p){
+    
+    stopifnot(p <= sum(y))
+    
+    n <- length(x)
+    
+    index.max <- which.max(x)
+    index.groups <- index.max
+    enter <- T
+    
+    while(enter){
+      if(max(index.groups) == n){
+        new.index = min(index.groups) - 1
+      }else if(min(index.groups) == 1){
+        new.index = max(index.groups) + 1
+      }else{
+        proposed.indices <- c(min(index.groups) - 1, max(index.groups) + 1)
+        new.index <- proposed.indices[which.max(x[proposed.indices])]
+      }
+      
+      new.index.groups <- c(index.groups, new.index)
+      if(sum(y[new.index.groups]) > p){
+        enter = F
+      }else if(sum(y[new.index.groups]) == p){
+        index.groups <- c(index.groups, new.index)
+        enter = F
+      } else{
+        index.groups <- c(index.groups, new.index)
+      }
+    }
+    
+    # check
+    stopifnot(y[index.groups] <= p)
+    
+    return(sort(index.groups))
+  }
+  
+  DF <- copy(eligible_count_round_95suppression_given_ART)
+  DF[, PROP_UNSUPPRESSED_M.FEMALE := PROP_UNSUPPRESSED_M[SEX == 'F'], by = c('ROUND', 'COMM', 'AGEYRS')]
+  DF[, INCREASE_ART_COVERAGE := (1 - PROP_UNSUPPRESSED_M.FEMALE) - (1 - PROP_UNSUPPRESSED_M ) ]
+  DF[, PROP_INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED / sum(INFECTED_NON_SUPPRESSED),  by = c('ROUND', 'COMM', 'SEX')]
+  
+  # age groups of targeted males representing 33% of infected unsuppressed
+  targeted_males <- DF[, list(AGEYRS = AGEYRS[find.index.mass(INCREASE_ART_COVERAGE, PROP_INFECTED_NON_SUPPRESSED, 1/3)]), by = c('COMM', 'ROUND', 'SEX')]
+  targeted_males[, first_targeted_males := T]
+  
+  # age groups of targeted males representing 66% of infected unsuppressed
+  tmp <- DF[, list(AGEYRS = AGEYRS[find.index.mass(INCREASE_ART_COVERAGE, PROP_INFECTED_NON_SUPPRESSED, 2/3)]), by = c('COMM', 'ROUND', 'SEX')]
+  tmp[, second_targeted_males := T]
+  targeted_males <- merge(targeted_males, tmp, by = c('COMM', 'ROUND', 'SEX', 'AGEYRS'), all.x = T, all.y = T)
+  targeted_males[is.na(first_targeted_males), first_targeted_males := F]
+  stopifnot(nrow( targeted_males[first_targeted_males == T & second_targeted_males == F]) == 0)
+  
+  # all males
+  tmp <- DF[, list(AGEYRS = AGEYRS[find.index.mass(INCREASE_ART_COVERAGE, PROP_INFECTED_NON_SUPPRESSED, sum(PROP_INFECTED_NON_SUPPRESSED))]), by = c('COMM', 'ROUND', 'SEX')]
+  tmp[, third_targeted_males := T]
+  targeted_males <- merge(targeted_males, tmp, by = c('COMM', 'ROUND', 'SEX', 'AGEYRS'), all.x = T, all.y = T)
+  targeted_males[is.na(first_targeted_males), first_targeted_males := F]
+  targeted_males[is.na(second_targeted_males), second_targeted_males := F]
+
+  # check
+  stopifnot(nrow( targeted_males[first_targeted_males == T & (second_targeted_males == F | third_targeted_males == F)]) == 0)
+  stopifnot(nrow( targeted_males[second_targeted_males == T & third_targeted_males == F]) == 0)
+  
+  # add category of spreader in one column
+  targeted_males[third_targeted_males == T, category := 3]
+  targeted_males[second_targeted_males == T, category := 2]
+  targeted_males[first_targeted_males == T, category := 1]
+  
+  # enlarge
+  tmp <- targeted_males[first_targeted_males == T]
+  tmp[, category := 1]
+  df_targeted_males <- tmp
+  tmp <- targeted_males[second_targeted_males == T]
+  tmp[, category := 2]
+  df_targeted_males <- rbind(df_targeted_males, tmp)
+  tmp <- targeted_males[third_targeted_males == T]
+  tmp[, category := 3]
+  df_targeted_males <- rbind(df_targeted_males, tmp)
+  
+  set(df_targeted_males, NULL, c('first_targeted_males', 'second_targeted_males', 'third_targeted_males'), NULL)
+  
+  # label
+  df_targeted_males[, label := 100]
+  df_targeted_males[category == 2, label := 66]
+  df_targeted_males[category == 1, label := 33]
+  
+  
+  # save
+  file = paste0(outdir, '-output-targeted_males.rds')
+  saveRDS(df_targeted_males, file)
+  
+  
+  return(df_targeted_males)
 }
