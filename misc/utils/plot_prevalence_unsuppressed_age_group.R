@@ -90,6 +90,7 @@ for(i in seq_along(communities)){
     scale_x_date(expand = c(0.03,0.03)) +
     guides(color = guide_legend(override.aes = list(shape = 16), order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
   ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_220930.png')), w = 7.5,h = 3.5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_220930.pdf')), w = 8,h = 3.5)
 }
 
 

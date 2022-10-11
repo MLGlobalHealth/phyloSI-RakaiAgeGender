@@ -177,6 +177,7 @@ if(0){
 # for readibility
 df_round_inland[round == 'R012', max_sample_date := as.Date('2008-05-15')]
 df_round_inland[round == 'R015', max_sample_date := as.Date('2013-06-01')]
+df_round_inland[round == 'R016', max_sample_date := as.Date('2015-01-20')]
 p <- ggplot(tmp1) +
   geom_rect(data = df_round_inland, aes(ymin = 200, ymax = 32000, xmin = min_sample_date,
                                         xmax = max_sample_date, col = ROUND_LABEL), alpha = 0.3, fill = 'white', size = 0.8) +
@@ -215,6 +216,7 @@ p <- ggplot(tmp1) +
          color = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
          pattern = guide_legend(byrow = T, nrow = 2, override.aes = list(fill = "white", col = 'black'), order = 3))
 ggsave(p, file = file.path(outdir, 'Participants_aggregated_age2.png'), w = 4.2, h = 7)
+ggsave(p, file = file.path(outdir, 'Participants_aggregated_age2.pdf'), w = 4.4, h = 7.5)
 
 
 

@@ -62,7 +62,8 @@ for(i in seq_along(communities)){
     labs(y = 'Male-female ratio of the rate of infected\nindividuals that remain unsuppressed', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
     ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_220930.png')), w = 3.5,h = 3.15)
-  
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_220930.pdf')), w = 3.5,h = 3.2)
+    
 
 }
 
