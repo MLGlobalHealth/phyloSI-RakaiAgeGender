@@ -390,7 +390,8 @@ if(1){
   
   # plot incident cases over time
   plot_incident_cases_over_time(incidence_cases_round, outfile.figures)
-  plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures)
+  plot_incident_rates_over_time(incidence_cases_round, eligible_count_round, outfile.figures, outdir.table)
+  plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
     
   # plot offset
   plot_offset(stan_data, outfile.figures)
