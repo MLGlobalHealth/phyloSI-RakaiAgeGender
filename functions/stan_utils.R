@@ -473,7 +473,8 @@ add_incidence_rates_lognormal_parameters <- function(stan_data, incidence_cases_
       for(k in 1:max(stan_data[['N_ROUND']])){
         
         if(k > stan_data[['N_ROUND']][j]){
-          ir[, i, j, k] = 0;
+          ir_lognorm_mean[, i, j, k] = 0
+          ir_lognorm_sd[, i, j, k] = 0
           next
         }
         
