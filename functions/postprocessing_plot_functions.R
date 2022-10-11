@@ -516,6 +516,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     }
     
     ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 5.5, h = 4.2)
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.5, h = 4.2)
     
   }
 }
@@ -572,18 +573,20 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
     pp.all <- plot.p(tmp.p, tmp1.p, 0.003) + theme(legend.position =  'bottom')
     
     ## round 15 and 18
-    pp <- plot.p(tmp.p[ROUND %in% Rounds], tmp1.p[ROUND %in% Rounds], 0.0035)+ theme(legend.position =  c(0.8,0.94))
+    pp <- plot.p(tmp.p[ROUND %in% Rounds], tmp1.p[ROUND %in% Rounds], 0.0035)+ theme(legend.position =  c(0.78,0.94))
 
     if(is.null(lab)) lab =  'Contribution_Sex'
     
     if(communities[i] == 'inland'){
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_entended_', communities[i], '.png'), w = 7, h = 12.5)
+
     }else{
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_entended_', communities[i], '.png'), w = 7, h = 9)
       
     }
     
     ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.png'), w = 4.5, h = 7.5)
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 4.5, h = 7.6)
     
   }
 }
@@ -951,8 +954,9 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
                          labels = median_age_source_group[order(median_age_source_group), unique(AGE_GROUP_INFECTION.RECIPIENT)], 
                          expand = c(0,0)) + 
       guides(color = guide_legend(order = 1))
-    p
+
     ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.png'), w = 5, h = 3.7)
+    ggsave(p, file = paste0(outdir, '-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 5.1, h = 3.7)
     
   }
 }
