@@ -25,12 +25,20 @@ save_statistics_incidence_rate_ratio_trends <- function(ic, outdir.table){
   one.way <- aov(INCIDENT_RATE_RATIO_REF ~ UNSUPPRESSION_RATE_RATIO_RATIO_M, data = tmp)
   summary(one.way)
   p_value <- round(summary(one.way)[[1]][["Pr(>F)"]][1], 4) # pvalue of the anova
+  f_value <- round(summary(one.way)[[1]][["F value"]][1], 4) # f value of the anova
+  df <- summary(one.way)[[1]][["Df"]][1] # df of the anova
   
   # fit a linear regression
   fit.lm <- lm(INCIDENT_RATE_RATIO_REF ~ UNSUPPRESSION_RATE_RATIO_RATIO_M, data = tmp)
   summary(fit.lm)
   
-  saveRDS(p_value, paste0(outdir.table, '-data-incidence_rate_ratio_trends.rds'))
+  # save
+  stats = list()
+  stats$p_value <- p_value
+  stats$f_value <- f_value
+  stats$df <- nrow(tmp) -1
+  
+  saveRDS(stats, paste0(outdir.table, '-data-incidence_rate_ratio_trends.rds'))
 }
 
 save_statistics_incidence_rate_trends <- function(icrr, icr, median_age, icrrs){
