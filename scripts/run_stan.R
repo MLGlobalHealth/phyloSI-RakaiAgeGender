@@ -112,7 +112,6 @@ source(file.path(indir, 'functions', 'summary_functions.R'))
 source(file.path(indir, 'functions', 'plotting_functions.R'))
 source(file.path(indir, 'functions', 'statistics_functions.R'))
 source(file.path(indir, 'functions', 'stan_utils.R'))
-source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 
 # check args
 stopifnot( use.tsi.estimates + use.network.derived.infection.dates + use.tsi.oneyear.before.first.positive == 1)
@@ -132,7 +131,7 @@ df_round_fishing[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_
 
 # load Tanya's estimate time since infection using phylogenetic data
 if(use.tsi.estimates)
-        time.since.infection <- make.time.since.infection2(fread(file.path.tsiestimates))
+        time.since.infection <- make.time.since.infection(fread(file.path.tsiestimates))
 
 # load census eligible ount
 eligible_count_smooth <- fread(file.eligible.count)
@@ -151,9 +150,10 @@ incidence.inland <- fread(file.incidence.inland)
 incidence.fishing <- fread(file.incidence.fishing)
 
 #for plots
-unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio)
-df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships))
-
+unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio) # sex ratio of unsuppression rate
+df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships)) # reported sexual contacts
+unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
+infected_share <- fread(file.prevalence.share) # share of infected count by sex
 
 #
 # Define start time, end time and cutoff
@@ -186,10 +186,6 @@ df_round <- make.df.round(df_round_inland, df_round_fishing, df_period)
 eligible_count_round <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
 eligible_count_round <- add_infected_unsuppressed(eligible_count_round, proportion_unsuppressed, participation, only.participant.treated)
 eligible_count_round[, table(ROUND, COMM)]
-
-# summarise by time period
-eligible_count <- summarise_eligible_count_period(eligible_count_round, cutoff_date, df_period)
-eligible_count[, table(PERIOD, COMM)]
 
 
 #
@@ -358,10 +354,6 @@ df_community <- get.df.community()
 
 stan_data <- add_stan_data_base()
 stan_data <- add_phylo_data(stan_data, pairs)
-stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
-                                      n_knots_rows = 6, n_knots_columns = 6,
-                                      X = unique(df_age$AGE_TRANSMISSION.SOURCE),
-                                      Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_data <- add_incidence_cases(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates_lognormal_parameters(stan_data, incidence_cases_round)
@@ -369,6 +361,10 @@ stan_data <- add_offset(stan_data, eligible_count_round)
 stan_data <- add_offset_time(stan_data, eligible_count_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
+stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
+                                      n_knots_rows = 6, n_knots_columns = 6,
+                                      X = unique(df_age$AGE_TRANSMISSION.SOURCE),
+                                      Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_init <- add_init(stan_data)
 
 
@@ -377,6 +373,7 @@ stan_init <- add_init(stan_data)
 #
 
 if(1){
+  
   # find color palette of rounds
   find_palette_round()
   
@@ -388,8 +385,8 @@ if(1){
   plot_transmission_events_over_time(pairs, outfile.figures)
   save_statistics_transmission_events(pairs, outdir.table)
   
-  # plot incident cases over time
-  plot_incident_cases_over_time(incidence_cases_round, outfile.figures)
+  # plot incident rates and cases over time
+  plot_incident_cases_over_time(incidence_cases_round, participation, outdir)
   plot_incident_rates_over_time(incidence_cases_round, eligible_count_round, outfile.figures, outdir.table)
   plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
     
@@ -397,7 +394,6 @@ if(1){
   plot_offset(stan_data, outfile.figures)
   
   # plot pair from chains
-  # plot_pairs_infection_dates(pairs.all, outfile.figures)
   # phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outfile, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
   plot_hist_age_infection(copy(pairs), outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)

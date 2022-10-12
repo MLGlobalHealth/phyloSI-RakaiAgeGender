@@ -89,7 +89,7 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-pairs_plots.png'), w  = 8, h = 8
 # Force of infection contrasts
 #
 
-
+#
 # # period contrast
 add.vars = NULL
 if(length(dim(samples[['log_beta_period_contrast']])) == 3){
@@ -109,7 +109,7 @@ log_period_contrast_recipient<- find_summary_output(samples, 'log_beta_period_co
                                                   names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
 plot_recipient_contrast(log_period_contrast_recipient, outfile.figures, paste0(df_period[INDEX_TIME == 2, PERIOD], ' period contrast'), 'period')
 
-
+#
 # # round contrast
 add.vars = 'INDEX_ROUND'
 if(length(dim(samples[['log_beta_round_contrast']])) == 4){
@@ -132,7 +132,7 @@ log_round_contrast_recipient<- find_summary_output(samples, 'log_beta_round_cont
 log_round_contrast_recipient <- remove_first_round(log_round_contrast_recipient)
 plot_recipient_contrast(log_round_contrast_recipient, outfile.figures, 'Round constrast', 'round')
 
-
+#
 # # community contrast
 if('log_beta_community_contrast' %in% names(samples)){
   add.vars = NULL
