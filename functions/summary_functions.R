@@ -78,6 +78,7 @@ make.df.period <- function(start_observational_period_inland, stop_observational
   
   # combine
   tmp <- rbind(tmp_inland, tmp_fishing)
+  tmp[, PERIOD := factor(PERIOD, levels = PERIOD)]
   
   return(tmp)
 }
