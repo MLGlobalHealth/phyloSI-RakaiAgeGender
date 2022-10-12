@@ -1184,7 +1184,184 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
   }
 }
 
+plot_counterfactual_one <- function(counterfactuals_p_a, eligible_count_round, incidence_factual, lab, outdir){
+  
+  #
+  # target label
+  #
+  
+  df_target = data.table(variable = c('TREATED.SPREADERS', 'TREATED.NONCOMPLIER', 'TREATED.RANDOM'), 
+                         counterfactual_index = 1:3, 
+                         type = c('main spreaders', 'non compliers', 'random'),
+                         LABEL_TARGET = c('Top 1/3 men sources', 
+                                          'Men age groups with greatest\ndifference in ART coverage\ncompared to women', 
+                                          'Untargeted intervention'))
+  df_target[, LABEL_TARGET := factor(LABEL_TARGET, levels = df_target[, LABEL_TARGET])]
+  
+  #
+  # unlist objects from counterfactual
+  #
+  
+  # number of male treated
+  budget.counterfactual <- counterfactuals_p_a$budget 
+  
+  # relative incidence cases counterfactual compared to factual by age
+  relative_incidence_counterfactual <- counterfactuals_p_a$relative_incidence_counterfactual 
+  
+  # relative incidence cases counterfactual compared to factual regardless age
+  relative_incidence_counterfactual_all <- counterfactuals_p_a$relative_incidence_counterfactual_all 
+  
+  # incidence cases counterfactual by age
+  incidence_counterfactual <- counterfactuals_p_a$incidence_counterfactual 
+  
+  
+  #
+  # restrict to one round and to male to female direction
+  #
+  
+  Round <- 'R018'
+  budget.counterfactual <- budget.counterfactual[ROUND == Round & SEX == 'M']
+  relative_incidence_counterfactual <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
+  incidence_counterfactual <- incidence_counterfactual[ROUND == Round & IS_MF == T]
+  icf <- incidence_factual[ROUND == Round & IS_MF == T]
+  relative_incidence_counterfactual_all <- relative_incidence_counterfactual_all[ROUND == Round & IS_MF == T]
+  
+  
+  #
+  # Clean objects
+  #
+  
+  # format budget and merge to target label
+  bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM'))
+  bc <- merge(bc, df_target, by = 'variable')
+  bc[, lab := lab]
+  
+  # merge incidence cases counterfactual to target label 
+  ic <- merge(incidence_counterfactual, df_target, by = 'counterfactual_index')
+  
+  # merge relative incidence cases counterfactual to target label 
+  ric <- merge(relative_incidence_counterfactual, df_target, by = 'counterfactual_index')
+  ric.all <- merge(relative_incidence_counterfactual_all, df_target, by = 'counterfactual_index')
+
+  
+  #
+  # Plot
+  #
+  
+  communities <- ric[, unique(COMM)]
+  cols <- c('#CC3636', '#F57328', '#367E18')
+  
+  for(i in seq_along(communities)){
+    
+    bc.c <- bc[COMM == communities[i]]
+    ic.c <- ic[COMM == communities[i]]
+    ric.c <- ric[COMM == communities[i]]
+    icf.c <- icf[COMM == communities[i]]
+    ric.all.c <- ric.all[COMM == communities[i]]
+    
+    # budget total
+    p1 <- ggplot(bc.c, aes(x = 1)) + 
+      geom_bar(aes(fill = LABEL_TARGET, y = value), stat = 'identity', position = position_dodge(0.7), width = 0.6) + 
+      labs(x = '', y = paste0('Additional number\nof men treated'), fill = '') + 
+      theme_bw() +
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank(), 
+            axis.ticks.x = element_blank(), 
+            axis.text.x = element_blank(), 
+            # legend.position = c(0.85, 0.83), 
+            legend.key.size = unit(0.4, 'cm'),
+            legend.position = 'none', 
+            axis.title.x = element_blank(),
+            legend.title = element_blank(), 
+            panel.grid.minor.y = element_blank(), 
+      ) +
+      scale_fill_manual(values = cols) +
+      scale_y_continuous(expand = expansion(mult = c(0, .05))) 
+    
+    # incidence cases by age
+    fit_data_label <- 'No intervention\nRound 18'
+    p2 <- ggplot(ic.c) + 
+      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.2) + 
+      geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, linetype = fit_data_label), alpha = 0.2) + 
+      geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = fit_data_label), col = 'black') +
+      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
+      labs(x = 'Age', y = 'Incidence cases\nin women') + 
+      theme_bw() +
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_blank(), 
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank(), 
+            axis.title.x = element_blank(), 
+            legend.position = 'bottom',
+            legend.box= 'vertical', 
+            legend.title = element_blank()) +
+      scale_color_manual(values = cols) +
+      scale_fill_manual(values = cols) +
+      scale_y_continuous() + 
+      scale_x_continuous(expand = c(0,0)) 
+    
+    # reduction infection by age
+    p3 <- ggplot(ric.c, aes(x = AGEYRS)) + 
+      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
+      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
+      labs(x = 'Age', y = '% reduction in\nincidence in women', 
+           fill = '', col = '') + 
+      theme_bw() +
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_blank(), 
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank(), 
+            legend.title = element_blank(), 
+            # legend.direction = 'vertical',
+            # axis.title.x = element_blank(), 
+            # axis.text.x = element_blank(), 
+            legend.position = 'none') +
+      scale_color_manual(values = cols) +
+      scale_fill_manual(values = cols) +
+      scale_y_continuous(labels = scales::percent, limits = c(0,0.80), expand = c(0,0)) + 
+      scale_x_continuous(expand = c(0,0)) 
+    
+    # ireduction infection regardless of age
+    p4 <- ggplot(ric.all.c, aes(x = AGEYRS)) + 
+      geom_bar(aes(x = counterfactual_index, y = M, fill = LABEL_TARGET), stat = 'identity') + 
+      geom_errorbar(aes(x = counterfactual_index, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET)), alpha = 0.5, width = 0.15) + 
+      labs(x = '', y = '% reduction in\nincidence in women', 
+           fill = '', col = '') + 
+      theme_bw() +
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_blank(), 
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank(), 
+            legend.title = element_blank(), 
+            axis.text.x = element_blank(), 
+            axis.title.x = element_blank(), 
+            axis.ticks.x = element_blank(), 
+            legend.position = 'none') +
+      scale_color_manual(values = cols) +
+      scale_fill_manual(values = cols) +
+      scale_y_continuous(labels = scales::percent, limits = c(0,0.65), expand = c(0,0)) 
+    
+    # arrange
+    p3 <- ggarrange(p3, legend.grob = get_legend(p2), legend = 'bottom')
+    p2 <- p2 + theme(legend.position= 'none')
+    
+    p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, NA, 1), c(2, 2, 2), c(NA,3, 3), c(4, 4, 4)), 
+                      widths = c(0.01, 0.01, 0.95), heights = c(0.16, 0.16, 0.2, 0.34))
+    
+    # save
+    file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_all_', communities[i], '.pdf')
+    ggsave(p, file = file, w = 5.5, h = 7.6)
+    
+  }
+}
+
 plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, eligible_count_round, incidence_factual, lab, outdir){
+  
+  #
+  # labels
+  #
   
   # target label
   df_target = data.table(counterfactual_index = 1:3, 
@@ -1193,45 +1370,93 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
                                           'All men'))
   df_target[, LABEL_TARGET := factor(LABEL_TARGET, levels = df_target[, LABEL_TARGET])]
   
-  # unlist as much as female
-  label.f = '95% diagnosed\nART coverage in men as in female\n95% suppression rate'
+  # label in scenario where treated male take up art as much as female
+  label.f = 'ART coverage in men as in female\n95% suppression rate'
+  if(!grepl('Diagnosed', lab)){
+    label.f <- paste0('95% diagnosed\n', label.f)
+  }
+  
+  # label in scenario where treated male are treated at 95%
+  label.a = '95% receiving ART\n95% suppression rate'
+  if(!grepl('Diagnosed', lab)){
+    label.a <- paste0('95% diagnosed\n', label.a)
+  }
+  
+  
+  #
+  # unlist objects in scenario where treated male take up art as much as female
+  #
+  
+  # number of male treated regardless of age
   budget.counterfactual <- counterfactuals_s_p_f$budget 
-  relative_incidence_counterfactual <- counterfactuals_s_p_f$relative_incidence_counterfactual 
-  incidence_counterfactual <- counterfactuals_s_p_f$incidence_counterfactual 
-  eligible_count_round.counterfactual <- counterfactuals_s_p_f$eligible_count_round.counterfactual
-  relative_incidence_counterfactual_all <- counterfactuals_s_p_f$relative_incidence_counterfactual_all 
   budget.counterfactual[, label := label.f]
-  relative_incidence_counterfactual[, label := label.f]
-  incidence_counterfactual[, label := label.f]
+  
+  # number of male treated regardless by age
+  eligible_count_round.counterfactual <- counterfactuals_s_p_f$eligible_count_round.counterfactual
   eligible_count_round.counterfactual[, label := label.f]
+  
+  # relative incident cases counterfactual compared to factual by age
+  relative_incidence_counterfactual <- counterfactuals_s_p_f$relative_incidence_counterfactual 
+  relative_incidence_counterfactual[, label := label.f]
+  
+  # relative incident cases counterfactual compared to factual regardless of age
+  relative_incidence_counterfactual_all <- counterfactuals_s_p_f$relative_incidence_counterfactual_all 
   relative_incidence_counterfactual_all[, label := label.f]
   
-  # unlist all
-  label.a = '95% diagnosed\n95% receiving ART\n95% suppression rate'
+  # incident cases counterfactual 
+  incidence_counterfactual <- counterfactuals_s_p_f$incidence_counterfactual 
+  incidence_counterfactual[, label := label.f]
+  
+
+  #
+  # unlist objects in scenario where treated male are treated at 95%
+  #
+  
+  # number of male treated regardless of age
   budget.counterfactual.a <- counterfactuals_s_p_a$budget 
-  relative_incidence_counterfactual.a <- counterfactuals_s_p_a$relative_incidence_counterfactual 
-  incidence_counterfactual.a <- counterfactuals_s_p_a$incidence_counterfactual 
-  eligible_count_round.counterfactual.a <- counterfactuals_s_p_a$eligible_count_round.counterfactual
-  relative_incidence_counterfactual_all.a <- counterfactuals_s_p_a$relative_incidence_counterfactual_all 
   budget.counterfactual.a[, label := label.a]
-  relative_incidence_counterfactual.a[, label := label.a]
-  incidence_counterfactual.a[, label := label.a]
+  
+  # number of male treated regardless by age
+  eligible_count_round.counterfactual.a <- counterfactuals_s_p_a$eligible_count_round.counterfactual
   eligible_count_round.counterfactual.a[, label := label.a]
+  
+  # relative incident cases counterfactual compared to factual by age
+  relative_incidence_counterfactual.a <- counterfactuals_s_p_a$relative_incidence_counterfactual 
+  relative_incidence_counterfactual.a[, label := label.a]
+  
+  # relative incident cases counterfactual compared to factual regardless of age
+  relative_incidence_counterfactual_all.a <- counterfactuals_s_p_a$relative_incidence_counterfactual_all 
   relative_incidence_counterfactual_all.a[, label := label.a]
   
-  # combine
+  # incident cases counterfactual 
+  incidence_counterfactual.a <- counterfactuals_s_p_a$incidence_counterfactual 
+  incidence_counterfactual.a[, label := label.a]
+
+
+  #
+  # combine both scenarios
+  #
+  
   budget.counterfactual <- rbind(budget.counterfactual, budget.counterfactual.a)
-  relative_incidence_counterfactual <- rbind(relative_incidence_counterfactual, relative_incidence_counterfactual.a)
-  incidence_counterfactual <- rbind(incidence_counterfactual, incidence_counterfactual.a)
-  eligible_count_round.counterfactual <- rbind(eligible_count_round.counterfactual, eligible_count_round.counterfactual.a)
-  relative_incidence_counterfactual_all <- rbind(relative_incidence_counterfactual_all, relative_incidence_counterfactual_all.a)
   budget.counterfactual[, label := factor(label, levels = c(label.f, label.a))]
-  relative_incidence_counterfactual[, label := factor(label, levels = c(label.f, label.a))]
-  incidence_counterfactual[, label := factor(label, levels = c(label.f, label.a))]
+  
+  eligible_count_round.counterfactual <- rbind(eligible_count_round.counterfactual, eligible_count_round.counterfactual.a)
   eligible_count_round.counterfactual[, label := factor(label, levels = c(label.f, label.a))]
+  
+  relative_incidence_counterfactual <- rbind(relative_incidence_counterfactual, relative_incidence_counterfactual.a)
+  relative_incidence_counterfactual[, label := factor(label, levels = c(label.f, label.a))]
+  
+  relative_incidence_counterfactual_all <- rbind(relative_incidence_counterfactual_all, relative_incidence_counterfactual_all.a)
   relative_incidence_counterfactual_all[, label := factor(label, levels = c(label.f, label.a))]
   
-  # restrict to one round
+  incidence_counterfactual <- rbind(incidence_counterfactual, incidence_counterfactual.a)
+  incidence_counterfactual[, label := factor(label, levels = c(label.f, label.a))]
+  
+
+  #
+  # restrict to one round and to male to female direction
+  #
+  
   Round <- 'R018'
   budget.counterfactual <- budget.counterfactual[ROUND == Round & SEX == 'M']
   relative_incidence_counterfactual <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
@@ -1240,54 +1465,40 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
   ecf <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
   relative_incidence_counterfactual_all <- relative_incidence_counterfactual_all[ROUND == Round & IS_MF == T]
   
-  # format budget
+  
+  #
+  # Clean and merge to target labels
+  #
+  
+  # format budget regardless of age and merge to target labels
   bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index'))
   bc <- merge(bc, df_target, by = 'counterfactual_index')
   bc[, lab := lab]
   
+  # merge udget regardless by age to target labels
   ecf <- merge(ecf, df_target, by = 'counterfactual_index')
   
-  # find incidence rate
-  tmp <- copy(eligible_count_round[, .(ROUND, SEX, COMM, AGEYRS, SUSCEPTIBLE)])
-  tmp[, IS_MF := ifelse(SEX == 'F', 1, 0)]
-  ic <- merge(incidence_counterfactual, tmp, 
-                                    by.x = c('ROUND', 'COMM', 'AGE_INFECTION.RECIPIENT', 'IS_MF'), 
-                                    by.y = c('ROUND', 'COMM', 'AGEYRS', 'IS_MF'))
-  # ic[, M := M / SUSCEPTIBLE]
-  # ic[, CL := CL / SUSCEPTIBLE]
-  # ic[, CU := CU / SUSCEPTIBLE]
-  ic <- merge(ic, df_target, by = 'counterfactual_index')
+  # merge incidence cases counterfactual by ageto target labels
+  ic <- merge(incidence_counterfactual, df_target, by = 'counterfactual_index')
   
-  icf <- merge(icf, tmp, 
-               by.x = c('ROUND', 'COMM', 'AGE_INFECTION.RECIPIENT', 'IS_MF'), 
-               by.y = c('ROUND', 'COMM', 'AGEYRS', 'IS_MF'))
-  # icf[, M := M / SUSCEPTIBLE]
-  # icf[, CL := CL / SUSCEPTIBLE]
-  # icf[, CU := CU / SUSCEPTIBLE]
-  
-  # reduction in incidence
+  # merge incidence cases counterfactual relative to factual to target labels
   ric <- merge(relative_incidence_counterfactual, df_target, by = 'counterfactual_index')
   ric.all <- merge(relative_incidence_counterfactual_all, df_target, by = 'counterfactual_index')
-  
-  # sex label
-  # icf[, SEX := 'Female']
-  # icf[LABEL_DIRECTION == 'Female -> Male', SEX := 'Male']
-  # 
   
   communities <- ric[, unique(COMM)]
   cols <- c('#CC3636', '#F57328', '#367E18')
   
   for(i in seq_along(communities)){
 
-      tmp1 <- bc[COMM == communities[i]]
-      tmp2 <- ic[COMM == communities[i]]
-      tmp3 <- ric[COMM == communities[i]]
-      tmp4 <- icf[COMM == communities[i]]
-      tmp5 <- ecf[COMM == communities[i]]
-      tmp6 <- ric.all[COMM == communities[i]]
+    bc.c <- bc[COMM == communities[i]]
+      ic.c <- ic[COMM == communities[i]]
+      ric.c <- ric[COMM == communities[i]]
+      icf.c <- icf[COMM == communities[i]]
+      ecf.c <- ecf[COMM == communities[i]]
+      ric.all.c <- ric.all[COMM == communities[i]]
       
       # budget by age group
-      p <- ggplot(tmp5, aes(x = AGEYRS)) +
+      p <- ggplot(ecf.c, aes(x = AGEYRS)) +
         geom_bar(aes(y = TREATED, fill = LABEL_TARGET), stat = 'identity') +  
         facet_grid(LABEL_TARGET~label) + 
         scale_fill_manual(values = cols) + 
@@ -1300,8 +1511,8 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
       file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
       ggsave(p, file = file, w = 7, h = 7)
       
-      # budget total
-      p1 <- ggplot(tmp1, aes(x = 1)) + 
+      # budget regardless of age
+      p1 <- ggplot(bc.c, aes(x = 1)) + 
         geom_bar(aes(fill = LABEL_TARGET, y = value), stat = 'identity', position = position_dodge(0.7), width = 0.6) + 
         labs(x = '', y = paste0('Number of male\ntreated'), fill = '') + 
         theme_bw() +
@@ -1322,12 +1533,12 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
         scale_y_continuous(expand = expansion(mult = c(0, .05))) +
         facet_grid(.~label)
       
-      # incidence rate
-      p2 <- ggplot(tmp2) + 
-        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.2) + 
-        geom_ribbon(data = tmp4, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, linetype = 'No intervention\nRound 18'), alpha = 0.2) + 
-        geom_line(data = tmp4, aes(x = AGE_INFECTION.RECIPIENT, y = M*100, linetype = 'No intervention\nRound 18'), col = 'black') +
-        geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M*100, col = LABEL_TARGET)) + 
+      # incidence cases by age
+      p2 <- ggplot(ic.c) + 
+        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.2) + 
+        geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, linetype = 'No intervention\nRound 18'), alpha = 0.2) + 
+        geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = 'No intervention\nRound 18'), col = 'black') +
+        geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
         labs(x = 'Age', y = 'Incidence cases\nin female') + 
         theme_bw() +
         theme(strip.background = element_rect(colour="white", fill="white"),
@@ -1344,8 +1555,8 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
         facet_grid(.~label)+
         guides(fill = guide_legend(order = 2), col = guide_legend(order = 2), linetype = guide_legend(order = 1))
 
-      # reduction infection
-      p3 <- ggplot(tmp3, aes(x = AGEYRS)) + 
+      # reduction infection cases by age
+      p3 <- ggplot(ric.c, aes(x = AGEYRS)) + 
         geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
         geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
         labs(x = 'Age', y = '% reduction in incidence\nin female', 
@@ -1366,7 +1577,8 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
         scale_x_continuous(expand = c(0,0)) + 
         facet_grid(.~label)
 
-      p4 <- ggplot(tmp6, aes(x = AGEYRS)) + 
+      # reduction infection cases regardless of age
+      p4 <- ggplot(ric.all.c, aes(x = AGEYRS)) + 
         geom_bar(aes(x = counterfactual_index, y = M, fill = LABEL_TARGET), stat = 'identity') + 
         geom_errorbar(aes(x = counterfactual_index, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET)), alpha = 0.5, width = 0.15) + 
         labs(x = '', y = '% reduction in incidence\nin female (all ages)', 
@@ -1387,411 +1599,21 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
         # scale_x_continuous(expand = c(0,0)) +  
         facet_grid(.~label)
       
+      # arrange
+      
       p3 <- ggarrange(p3, legend.grob = get_legend(p2), legend = 'bottom')
       p2 <- p2 + theme(legend.position= 'none')
 
       p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, NA, 1), c(2, 2, 2), c(NA,3, 3), c(4, 4, 4)), 
                         widths = c(0.017, 0.01, 0.95), heights = c(0.22, 0.18, 0.22, 0.30))
       
+      # save
       file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.png')
       ggsave(p, file = file, w = 6.7, h = 7.6)
       
 
   }
 }
-
-plot_counterfactual_one <- function(counterfactuals_p_a, eligible_count_round, incidence_factual, lab, outdir){
-  
-  # target label
-  df_target = data.table(variable = c('TREATED.SPREADERS', 'TREATED.NONCOMPLIER', 'TREATED.RANDOM'), 
-                         counterfactual_index = 1:3, 
-                         type = c('main spreaders', 'non compliers', 'random'),
-                         LABEL_TARGET = c('Top 1/3 men sources', 
-                                          'Men age groups with greatest\ndifference in ART coverage\ncompared to women', 
-                                          'Untargeted intervention'))
-  df_target[, LABEL_TARGET := factor(LABEL_TARGET, levels = df_target[, LABEL_TARGET])]
-  
-  # unlist all
-  budget.counterfactual <- counterfactuals_p_a$budget 
-  relative_incidence_counterfactual <- counterfactuals_p_a$relative_incidence_counterfactual 
-  incidence_counterfactual <- counterfactuals_p_a$incidence_counterfactual 
-  eligible_count_round.counterfactual <- counterfactuals_p_a$eligible_count_round.counterfactual
-  relative_incidence_counterfactual_all <- counterfactuals_p_a$relative_incidence_counterfactual_all 
-
-  # restrict to one round
-  Round <- 'R018'
-  budget.counterfactual <- budget.counterfactual[ROUND == Round & SEX == 'M']
-  relative_incidence_counterfactual <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
-  incidence_counterfactual <- incidence_counterfactual[ROUND == Round & IS_MF == T]
-  icf <- incidence_factual[ROUND == Round & IS_MF == T]
-  ecf <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
-  relative_incidence_counterfactual_all <- relative_incidence_counterfactual_all[ROUND == Round & IS_MF == T]
-  
-  # format budget
-  bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM'))
-  bc <- merge(bc, df_target, by = 'variable')
-  bc[, lab := lab]
-  
-  ecf <- merge(ecf, df_target, by = 'type')
-  
-  # find incidence rate
-  tmp <- copy(eligible_count_round[, .(ROUND, SEX, COMM, AGEYRS, SUSCEPTIBLE)])
-  tmp[, IS_MF := ifelse(SEX == 'F', 1, 0)]
-  ic <- merge(incidence_counterfactual, tmp, 
-              by.x = c('ROUND', 'COMM', 'AGE_INFECTION.RECIPIENT', 'IS_MF'), 
-              by.y = c('ROUND', 'COMM', 'AGEYRS', 'IS_MF'))
-  # ic[, M := M / SUSCEPTIBLE]
-  # ic[, CL := CL / SUSCEPTIBLE]
-  # ic[, CU := CU / SUSCEPTIBLE]
-  ic <- merge(ic, df_target, by = 'counterfactual_index')
-  
-  icf <- merge(icf, tmp, 
-               by.x = c('ROUND', 'COMM', 'AGE_INFECTION.RECIPIENT', 'IS_MF'), 
-               by.y = c('ROUND', 'COMM', 'AGEYRS', 'IS_MF'))
-  # icf[, M := M / SUSCEPTIBLE]
-  # icf[, CL := CL / SUSCEPTIBLE]
-  # icf[, CU := CU / SUSCEPTIBLE]
-  
-  # reduction in incidence
-  ric <- merge(relative_incidence_counterfactual, df_target, by = 'counterfactual_index')
-  ric.all <- merge(relative_incidence_counterfactual_all, df_target, by = 'counterfactual_index')
-  
-  # sex label
-  # icf[, SEX := 'Female']
-  # icf[LABEL_DIRECTION == 'Female -> Male', SEX := 'Male']
-  # 
-  
-  communities <- ric[, unique(COMM)]
-  cols <- c('#CC3636', '#F57328', '#367E18')
-  
-  for(i in seq_along(communities)){
-    
-    tmp1 <- bc[COMM == communities[i]]
-    tmp2 <- ic[COMM == communities[i]]
-    tmp3 <- ric[COMM == communities[i]]
-    tmp4 <- icf[COMM == communities[i]]
-    tmp5 <- ecf[COMM == communities[i]]
-    tmp6 <- ric.all[COMM == communities[i]]
-    
-    # budget total
-    p1 <- ggplot(tmp1, aes(x = 1)) + 
-      geom_bar(aes(fill = LABEL_TARGET, y = value), stat = 'identity', position = position_dodge(0.7), width = 0.6) + 
-      labs(x = '', y = paste0('Additional number\nof men treated'), fill = '') + 
-      theme_bw() +
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            panel.grid.major.x = element_blank(), 
-            panel.grid.minor.x = element_blank(), 
-            axis.ticks.x = element_blank(), 
-            axis.text.x = element_blank(), 
-            # legend.position = c(0.85, 0.83), 
-            legend.key.size = unit(0.4, 'cm'),
-            legend.position = 'none', 
-            axis.title.x = element_blank(),
-            legend.title = element_blank(), 
-            panel.grid.minor.y = element_blank(), 
-      ) +
-      scale_fill_manual(values = cols) +
-      scale_y_continuous(expand = expansion(mult = c(0, .05))) 
-    
-    # incidence rate
-    fit_data_label <- 'No intervention\nRound 18'
-    p2 <- ggplot(tmp2) + 
-      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.2) + 
-      geom_ribbon(data = tmp4, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, linetype = fit_data_label), alpha = 0.2) + 
-      geom_line(data = tmp4, aes(x = AGE_INFECTION.RECIPIENT, y = M*100, linetype = fit_data_label), col = 'black') +
-      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M*100, col = LABEL_TARGET)) + 
-      labs(x = 'Age', y = 'Incidence cases\nin women') + 
-      theme_bw() +
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_blank(), 
-            panel.grid.major.x = element_blank(), 
-            panel.grid.minor.x = element_blank(), 
-            axis.title.x = element_blank(), 
-            legend.position = 'bottom',
-            legend.box= 'vertical', 
-            legend.title = element_blank()) +
-      scale_color_manual(values = cols) +
-      scale_fill_manual(values = cols) +
-      scale_y_continuous() + 
-      scale_x_continuous(expand = c(0,0)) 
-    
-    # reduction infection
-    p3 <- ggplot(tmp3, aes(x = AGEYRS)) + 
-      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
-      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
-      labs(x = 'Age', y = '% reduction in\nincidence in women', 
-           fill = '', col = '') + 
-      theme_bw() +
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_blank(), 
-            panel.grid.major.x = element_blank(), 
-            panel.grid.minor.x = element_blank(), 
-            legend.title = element_blank(), 
-            # legend.direction = 'vertical',
-            # axis.title.x = element_blank(), 
-            # axis.text.x = element_blank(), 
-            legend.position = 'none') +
-      scale_color_manual(values = cols) +
-      scale_fill_manual(values = cols) +
-      scale_y_continuous(labels = scales::percent, limits = c(0,0.80), expand = c(0,0)) + 
-      scale_x_continuous(expand = c(0,0)) 
-    
-    p4 <- ggplot(tmp6, aes(x = AGEYRS)) + 
-      geom_bar(aes(x = counterfactual_index, y = M, fill = LABEL_TARGET), stat = 'identity') + 
-      geom_errorbar(aes(x = counterfactual_index, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET)), alpha = 0.5, width = 0.15) + 
-      labs(x = '', y = '% reduction in\nincidence in women', 
-           fill = '', col = '') + 
-      theme_bw() +
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_blank(), 
-            panel.grid.major.x = element_blank(), 
-            panel.grid.minor.x = element_blank(), 
-            legend.title = element_blank(), 
-            axis.text.x = element_blank(), 
-            axis.title.x = element_blank(), 
-            axis.ticks.x = element_blank(), 
-            legend.position = 'none') +
-      scale_color_manual(values = cols) +
-      scale_fill_manual(values = cols) +
-      scale_y_continuous(labels = scales::percent, limits = c(0,0.65), expand = c(0,0)) 
-    
-    p3 <- ggarrange(p3, legend.grob = get_legend(p2), legend = 'bottom')
-    p2 <- p2 + theme(legend.position= 'none')
-    
-    p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, NA, 1), c(2, 2, 2), c(NA,3, 3), c(4, 4, 4)), 
-                      widths = c(0.01, 0.01, 0.95), heights = c(0.16, 0.16, 0.2, 0.34))
-    
-    file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_all_', communities[i], '.pdf')
-    ggsave(p, file = file, w = 5.5, h = 7.6)
-    
-  }
-}
-
-
-plot_counterfactual_relative_incidence_old2 <- function(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
-                                                   incidence_factual, incidence_counterfactual, outdir, only_participant= F){
-  
-  # restrict to one round
-  Round <- 'R018'
-  icf <- incidence_factual[ROUND == Round]
-  icc <- incidence_counterfactual[ROUND == Round & IS_MF == T]
-  rei <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
-  ecr <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
-
-  # sex label
-  icf[, SEX := 'Female']
-  icf[LABEL_DIRECTION == 'Female -> Male', SEX := 'Male']
-  
-  communities <- rei[, unique(COMM)]
-  cols <- c('#CC3636', '#F57328', '#367E18')
-  counterfactual_compared <- list(c(1,4,3), c(2,5,3))
-  
-  # label male
-  male_label = ''
-  if(only_participant) male_label = 'participants'
-  
-  for(i in seq_along(communities)){
-    for(j in 1:length(counterfactual_compared)){
-      Counterfactual <- counterfactual_compared[[j]]
-      
-      tmp <- rei[COMM == communities[i] & counterfactual_index %in% Counterfactual]
-      tmp1 <- ecr[COMM == communities[i] & counterfactual_index %in% Counterfactual]
-      tmp2 <- icf[COMM == communities[i]]
-      tmp3 <- icc[COMM == communities[i] & counterfactual_index %in% Counterfactual]
-      
-      # counterfactual label
-      counterfactual_label <- paste0('Counterfactual with higher ART\ncoverage among male ', male_label)
-      contributions <- spreaders[spreader_category %in% 1:2, sort(unique(label))]
-      artdiff <- noncomplier[ROUND == Round & COMM == communities[i] & spreader_category %in% 4:5, round(sort(unique(label), decreasing = T), 2)]
-      counterfactual_labels <- c(paste0('Males contributing to ', contributions, '% of transmissions'),
-                                 paste0('All male ', male_label), 
-                                 paste0('Males with ART coverage difference compared to\nfemale of at least ', artdiff))
-      counterfactual_labels_index <- c(1, 2, 4, 5, 3)
-      
-      tmp[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = counterfactual_labels[counterfactual_labels_index])]
-      tmp1[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = (counterfactual_labels[counterfactual_labels_index]))]
-      tmp3[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = (counterfactual_labels[counterfactual_labels_index]))]
-      
-      # percentage point increase
-      tmp1[, index_plot := which(Counterfactual == counterfactual_index), by = 'counterfactual_index']
-      p1 <- ggplot(tmp1, aes(x = AGEYRS)) + 
-        geom_step(aes(col = COUNTERFACTUAL_LABEL, y = INCREASE_ART_COVERAGE + 0.005*index_plot)) + 
-        labs(x = 'Age source', y = paste0('Percentage point increase in ART\ncoverage among male ', male_label), col = counterfactual_label) + 
-        theme_bw() +
-        theme(strip.background = element_rect(colour="white", fill="white"),
-              strip.text = element_text(size = rel(1)),
-              panel.grid.major.x = element_blank(), 
-              panel.grid.minor.x = element_blank(), 
-              legend.position = c(0.78, 0.76), 
-              legend.key.size = unit(0.4, 'cm'),
-              legend.direction = 'vertical', 
-              # legend.title = element_blank()
-        ) +
-        scale_color_manual(values = cols) +
-        scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
-        scale_x_continuous(expand = c(0,0)) 
-      
-      p2 <- ggplot() + 
-        geom_line(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = SEX), col = 'black') + 
-        geom_ribbon(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = SEX), alpha = 0.15) + 
-        geom_line(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, y = M, col = COUNTERFACTUAL_LABEL)) + 
-        geom_ribbon(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.15) + 
-        labs(x = 'Age', y = '\nHIV incidence infections', 
-             fill = counterfactual_label, col = counterfactual_label) + 
-        theme_bw() +
-        theme(strip.background = element_rect(colour="white", fill="white"),
-              strip.text = element_text(size = rel(1)),
-              panel.grid.major.x = element_blank(), 
-              panel.grid.minor.x = element_blank(), 
-              axis.title.x = element_blank(), 
-              # axis.text.x = element_blank(), 
-              legend.position = c(0.9, 0.86),
-              legend.title = element_blank()) +
-        scale_color_manual(values = cols) +
-        scale_fill_manual(values = cols) +
-        scale_y_continuous() + 
-        scale_x_continuous(expand = c(0,0)) +
-        guides(color = 'none', fill = 'none')
-
-      p3 <- ggplot(tmp, aes(x = AGEYRS)) + 
-        geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = COUNTERFACTUAL_LABEL)) + 
-        geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.5) + 
-        labs(x = 'Age', y = '% reduction in HIV incidence infections\namong female recipients', 
-             fill = counterfactual_label, col = counterfactual_label) + 
-        theme_bw() +
-        theme(strip.background = element_rect(colour="white", fill="white"),
-              strip.text = element_text(size = rel(1)),
-              panel.grid.major.x = element_blank(), 
-              panel.grid.minor.x = element_blank(), 
-              # axis.title.x = element_blank(), 
-              # axis.text.x = element_blank(), 
-              legend.position = 'none') +
-        scale_color_manual(values = cols) +
-        scale_fill_manual(values = cols) +
-        scale_y_continuous(labels = scales::percent, limits = c(0,1)) + 
-        scale_x_continuous(expand = c(0,0)) 
-
-      p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA, 1), c(NA, 2), c(3,3)), widths = c(0.02, 0.95), heights = c(0.33, 0.33, 0.33))
-      
-      file = paste0(outdir, '-output-counterfactual_incidence_panel_', j, '_', communities[i], '.png')
-      if(only_participant){
-        file = paste0(outdir, '-output-counterfactual_incidence_panel_', j, '_', 'only_participant', '_', communities[i], '.png')
-      }
-      ggsave(p, file = file, w = 8, h = 9)
-      
-      
-    }
-    
-    
-  }
-}
-
-plot_counterfactual_relative_incidence_old <- function(eligible_count_round.counterfactual, relative_incidence_counterfactual, 
-                                                   incidence_factual, incidence_counterfactual, outdir){
-  
-  # restrict to one round
-  Round <- 'R018'
-  icf <- incidence_factual[ROUND == Round]
-  icc <- incidence_counterfactual[ROUND == Round & IS_MF == T]
-  rei <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
-  ecr <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
-  
-  # sex label
-  icf[, SEX := 'Female']
-  icf[LABEL_DIRECTION == 'Female -> Male', SEX := 'Male']
-  
-  communities <- rei[, unique(COMM)]
-  cols <- c('#F08A5D', '#B83B5E', '#6A2C70')
-  
-  for(i in seq_along(communities)){
-    
-    tmp <- rei[COMM == communities[i]]
-    tmp1 <- ecr[COMM == communities[i]]
-    tmp2 <- icf[COMM == communities[i]]
-    tmp3 <- icc[COMM == communities[i]]
-    
-    # counterfactual label
-    counterfactual_label <- 'Counterfactual with higher ART\ncoverage among male sources'
-    
-    contributions <- spreaders[spreader_category %in% 1:2, sort(unique(label))]
-    artdiff <- noncomplier[ROUND == Round & COMM == communities[i] & spreader_category %in% 4:5, round(sort(unique(label))* 100)]
-    counterfactual_labels <- c(paste0('Male sources contributing to ', contributions, '% of transmissions'),
-                               'All male sources', 
-                               paste0('Males with ART coverage difference compared to female at least ', artdiff))
-    
-    tmp[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = counterfactual_labels)]
-    tmp1[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = (counterfactual_labels))]
-    tmp3[, COUNTERFACTUAL_LABEL := factor(counterfactual_labels[counterfactual_index], levels = (counterfactual_labels))]
-    
-    # percentage point increase
-    tmp1[is.na(spreader_category), spreader_category := 4]
-    tmp1 <- tmp1[!(spreader_category == 1 & counterfactual_index %in% 2:3) ]
-    tmp1 <- tmp1[!(spreader_category == 2 & counterfactual_index %in% 3) ]
-    
-    p1 <- ggplot(tmp1, aes(x = AGEYRS, y = INCREASE_ART_COVERAGE)) + 
-      geom_bar(aes(fill = COUNTERFACTUAL_LABEL), stat = 'identity', position = 'identity') + 
-      labs(x = 'Age source', y = 'Percentage point increase in ART\ncoverage among male sources', fill = counterfactual_label) + 
-      theme_bw() +
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            panel.grid.major.x = element_blank(), 
-            panel.grid.minor.x = element_blank(), 
-            legend.position = c(0.82, 0.78), 
-            legend.key.size = unit(0.4, 'cm'),
-            legend.direction = 'vertical', 
-            # legend.title = element_blank()
-      ) +
-      scale_fill_manual(values = cols) +
-      scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
-      scale_x_continuous(expand = c(0,0)) 
-    
-    p2 <- ggplot() + 
-      geom_line(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = SEX), col = 'black') + 
-      geom_ribbon(data = tmp2, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = SEX), alpha = 0.5) + 
-      geom_line(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, y = M, col = COUNTERFACTUAL_LABEL)) + 
-      geom_ribbon(data = tmp3, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.15) + 
-      labs(x = 'Age', y = '\nHIV incidence infections', 
-           fill = counterfactual_label, col = counterfactual_label) + 
-      theme_bw() +
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            panel.grid.major.x = element_blank(), 
-            panel.grid.minor.x = element_blank(), 
-            axis.title.x = element_blank(), 
-            # axis.text.x = element_blank(), 
-            legend.position = c(0.9, 0.86),
-            legend.title = element_blank()) +
-      scale_color_manual(values = cols) +
-      scale_fill_manual(values = cols) +
-      scale_y_continuous() + 
-      scale_x_continuous(expand = c(0,0)) +
-      guides(color = 'none', fill = 'none')
-    
-    p3 <- ggplot(tmp, aes(x = AGEYRS)) + 
-      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = COUNTERFACTUAL_LABEL)) + 
-      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, fill = COUNTERFACTUAL_LABEL), alpha = 0.5) + 
-      labs(x = 'Age', y = '% reduction in HIV incidence infections\namong female recipients', 
-           fill = counterfactual_label, col = counterfactual_label) + 
-      theme_bw() +
-      theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
-            panel.grid.major.x = element_blank(), 
-            panel.grid.minor.x = element_blank(), 
-            # axis.title.x = element_blank(), 
-            # axis.text.x = element_blank(), 
-            legend.position = 'none') +
-      scale_color_manual(values = cols) +
-      scale_fill_manual(values = cols) +
-      scale_y_continuous(labels = scales::percent, limits = c(0,1)) + 
-      scale_x_continuous(expand = c(0,0)) 
-    
-    p <- grid.arrange(p1, p2, p3, layout_matrix = rbind(c(NA, 1), c(NA, 2), c(3,3)), widths = c(0.02, 0.95), heights = c(0.33, 0.33, 0.33))
-    ggsave(p, file = paste0(outdir, '-output-counterfactual_incidence_', communities[i], '.png'), w = 8, h = 9)
-    
-  }
-}
-
 
 plot_NNT <- function(NNT, outdir){
   

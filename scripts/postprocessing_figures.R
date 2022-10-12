@@ -334,13 +334,17 @@ expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_l
 # identify the main spreaders, sources that contributes the most to incidence
 spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
 
-# counterfactual participant all treated comparison of targets
+# generate counterfactual when only participant are treated 
+# we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
+# in all scenario, the number of participants treated in the counterfactual are = number of participant sources that contribute to 1/3 incidence
 counterfactuals_p_a <- make_counterfactual_target(samples, spreaders, log_offset_round_95suppression_given_ART, stan_data,
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
                                            only_participant = T, art_up_to_female = F, outdir.table)
 plot_counterfactual_one(counterfactuals_p_a, eligible_count_round, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
-# counterfactual all males all treated comparison of targets
+# generate counterfactual when participants and non-participant are treated
+# we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
+# the number of male treated in the counterfactual are = number of male sources that contribute to 1/3 incidence
 counterfactuals_a_a <- make_counterfactual_target(samples, spreaders, log_offset_round_95suppression_given_ART, stan_data,
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
                                            only_participant = F, art_up_to_female = F, outdir.table)
@@ -353,25 +357,30 @@ plot_counterfactual_one(counterfactuals_a_a, eligible_count_round, incidence_fac
 
 cat("\nPlot relative incidence infection if different number of male are treated\n")
 
-# find categories of targeted males
+# in the previous counterfactual, we found that the most effective intervention is to
+# target male with greatest art diff compared to female
+# we now explore different number of age groups targeted in this scenario
+
+# males with greatest art diff compared to female stratified by categories
+# including more and more age groups until reaching all males
 targeted.males <- find_male_with_greatest_art_difference_category(eligible_count_round_95suppression_given_ART, outdir.table)
 
-only participant treated as much as female
+# generate counterfactual treating only participant treated as much as female are treated
 counterfactuals_s_p_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
                                            only_participant = T, art_up_to_female = T, outdir.table)
-# only participant all treated
+# generate counterfactual treating only participant 
 counterfactuals_s_p_a <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
                                              eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
                                              only_participant = T, art_up_to_female = F, outdir.table)
 plot_counterfactual(counterfactuals_s_p_f, counterfactuals_s_p_a, eligible_count_round_95suppression_given_ART,
                     incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
-# all male treated as much as female
+# generate counterfactual treating participant and non-participant treated as much as female
 counterfactuals_s_a_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
                                              eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
                                              only_participant = F, art_up_to_female = T, outdir.table)
-# all male all treated
+# generate counterfactual treating participant and non-participant 
 counterfactuals_s_a_a <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
                                              eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
                                              only_participant = F, art_up_to_female = F, outdir.table)
