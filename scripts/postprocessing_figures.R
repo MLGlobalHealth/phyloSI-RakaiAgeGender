@@ -63,6 +63,7 @@ source(file.path(indir, 'functions', 'summary_functions.R'))
 unsuppressed_share <- fread(file.unsuppressed.share)
 infected_share <- fread(file.prevalence.share)
 df_direction <- get.df.direction()
+df_period[, PERIOD := factor(PERIOD, levels = PERIOD)]
 
 #
 # offset
@@ -111,7 +112,6 @@ predict_z_recipient_round <- find_summary_output_by_round(samples, 'z_predict', 
 plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round, outfile.figures)
 predict_incidence_rate_round <- find_summary_output_by_round(samples, 'ir_predict', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                              names = c('INDEX_AGE_INFECTION.RECIPIENT', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
-
 plot_PPC_incidence_rate_round(predict_incidence_rate_round, incidence_cases_recipient_round,outfile.figures)
 
 # predicted observed transmission vs all transmission
