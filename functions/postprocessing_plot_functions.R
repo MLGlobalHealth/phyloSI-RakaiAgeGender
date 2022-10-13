@@ -1391,7 +1391,7 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
   budget.counterfactual <- counterfactuals_s_p_f$budget 
   budget.counterfactual[, label := label.f]
   
-  # number of male treated regardless by age
+  # number of male treated by age
   eligible_count_round.counterfactual <- counterfactuals_s_p_f$eligible_count_round.counterfactual
   eligible_count_round.counterfactual[, label := label.f]
   
@@ -1470,13 +1470,23 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
   # Clean and merge to target labels
   #
   
-  # format budget regardless of age and merge to target labels
+  # merge udget by by age to target labels
+  ecf[, INFECTED_SUPPRESSED := INFECTED - INFECTED_NON_SUPPRESSED]
+  ecf[, INFECTED_ALREADY_SUPPRESSED := INFECTED_SUPPRESSED - TREATED]
+  ecf <- ecf[, .(ROUND, SEX, AGEYRS, COMM, counterfactual_index, label, INFECTED_NON_SUPPRESSED, INFECTED_ALREADY_SUPPRESSED, TREATED)]
+  ecf <- melt.data.table(ecf, id.vars = c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label', 'counterfactual_index'))
+  ecf[, VARIABLE_LABEL := 'Already suppressed']
+  ecf[variable == 'TREATED', VARIABLE_LABEL := 'Treated with\nintervention']
+  ecf[variable == 'INFECTED_NON_SUPPRESSED', VARIABLE_LABEL := 'Unsuppressed']
+  ecf[, VARIABLE_LABEL := factor(VARIABLE_LABEL, levels = c('Unsuppressed', 'Already suppressed', 'Treated with\nintervention'))]
+  ecf <- merge(ecf, df_target, by = 'counterfactual_index')
+  
+  # format budget regardless of age, merge to target labels and add total number of unsuppressed in factual
   bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index'))
+  # bc <- ecf[, .(value = sum(value)), by = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index', 'VARIABLE_LABEL', 'variable')]
+  # bc <- merge(bc, tmp, by = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index'), allow.cartesian = T)
   bc <- merge(bc, df_target, by = 'counterfactual_index')
   bc[, lab := lab]
-  
-  # merge udget regardless by age to target labels
-  ecf <- merge(ecf, df_target, by = 'counterfactual_index')
   
   # merge incidence cases counterfactual by ageto target labels
   ic <- merge(incidence_counterfactual, df_target, by = 'counterfactual_index')
@@ -1499,47 +1509,49 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
       
       # budget by age group
       p <- ggplot(ecf.c, aes(x = AGEYRS)) +
-        geom_bar(aes(y = TREATED, fill = LABEL_TARGET), stat = 'identity') +  
+        geom_bar(aes(y = value, fill = VARIABLE_LABEL), stat = 'identity') +  
         facet_grid(LABEL_TARGET~label) + 
-        scale_fill_manual(values = cols) + 
         theme_bw() + 
-        labs(y = 'Number of male treated', x = 'Age') + 
+        labs(y = 'Number of male infected', x = 'Age', col = 'Male treated') + 
         theme(legend.title = element_blank(),
               legend.position = 'bottom',
               strip.background = element_rect(colour="white", fill="white"),
-              strip.text = element_text(size = rel(1)))
+              strip.text = element_text(size = rel(1))) + 
+        ggsci::scale_fill_jama()
       file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
-      ggsave(p, file = file, w = 7, h = 7)
+      ggsave(p, file = file, w = 7, h = 9)
       
       # budget regardless of age
-      p1 <- ggplot(bc.c, aes(x = 1)) + 
-        geom_bar(aes(fill = LABEL_TARGET, y = value), stat = 'identity', position = position_dodge(0.7), width = 0.6) + 
-        labs(x = '', y = paste0('Number of male\ntreated'), fill = '') + 
+      p1 <- ggplot(bc.c) + 
+        geom_bar(aes(y = value, x = LABEL_TARGET, fill = LABEL_TARGET), stat = 'identity') +  
+        labs(x = '', y = paste0('Additional number\nof men treated'), fill = '') + 
         theme_bw() +
+        facet_grid(.~label) +
         theme(strip.background = element_rect(colour="white", fill="white"),
               strip.text = element_text(size = rel(1)),
               panel.grid.major.x = element_blank(), 
               panel.grid.minor.x = element_blank(), 
               axis.ticks.x = element_blank(), 
               axis.text.x = element_blank(), 
+              # axis.text.x = element_text(angle = 90, hjust = 1),
               # legend.position = c(0.85, 0.83), 
               legend.key.size = unit(0.4, 'cm'),
-              legend.position = 'none', 
+              legend.position = c(0.9,0.9), 
               axis.title.x = element_blank(),
               legend.title = element_blank(), 
               panel.grid.minor.y = element_blank(), 
         ) +
         scale_fill_manual(values = cols) +
-        scale_y_continuous(expand = expansion(mult = c(0, .05))) +
-        facet_grid(.~label)
-      
+        guides(fill = 'none') + 
+        scale_y_continuous(expand = expansion(mult = c(0, .05))) 
+
       # incidence cases by age
       p2 <- ggplot(ic.c) + 
         geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.2) + 
         geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, linetype = 'No intervention\nRound 18'), alpha = 0.2) + 
         geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = 'No intervention\nRound 18'), col = 'black') +
         geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
-        labs(x = 'Age', y = 'Incidence cases\nin female') + 
+        labs(x = 'Age', y = 'Incidence cases\nin women') + 
         theme_bw() +
         theme(strip.background = element_rect(colour="white", fill="white"),
               strip.text = element_blank(), 
@@ -1559,7 +1571,7 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
       p3 <- ggplot(ric.c, aes(x = AGEYRS)) + 
         geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
         geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
-        labs(x = 'Age', y = '% reduction in incidence\nin female', 
+        labs(x = 'Age', y = '% reduction in\nincidence in women', 
              fill = '', col = '') + 
         theme_bw() +
         theme(strip.background = element_rect(colour="white", fill="white"),
@@ -1581,7 +1593,7 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
       p4 <- ggplot(ric.all.c, aes(x = AGEYRS)) + 
         geom_bar(aes(x = counterfactual_index, y = M, fill = LABEL_TARGET), stat = 'identity') + 
         geom_errorbar(aes(x = counterfactual_index, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET)), alpha = 0.5, width = 0.15) + 
-        labs(x = '', y = '% reduction in incidence\nin female (all ages)', 
+        labs(x = '', y = '% reduction in\nincidence in women', 
              fill = '', col = '') + 
         theme_bw() +
         theme(strip.background = element_rect(colour="white", fill="white"),
@@ -1604,8 +1616,8 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
       p3 <- ggarrange(p3, legend.grob = get_legend(p2), legend = 'bottom')
       p2 <- p2 + theme(legend.position= 'none')
 
-      p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, NA, 1), c(2, 2, 2), c(NA,3, 3), c(4, 4, 4)), 
-                        widths = c(0.017, 0.01, 0.95), heights = c(0.22, 0.18, 0.22, 0.30))
+      p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, 1, 1), c(2, 2, 2), c(NA,NA, 3), c(4, 4, 4)), 
+                        widths = c(0.015, 0.02, 0.95), heights = c(0.22, 0.18, 0.22, 0.30))
       
       # save
       file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.png')
