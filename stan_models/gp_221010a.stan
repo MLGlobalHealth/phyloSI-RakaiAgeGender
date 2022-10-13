@@ -135,6 +135,8 @@ transformed parameters {
   vector[N_PER_GROUP] lambda_latent_peryear[N_DIRECTION, N_COMMUNITY, max(N_ROUND)]; 
   vector[N_AGE] log_lambda_latent_recipient[N_DIRECTION, N_COMMUNITY, max(N_ROUND)]; 
   vector[N_AGE] log_lambda_latent_peryear_recipient[N_DIRECTION, N_COMMUNITY, max(N_ROUND)]; 
+  vector[N_AGE] ir_lognorm_mean[N_DIRECTION, N_COMMUNITY, max(N_ROUND)]; 
+  vector[N_AGE] ir_lognorm_sd[N_DIRECTION, N_COMMUNITY, max(N_ROUND)]; 
   vector[N_PER_GROUP] log_beta[N_DIRECTION, N_COMMUNITY, max(N_ROUND)];  
   vector[N_PER_GROUP] log_beta_direction_contrast[N_DIRECTION];
   vector[N_PER_GROUP] log_beta_period_contrast[N_DIRECTION,N_COMMUNITY];
@@ -194,6 +196,8 @@ transformed parameters {
           log_lambda_latent_peryear[i,j,k] = log_lambda_latent_peryear[i,j,k-1]; 
           lambda_latent_peryear[i,j,k] = lambda_latent_peryear[i,j,k-1]; 
           log_lambda_latent_peryear_recipient[i,j,k] = log_lambda_latent_peryear_recipient[i,j,k-1]; 
+          ir_lognorm_mean[i,j,k] = ir_lognorm_mean[i,j,k-1]; 
+          ir_lognorm_sd[i,j,k] = ir_lognorm_sd[i,j,k-1]; 
         }else{
           
           // add direction contrast
@@ -213,6 +217,8 @@ transformed parameters {
         log_lambda_latent_peryear[i,j,k] = log_beta[i,j,k] + log_offset[i,j,k] - log_offset_susceptible[i,j,k];
         lambda_latent_peryear[i,j,k] = exp(log_lambda_latent_peryear[i,j,k]);
         log_lambda_latent_peryear_recipient[i,j,k] = log(matrix_map_age_recipient * lambda_latent_peryear[i,j,k]) ;
+        ir_lognorm_mean[i,j,k] = log_lambda_latent_peryear_recipient[i,j,k] - sigma_r[i,j]^2 / 2;
+        ir_lognorm_sd[i,j,k] = log( ( (exp(sigma_r[i,j]^2)-1)*exp(2*ir_lognorm_mean[i,j,k] + sigma_r[i,j]^2) ) ./ (square(exp(log_lambda_latent_peryear_recipient[i,j,k]))) + 1);
         
         // lambda
         log_lambda_latent[i,j,k] = log_beta[i,j,k] + log_offset[i,j,k] + log_offset_time[i,j,k];
@@ -280,7 +286,7 @@ model {
           }
         }
 
-        ir[:,i,j,k] ~ lognormal(log_lambda_latent_peryear_recipient[i,j,k], sigma_r[i,j]);
+        ir[:,i,j,k] ~ lognormal(ir_lognorm_mean[i,j,k], ir_lognorm_sd[i,j,k]);
       }
       
       for (p in 1:N_PERIOD){
@@ -306,7 +312,7 @@ generated quantities{
             if(k > N_ROUND[j]){
               ir_predict[n,i,j,k] = ir_predict[n,i,j,k-1];
             } else{
-              ir_predict[n,i,j,k] = lognormal_rng(log_lambda_latent_peryear_recipient[i,j,k][n], sigma_r[i,j]);
+              ir_predict[n,i,j,k] = lognormal_rng(ir_lognorm_mean[i,j,k][n], ir_lognorm_sd[i,j,k][n]);
             }
           }
         }
@@ -317,7 +323,7 @@ generated quantities{
               z_predict[n,i,j,k] = z_predict[n,i,j,k-1];
             }else{
               z_predict[n,i,j,k] = poisson_log_rng(log_lambda_latent[i,j,k][n]);
-              log_lik[index] = lognormal_lpdf( ir[map_age_source[n],i,j,k] | log_lambda_latent_peryear_recipient[i,j,k][map_age_source[n]], sigma_r[i,j]) / N_AGE;
+              log_lik[index] = lognormal_lpdf( ir[map_age_source[n],i,j,k] | ir_lognorm_mean[i,j,k][map_age_source[n]], ir_lognorm_sd[i,j,k][map_age_source[n]]) / N_AGE;
               if(sampling_index_y[n,i,j,map_round_period[j,k]] != -1){
                 log_lik[index] += poisson_log_lpmf( y[n,i,j,map_round_period[j,k]] | log_lambda[i,j,map_round_period[j,k]][n] ) / N_ROUND_PER_PERIOD[j,map_round_period[j,k]];
               }
