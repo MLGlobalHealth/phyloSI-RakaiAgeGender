@@ -1475,11 +1475,13 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
   ecf[, INFECTED_ALREADY_SUPPRESSED := INFECTED_SUPPRESSED - TREATED]
   ecf <- ecf[, .(ROUND, SEX, AGEYRS, COMM, counterfactual_index, label, INFECTED_NON_SUPPRESSED, INFECTED_ALREADY_SUPPRESSED, TREATED)]
   ecf <- melt.data.table(ecf, id.vars = c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label', 'counterfactual_index'))
-  ecf[, VARIABLE_LABEL := 'Already suppressed']
-  ecf[variable == 'TREATED', VARIABLE_LABEL := 'Treated with\nintervention']
+  ecf[, VARIABLE_LABEL := 'Already\nsuppressed']
+  ecf[variable == 'TREATED', VARIABLE_LABEL := 'Became suppressed\nwith intervention']
   ecf[variable == 'INFECTED_NON_SUPPRESSED', VARIABLE_LABEL := 'Unsuppressed']
-  ecf[, VARIABLE_LABEL := factor(VARIABLE_LABEL, levels = c('Unsuppressed', 'Already suppressed', 'Treated with\nintervention'))]
+  ecf[, VARIABLE_LABEL := factor(VARIABLE_LABEL, levels = c('Unsuppressed', 'Became suppressed\nwith intervention', 'Already\nsuppressed'))]
+  ecf[, REDUCTION_UNSUPPRESSED := value[variable == 'INFECTED_NON_SUPPRESSED'] / (value[variable == 'INFECTED_NON_SUPPRESSED'] + value[variable == 'TREATED']), by= c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label', 'counterfactual_index')]
   ecf <- merge(ecf, df_target, by = 'counterfactual_index')
+  
   
   # format budget regardless of age, merge to target labels and add total number of unsuppressed in factual
   bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index'))
@@ -1519,6 +1521,20 @@ plot_counterfactual <- function(counterfactuals_s_p_f, counterfactuals_s_p_a, el
               strip.text = element_text(size = rel(1))) + 
         ggsci::scale_fill_jama()
       file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
+      ggsave(p, file = file, w = 7, h = 9)
+      
+      # reduction in unsuppressed
+      p <- ggplot(ecf.c, aes(x = AGEYRS)) +
+        geom_line(aes(y = 1 - REDUCTION_UNSUPPRESSED), stat = 'identity') +  
+        facet_grid(LABEL_TARGET~label) + 
+        theme_bw() + 
+        labs(y = '% reduction in number\nof unsuppressed', x = 'Age', col = 'Male treated') + 
+        theme(legend.title = element_blank(),
+              legend.position = 'bottom',
+              strip.background = element_rect(colour="white", fill="white"),
+              strip.text = element_text(size = rel(1))) +
+        scale_y_continuous(labels = scales::percent, limits = c(0,1), expand = c(0,0)) 
+      file = paste0(outdir, '-output-counterfactual_budget_reduction_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
       ggsave(p, file = file, w = 7, h = 9)
       
       # budget regardless of age
