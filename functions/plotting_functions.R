@@ -982,6 +982,38 @@ plot_incident_rates_over_time <- function(incidence_cases_round, eligible_count_
   ggsave(paste0(outdir, '-data-incidence_rate_round_sex.png'), w = 6.5, h = 3.2)
   ggsave(paste0(outdir, '-data-incidence_rate_round_sex.pdf'), w = 6.8, h = 3.2)
   
+  ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
+    geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
+    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
+    geom_point(data = median_age[COMM == 'inland'], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
+    labs(y = 'Incidence rate per 100 person-year\nin inland communities', x = 'Age') +
+    facet_wrap(.~LABEL_ROUND, nrow = 2) +
+    theme_bw() +
+    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"), 
+          legend.title = element_blank()) + 
+    scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
+    coord_cartesian(ylim= c(0, 2.1))
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland.pdf'), w = 8, h = 6)
+  
+  ggplot(tmp[COMM == 'fishing'], aes(x = AGEYRS)) +
+    geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
+    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
+    geom_point(data = median_age[COMM == 'fishing'], aes(y = 0.4, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
+    labs(y = 'Incidence rate per 100 person-year\nin fishing communities', x = 'Age') +
+    facet_grid(.~LABEL_ROUND, scale = 'free_y') +
+    theme_bw() +
+    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    theme(legend.position = 'bottom', 
+          strip.background = element_rect(colour="white", fill="white"), 
+          legend.title = element_blank()) + 
+    scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) 
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_fishing.pdf'), w = 8, h = 4)
   
   #
   # incidence rate relative to first round per person per round by 1-year age group
