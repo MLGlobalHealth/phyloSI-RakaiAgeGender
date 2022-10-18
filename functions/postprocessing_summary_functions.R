@@ -1068,7 +1068,7 @@ make_counterfactual <- function(samples, targeted.males, log_offset_round, stan_
     # find number of male treated under counterfactual
     selected_males <- merge(selected_males,  eligible_count_round.counterfactual[[i]][, .(ROUND, SEX, COMM, AGEYRS, TREATED)], by= c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
     budget[[i]] <- selected_males[, list(TREATED = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM')]
-    print(selected_males[TREATED < 0 & ROUND == 'R018'])
+    print(selected_males[TREATED < 0 & ROUND == 'R018']) # it is slighly negative for the fishing communities in older age group because the 5% of non-participation outweight the reduction in the proportion of unsuppressed
     
     # find offset under counterfactual
     log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]))
