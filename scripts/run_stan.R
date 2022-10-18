@@ -19,8 +19,8 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
-  jobname <- 'new_incidence'
-  stan_model <- 'gp_220911b'
+  jobname <- 'new_period'
+  stan_model <- 'gp_221017a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -66,6 +66,7 @@ if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 
 # indicators
 include.only.heterosexual.pairs <- T
+include.pairs.uncleardirection.disparateviralloads.complextopology <- F
 threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
 use.network.derived.infection.dates <- T
@@ -80,9 +81,11 @@ use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
 only.participant.treated <- F
+remove.pairs.from.rounds <- c('R017')
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
+file.path.pairs.uncleardirection.disparateviralloads.complextopology <- file.path(dirname(file.path.chains.data), 'pairs_uncleardirection_disparateviralloads_complextopology.rds')
 # file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.path.tsiestimates <- file.path(dirname(indir.deepsequence_analyses), 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_adjusted_TSI_with_estimated_dates.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
@@ -209,7 +212,9 @@ incidence_cases[, table(PERIOD, COMM)]
 meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
 
 # get likely transmission pairs
-chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
+chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs, 
+                                        include.pairs.uncleardirection.disparateviralloads.complextopology,
+                                        file.path.pairs.uncleardirection.disparateviralloads.complextopology)
 
 # merge meta data to source and recipient
 pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
@@ -247,7 +252,7 @@ if(use.network.derived.infection.dates)
 
         filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', filename)
 
-        out <- update.meta.pairs.after.doi.attribution(path=filename, outfile.figures)
+        out <- update.meta.pairs.after.doi.attribution(path=filename, outfile.figures, overwrite = F)
         stopifnot(nrow(meta_data) == nrow(out$meta_data))
         
 
@@ -314,6 +319,19 @@ if(only.transmission.same.community ){
   cat('Removing ', nrow(pairs.all[COMM.SOURCE != COMM.RECIPIENT]), ' pairs\n')
   pairs.all <- pairs.all[COMM.SOURCE == COMM.RECIPIENT]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
+}
+if(!is.null(remove.pairs.from.rounds)){
+  cat('\nExcluding pairs in inland community from round', remove.pairs.from.rounds, '\n')
+  tmp <- df_round_inland[round %in% remove.pairs.from.rounds, list(min_exclusion = min(min_sample_date), 
+                                                            max_exclusion = max(max_sample_date))]
+  cat('Removing ', nrow(pairs.all[COMM.RECIPIENT == 'inland' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ]]), ' pairs\n')
+  pairs.all <- pairs.all[!(COMM.RECIPIENT == 'inland' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ])]
+  
+  cat('\nExcluding pairs in fishing community from round', remove.pairs.from.rounds, '\n')
+  tmp <- df_round_fishing[round %in% remove.pairs.from.rounds, list(min_exclusion = min(min_sample_date), 
+                                                                   max_exclusion = max(max_sample_date))]
+  cat('Removing ', nrow(pairs.all[COMM.RECIPIENT == 'fishing' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ]]), ' pairs\n')
+  pairs.all <- pairs.all[!(COMM.RECIPIENT == 'fishing' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ])]
 }
 
 print.which.NA(pairs.all)
@@ -386,7 +404,7 @@ if(1){
   save_statistics_transmission_events(pairs, outdir.table)
   
   # plot incident rates and cases over time
-  plot_incident_cases_over_time(incidence_cases_round, participation, outdir)
+  plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
   plot_incident_rates_over_time(incidence_cases_round, eligible_count_round, outfile.figures, outdir.table)
   plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
     
