@@ -365,9 +365,7 @@ find.time.of.infection <- function(meta, time.since.infection, use.TSI.estimate)
   return(meta)
 }
 
-keep.likely.transmission.pairs <- function(dchain, threshold, 
-                                           include.pairs.uncleardirection.disparateviralloads.complextopology,
-                                           file.path.pairs.uncleardirection.disparateviralloads.complextopology)
+keep.likely.transmission.pairs <- function(dchain, threshold)
 {
   
   # keep pairs with a score greater than some threshold
@@ -378,23 +376,6 @@ keep.likely.transmission.pairs <- function(dchain, threshold,
   dchain[SCORE_DIR_12 > threshold, EST_DIR:='12']
   dchain[SCORE_DIR_21 > threshold, EST_DIR:='21']
   
-  # if include pairs with unclear direction, disparate viral loads and complex topology
-  if(include.pairs.uncleardirection.disparateviralloads.complextopology){
-    
-    dchain[, table(EST_DIR)]
-    dchain[, EST_DIR_ADD := F]
-    
-    pairs.keep <- data.table(readRDS(file.path.pairs.uncleardirection.disparateviralloads.complextopology))
-    N = nrow(pairs.keep)
-
-    for(i in 1:N){
-      dchain[H1 == pairs.keep[i, H1] & H2 == pairs.keep[i, H2] & PTY_RUN == pairs.keep[i, PTY_RUN], EST_DIR := pairs.keep[i, EST_DIR]]
-      dchain[H1 == pairs.keep[i, H1] & H2 == pairs.keep[i, H2] & PTY_RUN == pairs.keep[i, PTY_RUN], EST_DIR_ADD := T]
-    }
-    
-    dchain[, table(EST_DIR)]
-  }
-    
   # find source recipient
   dchain <- dchain[EST_DIR != 'unclear']
   dchain[, `:=` (SOURCE=H1, RECIPIENT=H2)]

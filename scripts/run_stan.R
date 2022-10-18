@@ -20,7 +20,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'new_period'
-  stan_model <- 'gp_221017a'
+  stan_model <- 'gp_221011a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -81,11 +81,10 @@ use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
 only.participant.treated <- F
-remove.pairs.from.rounds <- c('R017')
+remove.pairs.from.rounds <- NULL
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
-file.path.pairs.uncleardirection.disparateviralloads.complextopology <- file.path(dirname(file.path.chains.data), 'pairs_uncleardirection_disparateviralloads_complextopology.rds')
 # file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
 file.path.tsiestimates <- file.path(dirname(indir.deepsequence_analyses), 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_adjusted_TSI_with_estimated_dates.csv')
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
@@ -212,9 +211,7 @@ incidence_cases[, table(PERIOD, COMM)]
 meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
 
 # get likely transmission pairs
-chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs, 
-                                        include.pairs.uncleardirection.disparateviralloads.complextopology,
-                                        file.path.pairs.uncleardirection.disparateviralloads.complextopology)
+chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
 
 # merge meta data to source and recipient
 pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
