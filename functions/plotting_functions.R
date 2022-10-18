@@ -1268,8 +1268,11 @@ plot_pairs <- function(pairs, outdir)
             theme(axis.title.y = element_blank())
         }
         
-        p[[index]] <- ggExtra::ggMarginal(p[[index]], type = "histogram")
-        
+        if(nrow(tmp1) > 0){
+          p[[index]] <- ggExtra::ggMarginal(p[[index]], type = "histogram")
+          
+        }
+
         index=index + 1
         
       }
