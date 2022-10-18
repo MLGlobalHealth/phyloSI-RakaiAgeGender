@@ -1194,12 +1194,22 @@ find_counterfactual_unsuppressed_count <- function(targeted_males, eligible_coun
     
     if(only.participant.treated){ # baseline assumption
       # all participants are diagnosed and all non-participant are not diagnosed
-      df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s959595) + 
-           INFECTED * (1-PARTICIPATION) * 1]
+      if(!is.null(art_up_to_female)){
+        df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_M.COUNTERFACTUAL + 
+             INFECTED * (1-PARTICIPATION) * 1]
+      }else{
+        df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s959595) + 
+             INFECTED * (1-PARTICIPATION) * 1]
+      }
     }else{
       # participants and non-participants are diagnosed by the same proportion
-      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s959595) + 
-           INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_M]
+      if(!is.null(art_up_to_female)){
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  * PROP_UNSUPPRESSED_M.COUNTERFACTUAL + 
+             INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_M]
+      }else{
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s959595) + 
+             INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_M]
+      }
     }
     
   }else{
