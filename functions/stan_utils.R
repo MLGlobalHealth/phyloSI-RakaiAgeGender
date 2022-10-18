@@ -438,7 +438,11 @@ add_probability_sampling <- function(stan_data, proportion_sampling){
         # was the recipient sampled
         n_sampling_index[i, j, k] = log_prop_sampling[, sum(prop_sampling != 0.0001)]
         sampling_index[,i, j, k] = rep(-1, nrow(log_prop_sampling))
-        sampling_index[1:n_sampling_index[i, j, k], i, j, k]  = log_prop_sampling[, which(prop_sampling != 0.0001)]
+        
+        # if sampled add the probabilties (for some sensitivity analysis we removed some phylo pairs resulting in no pairs sampleds)
+        if(n_sampling_index[i, j, k] != 0){
+          sampling_index[1:n_sampling_index[i, j, k], i, j, k] = log_prop_sampling[, which(prop_sampling != 0.0001)]
+        }
       }
     }
   }

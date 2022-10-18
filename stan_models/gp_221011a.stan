@@ -285,7 +285,9 @@ model {
       }
       
       for (p in 1:N_PERIOD){
-        y[sampling_index_y[1:n_sampling_index_y[i,j,p],i,j,p],i,j,p] ~ poisson_log(log_lambda[i,j,p][sampling_index_y[1:n_sampling_index_y[i,j,p],i,j,p]]);
+        if(n_sampling_index_y[i,j,p] > 0){
+          y[sampling_index_y[1:n_sampling_index_y[i,j,p],i,j,p],i,j,p] ~ poisson_log(log_lambda[i,j,p][sampling_index_y[1:n_sampling_index_y[i,j,p],i,j,p]]);
+        }
       }
     }
   }
