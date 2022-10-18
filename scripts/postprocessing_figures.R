@@ -60,6 +60,7 @@ samples <- rstan::extract(fit)
 
 # temp
 source(file.path(indir, 'functions', 'summary_functions.R'))
+source(file.path(indir, 'functions', 'postprocessing_utils_functions.R'))
 unsuppressed_share <- fread(file.unsuppressed.share)
 infected_share <- fread(file.prevalence.share)
 df_direction <- get.df.direction()
@@ -366,26 +367,44 @@ cat("\nPlot relative incidence infection if different number of male are treated
 targeted.males <- find_male_with_greatest_art_difference_category(eligible_count_round_95suppression_given_ART, outdir.table)
 
 # generate counterfactual treating only participant treated as much as female are treated
-counterfactuals_s_p_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
+counterfactuals_p_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
-                                           only_participant = T, art_up_to_female = T, outdir.table)
-# generate counterfactual treating only participant 
-counterfactuals_s_p_a <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
+                                           only_participant = T, art_up_to_female = 1, s959595 = NULL, outdir.table)
+# generate counterfactual treating only participant treated half way to a much as female are treated
+counterfactuals_p_f05 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
                                              eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
-                                             only_participant = T, art_up_to_female = F, outdir.table)
-plot_counterfactual(counterfactuals_s_p_f, counterfactuals_s_p_a, eligible_count_round_95suppression_given_ART,
-                    incidence_factual, "Diagnosed unsuppressed", outfile.figures)
+                                             only_participant = T, art_up_to_female = 0.5, s959595 = NULL, outdir.table)
+# generate counterfactual treating only participant 95 95 95
+counterfactuals_p_959595 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
+                                             eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+                                             only_participant = T, art_up_to_female = NULL, s959595 = 1, outdir.table)
+# generate counterfactual treating only participant treated half way to 95 95 95
+counterfactuals_p_95959505 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
+                                             eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+                                             only_participant = T, art_up_to_female = NULL, s959595 = 0.5, outdir.table)
 
-# generate counterfactual treating participant and non-participant treated as much as female
-counterfactuals_s_a_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
+plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_p_959595, counterfactuals_p_95959505, 
+                    eligible_count_round_95suppression_given_ART, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
+
+# generate counterfactual treating all men treated as much as female are treated
+counterfactuals_a_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
+                                           eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+                                           only_participant = F, art_up_to_female = 1, s959595 = NULL, outdir.table)
+# generate counterfactual treating all men treated half way to a much as female are treated
+counterfactuals_a_f05 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
                                              eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
-                                             only_participant = F, art_up_to_female = T, outdir.table)
-# generate counterfactual treating participant and non-participant 
-counterfactuals_s_a_a <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                             eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
-                                             only_participant = F, art_up_to_female = F, outdir.table)
-plot_counterfactual(counterfactuals_s_a_f, counterfactuals_s_a_a, eligible_count_round_95suppression_given_ART, 
-                    incidence_factual, "Unsuppressed", outfile.figures)
+                                             only_participant = F, art_up_to_female = 0.5, s959595 = NULL, outdir.table)
+# generate counterfactual treating all men 95 95 95
+counterfactuals_a_959595 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
+                                                eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+                                                only_participant = F, art_up_to_female = NULL, s959595 = 1, outdir.table)
+# generate counterfactual treating all men treated half way to 95 95 95
+counterfactuals_a_95959505 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
+                                                  eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+                                                  only_participant = F, art_up_to_female = NULL, s959595 = 0.5, outdir.table)
+
+plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_a_959595, counterfactuals_a_95959505, 
+                    eligible_count_round_95suppression_given_ART, incidence_factual, "Unsuppressed", outfile.figures)
 
 
 #
