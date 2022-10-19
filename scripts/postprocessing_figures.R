@@ -11,7 +11,7 @@ library(lubridate)
 library(ggnewscale)
 
 jobname <- 'firstrun'
-stan_model <- 'gp_221002a'
+stan_model <- 'gp_221011a'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -321,12 +321,6 @@ incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_
                                                   log_offset_round = log_offset_round_95suppression_given_ART,
                                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 
-# find incidence under the factual scenario by sex
-incidence_factual_all <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'),
-                                                  transform = 'exp',
-                                                  log_offset_round = log_offset_round_95suppression_given_ART,
-                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
-
 # find age groups that contribute the most
 expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                                  transform = 'exp',
@@ -341,7 +335,7 @@ spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
 counterfactuals_p_a <- make_counterfactual_target(samples, spreaders, log_offset_round_95suppression_given_ART, stan_data,
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
                                            only_participant = T, art_up_to_female = F, outdir.table)
-plot_counterfactual_one(counterfactuals_p_a, eligible_count_round, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
+plot_counterfactual_one(counterfactuals_p_a, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
 # generate counterfactual when participants and non-participant are treated
 # we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
@@ -349,7 +343,7 @@ plot_counterfactual_one(counterfactuals_p_a, eligible_count_round, incidence_fac
 counterfactuals_a_a <- make_counterfactual_target(samples, spreaders, log_offset_round_95suppression_given_ART, stan_data,
                                            eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
                                            only_participant = F, art_up_to_female = F, outdir.table)
-plot_counterfactual_one(counterfactuals_a_a, eligible_count_round, incidence_factual, "Unsuppressed", outfile.figures)
+plot_counterfactual_one(counterfactuals_a_a, incidence_factual, "Unsuppressed", outfile.figures)
 
 
 #
@@ -384,7 +378,7 @@ counterfactuals_p_95959505 <- make_counterfactual(samples, targeted.males, log_o
                                              only_participant = T, art_up_to_female = NULL, s959595 = 0.5, outdir.table)
 
 plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_p_959595, counterfactuals_p_95959505, 
-                    eligible_count_round_95suppression_given_ART, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
+                    incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
 # generate counterfactual treating all men treated as much as female are treated
 counterfactuals_a_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
@@ -404,7 +398,7 @@ counterfactuals_a_95959505 <- make_counterfactual(samples, targeted.males, log_o
                                                   only_participant = F, art_up_to_female = NULL, s959595 = 0.5, outdir.table)
 
 plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_a_959595, counterfactuals_a_95959505, 
-                    eligible_count_round_95suppression_given_ART, incidence_factual, "Unsuppressed", outfile.figures)
+                    incidence_factual, "Unsuppressed", outfile.figures)
 
 
 #
