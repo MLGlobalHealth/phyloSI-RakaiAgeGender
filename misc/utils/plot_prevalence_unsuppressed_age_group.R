@@ -93,4 +93,13 @@ for(i in seq_along(communities)){
   ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_220930.pdf')), w = 8,h = 3.5)
 }
 
+# find statistics
+tmp1 <- tmp[COMM == 'inland' & ROUND == 'R018']
+tmp1 <- dcast.data.table(tmp1, SEX + AGE_GROUP ~ TYPE, value.var = 'M')
+tmp1[, UNSUPPRESSED_TO_PREVALENCE_RATIO := `HIV-positive with\nunsuppressed viral load` / `HIV prevalence` ]
+tmp2 <- tmp1[order(AGE_GROUP, SEX), .(AGE_GROUP, SEX, UNSUPPRESSED_TO_PREVALENCE_RATIO)]
+tmp2
 
+tmp1[, PREVALENCE_TO_UNSUPPRESSED_RATIO := `HIV prevalence` / `HIV-positive with\nunsuppressed viral load`  ]
+tmp2 <- tmp1[order(AGE_GROUP, SEX), .(AGE_GROUP, SEX, PREVALENCE_TO_UNSUPPRESSED_RATIO)]
+tmp2
