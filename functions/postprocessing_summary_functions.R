@@ -1047,9 +1047,9 @@ find_male_with_greatest_art_difference_category <- function(eligible_count_round
 
 make_counterfactual <- function(samples, targeted.males, log_offset_round, stan_data, 
                                 eligible_count_smooth, proportion_unsuppressed, proportion_prevalence, 
-                                only_participant = F, art_up_to_female = 1, s959595 = NULL, outdir){
+                                only_participant = F, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir){
   
-  stopifnot(is.null(art_up_to_female) | is.null(s959595)) 
+  stopifnot(is.null(art_up_to_female) + is.null(s959595) + is.null(s909090) == 2)
   
   # consider only all males
   targeted.males <- targeted.males[category == 3]
@@ -1066,7 +1066,7 @@ make_counterfactual <- function(samples, targeted.males, log_offset_round, stan_
     
     # find unsuppressed under counterfactual
     eligible_count_round.counterfactual[[i]] <- find_counterfactual_unsuppressed_count(copy(selected_males), copy(eligible_count_smooth), copy(proportion_unsuppressed), 
-                                                                                       copy(proportion_prevalence), stan_data, only_participant, art_up_to_female, s959595)
+                                                                                       copy(proportion_prevalence), stan_data, only_participant, art_up_to_female, s959595, s909090)
     
     # find number of male treated under counterfactual
     selected_males <- merge(selected_males,  eligible_count_round.counterfactual[[i]][, .(ROUND, SEX, COMM, AGEYRS, TREATED)], by= c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
@@ -1133,7 +1133,7 @@ make_counterfactual <- function(samples, targeted.males, log_offset_round, stan_
 
 find_counterfactual_unsuppressed_count <- function(targeted_males, eligible_count_smooth, 
                                                    proportion_unsuppressed, proportion_prevalence, stan_data, 
-                                                   only_participant = F, art_up_to_female = 1, s959595 = NULL){
+                                                   only_participant = F, art_up_to_female = 1, s959595 = NULL, s909090 = NULL){
   
   # find art coverage in female
   # (remember prop unsuppressed in art coverage for now)
@@ -1150,10 +1150,14 @@ find_counterfactual_unsuppressed_count <- function(targeted_males, eligible_coun
   if(!is.null(art_up_to_female)){
     # in the case where art coverage in male is set to be the same as in female
     proportion_unsuppressed.counterfactual[target == T, INCREASE_ART_COVERAGE := ((1 - PROP_UNSUPPRESSED_M.FEMALE) - (1 - PROP_UNSUPPRESSED_M ))*art_up_to_female ]
-  }else{
+  }else if(!is.null(s959595)){
     # in the case where art coverage in male is set to 95%
     proportion_unsuppressed.counterfactual[target == T, INCREASE_ART_COVERAGE := ((1 - 0.05) - (1 - PROP_UNSUPPRESSED_M ))*s959595 ]
+  }else{
+    # in the case where art coverage in male is set to 90%
+    proportion_unsuppressed.counterfactual[target == T, INCREASE_ART_COVERAGE := ((1 - 0.1) - (1 - PROP_UNSUPPRESSED_M ))*s909090 ]
   }
+  
   
   # in the counterfactual we assume that 95% of art user are unsuppressed (previously we assumed 100)
   # given diagnosed
@@ -1170,11 +1174,15 @@ find_counterfactual_unsuppressed_count <- function(targeted_males, eligible_coun
   proportion_unsuppressed.counterfactual[, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_M]
   if(!is.null(art_up_to_female)){
     # in the case where art coverage in male is set to be the same as in female
-    proportion_unsuppressed.counterfactual[target == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_M + (PROP_UNSUPPRESSED_M.FEMALE - PROP_UNSUPPRESSED_M)*art_up_to_female] 
-  } else{
+    proportion_unsuppressed.counterfactual[target == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_M.FEMALE] 
+  } else if(!is.null(s959595)){
     # in the case where art coverage in male is set to 95%
     # and 95% of art treated are unsuppressed
     proportion_unsuppressed.counterfactual[target == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL :=  1-0.95^2]
+  }else{
+    # in the case where art coverage in male is set to 90%
+    # and 90% of art treated are unsuppressed
+    proportion_unsuppressed.counterfactual[target == T, PROP_UNSUPPRESSED_M.COUNTERFACTUAL :=  1-0.90^2]
   }
   
   # recall the number of infected 
@@ -1199,42 +1207,65 @@ find_counterfactual_unsuppressed_count <- function(targeted_males, eligible_coun
     if(only.participant.treated){ # baseline assumption
       # all participants are diagnosed and all non-participant are not diagnosed
       if(!is.null(art_up_to_female)){
-        df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_M.COUNTERFACTUAL + 
+        df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*art_up_to_female) + 
+             INFECTED * (1-PARTICIPATION) * 1] 
+      }else if(!is.null(s959595)){
+        df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s959595) + 
              INFECTED * (1-PARTICIPATION) * 1]
       }else{
-        df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s959595) + 
+        df[target == T & SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s909090) + 
              INFECTED * (1-PARTICIPATION) * 1]
       }
     }else{
       # participants and non-participants are diagnosed by the same proportion
       if(!is.null(art_up_to_female)){
-        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  * PROP_UNSUPPRESSED_M.COUNTERFACTUAL + 
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  *  (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*art_up_to_female) + 
+             INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_M]
+      }else if(!is.null(s959595)){
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s959595) + 
              INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_M]
       }else{
-        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s959595) + 
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.COUNTERFACTUAL - PROP_UNSUPPRESSED_M)*s909090) + 
              INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_M]
       }
     }
     
   }else{
     
-    # 95% participants and non-participants are diagnosed, prop_unsuppressed becomes
+    # prop_diagnosed participants and non-participants are diagnosed, prop_unsuppressed becomes
     # prop_unsuppressed = 1 - prop_diagnosed * prop_art * prop_suppressed
     # in our code prop_art * prop_suppressed = 1 - PROP_UNSUPPRESSED_M.COUNTERFACTUAL
     
+
     if(!is.null(art_up_to_female)){
-      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  *  (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
-    }else{
-      df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL959595 := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
-      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL959595 - PROP_UNSUPPRESSED_M)*s959595) ]
-      set(df, NULL, 'PROP_UNSUPPRESSED_M.TOTAL959595', NULL)
+      # if all men diagnosed as female = 95%
+      df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+      # possibly to a certain percentage of this full scenario
+      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  *  (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*art_up_to_female)  ]
+    }else if(!is.null(s959595)){
+      # all men 95% diagnosed
+      df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+      # possibly to a certain percentage of this full scenario
+      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*s959595) ]
+    }else if(!is.null(s909090)){
+      # all men 90% diagnosed
+      df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.9 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+      # possibly to a certain percentage of this full scenario
+      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*s909090) ]
     }
+    set(df, NULL, 'PROP_UNSUPPRESSED_M.TOTAL', NULL)
   }
   
   df[target == F|SEX == 'F', INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL]
   
   # find difference in unsuppressed
   df[, TREATED := INFECTED_NON_SUPPRESSED.FACTUAL - INFECTED_NON_SUPPRESSED]
+  
+  # if treeated negtive then do not do the counterfactual
+  df[TREATED < 0, INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL]
+  df[TREATED < 0, PROP_UNSUPPRESSED_M.COUNTERFACTUAL :=  PROP_UNSUPPRESSED_M]
+  df[TREATED < 0, INCREASE_ART_COVERAGE := 0 ]
+  df[TREATED < 0, TREATED := INFECTED_NON_SUPPRESSED.FACTUAL - INFECTED_NON_SUPPRESSED]
   
   return(df)
 }
