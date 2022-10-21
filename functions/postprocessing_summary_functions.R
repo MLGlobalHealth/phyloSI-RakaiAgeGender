@@ -401,7 +401,7 @@ find_summary_output_by_round <- function(samples, output, vars,
   return(tmp1)
 }
 
-find_eligible_count_round_95suppression_given_ART <- function(eligible_count_smooth, proportion_prevalence, proportion_unsuppressed){
+find_eligible_count_round_95suppression_given_ART <- function(eligible_count_smooth, proportion_prevalence, proportion_unsuppressed, pa){
   
   eligible_count_round_95suppression_given_ART <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
   eligible_count_round_95suppression_given_ART[, ROUND := paste0('R0', ROUND)]
@@ -414,6 +414,11 @@ find_eligible_count_round_95suppression_given_ART <- function(eligible_count_smo
   # note that in our central def PROP_UNSUPPRESSED_M = prop_not_art
   # and we change it to PROP_UNSUPPRESSED_M = 1 - (1- prop_not_art) * 0.95
   tmp[, PROP_UNSUPPRESSED_M := 1 - (1-PROP_UNSUPPRESSED_M)*0.95 ]  
+  
+  # merge to participation (i.e., proporiton of census eligible population that participated)
+  pa <- pa[, .(ROUND, COMM, AGEYRS, SEX, PARTICIPATION)]
+  pa[, ROUND := paste0('R0', ROUND)]
+  tmp <- merge(tmp, pa, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
   tmp <- merge(eligible_count_round_95suppression_given_ART, tmp, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   if(only.participant.treated){
@@ -1123,6 +1128,9 @@ make_counterfactual <- function(samples, targeted.males, log_offset_round, stan_
   if(!is.null(s959595)){
     file <- paste0(file, '_959595', s959595)
   }
+  if(!is.null(s909090)){
+    file <- paste0(file, '_909090', s909090)
+  }
   file <- paste0(file, '.rds')
   
   saveRDS(counterfactuals, file)
@@ -1236,24 +1244,48 @@ find_counterfactual_unsuppressed_count <- function(targeted_males, eligible_coun
     # prop_unsuppressed = 1 - prop_diagnosed * prop_art * prop_suppressed
     # in our code prop_art * prop_suppressed = 1 - PROP_UNSUPPRESSED_M.COUNTERFACTUAL
     
-
-    if(!is.null(art_up_to_female)){
-      # if all men diagnosed as female = 95%
-      df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
-      # possibly to a certain percentage of this full scenario
-      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  *  (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*art_up_to_female)  ]
-    }else if(!is.null(s959595)){
-      # all men 95% diagnosed
-      df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
-      # possibly to a certain percentage of this full scenario
-      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*s959595) ]
-    }else if(!is.null(s909090)){
-      # all men 90% diagnosed
-      df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.9 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
-      # possibly to a certain percentage of this full scenario
-      df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*s909090) ]
+    if(only.participant.treated){ # baseline assumption
+      if(!is.null(art_up_to_female)){
+        # if all men diagnosed as female = 95%
+        df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+        # possibly to a certain percentage of this full scenario
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * PARTICIPATION *  (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*art_up_to_female) +
+             INFECTED  * (1-PARTICIPATION) *  (1 +  (PROP_UNSUPPRESSED_M.TOTAL - 1)*art_up_to_female)]
+      }else if(!is.null(s959595)){
+        # all men 95% diagnosed
+        df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+        # possibly to a certain percentage of this full scenario
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * PARTICIPATION* (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*s959595) +
+             INFECTED  * (1-PARTICIPATION) *  (1 +  (PROP_UNSUPPRESSED_M.TOTAL - 1)*s959595)]
+      }else if(!is.null(s909090)){
+        # all men 90% diagnosed
+        df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.9 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+        # possibly to a certain percentage of this full scenario
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * PARTICIPATION* (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*s909090) +
+             INFECTED  * (1-PARTICIPATION) *  (1 +  (PROP_UNSUPPRESSED_M.TOTAL - 1)*s909090)]
+      }
+      
+    }else{
+      if(!is.null(art_up_to_female)){
+        # if all men diagnosed as female = 95%
+        df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+        # possibly to a certain percentage of this full scenario
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  *  (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*art_up_to_female)  ]
+      }else if(!is.null(s959595)){
+        # all men 95% diagnosed
+        df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.95 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+        # possibly to a certain percentage of this full scenario
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*s959595) ]
+      }else if(!is.null(s909090)){
+        # all men 90% diagnosed
+        df[target == T& SEX == "M", PROP_UNSUPPRESSED_M.TOTAL := (1 - 0.9 * (1-PROP_UNSUPPRESSED_M.COUNTERFACTUAL))  ]
+        # possibly to a certain percentage of this full scenario
+        df[target == T& SEX == "M", INFECTED_NON_SUPPRESSED := INFECTED  * (PROP_UNSUPPRESSED_M +  (PROP_UNSUPPRESSED_M.TOTAL - PROP_UNSUPPRESSED_M)*s909090) ]
+      }
+      set(df, NULL, 'PROP_UNSUPPRESSED_M.TOTAL', NULL)
     }
-    set(df, NULL, 'PROP_UNSUPPRESSED_M.TOTAL', NULL)
+
+
   }
   
   df[target == F|SEX == 'F', INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL]

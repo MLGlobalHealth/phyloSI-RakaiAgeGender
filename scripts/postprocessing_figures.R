@@ -313,7 +313,7 @@ cat("\nPlot relative incidence infection if different groups of male are targete
 # we need to recalculate the number of infected unsuppressed with this new assumption 
 # and the log offset with this new assumption 
 # and define it as the factual scenario 
-eligible_count_round_95suppression_given_ART <- find_eligible_count_round_95suppression_given_ART(eligible_count_smooth, proportion_prevalence, proportion_unsuppressed)
+eligible_count_round_95suppression_given_ART <- find_eligible_count_round_95suppression_given_ART(eligible_count_smooth, proportion_prevalence, proportion_unsuppressed, participation)
 log_offset_round_95suppression_given_ART <- find_log_offset_by_round(stan_data, eligible_count_round_95suppression_given_ART)
 
 # find incidence under the factual scenario by sex and age

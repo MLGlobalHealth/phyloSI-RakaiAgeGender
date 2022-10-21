@@ -1516,23 +1516,23 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   
   budget.counterfactual <- do.call('rbind', list(budget.counterfactual, budget.counterfactual.f05, 
                                                  budget.counterfactual.959595, budget.counterfactual.909090))
-  budget.counterfactual[, label := factor(label, levels = c(label.f05, label.f, label.909090, label.959595))]
+  budget.counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
   eligible_count_round.counterfactual <-  do.call('rbind', list(eligible_count_round.counterfactual, eligible_count_round.counterfactual.f05,
                                                                 eligible_count_round.counterfactual.959595, eligible_count_round.counterfactual.909090))
-  eligible_count_round.counterfactual[, label := factor(label, levels = c(label.f05, label.f, label.909090, label.959595))]
+  eligible_count_round.counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
   relative_incidence_counterfactual <- do.call('rbind', list(relative_incidence_counterfactual, relative_incidence_counterfactual.f05,
                                                              relative_incidence_counterfactual.959595, relative_incidence_counterfactual.909090))
-  relative_incidence_counterfactual[, label := factor(label, levels = c(label.f05, label.f, label.909090, label.959595))]
+  relative_incidence_counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
   relative_incidence_counterfactual_all <- do.call('rbind', list(relative_incidence_counterfactual_all, relative_incidence_counterfactual_all.f05,
                                                                  relative_incidence_counterfactual_all.959595, relative_incidence_counterfactual_all.909090))
-  relative_incidence_counterfactual_all[, label := factor(label, levels = c(label.f05, label.f, label.909090, label.959595))]
+  relative_incidence_counterfactual_all[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
   incidence_counterfactual <- do.call('rbind', list(incidence_counterfactual, incidence_counterfactual.f05,
                                                     incidence_counterfactual.959595, incidence_counterfactual.909090))
-  incidence_counterfactual[, label := factor(label, levels = c(label.f05, label.f, label.909090, label.959595))]
+  incidence_counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
 
   #
@@ -1596,7 +1596,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   ric.all <- copy(relative_incidence_counterfactual_all)
   
   communities <- ric[, unique(COMM)]
-  cols <- c('#F1A661', '#C55300', '#749F82', '#425F57')
+  cols <- c('#F1A661', '#749F82','#C55300', '#425F57')
   
   for(i in seq_along(communities)){
     
@@ -1615,13 +1615,14 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       labs(y = 'Number of infected men', x = 'Age', col = 'Male treated') + 
       theme(legend.title = element_blank(),
             legend.position = 'bottom',
-            strip.background = element_rect(colour="white", fill="white")) + 
-      scale_fill_manual(values = c('grey50', cols[c(2,1,4,3)], 'grey80')) + 
+            strip.background = element_rect(colour="white", fill="white"), 
+            strip.text = element_blank()) + 
+      scale_fill_manual(values = c('grey50', cols[c(3,1,4,2)], 'grey80')) + 
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 6))
-    file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
-    ggsave(p, file = file, w = 4.5, h = 10)
+    file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    ggsave(p, file = file, w = 3.5, h = 8)
     
     # for the legend
     p <- ggplot(ecf.c, aes(x = AGEYRS)) +
@@ -1633,11 +1634,11 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
             legend.position = 'bottom',
             strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1))) + 
-      scale_fill_manual(values = c('grey50', cols[c(2,1,4,3)], 'grey80')) + 
+      scale_fill_manual(values = c('grey50', cols[c(3,1,4,2)], 'grey80')) + 
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 4))
-    file = paste0(outdir, '-output-counterfactual_budget_legend_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
+    file = paste0(outdir, '-output-counterfactual_budget_legend_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p, file = file, w = 7, h = 10)
     
     # reduction in unsuppressed
@@ -1659,7 +1660,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     # budget regardless of age
     p1 <- ggplot(bc.c) + 
       geom_bar(aes(y = value, x = label, fill = label), stat = 'identity') +  
-      labs(x = '', y = paste0('Additional number\nof men treated'), fill = '') + 
+      labs(x = '', y = paste0('Additional number\nof men suppressed'), fill = '') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
@@ -1751,8 +1752,8 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
                       widths = c(0.007, 0.022, 0.95), heights = c(0.15, 0.15, 0.2, 0.39))
     
     # save
-    file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.png')
-    ggsave(p, file = file, w = 6, h = 9)
+    file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    ggsave(p, file = file, w = 5.5, h = 9.5)
     
     
   }
