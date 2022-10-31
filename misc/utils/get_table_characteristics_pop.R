@@ -269,6 +269,7 @@ sequ <- as.data.table(readRDS(file.seq.count))
 
 ########################
 
+# merge all information
 tab <- merge(census, part, by = c('TYPE', 'COMM', 'ROUND'))
 tab <- merge(tab, hivp, by = c('TYPE', 'COMM', 'ROUND'))
 tab <- merge(tab, sartp, by = c('TYPE', 'COMM', 'ROUND'))
@@ -276,18 +277,30 @@ tab <- merge(tab, uns, by = c('TYPE', 'COMM', 'ROUND'), all.x = T)
 tab <- merge(tab, sequ, by = c('TYPE', 'COMM', 'ROUND'), all.x = T)
 tab[is.na(tab)] = 0
 
+# make factor for population categories
 tab[, unique(TYPE)]
 tab[, TYPE := factor(TYPE, levels = c('Total', 'Female', 'Female, 15-24', "Female, 25-34", "Female, 35-49", 
                                          "Male",  "Male, 15-24", "Male, 25-34", "Male, 35-49"))]
 tab <- tab[order(COMM, ROUND, TYPE)]
-tab[, ELIGIBLE := round(ELIGIBLE)]
 
+# check that the counts make sense (e.g., there cannot be more participant than census eligible)
 stopifnot(nrow(tab[ELIGIBLE  < PARTICIPANT ]) == 0)
 stopifnot(nrow(tab[PARTICIPANT  < HIV ]) == 0)
 stopifnot(nrow(tab[HIV  < SELF_REPORTED_ART ]) == 0)
 stopifnot(nrow(tab[HIV  < SEQUENCE ]) == 0)
 stopifnot(nrow(tab[HIV  < INFECTED_TESTED ]) == 0)
 
+# add comma thousands separator
+comma_thousands <- function(x) format(x, big.mark=",")
+tab[, ELIGIBLE := comma_thousands(ELIGIBLE)]
+tab[, PARTICIPANT := comma_thousands(PARTICIPANT)]
+tab[, HIV := comma_thousands(HIV)]
+tab[, INFECTED_TESTED := comma_thousands(INFECTED_TESTED)]
+tab[, SELF_REPORTED_ART := comma_thousands(SELF_REPORTED_ART)]
+tab[, UNSUPPRESSED := comma_thousands(UNSUPPRESSED)]
+tab[, SEQUENCE := comma_thousands(SEQUENCE)]
+
+# save
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
 saveRDS(tab, file.path(outdir, 'characteristics_study_population.rds'))
 
