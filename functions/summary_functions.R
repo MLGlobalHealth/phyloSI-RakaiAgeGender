@@ -186,7 +186,7 @@ add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppres
   return(df)
 }
 
-get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligible_count_round)
+get_incidence_cases_round <- function(incidence.inland, eligible_count_round)
 {
   
   # prepare incidence rates inland
@@ -198,18 +198,7 @@ get_incidence_cases_round <- function(incidence.inland, incidence.fishing, eligi
   inc.inland[, SEX := substring(SEX, 1, 1)]
   inc.inland <- inc.inland[ROUND >= 10]
   inc.inland[, ROUND := paste0('R0', as.character(ROUND))]
-  inc.inland <- inc.inland[, .(SEX, ROUND, AGEYRS, INCIDENCE, LB, UB, COMM)]
-  
-  # prepare incidence ratesfishing
-  inc.fishing <- copy(incidence.fishing)
-  colnames(inc.fishing) <- toupper(colnames(inc.fishing))
-  setnames(inc.fishing, 'AGE', 'AGEYRS')
-  inc.fishing[, COMM := 'fishing']
-  inc.fishing[, SEX := substring(SEX, 1, 1)]
-  setnames(inc.fishing, 'ROUND_LABEL', 'ROUND')
-  
-  # combine incident rates fishing and inland
-  incidence <- rbind(inc.inland, inc.fishing)
+  incidence <- inc.inland[, .(SEX, ROUND, AGEYRS, INCIDENCE, LB, UB, COMM)]
   
   if(0)
   {

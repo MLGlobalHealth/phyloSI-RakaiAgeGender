@@ -190,7 +190,7 @@ eligible_count_round[, table(ROUND, COMM)]
 #
 
 # by round
-incidence_cases_round <- get_incidence_cases_round(incidence.inland, incidence.fishing, eligible_count_round)
+incidence_cases_round <- get_incidence_cases_round(incidence.inland, eligible_count_round)
 incidence_cases_round[, table(ROUND, COMM)]
 
 # summarise by time period
