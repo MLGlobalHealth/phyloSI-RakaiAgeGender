@@ -47,12 +47,10 @@ make.time.since.infection <- function(DT)
 }
 
 make.df.period <- function(start_observational_period_inland, stop_observational_period_inland, 
-                           start_observational_period_fishing, stop_observational_period_fishing, 
                            cutoff_date)
 {
   ## make map for the two time periods 
   
-  # period in inland communities
   tmp_inland <- data.table(PERIOD = c(paste0(format(start_observational_period_inland, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
                                       paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period_inland, '%b %Y'))), 
                            BEFORE_CUTOFF = c(T, F), 
@@ -64,33 +62,17 @@ make.df.period <- function(start_observational_period_inland, stop_observational
                            MAX_PERIOD_DATE = c(cutoff_date, stop_observational_period_inland))
   stopifnot(tmp_inland[, sum(PERIOD_SPAN)] == .year.diff(stop_observational_period_inland, start_observational_period_inland))
   
-  # period in fishing communities
-  tmp_fishing <- data.table(PERIOD = c(paste0(format(start_observational_period_fishing, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
-                                      paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period_fishing, '%b %Y'))), 
-                           BEFORE_CUTOFF = c(T, F), 
-                           INDEX_TIME = 1:2, 
-                           PERIOD_SPAN = c(.year.diff(cutoff_date, start_observational_period_fishing), 
-                                           .year.diff(stop_observational_period_fishing, cutoff_date)), 
-                           COMM = 'fishing', 
-                           MIN_PERIOD_DATE = c(start_observational_period_fishing, cutoff_date),
-                           MAX_PERIOD_DATE = c(cutoff_date, stop_observational_period_fishing))
-  stopifnot(abs(tmp_fishing[, sum(PERIOD_SPAN)] - .year.diff(stop_observational_period_fishing, start_observational_period_fishing)) < 1e-15)
+
+  # make period a factor
+  tmp_inland[, PERIOD := factor(PERIOD, levels = PERIOD)]
   
-  # combine
-  tmp <- rbind(tmp_inland, tmp_fishing)
-  tmp[, PERIOD := factor(PERIOD, levels = PERIOD)]
-  
-  return(tmp)
+  return(tmp_inland)
 }
 
-make.df.round <- function(df_round_inland, df_round_fishing, df_period)
+make.df.round <- function(df_round_inland, df_period)
 {
   
   ## map for rounds 
-  
-  #
-  # for inland
-  #
   
   # define the time period corresponding to the rounds
   df_round_inland[, INDEX_TIME := 0]
@@ -111,40 +93,8 @@ make.df.round <- function(df_round_inland, df_round_fishing, df_period)
   df_round_inland[round == 'R016', max_sample_date := df_round_inland[round == 'R017', min_sample_date]]
   df_round_inland[round == 'R017', max_sample_date := df_round_inland[round == 'R018', min_sample_date]]
   
-  
-  #
-  # for fishing
-  #
-  
-  # define the time period corresponding to the rounds
-  df_round_fishing[, INDEX_TIME := 0]
-  df_round_fishing[round%in%paste0('R0',c(15,'15S')), INDEX_TIME := 1]
-  df_round_fishing[round %in% paste0('R0',16:18), INDEX_TIME := 2]
-  
-  # keep original min and max sample date
-  df_round_fishing[, max_sample_date_original := max_sample_date]
-  df_round_fishing[, min_sample_date_original := min_sample_date]
-  
-  # fill missing months by setting the max date of the round to the min of the next one
-  df_round_fishing[round == 'R015', min_sample_date := start_observational_period_fishing]
-  df_round_fishing[round == 'R015', max_sample_date := df_round_fishing[round == 'R015S', min_sample_date]]
-  df_round_fishing[round == 'R015S', max_sample_date := cutoff_date]
-  df_round_fishing[round == 'R016', min_sample_date := cutoff_date]
-  df_round_fishing[round == 'R016', max_sample_date := df_round_fishing[round == 'R017', min_sample_date]]
-  df_round_fishing[round == 'R017', max_sample_date := df_round_fishing[round == 'R018', min_sample_date]]
-  df_round_fishing[round == 'R018', max_sample_date := stop_observational_period_fishing]
-  
-  
-  #
-  # combine
-  #
-  
-  df_round_inland[, COMM := 'inland']
-  df_round_fishing[, COMM := 'fishing']
-  df_round <- rbind(df_round_inland, df_round_fishing)
-  
   # keep only rounds that correspond to time periods
-  df_round <- df_round[INDEX_TIME != '0']
+  df_round <- df_round_inland[INDEX_TIME != '0']
   df_round <- df_round[order(COMM, round)]
   
   # add index of rounds
@@ -226,6 +176,9 @@ add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppres
     df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PROP_UNSUPPRESSED_CL]
     df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PROP_UNSUPPRESSED_CU]
   }
+  
+  # merge to df round
+  df <- merge(df, unique(df_round[, .(COMM)]), by = c('COMM'))
   
   # rm unecessary variable
   df <- select(df, -c('PROP_UNSUPPRESSED_M', "PROP_UNSUPPRESSED_CL", "PROP_UNSUPPRESSED_CU", 'PARTICIPATION'))
@@ -1252,10 +1205,9 @@ get.df.direction <- function()
 
 get.df.community <- function()
 {
-    df_community <- data.table(INDEX_COMMUNITY = 1:2, COMM = c('fishing','inland'))
-    df_community[, LABEL_COMMUNITY := ifelse(COMM == 'inland', 'Inland communities', 'Fishing communities')]
-    df_community[, LABEL_COMMUNITY := factor(LABEL_COMMUNITY, levels = c('Inland communities', 'Fishing communities'))]
-    
+    df_community <- data.table(INDEX_COMMUNITY = 1, COMM = c('inland'))
+    df_community[, LABEL_COMMUNITY :='Inland communities']
+
   df_community
 }
 

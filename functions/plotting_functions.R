@@ -161,8 +161,6 @@ plot_hist_age_infection <- function(pairs, outdir = NULL)
 plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL)
 {
   
-  pairs <- copy(pairs.all)
-  
   # pairs[, COHORT_ROUND.SOURCE := substr(ROUND.SOURCE, 1, 4)]
   pairs[, COHORT_ROUND.RECIPIENT := substr(ROUND.RECIPIENT, 1, 4)]
   # pairs[, `Round source` := COHORT_ROUND.SOURCE]
@@ -195,24 +193,6 @@ plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL)
   file = paste0(outdir, '-data-hist_date_infection_inland.png')
   ggsave(p, file = file, w = 10.5, h = 9.5)
   
-  # fishing
-  tmp <- pairs[COMM.RECIPIENT == 'fishing']
-  tmp_round <- df_round[COMM == 'fishing']
-  p <- ggplot(tmp) +
-    geom_rect(data = tmp_round, aes(ymin = -Inf, ymax = Inf, xmin = MIN_SAMPLE_DATE, 
-                                    xmax = MAX_SAMPLE_DATE, fill = ROUND), alpha = 0.5) + 
-    geom_histogram(aes(x = DATE_INFECTION.RECIPIENT), bins = 100) +
-    facet_grid(Round_recipient~type) +
-    theme_bw() + 
-    labs(x = 'Date of infection recipient', y = 'Count of phylo pairs') + 
-    geom_vline(xintercept = cutoff_date, linetype = 'dashed') + 
-    scale_y_continuous(expand = expansion(mult = c(0, .05)))+ 
-    theme(strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)))  +
-    ggtitle('Fishing communities')
-  file = paste0(outdir, '-data-hist_date_infection_fishing.png')
-  ggsave(p, file = file, w = 10.5, h = 9.5)
-
   return(p)
 }
 
@@ -759,11 +739,11 @@ plot_offset <- function(stan_data, outdir)
 {
   
   tmp <- as.data.table(reshape2::melt(stan_data[['log_offset']] + stan_data[['log_offset_time']]))
-  setnames(tmp, 1:4, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
+  setnames(tmp, 1:3, c('INDEX_DIRECTION', 'INDEX_ROUND', 'INDEX_AGE'))
   tmp <- merge(tmp, df_direction, by = 'INDEX_DIRECTION')
-  tmp <- merge(tmp, df_community, by = 'INDEX_COMMUNITY')
-  tmp <- merge(tmp, df_round, by = c('INDEX_ROUND', 'COMM'))
+  tmp <- merge(tmp, df_round, by = c('INDEX_ROUND'))
   tmp <- merge(tmp, df_age, by = 'INDEX_AGE')
+  tmp <- merge(tmp, df_community, by = 'COMM')
 
   tmp1 <- tmp[, list(value = sum(exp(value))), by = c('AGE_INFECTION.RECIPIENT', 'LABEL_DIRECTION', 'LABEL_COMMUNITY', 'ROUND')]
   
@@ -998,22 +978,6 @@ plot_incident_rates_over_time <- function(incidence_cases_round, eligible_count_
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     coord_cartesian(ylim= c(0, 2.1))
   ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland.pdf'), w = 8, h = 6)
-  
-  ggplot(tmp[COMM == 'fishing'], aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
-    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
-    geom_point(data = median_age[COMM == 'fishing'], aes(y = 0.4, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
-    labs(y = 'Incidence rate per 100 person-year\nin fishing communities', x = 'Age') +
-    facet_grid(.~LABEL_ROUND, scale = 'free_y') +
-    theme_bw() +
-    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    theme(legend.position = 'bottom', 
-          strip.background = element_rect(colour="white", fill="white"), 
-          legend.title = element_blank()) + 
-    scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
-    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) 
-  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_fishing.pdf'), w = 8, h = 4)
   
   #
   # incidence rate relative to first round per person per round by 1-year age group

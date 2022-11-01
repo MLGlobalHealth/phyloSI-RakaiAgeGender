@@ -18,16 +18,20 @@ plot_2D_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
   
   if(all(c('ROUND', 'LABEL_DIRECTION', 'COMM') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION+COMM~ROUND)
+    w = 20
   }else if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+    w = 20
   }else if(all(c('COMM', 'LABEL_DIRECTION') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION~COMM)
+    w = 9
   }else if('LABEL_DIRECTION' %in% names(tmp)){
     p <- p + facet_grid(LABEL_DIRECTION~.)
+    w = 9
   }
   
   
-  ggsave(p, file = paste0(outdir, '-output-contrast_2D_', name, '.png'), w = 9, h = 9)
+  ggsave(p, file = paste0(outdir, '-output-contrast_2D_', name, '.png'), w = w, h = 9)
   
 } 
 
@@ -47,15 +51,19 @@ plot_source_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
 
   if(all(c('ROUND', 'LABEL_DIRECTION', 'COMM') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION+COMM~ROUND)
+    w = 20
   }else if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+    w = 20
   }else if(all(c('COMM', 'LABEL_DIRECTION') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION~COMM)
+    w = 9
   }else if('LABEL_DIRECTION' %in% names(tmp)){
     p <- p + facet_grid(LABEL_DIRECTION~.)
+    w = 9
   }
   
-  ggsave(p, file = paste0(outdir, '-output-contrast_source_', name, '.png'), w = 7, h = 7)
+  ggsave(p, file = paste0(outdir, '-output-contrast_source_', name, '.png'), w = w, h = 7)
   
 } 
 
@@ -75,15 +83,19 @@ plot_recipient_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
   
   if(all(c('ROUND', 'LABEL_DIRECTION', 'COMM') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION+COMM~ROUND)
+    w = 20
   }else if(all(c('ROUND', 'LABEL_DIRECTION') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION~ROUND)
+    w = 20
   }else if(all(c('COMM', 'LABEL_DIRECTION') %in% names(tmp))){
     p <- p + facet_grid(LABEL_DIRECTION~COMM)
+    w = 9
   }else if('LABEL_DIRECTION' %in% names(tmp)){
     p <- p + facet_grid(LABEL_DIRECTION~.)
+    w = 9
   }
   
-  ggsave(p, file = paste0(outdir, '-output-contrast_recipient_', name, '.png'), w = 7, h = 7)
+  ggsave(p, file = paste0(outdir, '-output-contrast_recipient_', name, '.png'), w = w, h = 7)
   
 } 
 
@@ -1614,7 +1626,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       theme_bw() + 
       labs(y = 'Number of infected men', x = 'Age', col = 'Male treated') + 
       theme(legend.title = element_blank(),
-            legend.position = 'bottom',
+            legend.position = 'non',
             strip.background = element_rect(colour="white", fill="white"), 
             strip.text = element_blank()) + 
       scale_fill_manual(values = c('grey50', cols[c(3,1,4,2)], 'grey80')) + 
@@ -1622,7 +1634,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 6))
     file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
-    ggsave(p, file = file, w = 3.5, h = 8)
+    ggsave(p, file = file, w = 3.9, h = 3.7)
     
     # for the legend
     p <- ggplot(ecf.c, aes(x = AGEYRS)) +
@@ -1748,13 +1760,22 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     p3 <- ggarrange(p3, legend.grob = get_legend(p2), legend = 'bottom')
     p2 <- p2 + theme(legend.position= 'none')
     
-    p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, 1, 1), c(2, 2, 2), c(NA,NA, 3), c(4, 4, 4)), 
+    p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, 1, 1), c(2, 2, 2), c(NA,NA, 3), c(4, 4, 4)),
                       widths = c(0.007, 0.022, 0.95), heights = c(0.15, 0.15, 0.2, 0.39))
-    
+
     # save
     file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p, file = file, w = 5.5, h = 9.5)
     
+    file = paste0(outdir, '-output-counterfactual_incidence_panel_plot1_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    ggsave(p1, file = file, w = 4, h = 1.85)
+
+    file = paste0(outdir, '-output-counterfactual_incidence_panel_plot2_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    ggsave(p4, file = file, w = 4, h = 1.85)
+    
+    p2 <- p2 + theme(axis.title.x = element_text())
+    file = paste0(outdir, '-output-counterfactual_incidence_panel_plot3_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    ggsave(p2, file = file, w = 4, h = 2.9)
     
   }
 }

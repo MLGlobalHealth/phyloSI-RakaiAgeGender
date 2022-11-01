@@ -32,10 +32,9 @@ if(length(args_line) > 0)
 }
 
 # load functions
-source(file.path(indir, 'functions', 'utils.R'))
-source(file.path(indir, 'functions', 'summary_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
+source(file.path(indir, 'functions', 'postprocessing_utils_functions.R'))
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
@@ -54,11 +53,13 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
+
 #
 ## convergence diagnostics 
 #
 
 make_convergence_diagnostics_stats(fit, samples, outdir.table)
+
 
 #
 # Trace plots
@@ -94,8 +95,6 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-pairs_plots.png'), w  = 8, h = 8
 add.vars = NULL
 if(length(dim(samples[['log_beta_period_contrast']])) == 3){
   add.vars = c('INDEX_DIRECTION', add.vars)
-}else if(length(dim(samples[['log_beta_period_contrast']])) == 4){
-  add.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', add.vars)
 }
 
 log_period_contrast <- find_summary_output(samples, 'log_beta_period_contrast', c(add.vars, 'INDEX_AGE'), names = c(add.vars, 'INDEX_AGE'))
@@ -114,42 +113,22 @@ plot_recipient_contrast(log_period_contrast_recipient, outfile.figures, paste0(d
 add.vars = 'INDEX_ROUND'
 if(length(dim(samples[['log_beta_round_contrast']])) == 4){
   add.vars = c('INDEX_DIRECTION', add.vars)
-}else if(length(dim(samples[['log_beta_round_contrast']])) == 5){
-  add.vars = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', add.vars)
 }
 
 log_round_contrast <- find_summary_output_by_round(samples, 'log_beta_round_contrast', c(add.vars, 'INDEX_AGE'),  names = c(add.vars, 'INDEX_AGE'))
 log_round_contrast <- remove_first_round(log_round_contrast)
 plot_2D_contrast(log_round_contrast, outfile.figures, paste0('Round contrast'), 'round')
 
-log_round_contrast_source <- find_summary_output(samples, 'log_beta_round_contrast', c(add.vars, 'AGE_TRANSMISSION.SOURCE'), 
+log_round_contrast_source <- find_summary_output_by_round(samples, 'log_beta_round_contrast', c(add.vars, 'AGE_TRANSMISSION.SOURCE'), 
                                                   names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
 log_round_contrast_source <- remove_first_round(log_round_contrast_source)
 plot_source_contrast(log_round_contrast_source, outfile.figures, 'Round constrast', 'round')
 
-log_round_contrast_recipient<- find_summary_output(samples, 'log_beta_round_contrast', c(add.vars, 'AGE_INFECTION.RECIPIENT'), 
+log_round_contrast_recipient<- find_summary_output_by_round(samples, 'log_beta_round_contrast', c(add.vars, 'AGE_INFECTION.RECIPIENT'), 
                                                     names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
 log_round_contrast_recipient <- remove_first_round(log_round_contrast_recipient)
 plot_recipient_contrast(log_round_contrast_recipient, outfile.figures, 'Round constrast', 'round')
 
-#
-# # community contrast
-if('log_beta_community_contrast' %in% names(samples)){
-  add.vars = NULL
-  if(length(dim(samples[['log_beta_community_contrast']])) == 3){
-    add.vars = 'INDEX_DIRECTION'
-  }
-  
-  log_community_contrast <- find_summary_output(samples, 'log_beta_community_contrast',  c(add.vars, 'INDEX_AGE'), names =  c(add.vars, 'INDEX_AGE'))
-  plot_2D_contrast(log_community_contrast, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
-  log_community_contrast_source <- find_summary_output(samples, 'log_beta_community_contrast', c(add.vars, 'AGE_TRANSMISSION.SOURCE'), 
-                                                       names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
-  plot_source_contrast(log_community_contrast_source, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
-  log_community_contrast_recipient<- find_summary_output(samples, 'log_beta_community_contrast', c(add.vars, 'AGE_INFECTION.RECIPIENT'), 
-                                                         names = c(add.vars, 'INDEX_AGE'), operation = 'mean')
-  plot_recipient_contrast(log_community_contrast_recipient, outfile.figures, paste0(df_community[INDEX_COMMUNITY == 1, LABEL_COMMUNITY], ' contrast'), 'community')
-  
-}
 
 
 cat("End of postprocessing_assess_mixing.R")

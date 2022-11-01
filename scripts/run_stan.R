@@ -20,7 +20,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'new_period'
-  stan_model <- 'gp_221011a'
+  stan_model <- 'gp_221101a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -80,8 +80,9 @@ only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
-only.participant.treated <- F
+only.participant.treated <- T
 remove.pairs.from.rounds <- NULL
+only.one.community <- 'inland'
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_analyses,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -129,7 +130,6 @@ dchain <- as.data.table(dchain)
 load(file.path.meta)
 load(file.path.round.timeline)
 df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
-df_round_fishing[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
 
 # load Tanya's estimate time since infection using phylogenetic data
 if(use.tsi.estimates)
@@ -149,13 +149,13 @@ proportion_unsuppressed <- fread(file.unsuppressed.prop)
 
 # load incidence estimates from Adam
 incidence.inland <- fread(file.incidence.inland)
-incidence.fishing <- fread(file.incidence.fishing)
 
 #for plots
 unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio) # sex ratio of unsuppression rate
 df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships)) # reported sexual contacts
 unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
 infected_share <- fread(file.prevalence.share) # share of infected count by sex
+
 
 #
 # Define start time, end time and cutoff
@@ -164,19 +164,14 @@ infected_share <- fread(file.prevalence.share) # share of infected count by sex
 start_observational_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
 stop_observational_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
 
-start_observational_period_fishing <- df_round_inland[round == 'R012', min_sample_date]
-stop_observational_period_fishing <- df_round_fishing[round == 'R018', max_sample_date] #  "2017-08-14"
-
 cutoff_date <- df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
 
 stopifnot(start_observational_period_inland <= cutoff_date & stop_observational_period_inland >= cutoff_date)
-stopifnot(start_observational_period_fishing <= cutoff_date & stop_observational_period_fishing >= cutoff_date)
 
 df_period <- make.df.period(start_observational_period_inland, stop_observational_period_inland, 
-                            start_observational_period_fishing, stop_observational_period_fishing, 
                             cutoff_date)
 
-df_round <- make.df.round(df_round_inland, df_round_fishing, df_period)
+df_round <- make.df.round(df_round_inland, df_period)
 
 
 #
@@ -282,15 +277,17 @@ if(remove.young.individuals){
 # plot time of infection
 plot_hist_time_infection(copy(pairs.all), cutoff_date, outfile.figures)
 
+if(!is.null(only.one.community)){
+  cat('\nExcluding sources and recipients in ',   pairs.all[COMM.RECIPIENT != only.one.community, unique(COMM.RECIPIENT)] ,'\n')
+  cat('Removing ', nrow(pairs.all[COMM.RECIPIENT != only.one.community]), ' pairs\n')
+  pairs.all <- pairs.all[COMM.RECIPIENT == only.one.community]
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
+}
 if(only.transmission.after.start.observational.period){
   cat('\nFor inland excluding recipients infected before ', as.character(start_observational_period_inland), '\n')
   cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT < start_observational_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
   pairs.all <- pairs.all[!(DATE_INFECTION.RECIPIENT < start_observational_period_inland & COMM.RECIPIENT == 'inland')]
-  
-  cat('\nFor fishing excluding recipients infected before ', as.character(start_observational_period_fishing), '\n')
-  cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT < start_observational_period_fishing & COMM.RECIPIENT == 'fishing']), ' pairs\n')
-  pairs.all <- pairs.all[!(DATE_INFECTION.RECIPIENT < start_observational_period_fishing & COMM.RECIPIENT == 'fishing')]
-  
+
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 
@@ -298,10 +295,6 @@ if(only.transmission.before.stop.observational.period){
   cat('\nFor inland excluding recipients infected after ', as.character(stop_observational_period_inland), '\n')
   cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT > stop_observational_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
   pairs.all <- pairs.all[!(DATE_INFECTION.RECIPIENT > stop_observational_period_inland & COMM.RECIPIENT == 'inland')]
-  
-  cat('\nFor fishing excluding recipients infected after ', as.character(stop_observational_period_fishing), '\n')
-  cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT > stop_observational_period_fishing & COMM.RECIPIENT == 'fishing']), ' pairs\n')
-  pairs.all <- pairs.all[!(DATE_INFECTION.RECIPIENT > stop_observational_period_fishing & COMM.RECIPIENT == 'fishing')]
   
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
@@ -334,21 +327,19 @@ if(!is.null(remove.pairs.from.rounds)){
 print.which.NA(pairs.all)
 print.statements.about.pairs(copy(pairs.all))
 
-# which base frequency files we have on the HPC
-# atm gives error: maybe TODO when I understand more about PHSC pipeline
-# missing_bff <- print.statements.about.basefreq.files(pairs.all)
-
-# keep only pairs with source-recipient with proxy for the time of infection
+# keep only pairs with source-recipient with a time of infection
 pairs <- pairs.all[!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPIENT)]
 pairs[, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT := DATE_INFECTION.RECIPIENT < cutoff_date]
 tab <- pairs[, list(count = .N), by = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT', 'SEX.RECIPIENT')]
 print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SEX.RECIPIENT)])
+
 
 #
 # Find probability of observing a transmissing event
 #
 
 proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures)
+
 
 #
 # PREPARE MAPS
@@ -381,6 +372,7 @@ stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_init <- add_init(stan_data)
+
 
 
 #

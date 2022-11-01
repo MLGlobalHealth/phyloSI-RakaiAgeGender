@@ -69,10 +69,10 @@ prepare_count_data <- function(stan_data){
   # merge to the maps
   
   tmp <- as.data.table(reshape2::melt(stan_data[['y']]))
-  setnames(tmp, 1:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
+  setnames(tmp, 1:3, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_TIME'))
   tmp <- merge(tmp, df_direction, by = 'INDEX_DIRECTION')
-  tmp <- merge(tmp, df_community, by = 'INDEX_COMMUNITY')
-  tmp <- merge(tmp, df_period, by = c('INDEX_TIME', 'COMM'))
+  tmp <- merge(tmp, df_period, by = c('INDEX_TIME'))
+  tmp <- merge(tmp, df_community, by = 'COMM')
   tmp <- merge(tmp, df_age, by = 'INDEX_AGE')
   
   setnames(tmp, 'value', 'count')

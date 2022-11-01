@@ -166,9 +166,9 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
   if(!is.null(names)){
     setnames(tmp1, 2:(length(names) + 1), names)
     }else if(tmp1[, max(Var2)] == df_age[, max(INDEX_AGE)]){
-    setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME'))
+    setnames(tmp1, 2:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_TIME'))
     }else{
-    setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_TIME', 'INDEX_AGE'))
+    setnames(tmp1, 2:4, c('INDEX_DIRECTION', 'INDEX_TIME', 'INDEX_AGE'))
   }
 
   if('INDEX_AGE' %in% names(tmp1)){
@@ -200,10 +200,10 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
   
   if('INDEX_DIRECTION' %in% vars)
     tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
-  if('INDEX_COMMUNITY' %in% vars)
-    tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
+  if('INDEX_TIME' %in% vars){
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME'))
+    tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  }
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   
@@ -231,9 +231,9 @@ find_summary_output_by_round <- function(samples, output, vars,
   if(!is.null(names)){
     setnames(tmp1, 2:(length(names) + 1), names)
   }else if(tmp1[, max(Var2)] == df_age[, max(INDEX_AGE)]){
-    setnames(tmp1, 2:5, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'))
+    setnames(tmp1, 2:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_ROUND'))
   }else{
-    setnames(tmp1, 2:5, c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'INDEX_AGE'))
+    setnames(tmp1, 2:4, c('INDEX_DIRECTION', 'INDEX_ROUND', 'INDEX_AGE'))
   }
   
   if('INDEX_AGE' %in% names(tmp1)){
@@ -253,14 +253,13 @@ find_summary_output_by_round <- function(samples, output, vars,
   }
   
   if('INDEX_ROUND' %in% names(tmp1)){
-    #  merge to map rounds and community
-    tmp <- merge(df_round, df_community, by = c('COMM'))
-    tmp1 <- merge(tmp1, tmp, by = c('INDEX_ROUND', 'INDEX_COMMUNITY'))
+    #  merge to map rounds 
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
   }
   
   if(!is.null(log_offset_round)){
     # add a log offset specified by the formula
-    tmp1 <- merge(tmp1, log_offset_round, by = c('ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'INDEX_DIRECTION', 'INDEX_COMMUNITY'))
+    tmp1 <- merge(tmp1, log_offset_round, by = c('ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'INDEX_DIRECTION'))
     tmp1[, value := value + eval(rlang::parse_expr(log_offset_formula))]
   }
   
@@ -308,10 +307,8 @@ find_summary_output_by_round <- function(samples, output, vars,
       setnames(tmp, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
     if('INDEX_DIRECTION' %in% vars)
       tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 1, INDEX_DIRECTION], df_direction[IS_MF == 0, INDEX_DIRECTION])]
-    if('INDEX_COMMUNITY' %in% vars)
-      tmp <- merge(tmp, df_community, by = 'COMM')
     if('INDEX_ROUND' %in% vars)
-      tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+      tmp <- merge(tmp, df_round, by = c('ROUND'))
     
     tmp <- tmp[,list(TOTAL_INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)), by = vars]
     
@@ -336,10 +333,8 @@ find_summary_output_by_round <- function(samples, output, vars,
       if('AGE_GROUP_INFECTION.RECIPIENT' %in% vars)
         tmp[, INDEX_DIRECTION := ifelse(SEX == 'M', df_direction[IS_MF == 0, INDEX_DIRECTION], df_direction[IS_MF == 1, INDEX_DIRECTION])]
     }
-    if('INDEX_COMMUNITY' %in% vars)
-      tmp <- merge(tmp, df_community, by = 'COMM')
     if('INDEX_ROUND' %in% vars)
-      tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
+      tmp <- merge(tmp, df_round, by = c('ROUND'))
     
     tmp <- tmp[,list(TOTAL_SUSCEPTIBLE = sum(SUSCEPTIBLE)), by = vars]
     
@@ -380,14 +375,16 @@ find_summary_output_by_round <- function(samples, output, vars,
   # merge by all the maps
   if('INDEX_DIRECTION' %in% vars)
     tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
-  if('INDEX_COMMUNITY' %in% vars)
-    tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  if('INDEX_ROUND' %in% vars)
-    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
+  if('INDEX_ROUND' %in% vars){
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
+    tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  }
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
-  if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
+  if('INDEX_TIME' %in% vars){
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME'))
+    tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  }
   
   if(save_output){
     file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')))
@@ -627,18 +624,18 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
     log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]))
     
     # find incidence counterfactual by age of the recipient
-    incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
+    incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                   transform = 'exp', 
                                                                   log_offset_round = log_offset_round.counterfactual, 
                                                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
                                                                   save_output = F)
     # find relative difference incidence  by age of the recipient
-    relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+    relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                                      log_offset_round, log_offset_round.counterfactual,
                                                                                      transform = 'exp')
     
     # find relative difference incidence 
-    relative_incidence_counterfactual_all[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'),
+    relative_incidence_counterfactual_all[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND'),
                                                                                          log_offset_round, log_offset_round.counterfactual,
                                                                                          transform = 'exp')
     
@@ -875,10 +872,10 @@ find_relative_incidence_counterfactual <- function(samples, output, vars, log_of
   
   if('INDEX_DIRECTION' %in% vars)
     tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
-  if('INDEX_COMMUNITY' %in% vars)
-    tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  if('INDEX_ROUND' %in% vars)
-    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
+  if('INDEX_ROUND' %in% vars){
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
+    tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  }
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   if('INDEX_TIME' %in% vars)
@@ -916,10 +913,10 @@ find_difference_incidence_counterfactual <- function(samples, output, vars, log_
   
   if('INDEX_DIRECTION' %in% vars)
     tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
-  if('INDEX_COMMUNITY' %in% vars)
-    tmp1 <- merge(tmp1, df_community, by = 'INDEX_COMMUNITY')
-  if('INDEX_ROUND' %in% vars)
-    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND', 'COMM'))
+  if('INDEX_ROUND' %in% vars){
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
+    tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  }
   if('INDEX_AGE' %in% vars)
     tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
   if('INDEX_TIME' %in% vars)
@@ -1082,18 +1079,18 @@ make_counterfactual <- function(samples, targeted.males, log_offset_round, stan_
     log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]))
     
     # find incidence counterfactual by age of the recipient
-    incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
+    incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                   transform = 'exp', 
                                                                   log_offset_round = log_offset_round.counterfactual, 
                                                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
                                                                   save_output = F)
     # find relative difference incidence  by age of the recipient
-    relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+    relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                                      log_offset_round, log_offset_round.counterfactual,
                                                                                      transform = 'exp')
     
     # find relative difference incidence 
-    relative_incidence_counterfactual_all[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'INDEX_ROUND'),
+    relative_incidence_counterfactual_all[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND'),
                                                                                          log_offset_round, log_offset_round.counterfactual,
                                                                                          transform = 'exp')
     
