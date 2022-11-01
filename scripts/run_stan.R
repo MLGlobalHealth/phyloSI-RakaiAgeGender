@@ -91,8 +91,8 @@ file.path.tsiestimates <- file.path(dirname(indir.deepsequence_analyses), 'PANGE
 file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
 
 # from EMODO_RAKAI repo
-file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_220930.csv")
-file.incidence.fishing	<- file.path(indir.deepsequencedata, 'RCCS_R15_R18', "Rakai_incpredictions_fishing_220930.csv")
+file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_221101.csv")
+file.incidence.samples.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_samples_inland_221101.csv")
 
 # from misc/
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
@@ -385,7 +385,7 @@ if(1){
   find_palette_round()
   
   # plot count eligible susceptible / infected / infected unsuppressed and incident cases
-  plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outfile.figures)
+  plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, outfile.figures)
   plot_data_by_period(incidence_cases, outfile.figures)
   
   # plot tansmission events over time
@@ -393,8 +393,9 @@ if(1){
   save_statistics_transmission_events(pairs, outdir.table)
   
   # plot incident rates and cases over time
+  incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
   plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
-  plot_incident_rates_over_time(incidence_cases_round, eligible_count_round, outfile.figures, outdir.table)
+  plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
   plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
     
   # plot offset

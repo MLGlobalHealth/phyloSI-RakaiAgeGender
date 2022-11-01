@@ -536,7 +536,7 @@ phsc.plot.transmission.network<- function(dchain, dc, pairs, outdir=NULL, point.
 }
 
 
-plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, proportion_prevalence, incidence_cases_round, outdir)
+plot_data_by_round <- function(eligible_count_round, proportion_unsuppressed, proportion_prevalence, outdir)
 {
   
   level_rounds <- c('R010', 'R011', 'R012', 'R013', 'R014', 'R015', 'R015S', 'R016', 'R017', 'R018')
@@ -917,7 +917,11 @@ plot_incident_cases_over_time <- function(incidence_cases_round, participation, 
 }
 
 
-plot_incident_rates_over_time <- function(incidence_cases_round, eligible_count_round, outdir, outdir.table){
+plot_incident_rates_over_time <- function(incidence_cases_round, 
+                                          incidence_rates_round.samples,
+                                          eligible_count_round,
+                                          outdir, outdir.table){
+  
   
   #
   # incidence rate per person per round
@@ -982,12 +986,12 @@ plot_incident_rates_over_time <- function(incidence_cases_round, eligible_count_
   #
   # incidence rate relative to first round per person per round by 1-year age group
   
-  N = 10000
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
+
   set.seed(12)
-  icr <- incidence_cases_round[, list(INCIDENCE.DRAW = exp(rnorm(N, log(INCIDENCE), (log(INCIDENCE) - log(LB)) / 1.96)), 
-                                      iterations = 1:N), by = c('COMM', 'ROUND', 'AGEYRS', 'SEX')]
+  icr <- copy(incidence_rates_round.samples)
+  rm(incidence_rates_round.samples)
   icr[COMM == 'fishing', REF.ROUND := 'R015']
   icr[COMM == 'inland', REF.ROUND := 'R010']
   icr[, INCIDENCE_REL := INCIDENCE.DRAW / INCIDENCE.DRAW[ROUND == REF.ROUND], by = c('COMM', 'AGEYRS', 'SEX', 'iterations')]
@@ -1164,8 +1168,9 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
     }
     
     p<-ggplot(tmp[INDEX_ROUND != min(INDEX_ROUND)]) + 
-      geom_hline(yintercept = 1, linetype = 'dashed', alpha = 0.5) + 
-      geom_vline(xintercept = 1, linetype = 'dashed', alpha = 0.5) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', alpha = 0.5) + 
+      # geom_hline(yintercept = 1, linetype = 'dashed', alpha = 0.5) + 
+      # geom_vline(xintercept = 1, linetype = 'dashed', alpha = 0.5) + 
       # geom_point(aes(col = ROUND_LABEL, shape = AGE_GROUP, x = UNSUPPRESSION_RATE_RATIO_BY_AGE_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       geom_point(aes(col = ROUND_LABEL, shape = age_group, x = UNSUPPRESSION_RATE_RATIO_RATIO_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_y_continuous(limits = c(NA,2)) + 

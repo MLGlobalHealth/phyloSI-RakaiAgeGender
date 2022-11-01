@@ -1255,3 +1255,27 @@ get.age.aggregated.map <- function(age_aggregated)
   return(df_age_aggregated)
 }
 
+load_incidence_rates_samples <- function(file.incidence.samples.inland){
+  
+  incidence_rates_round.samples <- as.data.table(read.csv(file.incidence.samples.inland))
+  incidence_rates_round.samples[,COMM := 'inland']
+  incidence_rates_round.samples[, SEX := substr(Sex,1,1)]
+  incidence_rates_round.samples[, ROUND := gsub('Round: (.+)', '\\1', ROUND)]
+  incidence_rates_round.samples[, ROUND := paste0('R0', ROUND)]
+  setnames(incidence_rates_round.samples, 'age', 'AGEYRS')
+  setnames(incidence_rates_round.samples, 'inc', 'INCIDENCE.DRAW')
+  
+  # iterations: iterations over 50 data with imputed date of infection
+  # iterations within: iterations within dataset of estimated incidence rate using MLE mean/sd and assuming normality
+  # subsample otherwise the memory is excausted
+  incidence_rates_round.samples <- incidence_rates_round.samples[iterations_within %in% 1:500]
+  incidence_rates_round.samples[, iterations := paste0(iterations, '-', iterations_within)]
+  
+  # keep var of interest
+  incidence_rates_round.samples <- incidence_rates_round.samples[, .(SEX, COMM, ROUND, AGEYRS, iterations, INCIDENCE.DRAW)]
+
+  # add rounds
+  incidence_rates_round.samples <- merge(incidence_rates_round.samples, df_round, by = c('ROUND', 'COMM'))
+  
+  return(incidence_rates_round.samples)
+}
