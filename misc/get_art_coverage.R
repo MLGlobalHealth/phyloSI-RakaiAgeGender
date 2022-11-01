@@ -53,7 +53,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   geom_line(aes(y = 1-PROP_UNSUPPRESSED_M, col = SEX_LABEL)) + 
   geom_ribbon(aes(ymin = 1-PROP_UNSUPPRESSED_CL, ymax = 1-PROP_UNSUPPRESSED_CU, fill = SEX_LABEL), alpha = 0.7) +
   facet_grid( ROUND_LABEL~COMM_LABEL) +
-  labs(x = 'Age', y = 'ART coverage among HIV-positive participants', col = '', fill = '') +
+  labs(x = 'Age', y = 'Proportion of unsuppressed among HIV-positive participants', col = '', fill = '') +
   theme_bw() +
   scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
   scale_color_manual(values = c('Male'='royalblue3','Female'='deeppink')) + 

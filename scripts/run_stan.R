@@ -20,8 +20,8 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
-  jobname <- 'new_incidence'
-  stan_model <- 'gp_220911b'
+  jobname <- 'new_period'
+  stan_model <- 'gp_221101a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -69,10 +69,11 @@ if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 
 # indicators
 include.only.heterosexual.pairs <- T
+include.pairs.uncleardirection.disparateviralloads.complextopology <- F
 threshold.likely.connected.pairs <- 0.5
 use.tsi.estimates <- F
-use.network.derived.infection.dates <- F
-use.tsi.oneyear.before.first.positive <- T
+use.network.derived.infection.dates <- T
+use.tsi.oneyear.before.first.positive <- F
 remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
 remove.missing.community.recipient <- T
@@ -82,7 +83,9 @@ only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
-only.participant.treated <- F
+only.participant.treated <- T
+remove.pairs.from.rounds <- NULL
+only.one.community <- 'inland'
 
 # file paths
 file.path.chains.data <- file.path(indir.deepsequence_xiaoyue,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
@@ -115,7 +118,6 @@ source(file.path(indir, 'functions', 'summary_functions.R'))
 source(file.path(indir, 'functions', 'plotting_functions.R'))
 source(file.path(indir, 'functions', 'statistics_functions.R'))
 source(file.path(indir, 'functions', 'stan_utils.R'))
-source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 
 # check args
 stopifnot( use.tsi.estimates + use.network.derived.infection.dates + use.tsi.oneyear.before.first.positive == 1)
@@ -131,11 +133,10 @@ dchain <- as.data.table(dchain)
 load(file.path.meta)
 load(file.path.round.timeline)
 df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
-df_round_fishing[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
 
 # load Tanya's estimate time since infection using phylogenetic data
 if(use.tsi.estimates)
-        time.since.infection <- make.time.since.infection2(fread(file.path.tsiestimates))
+        time.since.infection <- make.time.since.infection(fread(file.path.tsiestimates))
 
 # load census eligible ount
 eligible_count_smooth <- fread(file.eligible.count)
@@ -151,11 +152,12 @@ proportion_unsuppressed <- fread(file.unsuppressed.prop)
 
 # load incidence estimates from Adam
 incidence.inland <- fread(file.incidence.inland)
-incidence.fishing <- fread(file.incidence.fishing)
 
 #for plots
-unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio)
-df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships))
+unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio) # sex ratio of unsuppression rate
+df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships)) # reported sexual contacts
+unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
+infected_share <- fread(file.prevalence.share) # share of infected count by sex
 
 
 #
@@ -165,19 +167,14 @@ df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships))
 start_observational_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
 stop_observational_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
 
-start_observational_period_fishing <- df_round_inland[round == 'R012', min_sample_date]
-stop_observational_period_fishing <- df_round_fishing[round == 'R018', max_sample_date] #  "2017-08-14"
-
 cutoff_date <- df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
 
 stopifnot(start_observational_period_inland <= cutoff_date & stop_observational_period_inland >= cutoff_date)
-stopifnot(start_observational_period_fishing <= cutoff_date & stop_observational_period_fishing >= cutoff_date)
 
 df_period <- make.df.period(start_observational_period_inland, stop_observational_period_inland, 
-                            start_observational_period_fishing, stop_observational_period_fishing, 
                             cutoff_date)
 
-df_round <- make.df.round(df_round_inland, df_round_fishing, df_period)
+df_round <- make.df.round(df_round_inland, df_period)
 
 
 #
@@ -190,17 +187,13 @@ eligible_count_round <- add_susceptible_infected(eligible_count_smooth, proporti
 eligible_count_round <- add_infected_unsuppressed(eligible_count_round, proportion_unsuppressed, participation, only.participant.treated)
 eligible_count_round[, table(ROUND, COMM)]
 
-# summarise by time period
-eligible_count <- summarise_eligible_count_period(eligible_count_round, cutoff_date, df_period)
-eligible_count[, table(PERIOD, COMM)]
-
 
 #
 # Find incidence cases
 #
 
 # by round
-incidence_cases_round <- get_incidence_cases_round(incidence.inland, incidence.fishing, eligible_count_round)
+incidence_cases_round <- get_incidence_cases_round(incidence.inland, eligible_count_round)
 incidence_cases_round[, table(ROUND, COMM)]
 
 # summarise by time period
@@ -254,7 +247,7 @@ if(use.network.derived.infection.dates)
 
         filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', filename)
 
-        out <- update.meta.pairs.after.doi.attribution(path=filename, outfile.figures)
+        out <- update.meta.pairs.after.doi.attribution(path=filename, outfile.figures, overwrite = F)
         stopifnot(nrow(meta_data) == nrow(out$meta_data))
         
 
@@ -287,15 +280,17 @@ if(remove.young.individuals){
 # plot time of infection
 plot_hist_time_infection(copy(pairs.all), cutoff_date, outfile.figures)
 
+if(!is.null(only.one.community)){
+  cat('\nExcluding sources and recipients in ',   pairs.all[COMM.RECIPIENT != only.one.community, unique(COMM.RECIPIENT)] ,'\n')
+  cat('Removing ', nrow(pairs.all[COMM.RECIPIENT != only.one.community]), ' pairs\n')
+  pairs.all <- pairs.all[COMM.RECIPIENT == only.one.community]
+  cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
+}
 if(only.transmission.after.start.observational.period){
   cat('\nFor inland excluding recipients infected before ', as.character(start_observational_period_inland), '\n')
   cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT < start_observational_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
   pairs.all <- pairs.all[!(DATE_INFECTION.RECIPIENT < start_observational_period_inland & COMM.RECIPIENT == 'inland')]
-  
-  cat('\nFor fishing excluding recipients infected before ', as.character(start_observational_period_fishing), '\n')
-  cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT < start_observational_period_fishing & COMM.RECIPIENT == 'fishing']), ' pairs\n')
-  pairs.all <- pairs.all[!(DATE_INFECTION.RECIPIENT < start_observational_period_fishing & COMM.RECIPIENT == 'fishing')]
-  
+
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 
@@ -303,10 +298,6 @@ if(only.transmission.before.stop.observational.period){
   cat('\nFor inland excluding recipients infected after ', as.character(stop_observational_period_inland), '\n')
   cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT > stop_observational_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
   pairs.all <- pairs.all[!(DATE_INFECTION.RECIPIENT > stop_observational_period_inland & COMM.RECIPIENT == 'inland')]
-  
-  cat('\nFor fishing excluding recipients infected after ', as.character(stop_observational_period_fishing), '\n')
-  cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT > stop_observational_period_fishing & COMM.RECIPIENT == 'fishing']), ' pairs\n')
-  pairs.all <- pairs.all[!(DATE_INFECTION.RECIPIENT > stop_observational_period_fishing & COMM.RECIPIENT == 'fishing')]
   
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
@@ -322,25 +313,36 @@ if(only.transmission.same.community ){
   pairs.all <- pairs.all[COMM.SOURCE == COMM.RECIPIENT]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
+if(!is.null(remove.pairs.from.rounds)){
+  cat('\nExcluding pairs in inland community from round', remove.pairs.from.rounds, '\n')
+  tmp <- df_round_inland[round %in% remove.pairs.from.rounds, list(min_exclusion = min(min_sample_date), 
+                                                            max_exclusion = max(max_sample_date))]
+  cat('Removing ', nrow(pairs.all[COMM.RECIPIENT == 'inland' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ]]), ' pairs\n')
+  pairs.all <- pairs.all[!(COMM.RECIPIENT == 'inland' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ])]
+  
+  cat('\nExcluding pairs in fishing community from round', remove.pairs.from.rounds, '\n')
+  tmp <- df_round_fishing[round %in% remove.pairs.from.rounds, list(min_exclusion = min(min_sample_date), 
+                                                                   max_exclusion = max(max_sample_date))]
+  cat('Removing ', nrow(pairs.all[COMM.RECIPIENT == 'fishing' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ]]), ' pairs\n')
+  pairs.all <- pairs.all[!(COMM.RECIPIENT == 'fishing' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ])]
+}
 
 print.which.NA(pairs.all)
 print.statements.about.pairs(copy(pairs.all))
 
-# which base frequency files we have on the HPC
-# atm gives error: maybe TODO when I understand more about PHSC pipeline
-# missing_bff <- print.statements.about.basefreq.files(pairs.all)
-
-# keep only pairs with source-recipient with proxy for the time of infection
+# keep only pairs with source-recipient with a time of infection
 pairs <- pairs.all[!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPIENT)]
 pairs[, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT := DATE_INFECTION.RECIPIENT < cutoff_date]
 tab <- pairs[, list(count = .N), by = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT', 'SEX.RECIPIENT')]
 print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SEX.RECIPIENT)])
+
 
 #
 # Find probability of observing a transmissing event
 #
 
 proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures)
+
 
 #
 # PREPARE MAPS
@@ -361,14 +363,19 @@ df_community <- get.df.community()
 
 stan_data <- add_stan_data_base()
 stan_data <- add_phylo_data(stan_data, pairs)
+stan_data <- add_incidence_cases(stan_data, incidence_cases_round)
+stan_data <- add_incidence_rates(stan_data, incidence_cases_round)
+stan_data <- add_incidence_rates_lognormal_parameters(stan_data, incidence_cases_round)
+stan_data <- add_offset(stan_data, eligible_count_round)
+stan_data <- add_offset_time(stan_data, eligible_count_round)
+stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
+stan_data <- add_probability_sampling(stan_data, proportion_sampling)
 stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 6, n_knots_columns = 6,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
-stan_data <- add_incidence_cases(stan_data, incidence_cases_round)
-stan_data <- add_offset(stan_data, eligible_count_round)
-stan_data <- add_probability_sampling(stan_data, proportion_sampling)
 stan_init <- add_init(stan_data)
+
 
 
 #
@@ -376,6 +383,7 @@ stan_init <- add_init(stan_data)
 #
 
 if(1){
+  
   # find color palette of rounds
   find_palette_round()
   
@@ -387,15 +395,15 @@ if(1){
   plot_transmission_events_over_time(pairs, outfile.figures)
   save_statistics_transmission_events(pairs, outdir.table)
   
-  # plot incident cases over time
-  plot_incident_cases_over_time(incidence_cases_round, outfile.figures)
-  plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures)
+  # plot incident rates and cases over time
+  plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
+  plot_incident_rates_over_time(incidence_cases_round, eligible_count_round, outfile.figures, outdir.table)
+  plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
     
   # plot offset
   plot_offset(stan_data, outfile.figures)
   
   # plot pair from chains
-  # plot_pairs_infection_dates(pairs.all, outfile.figures)
   # phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outfile, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
   plot_hist_age_infection(copy(pairs), outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)
