@@ -186,7 +186,7 @@ if(1){
   # plot
   p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'Age', y = 'Count newly registered HIV-positive participants', fill = 'Self-reported ART use') +
+    labs(x = 'Age', y = 'Count newly registered HIV-positive newly registered participants', fill = 'Self-reported ART use') +
     facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
@@ -376,7 +376,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   theme(legend.position = 'bottom',
         strip.background = element_rect(colour="white", fill="white"),
         strip.text = element_text(size = rel(1))) +
-  labs(x = 'Age', y = 'Self-reported ART coverage among participants') + 
+  labs(x = 'Age', y = 'Self-reported ART coverage among newly registered participants') + 
   scale_y_continuous(labels = scales::percent, limits= c(0,1))
 ggsave(file=file.path(outdir, paste0('smooth_artcoverage_newlyregistered_221101.png')), w=8, h=8)
 

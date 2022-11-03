@@ -165,7 +165,7 @@ if(1){
   # plot
   p <- ggplot(tmp, aes(x = AGE_LABEL, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'Age', y = 'Count HIV-positive participants', fill = 'Viral load') +
+    labs(x = 'Age', y = 'Count HIV-positive newly registered participants', fill = 'Viral load') +
     facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
@@ -320,7 +320,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   geom_ribbon(aes(ymin = 1-PROP_UNSUPPRESSED_CL, ymax = 1-PROP_UNSUPPRESSED_CU), alpha = 0.5) + 
   geom_point(aes(y = 1-PROP_UNSUPPRESSED_EMPIRICAL), alpha = 0.5, col = 'darkred') + 
   facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
-  labs(x = 'Age', y = 'Proportion of HIV-positive participants with suppressed viral load', fill = '') +
+  labs(x = 'Age', y = 'Proportion of HIV-positive newly registered participants with suppressed viral load', fill = '') +
   theme_bw() +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
