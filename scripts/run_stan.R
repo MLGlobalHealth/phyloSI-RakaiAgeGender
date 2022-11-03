@@ -105,8 +105,8 @@ file.treatment.cascade.prop.participants <- file.path(indir.deepsequencedata, 'R
 file.treatment.cascade.prop.nonparticipants <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "RCCS_treatment_cascade_nonparticipants_estimates_221101.csv")
 
 # from misc/ for plots
-file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
-file.unsuppressed_rate_ratio <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_ratio_sex_220926.csv'))
+file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_share_sex_221101.csv'))
+file.unsuppressed_rate_ratio <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
 file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
 file.reported.sexual.partnerships <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('age-age-group-est-cntcts-r15.rds'))
 
