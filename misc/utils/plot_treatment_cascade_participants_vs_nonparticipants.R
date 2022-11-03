@@ -30,11 +30,11 @@ cascade.np <- as.data.table(read.csv(file.cascade.nonparticipants))
 # combine
 cascade.p[, type := 'Participants']
 cascade.np[, type := 'Non participants']
-cascade <- rbind(cascade.p, cascade.np)
-cascade[, type := factor(type, c('Participants', 'Non participants'))]
+cascade.all.var <- rbind(cascade.p, cascade.np)
+cascade.all.var[, type := factor(type, c('Participants', 'Non participants'))]
 
-# select variable of interst
-cascade <- cascade[, .(ROUND, SEX, AGEYRS, COMM, type,
+# select variable of interst for cascade
+cascade <- cascade.all.var[, .(ROUND, SEX, AGEYRS, COMM, type,
                        PROP_DIAGNOSED_M, PROP_DIAGNOSED_CL, PROP_DIAGNOSED_CU,
                        PROP_ART_COVERAGE_M, PROP_ART_COVERAGE_CL, PROP_ART_COVERAGE_CU,
                        SUPPRESSION_RATE_M, SUPPRESSION_RATE_CL, SUPPRESSION_RATE_CU)]
@@ -54,11 +54,11 @@ cascade[, variable := gsub('(.+)_.*', '\\1',variable)]
 cascade <- dcast.data.table(cascade, ROUND + SEX + AGEYRS + COMM + type + variable ~ q, value.var = 'value')
 
 
-#########
+###########################
 
-# PLOT
+# PLOT TREATMENT CASCADE
 
-#########
+###########################
 
 # label
 diagnosed.label = 'estimated proportion of diagnosed'
@@ -99,3 +99,38 @@ ggplot(tmp, aes(x = AGEYRS)) +
   guides(color = guide_legend(byrow = T, nrow = 3),
          fill = guide_legend(byrow = T, nrow = 3))
 ggsave(file = file.path(outdir, 'treatment_cascade_inland_participants_vs_nonparticipants.pdf'), w = 6.5, h = 6.5)  
+
+
+###########################
+
+# PLOT PROPORTION OF UNSUPPRESSED
+
+###########################
+
+# select variable of interst for cascade
+uns <- cascade.all.var[, .(ROUND, SEX, AGEYRS, COMM, type,
+                               PROP_UNSUPPRESSED_M, PROP_UNSUPPRESSED_CL, PROP_UNSUPPRESSED_CU)]
+
+# for participants
+tab <- uns[type == 'Participants']
+tab[,SEX_LABEL := 'Men']
+tab[SEX == 'F',SEX_LABEL := 'Women']
+tab[,COMM_LABEL := 'Inland communities']
+tab[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
+tab[,ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
+
+ggplot(tab, aes(x = AGEYRS)) + 
+  geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU, fill = SEX_LABEL), alpha = 0.25) + 
+  geom_line(aes(y = PROP_UNSUPPRESSED_M, col = SEX_LABEL)) + 
+  facet_grid(ROUND_LABEL~COMM_LABEL) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Proportion of unsuppressed among HIV-positive participants', 
+       col = '', fill = '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) + 
+  scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
+  scale_x_continuous(expand = c(0,0)) 
+ggsave(file = file.path(outdir, 'treatment_cascade_inland_participants_vs_nonparticipants.pdf'), w = 6.5, h = 6.5)  
+
