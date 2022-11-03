@@ -16,6 +16,7 @@ outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfec
 # file
 path.stan <- file.path(indir.repository, 'stan_models', 'binomial_gp.stan')
 path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
+file.path.quest <- file.path(indir.deepsequence.data, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
 
 # tuning
 VL_DETECTABLE = 400
@@ -24,7 +25,7 @@ VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 
 #################
 
-# PREPARE DATE #
+# PREPARE DATA #
 
 #################
 
@@ -66,6 +67,42 @@ set(DT, NULL, 'HIV_AND_VLD', DT[, as.integer(VLD==1 & HIV_AND_VL==1)])
 set(DT, DT[, which(HIV_AND_VL==1 & VLU==1)], 'VLC', 0)
 setkey(DT, ROUND, FC, SEX, AGEYRS)
 
+
+#################################
+
+# KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
+# THAT ARE THE CLOSEST TO NON-PARTICIPANTS
+
+#################################
+
+# keep variable of interest
+quest <- as.data.table(read.csv(file.path.quest))
+rinc <- quest[, .(round, study_id)]
+
+# to upper
+colnames(rinc) <- toupper(colnames(rinc))
+
+# find index of round
+rinc <- rinc[order(STUDY_ID, ROUND)]
+rinc[, INDEX_ROUND := 1:length(ROUND), by = 'STUDY_ID']
+
+# format round as in DT
+rinc[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
+rinc[ROUND == '15S', ROUND := '15.1']
+rinc[, ROUND := as.numeric(ROUND)]
+
+# merge
+DT <- merge(DT, rinc, by= c('STUDY_ID', 'ROUND'))
+
+# keep participants seen for the first time 
+DT <- DT[INDEX_ROUND == 1]
+
+#################################
+
+# AGGREGATE BY ROUND, SEX, COMM AND AGE  #
+
+#################################
+
 # get count for every categories
 tmp <- seq.int(min(DT$AGEYRS), max(DT$AGEYRS))
 tmp1 <- DT[, sort(unique(ROUND))]
@@ -89,10 +126,9 @@ vla[, AGE:= AGE_LABEL-14L]
 vla[, ROW_ID:= seq_len(nrow(vla))]
 
 
-
 ##########################################
 
-# FIND UNSUPPRESSED PROPORTION ESTIMATE #
+# FIND UNSUPPRESSED PROPORTION CRUDE ESTIMATE #
 
 ##########################################
 
@@ -100,6 +136,13 @@ vla[, ROW_ID:= seq_len(nrow(vla))]
 vla[, NONVLNS := HIV_N-VLNS_N]
 vla[, EMPIRICAL_NONVLNS_IN_HIV := NONVLNS / HIV_N, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# proportion of suppressed
 vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsuppressed
+
+
+##########################################
+
+# PLOT #
+
+##########################################
 
 if(1){
   tmp <- vla[, .(ROUND, LOC_LABEL, SEX_LABEL, AGE_LABEL, HIV_N, VLNS_N)]
@@ -128,10 +171,16 @@ if(1){
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)))
-  p
-  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age.png')), w=9, h=8)
+  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age_newlyregistered_221101.png')), w=9, h=8)
   
 }
+
+
+##########################################
+
+# FIND UNSUPPRESSED PROPORTION SMOOTH ESTIMATE #
+
+##########################################
 
 # find smooth proportion
 for(round in 15:18){
@@ -139,7 +188,6 @@ for(round in 15:18){
   # round <- 16
   # round <- 17
   # round <- 18
-  
   
   DT <- copy(vla[ROUND == round] )
   stopifnot(length(round) == 1)
@@ -177,7 +225,7 @@ for(round in 15:18){
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '.rds')
+  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '_newlyregistered.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
   
@@ -202,7 +250,7 @@ for(i in seq_along(rounds)){
   x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '.rds')
+  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '_newlyregistered.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -249,7 +297,6 @@ for(i in seq_along(rounds)){
   nsinf[[i]] <- nsinf.by.age
   nsinf.samples[[i]] <- nsinf.samples.by.age
 }
-
 nsinf <- do.call('rbind', nsinf)
 nsinf.samples <- do.call('rbind', nsinf.samples)
 
@@ -279,14 +326,8 @@ ggplot(tmp, aes(x = AGEYRS)) +
         strip.background = element_rect(colour="white", fill="white"),
         strip.text = element_text(size = rel(1))) + 
   scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion.png')), w=9, h=8)
+ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion_newlyregistered.png')), w=9, h=8)
 
-ggplot(nsinf, aes(x = AGEYRS)) + 
-  geom_line(aes(y = PROP_UNSUPPRESSED_M, col = ROUND)) + 
-  geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU, fill = ROUND), alpha = 0.5) + 
-  geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL, col = ROUND), alpha = 0.5) + 
-  facet_grid(COMM~SEX) + 
-  theme_bw()
 
 #########
 
@@ -294,8 +335,8 @@ ggplot(nsinf, aes(x = AGEYRS)) +
 
 #########
 
-file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_vl_', VIREMIC_VIRAL_LOAD, '_220803.csv'))
+file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_vl_', VIREMIC_VIRAL_LOAD, '_newlyregistered_221101.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_', VIREMIC_VIRAL_LOAD, '_220818.csv'))
+file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_', VIREMIC_VIRAL_LOAD, '_newlyregistered_221101.csv'))
 write.csv(nsinf.samples, file = file.name, row.names = F)
