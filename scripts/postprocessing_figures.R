@@ -284,6 +284,10 @@ plot_incidence_infection(incidence_infection, outfile.figures)
 
 cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
 
+reported_contact <- clean_reported_contact(df_reported_contact)
+source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
+source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
+
 # by 1-year age band
 median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
@@ -305,22 +309,15 @@ plot_median_age_source_group(median_age_source_group, expected_contribution_age_
 
 
 #
-# Counterfactual: comparison of targeted male
+# Counterfactual: comparison of targets
 #
 
 cat("\nPlot relative incidence infection if different groups of male are targeted\n")
 
-# in the counterfactual we assume that 95% of art user are unsuppressed (previously we assumed 100)
-# we need to recalculate the number of infected unsuppressed with this new assumption 
-# and the log offset with this new assumption 
-# and define it as the factual scenario 
-eligible_count_round_95suppression_given_ART <- find_eligible_count_round_95suppression_given_ART(eligible_count_smooth, proportion_prevalence, proportion_unsuppressed, participation)
-log_offset_round_95suppression_given_ART <- find_log_offset_by_round(stan_data, eligible_count_round_95suppression_given_ART)
-
 # find incidence under the factual scenario by sex and age
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
-                                                  log_offset_round = log_offset_round_95suppression_given_ART,
+                                                  log_offset_round = log_offset_round,
                                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 
 # find age groups that contribute the most
@@ -334,49 +331,47 @@ spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
 # generate counterfactual when only participant are treated 
 # we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
 # in all scenario, the number of participants treated in the counterfactual are = number of participant sources that contribute to 1/3 incidence
-counterfactuals_p_a <- make_counterfactual_target(samples, spreaders, log_offset_round_95suppression_given_ART, stan_data,
-                                           eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_p_a <- make_counterfactual_target(samples, spreaders, log_offset_round, stan_data,
+                                           eligible_count_smooth, eligible_count_round, 
+                                           treatment_cascade, proportion_prevalence, participation,
                                            only_participant = T, art_up_to_female = F, outdir.table)
 plot_counterfactual_one(counterfactuals_p_a, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
 # generate counterfactual when participants and non-participant are treated
 # we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
 # the number of male treated in the counterfactual are = number of male sources that contribute to 1/3 incidence
-counterfactuals_a_a <- make_counterfactual_target(samples, spreaders, log_offset_round_95suppression_given_ART, stan_data,
-                                           eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_a_a <- make_counterfactual_target(samples, spreaders, log_offset_round, stan_data,
+                                           eligible_count_smooth, eligible_count_round, 
+                                           treatment_cascade, proportion_prevalence,participation,
                                            only_participant = F, art_up_to_female = F, outdir.table)
 plot_counterfactual_one(counterfactuals_a_a, incidence_factual, "Unsuppressed", outfile.figures)
 
 
 #
-# Counterfactual: comparison of the number of male treated
+# Counterfactual: comparison of strategies
 #
 
 cat("\nPlot relative incidence infection if different number of male are treated\n")
 
-# in the previous counterfactual, we found that the most effective intervention is to
-# target male with greatest art diff compared to female
-# we now explore different number of age groups targeted in this scenario
-
-# males with greatest art diff compared to female stratified by categories
-# including more and more age groups until reaching all males
-targeted.males <- find_male_with_greatest_art_difference_category(eligible_count_round_95suppression_given_ART, outdir.table)
-
 # generate counterfactual treating only men participant as much as female are diagnosed/treated/suppressed
-counterfactuals_p_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                           eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_p_f <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                           eligible_count_smooth, eligible_count_round, 
+                                           treatment_cascade, proportion_prevalence, participation,
                                            only_participant = T, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
 #  generate counterfactual treating only men participant half way to as much as female are diagnosed/treated/suppressed
-counterfactuals_p_f05 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                             eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_p_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                             eligible_count_smooth, eligible_count_round, 
+                                             treatment_cascade, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
 # generate counterfactual treating only men participant 95 95 95
-counterfactuals_p_959595 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                             eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_p_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                                eligible_count_smooth, eligible_count_round, 
+                                                treatment_cascade, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = NULL, s959595 = 1, s909090 = NULL, outdir.table)
 # generate counterfactual treating only men participant 90 90 90
-counterfactuals_p_909090 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                             eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_p_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                                eligible_count_smooth, eligible_count_round, 
+                                                treatment_cascade, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
 
 # plot
@@ -385,20 +380,24 @@ plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_
 
 
 # generate counterfactual treating all men as much as female are diagnosed/treated/suppressed
-counterfactuals_a_f <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                           eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_a_f <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                           eligible_count_smooth, eligible_count_round, 
+                                           treatment_cascade, proportion_prevalence, participation,
                                            only_participant = F, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
 #  generate counterfactual treating all men half way to as much as female are diagnosed/treated/suppressed
-counterfactuals_a_f05 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                             eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_a_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                             eligible_count_smooth, eligible_count_round, 
+                                             treatment_cascade, proportion_prevalence, participation,
                                              only_participant = F, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
 # generate counterfactual treating all men 95 95 95
-counterfactuals_a_959595 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                                eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_a_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                                eligible_count_smooth, eligible_count_round, 
+                                                treatment_cascade, proportion_prevalence, participation,
                                                 only_participant = F, art_up_to_female = NULL, s959595 = 1, s909090 = NULL,outdir.table)
 # generate counterfactual treating all men 90 90 90
-counterfactuals_a_909090 <- make_counterfactual(samples, targeted.males, log_offset_round_95suppression_given_ART, stan_data,
-                                                  eligible_count_smooth, proportion_unsuppressed, proportion_prevalence,
+counterfactuals_a_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                                eligible_count_smooth, eligible_count_round, 
+                                                treatment_cascade, proportion_prevalence, participation,
                                                   only_participant = F, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
 
 # plot

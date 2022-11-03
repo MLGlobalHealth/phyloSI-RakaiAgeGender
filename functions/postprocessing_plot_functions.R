@@ -1291,7 +1291,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
       ) +
       scale_fill_manual(values = cols) +
       scale_y_continuous(expand = expansion(mult = c(0, .05))) 
-    file = paste0(outdir, '-output-counterfactual_incidence_budget_', gsub(' ' , '', lab), '_all_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_target_incidence_budget_', gsub(' ' , '', lab), '_all_', communities[i], '.pdf')
     ggsave(p, file = file, w = 5.5, h = 7.6)
     
     # budget total
@@ -1386,7 +1386,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
                       widths = c(0.02, 0.012, 0.95), heights = c(0.16, 0.16, 0.2, 0.34))
     
     # save
-    file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_all_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_target_incidence_panel_', gsub(' ' , '', lab), '_all_', communities[i], '.pdf')
     ggsave(p, file = file, w = 5.5, h = 7.6)
     
   }
@@ -1567,8 +1567,8 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   # merge udget by by age to target labels
   ecf[, INFECTED_SUPPRESSED := INFECTED - INFECTED_NON_SUPPRESSED]
   ecf[, INFECTED_ALREADY_SUPPRESSED := INFECTED_SUPPRESSED - TREATED]
-  ecf <- ecf[, .(ROUND, SEX, AGEYRS, COMM, counterfactual_index, label, INFECTED_NON_SUPPRESSED, INFECTED_ALREADY_SUPPRESSED, TREATED)]
-  ecf <- melt.data.table(ecf, id.vars = c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label', 'counterfactual_index'))
+  ecf <- ecf[, .(ROUND, SEX, AGEYRS, COMM, label, INFECTED_NON_SUPPRESSED, INFECTED_ALREADY_SUPPRESSED, TREATED)]
+  ecf <- melt.data.table(ecf, id.vars = c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label'))
   
   # make labels
   label.suppressed = 'Virally suppressed in round 18'; label.unsuppressed = 'Virally unsuppressed'; 
@@ -1577,8 +1577,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   ecf[variable == 'TREATED', VARIABLE_LABEL := label.new.suppressed]
   ecf[variable == 'INFECTED_NON_SUPPRESSED', VARIABLE_LABEL := label.unsuppressed]
   ecf[, VARIABLE_LABEL := factor(VARIABLE_LABEL, levels = c(label.unsuppressed, label.new.suppressed, label.suppressed))]
-  ecf[, REDUCTION_UNSUPPRESSED := value[variable == 'INFECTED_NON_SUPPRESSED'] / (value[variable == 'INFECTED_NON_SUPPRESSED'] + value[variable == 'TREATED']), by= c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label', 'counterfactual_index')]
-  # ecf <- merge(ecf, df_target, by = 'counterfactual_index')
+  ecf[, REDUCTION_UNSUPPRESSED := value[variable == 'INFECTED_NON_SUPPRESSED'] / (value[variable == 'INFECTED_NON_SUPPRESSED'] + value[variable == 'TREATED']), by= c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label')]
   ecf[, VARIABLE_LABEL2 := VARIABLE_LABEL]
   ecf[VARIABLE_LABEL == label.new.suppressed, VARIABLE_LABEL2 := label]
   ecf[, VARIABLE_LABEL2 := factor(VARIABLE_LABEL2, levels = c(label.unsuppressed, 
@@ -1586,7 +1585,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
                                                               label.suppressed))]
   
   # format budget regardless of age, merge to target labels and add total number of unsuppressed in factual
-  bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index'))
+  bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM', 'label'))
   # bc <- ecf[, .(value = sum(value)), by = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index', 'VARIABLE_LABEL', 'variable')]
   # bc <- merge(bc, tmp, by = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index'), allow.cartesian = T)
   # bc <- merge(bc, df_target, by = 'counterfactual_index')
@@ -1633,7 +1632,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 6))
-    file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_strategy_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p, file = file, w = 3.9, h = 3.7)
     
     # for the legend
@@ -1650,7 +1649,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 4))
-    file = paste0(outdir, '-output-counterfactual_budget_legend_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_strategy_budget_legend_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p, file = file, w = 7, h = 10)
     
     # reduction in unsuppressed
@@ -1665,7 +1664,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_y_continuous(labels = scales::percent, limits = c(0, NA)) + 
       scale_color_manual(values = cols) + 
       guides(color = guide_legend(byrow = T, nrow = 4))
-    file = paste0(outdir, '-output-counterfactual_budget_reduction_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
+    file = paste0(outdir, '-output-counterfactual_strategy_budget_reduction_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
     ggsave(p, file = file, w = 5, h = 6)
     
     
@@ -1764,17 +1763,17 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
                       widths = c(0.007, 0.022, 0.95), heights = c(0.15, 0.15, 0.2, 0.39))
 
     # save
-    file = paste0(outdir, '-output-counterfactual_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_strategy_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p, file = file, w = 5.5, h = 9.5)
     
-    file = paste0(outdir, '-output-counterfactual_incidence_panel_plot1_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_strategy_incidence_panel_plot1_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p1, file = file, w = 4, h = 1.85)
 
-    file = paste0(outdir, '-output-counterfactual_incidence_panel_plot2_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_strategy_incidence_panel_plot2_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p4, file = file, w = 4, h = 1.85)
     
     p2 <- p2 + theme(axis.title.x = element_text())
-    file = paste0(outdir, '-output-counterfactual_incidence_panel_plot3_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_strategy_incidence_panel_plot3_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p2, file = file, w = 4, h = 2.9)
     
   }

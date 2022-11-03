@@ -80,7 +80,8 @@ only.transmission.before.stop.observational.period <- T
 use.diagonal.prior <- F
 use.informative.prior <- F
 only.transmission.same.community <- F
-only.participant.treated <- T
+nonparticipants.treated.like.participants <- F
+nonparticipants.not.treated <- F
 remove.pairs.from.rounds <- NULL
 only.one.community <- 'inland'
 
@@ -94,18 +95,20 @@ file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anon
 file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_221101.csv")
 file.incidence.samples.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_samples_inland_221101.csv")
 
-# from misc/
+# from misc/ for analysis
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
 file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
-
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
 file.participation <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
-file.unsuppressed.prop <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "RCCS_artcoverage_estimates_220906.csv")
-file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
 file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220811.csv')
-file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
+file.treatment.cascade.prop.participants <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "RCCS_treatment_cascade_participants_estimates_221101.csv")
+file.treatment.cascade.prop.nonparticipants <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "RCCS_treatment_cascade_nonparticipants_estimates_221101.csv")
+
+# from misc/ for plots
+file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
 file.unsuppressed_rate_ratio <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_ratio_sex_220926.csv'))
-file.reported.sexual.partnerships <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('cont_age-R015.rds'))
+file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
+file.reported.sexual.partnerships <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('age-age-group-est-cntcts-r15.rds'))
 
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
@@ -145,7 +148,8 @@ participation <- fread(file.participation)
 proportion_prevalence <- fread(file.prevalence.prop)
 
 # load non-suppressed proportion 
-proportion_unsuppressed <- fread(file.unsuppressed.prop)
+treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
+                                                             file.treatment.cascade.prop.nonparticipants)
 
 # load incidence estimates from Adam
 incidence.inland <- fread(file.incidence.inland)
@@ -163,14 +167,11 @@ infected_share <- fread(file.prevalence.share) # share of infected count by sex
 
 start_observational_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
 stop_observational_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
-
 cutoff_date <- df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
 
 stopifnot(start_observational_period_inland <= cutoff_date & stop_observational_period_inland >= cutoff_date)
 
-df_period <- make.df.period(start_observational_period_inland, stop_observational_period_inland, 
-                            cutoff_date)
-
+df_period <- make.df.period(start_observational_period_inland, stop_observational_period_inland, cutoff_date)
 df_round <- make.df.round(df_round_inland, df_period)
 
 
@@ -181,7 +182,9 @@ df_round <- make.df.round(df_round_inland, df_period)
 
 # by round
 eligible_count_round <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
-eligible_count_round <- add_infected_unsuppressed(eligible_count_round, proportion_unsuppressed, participation, only.participant.treated)
+eligible_count_round <- add_infected_unsuppressed(eligible_count_round, treatment_cascade, participation, 
+                                                  nonparticipants.treated.like.participants, 
+                                                  nonparticipants.not.treated)
 eligible_count_round[, table(ROUND, COMM)]
 
 
@@ -385,7 +388,7 @@ if(1){
   find_palette_round()
   
   # plot count eligible susceptible / infected / infected unsuppressed and incident cases
-  plot_data_by_round(eligible_count_round, proportion_unsuppressed, proportion_prevalence, outfile.figures)
+  plot_data_by_round(eligible_count_round, treatment_cascade, proportion_prevalence, outfile.figures)
   plot_data_by_period(incidence_cases, outfile.figures)
   
   # plot tansmission events over time
@@ -417,6 +420,7 @@ if(1){
 tmp <- names(.GlobalEnv)
 tmp <- tmp[!grepl('^.__|^\\.|^model$',tmp)]
 save(list=tmp, file=paste0(outfile, "-stanin_",jobname,".RData"))
+
 
 #
 # RUN STAN DATA
