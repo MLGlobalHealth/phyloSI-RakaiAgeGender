@@ -175,8 +175,8 @@ if(1){
   tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
   p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS)) +
-    geom_bar(aes(y = ELIGIBLE_SMOOTH), stat = 'identity', fill = 'grey70') +
-    geom_line(aes(y = ELIGIBLE), col = 'darkred', alpha  = 0.6) +
+    geom_bar(aes(y = ELIGIBLE), stat = 'identity', fill = 'grey70') +
+    geom_line(aes(y = ELIGIBLE_SMOOTH), col = 'darkred', alpha  = 0.6) +
     labs(y = 'Census eligible individuals', x = 'Age') +
     facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
     theme_bw() +

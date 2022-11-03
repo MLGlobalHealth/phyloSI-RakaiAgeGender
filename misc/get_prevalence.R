@@ -239,6 +239,7 @@ nsinf.samples <- do.call('rbind', nsinf.samples)
 stopifnot(nrow(nsinf[COMM == 'inland']) == nsinf[, length(unique(AGEYRS))] * nsinf[, length(unique(SEX))] *nsinf[COMM == 'inland', length(unique(ROUND))])
 stopifnot(nrow(nsinf[COMM == 'fishing']) == nsinf[, length(unique(AGEYRS))] * nsinf[, length(unique(SEX))] *nsinf[COMM == 'fishing', length(unique(ROUND))])
 
+
 #########
 
 # PLOT #
@@ -255,17 +256,20 @@ tmp[, COMM_LABEL := 'Fishing\n communities']
 tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
 
 ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_point(aes(y = EMPIRICAL_PREVALENCE), alpha = 0.5, col = 'darkred') + 
-  geom_line(aes(y = PREVALENCE_M)) + 
-  geom_ribbon(aes(ymin = PREVALENCE_CL, ymax = PREVALENCE_CU), alpha = 0.5) + 
-  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+  geom_point(aes(y = EMPIRICAL_PREVALENCE, col = SEX_LABEL), alpha = 0.5, shape = 16) + 
+  geom_line(aes(y = PREVALENCE_M, col = SEX_LABEL)) + 
+  geom_ribbon(aes(ymin = PREVALENCE_CL, ymax = PREVALENCE_CU, fill = SEX_LABEL), alpha = 0.7) + 
+  facet_grid(ROUND_LABEL~COMM_LABEL) +
   theme_bw() +
+  scale_color_manual(values = c('Male'='royalblue3','Female'='deeppink')) +
+  scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1))) + 
-  labs(x = 'Age', y = 'HIV-1 prevalence among participants')+ 
-  scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_prevalence_220909.png')), w=8, h=9)
+        strip.text = element_text(size = rel(1)),
+        panel.spacing.y = unit(0.7, "lines")) + 
+  labs(x = 'Age', y = 'HIV prevalence in RCCS participants', col = '', fill= '')+ 
+  scale_y_continuous(labels = scales::percent, limits= c(0,1), expand = c(0,0))
+ggsave(file=file.path(outdir, paste0('smooth_prevalence_221031.png')),  w = 8, h = 10)
 
 
 ggplot(tmp, aes(x = AGEYRS)) + 

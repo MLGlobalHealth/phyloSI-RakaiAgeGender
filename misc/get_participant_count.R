@@ -91,16 +91,18 @@ p
 ggsave(p, file = file.path(outdir, 'Participants.png'), w = 8, h = 9)
 
 p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS)) +
-  geom_line(aes(y = PARTICIPATION)) +
-  labs(y = 'Participation among census eligible individuals', x = 'Age') +
-  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+  geom_line(aes(y = PARTICIPATION, col = SEX_LABEL)) +
+  labs(y = 'RCCS participation rate', x = 'Age', col = '') +
+  facet_grid(ROUND_LABEL~COMM_LABEL) +
+  scale_color_manual(values = c('Male'='royalblue3','Female'='deeppink')) +
   theme_bw() +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1))) + 
-  scale_y_continuous(labels = scales::percent, limits = c(0,1)) 
+        strip.text = element_text(size = rel(1)), 
+        panel.spacing.y = unit(0.7, "lines")) + 
+  scale_y_continuous(labels = scales::percent, limits = c(0,1), expand = c(0,0)) 
 p
-ggsave(p, file = file.path(outdir, 'Participation.png'), w = 8, h = 9)
+ggsave(p, file = file.path(outdir, 'Participation.png'), w = 8, h = 10)
 
 # sum over age
 tmp1 <- tmp[, list(PARTICIPANT = sum(PARTICIPANT), ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'SEX_LABEL', 'COMM_LABEL', 'COMM')]
