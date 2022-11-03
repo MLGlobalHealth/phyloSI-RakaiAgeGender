@@ -70,7 +70,7 @@ sequ <- rbind(sequ, dcount[SEX == 'M' & AGEYRS < 25, list(SEQUENCE = length(uniq
 sequ <- rbind(sequ, dcount[SEX == 'M' & AGEYRS > 24 & AGEYRS < 35, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male, 25-34'), by = c('COMM', 'ROUND')])
 sequ <- rbind(sequ, dcount[SEX == 'M' & AGEYRS > 34, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male, 35-49'), by = c('COMM', 'ROUND')])
 
-sequ[, TYPE := factor(TYPE, levels = c('Total', 'Female', 'Female, 15-24', "Female, 25-34", "Female, 35-49", 
+sequ[, TYPE := factor(TYPE, levels = c('Total', 'Female', 'Female, 15-24', "Female, 25-34", "Female, 35-49",
                                       "Male",  "Male, 15-24", "Male, 25-34", "Male, 35-49"))]
 sequ <- sequ[order(COMM, ROUND, TYPE)]
 saveRDS(sequ, file.path(outdir, 'characteristics_sequenced.rds'))
@@ -78,6 +78,28 @@ saveRDS(sequ, file.path(outdir, 'characteristics_sequenced.rds'))
 sequ <- dcount[SEX == 'F', list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Female'), by = c('COMM')]
 sequ <- rbind(sequ, dcount[SEX == 'M', list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male'), by = c('COMM')])
 saveRDS(sequ, file.path(outdir, 'characteristics_sequenced_brief.rds'))
+
+# unique participants across rounds 14-18 by comm, sex, agegp
+dcount[, r:= as.numeric(gsub('R','',gsub('S','.1',ROUND)))]
+setkey(dcount,PT_ID,r)
+dcount <- dcount[,.SD[1],by = PT_ID]
+
+dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
+                     labels=c('15-24','25-34','35-49'))]
+sequ <- dcount[ROUND %in% c('R014','R015','R015S','R016','R017','R018'),
+               list(SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP')]
+tot1 <- dcount[ROUND %in% c('R014','R015','R015S','R016','R017','R018'),
+               list(SEX = 'Total', AGEGP = 'Total', SEQUENCE = length(unique(PT_ID))), by = c('COMM')]
+tot2 <- dcount[ROUND %in% c('R014','R015','R015S','R016','R017','R018'),
+               list(AGEGP = 'Total', SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX')]
+sequ <- rbind(sequ,tot1,tot2)
+sequ[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
+sequ[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Male'))]
+sequ[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))]
+sequ <- sequ[order(COMM,SEX,AGEGP),]
+
+saveRDS(sequ, file.path(outdir, 'characteristics_sequenced_R14_18.rds'))
+
 
 # plot
 tmp <- dcount[, list(SEQUENCE = length(unique(PT_ID))), by = c('COMM', 'ROUND', 'SEX', 'AGEYRS')]
@@ -94,7 +116,7 @@ p <- ggplot(tmp, aes(x = AGEYRS)) +
   labs(y = 'Count of HIV-positive participants with virus sequenced', x = 'Age') +
   facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
   theme_bw() +
-  theme(legend.position = 'bottom', 
+  theme(legend.position = 'bottom',
         strip.background = element_rect(colour="white", fill="white"),
         strip.text = element_text(size = rel(1)))
 p
