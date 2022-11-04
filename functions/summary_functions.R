@@ -1282,7 +1282,6 @@ load_incidence_rates_samples <- function(file.incidence.samples.inland){
   # iterations: iterations over 50 data with imputed date of infection
   # iterations within: iterations within dataset of estimated incidence rate using MLE mean/sd and assuming normality
   # subsample otherwise the memory is excausted
-  incidence_rates_round.samples <- incidence_rates_round.samples[iterations_within %in% 1:500]
   incidence_rates_round.samples[, iterations := paste0(iterations, '-', iterations_within)]
   
   # keep var of interest

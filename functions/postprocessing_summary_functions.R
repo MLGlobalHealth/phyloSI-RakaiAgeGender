@@ -398,35 +398,6 @@ find_summary_output_by_round <- function(samples, output, vars,
   return(tmp1)
 }
 
-find_eligible_count_round_95suppression_given_ART <- function(eligible_count_smooth, proportion_prevalence, proportion_unsuppressed, pa){
-  
-  eligible_count_round_95suppression_given_ART <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
-  eligible_count_round_95suppression_given_ART[, ROUND := paste0('R0', ROUND)]
-  
-  tmp <- copy(proportion_unsuppressed)
-  # given diagnosed
-  # prop_unsuppressed = 1 - prop_suppressed
-  # prop_unsuppressed = 1 - prop_art * 0.95
-  # prop_unsuppressed = 1 - (1- prop_not_art) * 0.95
-  # note that in our central def PROP_UNSUPPRESSED_M = prop_not_art
-  # and we change it to PROP_UNSUPPRESSED_M = 1 - (1- prop_not_art) * 0.95
-  tmp[, PROP_UNSUPPRESSED_M := 1 - (1-PROP_UNSUPPRESSED_M)*0.95 ]  
-  
-  # merge to participation (i.e., proporiton of census eligible population that participated)
-  pa <- pa[, .(ROUND, COMM, AGEYRS, SEX, PARTICIPATION)]
-  pa[, ROUND := paste0('R0', ROUND)]
-  tmp <- merge(tmp, pa, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
-  
-  tmp <- merge(eligible_count_round_95suppression_given_ART, tmp, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
-  if(only.participant.treated){
-    # assuming that only participants are diagnosed and all non-participants are not diagnosed
-    tmp[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_M + INFECTED * (1-PARTICIPATION) * 1]
-  }else{
-    # assuming that participant and non-participant are diagnosed at the same proportion
-    tmp[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_M]
-  }
-  return(tmp)
-}
 
 find_spreaders <- function(expected_contribution_age_source, outdir){
   

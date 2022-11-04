@@ -1130,7 +1130,8 @@ plot_median_age_source <- function(median_age_source, outdir){
   
 }
 
-plot_median_age_source_group <- function(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outdir){
+plot_median_age_source_group <- function(median_age_source_group, expected_contribution_age_group_source2, 
+                                         reported_contact, outdir){
   
   mas <- copy(median_age_source_group)
   
@@ -1167,12 +1168,13 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
     p <- ggplot(mac.s) + 
       facet_grid(.~LABEL_RECIPIENT) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
-      geom_line(data = rec.s, aes(x = AGEYRS, y = cont.age.median, linetype= 'Median age of reported\nsexual partners\nin Round 15')) + 
-      geom_boxplot(stat = "identity", 
-                   aes(x = mean_age_group, col = LABEL_ROUND, 
+      geom_boxplot(stat = "identity",
+                   aes(x = AGE_GROUP_INFECTION.RECIPIENT , col = LABEL_ROUND,
                        lower  = C25,upper = C75, middle = C50, ymin = C10, ymax = C90, group= interaction(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT)),
                    width = widths, varwidth = T) +
-      theme_bw() + 
+      geom_boxplot(data = rec.s, aes(x = AGE_GROUP, y = part.age, fill = 'Reported sexual\npartners in\nRound 15'),
+                   varwidth  = TRUE, position = position_dodge2(preserve = "single"), alpha = 0.2, outlier.shape = NA) +
+      theme_bw() +
       labs(x = 'Age recipient', y = 'Age source') +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
@@ -1181,14 +1183,15 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
             panel.grid.minor.x = element_blank(), 
             legend.spacing.x = unit(0.1, 'cm'),
             legend.title = element_blank()) +
-      scale_color_manual(values = cols) + 
+      scale_color_manual(values = cols)  +
+      scale_fill_manual(values = 'white')  +
       scale_y_continuous(expand = c(0,0), 
                          breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
                            max(range_age_non_extended))) + 
-      coord_cartesian(ylim = range_age_non_extended, xlim= range_age_non_extended) +
-      scale_x_continuous(breaks = mas[order(mas), unique(mean_age_group)], 
-                         labels = mas[order(mas), unique(AGE_GROUP_INFECTION.RECIPIENT)], 
-                         expand = c(0,0)) + 
+      # coord_cartesian(ylim = range_age_non_extended, xlim= range_age_non_extended) +
+      # scale_x_continuous(breaks = mas[order(mas), unique(mean_age_group)], 
+      #                    labels = mas[order(mas), unique(AGE_GROUP_INFECTION.RECIPIENT)], 
+      #                    expand = c(0,0)) + 
       guides(color = guide_legend(order = 1))
 
     ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 5.1, h = 3.7)

@@ -58,14 +58,6 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temp
-source(file.path(indir, 'functions', 'summary_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_utils_functions.R'))
-unsuppressed_share <- fread(file.unsuppressed.share)
-infected_share <- fread(file.prevalence.share)
-df_direction <- get.df.direction()
-df_period[, PERIOD := factor(PERIOD, levels = PERIOD)]
-
 
 #
 # offset
@@ -283,10 +275,6 @@ plot_incidence_infection(incidence_infection, outfile.figures)
 #
 
 cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
-
-reported_contact <- clean_reported_contact(df_reported_contact)
-source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
 
 # by 1-year age band
 median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
