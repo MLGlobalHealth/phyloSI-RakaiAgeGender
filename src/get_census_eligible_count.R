@@ -169,22 +169,25 @@ if(1){
   tmp <- copy(ncen)
   tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
   tmp <- tmp[!(ROUND == '15S' & COMM == 'inland')]
-  tmp[, SEX_LABEL := 'Female']
-  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, SEX_LABEL := 'Women']
+  tmp[SEX== 'M', SEX_LABEL := 'Men']
   tmp[, COMM_LABEL := 'Fishing\n communities']
   tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
   
-  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS)) +
-    geom_bar(aes(y = ELIGIBLE), stat = 'identity', fill = 'grey70') +
-    geom_line(aes(y = ELIGIBLE_SMOOTH), col = 'darkred', alpha  = 0.6) +
-    labs(y = 'Census eligible individuals', x = 'Age') +
-    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09") & COMM == 'inland'], aes(x = AGEYRS)) +
+    geom_bar(aes(y = ELIGIBLE, fill = SEX_LABEL), stat = 'identity') +
+    geom_line(aes(y = ELIGIBLE_SMOOTH, col  = SEX_LABEL)) +
+    labs(y = 'Census eligible individuals', x = 'Age', col = '', fill = '') +
+    facet_grid(ROUND_LABEL~SEX_LABEL) +
+    scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
+    scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) +
     theme_bw() +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)))
-  p
-  ggsave(p, file = file.path(outdir, 'CensusEligibleIndividuals.png'), w = 8, h = 10)
+          strip.text = element_text(size = rel(1))) + 
+    scale_x_continuous(expand = c(0,0)) + 
+    scale_y_continuous(expand = expansion(mult = c(0,0.1)))  
+  ggsave(p, file = file.path(outdir, 'CensusEligibleIndividuals_221101.pdf'), w = 8, h = 10)
 
 }
 
@@ -194,3 +197,4 @@ ncen <- select(ncen, -'ELIGIBLE_SMOOTH')
 
 # save
 write.csv(ncen, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv'), row.names = F)
+

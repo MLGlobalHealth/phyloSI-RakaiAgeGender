@@ -813,8 +813,8 @@ plot_transmission_events_over_time <- function(pairs, outdir){
            c('SEX', 'COMM', 'AGEYRS', 'DATE'))
   dp[, AGEYRS := floor(AGEYRS)]
   dp <- merge(dp, df_age_group, by = 'AGEYRS')
-  dp[, DIRECTION := 'Male -> Female']
-  dp[SEX.SOURCE == 'F', DIRECTION := 'Female -> Male']
+  dp[, DIRECTION := 'Male to Female']
+  dp[SEX.SOURCE == 'F', DIRECTION := 'Female to Male']
 
   
   #
@@ -841,11 +841,11 @@ plot_transmission_events_over_time <- function(pairs, outdir){
             legend.position = 'bottom',
             legend.title = element_blank()) + 
       scale_linetype_manual(values = 'dashed') + 
-      scale_fill_manual(values = c('Male -> Female'=male_color,'Female -> Male'=female_color)) +
+      scale_fill_manual(values = c('Male to Female'=male_color,'Female to Male'=female_color)) +
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05)),
                          breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) + 
       scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))  
-    ggsave(p3, file =  paste0(outdir, '-data-detected_transmission_events_', communities[i], '.png'), w = 9, h = 4)
+    ggsave(p3, file =  paste0(outdir, '-data-detected_transmission_events_', communities[i], '.pdf'), w = 7.5, h = 4)
     
   }
   
@@ -982,8 +982,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     coord_cartesian(ylim= c(0, 2.1))
-  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.png'), w = 6.5, h = 3.2)
-  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 6.8, h = 3.2)
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 9, h = 3.5)
   
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
@@ -1042,7 +1041,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     coord_cartesian(ylim= c(0, 2.1))
   ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex.png'), w = 6.5, h = 3.2)
-  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex.pdf'), w = 6.5, h = 3.2)
+  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex.pdf'), w = 7.5, h = 4)
   
   ggplot(tmp1[COMM == 'inland' & round %in% c(14,16,18)], aes(x = AGEYRS)) +
     geom_hline(yintercept = 1, alpha = 0.2) + 
@@ -1217,59 +1216,56 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
 plot_pairs <- function(pairs, outdir)
 {
   
-  tmp <- merge(pairs, df_period, by.x = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT'), by.y = c('BEFORE_CUTOFF', 'COMM'))
-  tmp[, DIRECTION := 'Male -> Female' ]
-  tmp[SEX.SOURCE == 'F', DIRECTION := 'Female -> Male' ]
+  # find round of infection
+  tmp <- merge(pairs, df_round,by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian = T)
+  tmp <- tmp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MAX_SAMPLE_DATE]
   
-  COMMS <- c('fishing', 'inland')
+  # find direction label
+  tmp[, DIRECTION := 'Male to female' ]
+  tmp[SEX.SOURCE == 'F', DIRECTION := 'Female to male' ]
+  
+  COMMS <- pairs[, unique(COMM.RECIPIENT)]
   SEX <- c('M', 'F')
-  PERIOD <- c(1,2)
   for(i in seq_along(COMMS)){
+    
     p <- list();index = 1
     for(j in seq_along(SEX)){
-      for(k in seq_along(PERIOD)){
-        
-        comm <- COMMS[i]
-        sex <- SEX[j]
-        index_time <- PERIOD[k]
-        
-        tmp1 <- tmp[COMM.RECIPIENT == comm & SEX.SOURCE == sex & INDEX_TIME == index_time]
-        p[[index]] <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE, y = AGE_INFECTION.RECIPIENT)) + 
-          geom_point() + 
-          labs(x = 'Age at transmission source', y = 'Age at infection recipient') +
-          geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
-          theme_bw() + 
-          coord_fixed() +
-          scale_x_continuous(limits = c(15, 49))+
-          scale_y_continuous(limits = c(15, 49)) +
-          geom_label(x = 18, y = 49, label = paste0(paste0(nrow(tmp1), ' pairs')), label.size = NA) 
-        
-        if(j == 1){
-          p[[index]] <- p[[index]] +
-            ggtitle(tmp1[, unique(PERIOD)]) + 
-            theme(plot.title = element_text(hjust = 0.5, face = 'bold'), 
-                  axis.title.x = element_blank())
-        }
-        
-        if(k == 2){
-          p[[index]] <- p[[index]] +
-            theme(axis.title.y = element_blank())
-        }
-        
-        if(nrow(tmp1) > 0){
-          p[[index]] <- ggExtra::ggMarginal(p[[index]], type = "histogram")
-          
-        }
-
-        index=index + 1
-        
+      
+      comm <- COMMS[i]
+      sex <- SEX[j]
+      
+      tmp1 <- tmp[COMM.RECIPIENT == comm & SEX.SOURCE == sex ]
+      p[[index]] <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE, y = AGE_INFECTION.RECIPIENT)) + 
+        geom_point(aes(col = LABEL_ROUND)) + 
+        labs(x = 'Age at transmission source', y = 'Age at infection recipient', col = '') +
+        geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+        theme_bw() + 
+        coord_fixed() +
+        ggtitle(tmp1[, unique(DIRECTION)]) + 
+        scale_color_manual(values = palette_round_inland) + 
+        scale_x_continuous(limits = c(15, 49))+
+        scale_y_continuous(limits = c(15, 49)) +
+        geom_label(x = 18, y = 49, label = paste0(paste0(nrow(tmp1), ' pairs')), label.size = NA) +
+        theme(plot.title = element_text(hjust = 0.5, face = 'bold'))
+      
+      if(j == 2){
+        p[[index]] <- p[[index]] +
+          theme(legend.position = 'none') 
+      }else{
+        p[[index]] <- p[[index]] +
+          theme(legend.position = 'bottom', 
+                legend.justification = "left") + 
+          guides(color = guide_legend(byrow = T, nrow =2))
       }
+      
+      p[[index]] <- ggExtra::ggMarginal(p[[index]], type = "histogram")
+      
+      index=index + 1
+      
     }
     
-    pp <- grid.arrange(grobs = p, layout_matrix = rbind(c(1,2), c(3,4)), width= c(0.52, 0.48), 
-                       left = text_grob('Male to Female                                                 Female to Male', 
-                                        face = 'bold', rot = 90, hjust =0.53, size = 13))
-    ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.png'), w = 8, h = 8)
+    pp <- grid.arrange(grobs = p, layout_matrix = rbind(c(1,2), c(1,NA)), heights= c(0.83, 0.17))
+    ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.pdf'), w = 8.2, h = 5)
     
   }
   
