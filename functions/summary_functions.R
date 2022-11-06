@@ -1298,7 +1298,7 @@ read_treatment_cascade <- function(file.treatment.cascade.prop.participants,
   
   # PROP_SUPPRESSED_M: Proportion of suppressed among infected
   # PROP_DIAGNOSED_M: Proportion of diagnosed given infected
-  # PROP_ART_COVERAGE_M: Proportion of art used given diagnosed
+  # PROP_ART_COVERAGE_M: Proportion of art used given infected
   # SUPPRESSION_RATE_M: Prportion of suppressed given art use
   
   # participants

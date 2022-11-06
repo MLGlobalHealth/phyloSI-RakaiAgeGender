@@ -39,30 +39,30 @@ df <- rbind(tmp, df[ROUND != 'R010'])
 # restrict age 
 df <- df[AGEYRS > 14 & AGEYRS < 50]
 
-# find proportion suppressed
+# find proportion suppressed among HIV positive participants
 df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
-# find suppression rate
+# find suppression rate among HIV positive participants
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 df[, SUPPRESSION_RATE_EMPIRICAL := (1-PROP_UNSUPPRESSED_EMPIRICAL) / PROP_ART_COVERAGE_EMPIRICAL ]
 df[SUPPRESSION_RATE_EMPIRICAL > 1 + 1e-6, table(ROUND)] # the suppression rate should be < 1
 
 
-####################################
+##################################################################
 
-# FIND PROPORTION OF DIAGNOSED
+# FIND PROPORTION OF DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS
 
-####################################
+##################################################################
 
 # all participants are diagnosed
 df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := 1]
 
 
-####################################
+######################################################################################
 
-# FIND ART COVERERAGE GIVEN DIAGNOSED FOR ALL ROUND
+# FIND ART COVERERAGE GIVEN DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS FOR ALL ROUND
 
-####################################
+######################################################################################
 
 # for round 15 find % on art by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
@@ -81,11 +81,11 @@ set(df, NULL, 'SUPPRESSION_RATE_EMPIRICAL_R016', NULL)
 df <- df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE <= 1]
 
 
-####################################
+##########################################################################
 
-# FIND SUPPRESSION RATE FOR ALL ROUND
+# FIND SUPPRESSION RATE AMONG HIV POSITIVE PARTICIPANTS FOR ALL ROUND
 
-####################################
+##########################################################################
 
 # for round <15 find % suppressed by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
@@ -97,7 +97,7 @@ set(df, NULL, 'SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016', NULL)
 # add constraint that suppression rate must be smaller than 1
 df <- df[SUPPRESSION_RATE_POSTERIOR_SAMPLE <= 1]
 
-# find prop suppressed given diagnosed
+# find prop suppressed given diagnosed among hiv positive participants
 df[, PROP_SUPPRESSED_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE]
 
 
@@ -107,8 +107,16 @@ df[, PROP_SUPPRESSED_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERI
 
 ####################################
 
+# melt
 df <- melt.data.table(df, id.vars= c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL'))
 df[, variable := gsub('(.+)_POSTERIOR_SAMPLE', '\\1', variable)]
+
+# round the empirical otherwise we get two entries 
+df[, PROP_UNSUPPRESSED_EMPIRICAL := round(PROP_UNSUPPRESSED_EMPIRICAL, 7)] 
+df[, PROP_ART_COVERAGE_EMPIRICAL := round(PROP_ART_COVERAGE_EMPIRICAL, 7)] 
+df[, SUPPRESSION_RATE_EMPIRICAL := round(SUPPRESSION_RATE_EMPIRICAL, 7)] 
+
+# summarise
 ns = df[, list(q= quantile(value, prob=ps, na.rm = T), q_label=paste0(variable, '_', qlab)), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL', 'variable')]
 ns = as.data.table(reshape2::dcast(ns, AGEYRS + SEX + COMM + ROUND + PROP_UNSUPPRESSED_EMPIRICAL + PROP_ART_COVERAGE_EMPIRICAL + SUPPRESSION_RATE_EMPIRICAL ~ q_label, value.var = "q"))
 

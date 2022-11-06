@@ -103,3 +103,4 @@ tmp2
 tmp1[, PREVALENCE_TO_UNSUPPRESSED_RATIO := `HIV prevalence` / `HIV-positive with\nunsuppressed viral load`  ]
 tmp2 <- tmp1[order(AGE_GROUP, SEX), .(AGE_GROUP, SEX, PREVALENCE_TO_UNSUPPRESSED_RATIO)]
 tmp2
+

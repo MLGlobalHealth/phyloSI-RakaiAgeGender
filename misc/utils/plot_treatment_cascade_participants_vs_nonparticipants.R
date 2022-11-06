@@ -4,6 +4,8 @@ require(lubridate)
 library(dplyr)
 library(stringr)
 library(ggsci)
+library(gridExtra)
+library(ggpubr)
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
@@ -108,29 +110,211 @@ ggsave(file = file.path(outdir, 'treatment_cascade_inland_participants_vs_nonpar
 ###########################
 
 # select variable of interst for cascade
-uns <- cascade.all.var[, .(ROUND, SEX, AGEYRS, COMM, type,
+uns <- cascade.all.var[, .(ROUND, SEX, AGEYRS, COMM, type,PROP_UNSUPPRESSED_EMPIRICAL,
                                PROP_UNSUPPRESSED_M, PROP_UNSUPPRESSED_CL, PROP_UNSUPPRESSED_CU)]
+uns[,SEX_LABEL := 'Men']
+uns[SEX == 'F',SEX_LABEL := 'Women']
+uns[,COMM_LABEL := 'Inland communities']
+uns[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
+uns[,ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
 
 # for participants
-tab <- uns[type == 'Participants']
-tab[,SEX_LABEL := 'Men']
-tab[SEX == 'F',SEX_LABEL := 'Women']
-tab[,COMM_LABEL := 'Inland communities']
-tab[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
-tab[,ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
-
+tab <- uns[type == 'Participants' & COMM == 'inland' & ROUND != 'R015S']
 ggplot(tab, aes(x = AGEYRS)) + 
-  geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU, fill = SEX_LABEL), alpha = 0.25) + 
-  geom_line(aes(y = PROP_UNSUPPRESSED_M, col = SEX_LABEL)) + 
-  facet_grid(ROUND_LABEL~COMM_LABEL) + 
+  geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU, fill = SEX_LABEL), alpha = 0.5) + 
+  geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL, col = SEX_LABEL, shape = 'Data'), alpha = 0.5) + 
+  geom_line(aes(y = PROP_UNSUPPRESSED_M, col = SEX_LABEL, linetype= 'Fit')) + 
+  facet_wrap(~ROUND_LABEL) + 
   theme_bw() + 
-  labs(x = 'Age', y = 'Proportion of unsuppressed among HIV-positive participants', 
-       col = '', fill = '') +
+  labs(x = 'Age', y = 'Proportion of HIV-positive participants with unsuppressed viral load', 
+       col = '', fill = '', linetype = '', shape = '') +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white")) +
   scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) + 
   scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) +
   scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
-  scale_x_continuous(expand = c(0,0)) 
-ggsave(file = file.path(outdir, 'treatment_cascade_inland_participants_vs_nonparticipants.pdf'), w = 6.5, h = 6.5)  
+  scale_x_continuous(expand = c(0,0))  + 
+  guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
+         color = guide_legend(order = 3),fill = guide_legend(order = 3))
+ggsave(file = file.path(outdir, 'participants_smooth_unsuppressed.pdf'), w = 7, h = 7)  
+
+# for non-participants
+tab <- uns[type == 'Non participants' & COMM == 'inland' & ROUND != 'R015S']
+ggplot(tab, aes(x = AGEYRS)) + 
+  geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU, fill = SEX_LABEL), alpha = 0.5) + 
+  geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL, col = SEX_LABEL, shape = 'Data'), alpha = 0.5) + 
+  geom_line(aes(y = PROP_UNSUPPRESSED_M, col = SEX_LABEL, linetype= 'Fit')) + 
+  facet_wrap(~ROUND_LABEL) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Proportion of newly registered HIV-positive participants\nwith unsuppressed viral load', 
+       col = '', fill = '', linetype = '', shape = '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) + 
+  scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
+  scale_x_continuous(expand = c(0,0))  + 
+  guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
+         color = guide_legend(order = 3),fill = guide_legend(order = 3))
+ggsave(file = file.path(outdir, 'nonparticipants_smooth_unsuppressed.pdf'), w = 7, h = 7)  
+
+
+###########################
+
+# PLOT PROPORTION OF ON ART
+
+###########################
+
+# select variable of interst for cascade
+art <- cascade.all.var[, .(ROUND, SEX, AGEYRS, COMM, type,PROP_ART_COVERAGE_EMPIRICAL,
+                           PROP_ART_COVERAGE_M, PROP_ART_COVERAGE_CL, PROP_ART_COVERAGE_CU)]
+art[,SEX_LABEL := 'Men']
+art[SEX == 'F',SEX_LABEL := 'Women']
+art[,COMM_LABEL := 'Inland communities']
+art[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
+art[,ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
+art[ROUND == 'R010',PROP_ART_COVERAGE_EMPIRICAL := NA ]# round 10 was fixed to be the same as round 11
+
+# for participants
+tab <- art[type == 'Participants' & COMM == 'inland' & ROUND != 'R015S']
+ggplot(tab, aes(x = AGEYRS)) + 
+  geom_ribbon(aes(ymin = PROP_ART_COVERAGE_CL, ymax = PROP_ART_COVERAGE_CU, fill = SEX_LABEL), alpha = 0.5) + 
+  geom_point(aes(y = PROP_ART_COVERAGE_EMPIRICAL, col = SEX_LABEL, shape = 'Data'), alpha = 0.5) + 
+  geom_line(aes(y = PROP_ART_COVERAGE_M, col = SEX_LABEL, linetype = 'Fit')) + 
+  facet_wrap(~ROUND_LABEL, ncol = 3) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Proportion of HIV-positive RCCS participants on ART', 
+       col = '', fill = '', shape = '', linetype= '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) + 
+  scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
+  scale_x_continuous(expand = c(0,0))  + 
+  guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
+         color = guide_legend(order = 3),fill = guide_legend(order = 3))
+ggsave(file = file.path(outdir, 'participants_smooth_art.pdf'), w = 7, h = 7)  
+
+# for non-participants
+tab <- art[type == 'Non participants' & COMM == 'inland' & ROUND != 'R015S']
+ggplot(tab, aes(x = AGEYRS)) + 
+  geom_ribbon(aes(ymin = PROP_ART_COVERAGE_CL, ymax = PROP_ART_COVERAGE_CU, fill = SEX_LABEL), alpha = 0.5) + 
+  geom_point(aes(y = PROP_ART_COVERAGE_EMPIRICAL, col = SEX_LABEL, shape = 'Data'), alpha = 0.5) + 
+  geom_line(aes(y = PROP_ART_COVERAGE_M, col = SEX_LABEL, linetype = 'Fit')) + 
+  facet_wrap(~ROUND_LABEL, ncol = 3) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Proportion of newly registered HIV-positive RCCS participants on ART', 
+       col = '', fill = '', shape = '', linetype= '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) + 
+  scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
+  scale_x_continuous(expand = c(0,0))  + 
+  guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
+         color = guide_legend(order = 3),fill = guide_legend(order = 3))
+ggsave(file = file.path(outdir, 'nonparticipants_smooth_art.pdf'), w = 7, h = 7)  
+
+
+###########################
+
+# PLOT SUPPRESSION RATE
+
+###########################
+
+# select variable of interst for cascade
+art <- cascade.all.var[, .(ROUND, SEX, AGEYRS, COMM, type,
+                           SUPPRESSION_RATE_M, SUPPRESSION_RATE_CL, SUPPRESSION_RATE_CU)]
+art[,SEX_LABEL := 'Men']
+art[SEX == 'F',SEX_LABEL := 'Women']
+art[,COMM_LABEL := 'Inland communities']
+art[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
+art[,ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
+
+#
+# for participants
+#
+
+# suppression rate
+tab <- art[type == 'Participants' & COMM == 'inland' & !ROUND %in% c('R010', 'R011', 'R012', 'R013',  'R014', 'R015S')]
+p1 <- ggplot(tab, aes(x = AGEYRS)) + 
+  geom_ribbon(aes(ymin = SUPPRESSION_RATE_CL, ymax = SUPPRESSION_RATE_CU, fill = SEX_LABEL), alpha = 0.5) + 
+  geom_line(aes(y = SUPPRESSION_RATE_M, col = SEX_LABEL)) + 
+  facet_wrap(~ROUND_LABEL, ncol = 1) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Viral suppression rate in HIV-infected participants', 
+       col = '', fill = '', shape = '', linetype= '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) + 
+  scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
+  scale_x_continuous(expand = c(0,0))  + 
+  guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
+         color = guide_legend(order = 3),fill = guide_legend(order = 3))
+p1 <- ggarrange(p1, labels = c('a'))
+
+# suppression rate ratio
+tab <- dcast.data.table(tab, ROUND_LABEL + AGEYRS + COMM ~ SEX, value.var = 'SUPPRESSION_RATE_M')
+tab[, SUPPRESSION_RATE_RATIO := `F`/`M`]
+cols <<- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(4)
+p2 <- ggplot(tab, aes(x = AGEYRS)) + 
+  geom_hline(aes(yintercept = 1), linetype = 'dashed', col = 'grey50') + 
+  geom_line(aes(y = SUPPRESSION_RATE_RATIO, col = ROUND_LABEL)) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Female-to-male viral suppression rate\nratio in HIV-infected participants', 
+       col = '', fill = '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = cols) + 
+  scale_y_log10( limits = c(1,NA)) + 
+  scale_x_continuous(expand = c(0,0))
+p2 <- ggarrange(p2, labels = c('b'))
+
+p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6, 0.4), widths = c(0.45, 0.55))
+ggsave(p, file = file.path(outdir, 'participants_suppression_rate.pdf'), w = 8, h = 7)
+
+
+#
+# for non-participants
+#
+
+# suppression rate
+tab <- art[type == 'Non participants' & COMM == 'inland' & !ROUND %in% c('R010', 'R011', 'R012', 'R013',  'R014', 'R015S')]
+p1 <- ggplot(tab, aes(x = AGEYRS)) + 
+  geom_ribbon(aes(ymin = SUPPRESSION_RATE_CL, ymax = SUPPRESSION_RATE_CU, fill = SEX_LABEL), alpha = 0.5) + 
+  geom_line(aes(y = SUPPRESSION_RATE_M, col = SEX_LABEL)) + 
+  facet_wrap(~ROUND_LABEL, ncol = 1) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Viral suppression rate in HIV-infected participants', 
+       col = '', fill = '', shape = '', linetype= '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) + 
+  scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
+  scale_x_continuous(expand = c(0,0))  + 
+  guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
+         color = guide_legend(order = 3),fill = guide_legend(order = 3))
+p1 <- ggarrange(p1, labels = c('a'))
+
+# suppression rate ratio
+tab <- dcast.data.table(tab, ROUND_LABEL + AGEYRS + COMM ~ SEX, value.var = 'SUPPRESSION_RATE_M')
+tab[, SUPPRESSION_RATE_RATIO := `F`/`M`]
+cols <<- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(4)
+p2 <- ggplot(tab, aes(x = AGEYRS)) + 
+  geom_hline(aes(yintercept = 1), linetype = 'dashed', col = 'grey50') + 
+  geom_line(aes(y = SUPPRESSION_RATE_RATIO, col = ROUND_LABEL)) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Female-to-male viral suppression rate\nratio in HIV-infected participants', 
+       col = '', fill = '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = cols) + 
+  scale_y_log10( limits = c(1,NA)) + 
+  scale_x_continuous(expand = c(0,0))
+p2 <- ggarrange(p2, labels = c('b'))
+
+p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6, 0.4), widths = c(0.45, 0.55))
+ggsave(p, file = file.path(outdir, 'nonparticipants_suppression_rate.pdf'), w = 8, h = 7)
 

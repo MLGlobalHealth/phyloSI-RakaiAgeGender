@@ -1,4 +1,3 @@
-
 library(data.table)
 library(ggplot2)
 require(lubridate)
@@ -40,20 +39,20 @@ df <- rbind(tmp, df[ROUND != 'R010'])
 # restrict age 
 df <- df[AGEYRS > 14 & AGEYRS < 50]
 
-# find proportion suppressed
+# find proportion suppressed among new registed HIV-positive 
 df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
-# find suppression rate
+# find suppression rate  among new registed HIV-positive 
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 df[, SUPPRESSION_RATE_EMPIRICAL := (1-PROP_UNSUPPRESSED_EMPIRICAL) / PROP_ART_COVERAGE_EMPIRICAL ]
 df[SUPPRESSION_RATE_EMPIRICAL > 1 + 1e-6, table(ROUND)] # the suppression rate should be < 1
 
 
-####################################
+##############################################################################
 
-# FIND ART COVERERAGE FOR ALL ROUND
+# FIND ART COVERERAGE AMONG NEWLY REGISTERED HIV-POSITIVE 
 
-####################################
+##############################################################################
 
 # for round 15 find % on art by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
@@ -74,7 +73,7 @@ df <- df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE <= 1]
 
 ####################################
 
-# FIND DIAGNOSED PROPORTION
+# FIND DIAGNOSED PROPORTION AMONG NEWLY REGISTERED HIV-POSITIVE 
 
 ####################################
 
@@ -84,7 +83,7 @@ df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 
 ####################################
 
-# FIND SUPPRESSION RATE FOR ALL ROUND
+# FIND SUPPRESSION RATE AMONG NEWLY REGISTERED HIV-POSITIVE FOR ALL ROUND
 
 ####################################
 
@@ -98,7 +97,7 @@ set(df, NULL, 'SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016', NULL)
 # add constraint that suppression rate must be smaller than 1
 df <- df[SUPPRESSION_RATE_POSTERIOR_SAMPLE <= 1]
 
-# find prop suppressed given diagnosed
+# find prop suppressed given diagnosed AMONG NEWLY REGISTERED HIV-POSITIVE 
 df[, PROP_SUPPRESSED_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE]
 
 
