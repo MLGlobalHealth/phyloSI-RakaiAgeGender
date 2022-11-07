@@ -33,6 +33,10 @@ dall <- fread(path.tests)
 dall <- dall[ROUND %in% c(15:18, 15.5)]
 # dall <- dall[ROUND == round]
 
+# percent of hiv positive with viral laod measurements 
+virperc <- dall[HIV_STATUS == 1 & COMM == 'inland']
+virperc <- virperc[, paste0(round(mean(!is.na(HIV_VL))*100, 2)), by = 'ROUND']
+
 # rename variables according to Oli's old script + remove 1 unknown sex
 setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
 dall[, HIV_AND_VL := ifelse( HIV_STATUS == 1 & !is.na(VL_COPIES), 1, 0)]
@@ -89,10 +93,9 @@ vla[, AGE:= AGE_LABEL-14L]
 vla[, ROW_ID:= seq_len(nrow(vla))]
 
 
-
 ##########################################
 
-# FIND UNSUPPRESSED PROPORTION ESTIMATE #
+# FIND UNSUPPRESSED PROPORTION CRUDE ESTIMATE #
 
 ##########################################
 
@@ -101,37 +104,56 @@ vla[, NONVLNS := HIV_N-VLNS_N]
 vla[, EMPIRICAL_NONVLNS_IN_HIV := NONVLNS / HIV_N, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# proportion of suppressed
 vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsuppressed
 
+
+##########################################
+
+# PLOT #
+
+##########################################
+
 if(1){
   tmp <- vla[, .(ROUND, LOC_LABEL, SEX_LABEL, AGE_LABEL, HIV_N, VLNS_N)]
   tmp[, `Non viremic` := HIV_N - VLNS_N] 
   setnames(tmp, 'VLNS_N', 'Viremic')
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'HIV_N'))
+  tmp[, variable := factor(variable, levels= c('Non viremic', 'Viremic'))]
   setnames(tmp, 'LOC_LABEL', 'COMM')
   setnames(tmp, 'SEX_LABEL', 'SEX')
   tmp[, ROUND := as.character(ROUND)]
   tmp[ROUND == '15.5', ROUND := '15S']
   tmp <- tmp[ROUND != '15S']
-  tmp[, ROUND_LABEL := paste0('ROUND: ', ROUND)]
+  tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
   tmp <- tmp[!(ROUND == '15S')]
   # tmp <- tmp[!(ROUND == '15')]
-  tmp[, SEX_LABEL := 'Female']
-  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, SEX_LABEL := 'Women']
+  tmp[SEX== 'M', SEX_LABEL := 'Men']
   tmp[, COMM_LABEL := 'Fishing\n communities']
   tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
+  tmp <- tmp[AGE_LABEL > 14 & AGE_LABEL < 50]
   
   # plot
-  p <- ggplot(tmp, aes(x = AGE_LABEL, y = value)) +
+  p <- ggplot(tmp[COMM == 'inland'], aes(x = AGE_LABEL, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'Age', y = 'Count HIV-positive participants', fill = 'Viral load') +
-    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+    labs(x = 'Age', y = 'Count HIV-positive participants', fill = '') +
+    facet_grid(ROUND_LABEL~SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)))
-  p
-  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age.png')), w=9, h=8)
+          strip.text = element_text(size = rel(1))) + 
+    scale_fill_manual(values = c('#9F73AB', '#432C7A'), 
+                      labels = c('Viral load <= 1,000 copies/mL', 'Viral load > 1,000 copies/mL')) + 
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05))) + 
+    scale_x_continuous(expand = c(0,0))
+  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age_221104.pdf')), w=7, h=5.2)
   
 }
+
+
+##########################################
+
+# FIND UNSUPPRESSED PROPORTION SMOOTH ESTIMATE #
+
+##########################################
 
 # find smooth proportion
 for(round in 15:18){
@@ -193,12 +215,14 @@ for(round in 15:18){
 rounds <- 15:18
 nsinf <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <-  vector(mode = 'list', length = length(rounds))
+nspred <- vector(mode = 'list', length = length(rounds))
+convergence.list <- vector(mode = 'list', length = length(rounds))
 for(i in seq_along(rounds)){
   
   round <- rounds[i]
   DT <- copy(vla[ROUND == round] )
   
-  # predicts age 
+  # age to predict
   x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
@@ -206,7 +230,20 @@ for(i in seq_along(rounds)){
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
-  #	summarise proportion of unsuppressed by sex and age
+  #
+  # Find rhat and neff
+  #
+  
+  sum_fit <- summary(fit)
+  neff <- na.omit(sum_fit$summary[, 9])
+  rhat <- na.omit(sum_fit$summary[, 10])
+  convergence <- data.table(ROUND = round, neff = neff, rhat = rhat)
+  
+  #
+  #	summarise estimated unsuppressed by sex and age
+  #
+  
+  # extract estimates
   ps <- c(0.025,0.5,0.975)
   qlab <- c('CL','M','CU')
   tmp <- as.data.table(reshape2::melt(1-re$p_predict_00))
@@ -226,8 +263,38 @@ for(i in seq_along(rounds)){
   nsinf.by.age = tmp[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
   nsinf.by.age = as.data.table(reshape2::dcast(nsinf.by.age, ... ~ q_label, value.var = "q"))
   
+  
+  #
+  #	summarise predicted unsuppressed by sex and age
+  #
+  
+  # merge to total count 
+  tmp <- merge(tmp, DT[, .(SEX, LOC, AGE_LABEL, HIV_N)], by = c('SEX', 'LOC', 'AGE_LABEL'), all.x = T)
+  
+  # predict count and predict unsuppressed
+  tmp[!is.na(HIV_N), COUNT_PREDICT := rbinom(1, HIV_N, value), by = c('SEX', 'LOC', 'AGE_LABEL', 'iterations')]
+  tmp[, UNSUPPRESSED_PREDICT := COUNT_PREDICT / HIV_N]
+  
+  # summarise
+  nspred.by.age = tmp[, list(q= quantile(UNSUPPRESSED_PREDICT, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
+  nspred.by.age = as.data.table(reshape2::dcast(nspred.by.age, ... ~ q_label, value.var = "q"))
+  
+  # sub-sample the last 9500 iterations
+  it <- data.table(iterations = tmp[, sort(unique(iterations))])
+  it[, iterations_rev := max(iterations):1]
+  tmp <- merge(it, tmp, by = 'iterations')
+  tmp <- tmp[iterations_rev %in% 1:9500]
+  tmp[, iterations := iterations - min(iterations)+ 1]
+
+  
+  #
+  # POSTPROCESING
+  #
+  
+  # merge to data
   nsinf.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_VLNS_IN_HIV)), nsinf.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
   nsinf.samples.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_VLNS_IN_HIV)), tmp, by=c('SEX','LOC', 'AGE_LABEL'))
+  nspred.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_VLNS_IN_HIV)), nspred.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
   
   # change of var name
   set(nsinf.by.age, NULL, 'SEX', NULL)
@@ -238,9 +305,20 @@ for(i in seq_along(rounds)){
   nsinf.by.age[, ROUND := paste0('R0', round)]
   
   # load change of var name
+  set(nspred.by.age, NULL, 'SEX', NULL)
+  set(nspred.by.age, NULL, 'LOC', NULL)
+  setnames(nspred.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'M', "CL", "CU"), 
+           c('COMM', 'SEX', 'AGEYRS', 'PROP_UNSUPPRESSED_M', 'PROP_UNSUPPRESSED_CL', 'PROP_UNSUPPRESSED_CU'))
+  nspred.by.age[, ROUND := paste0('R0', round)]
+  
+  # load change of var name
   set(nsinf.samples.by.age, NULL, 'SEX', NULL)
   set(nsinf.samples.by.age, NULL, 'LOC', NULL)
+  set(nsinf.samples.by.age, NULL, 'iterations_rev', NULL)
+  set(nsinf.samples.by.age, NULL, 'HIV_N', NULL)
   set(nsinf.samples.by.age, NULL, 'Var2', NULL)
+  set(nsinf.samples.by.age, NULL, 'UNSUPPRESSED_PREDICT', NULL)
+  set(nsinf.samples.by.age, NULL, 'COUNT_PREDICT', NULL)
   setnames(nsinf.samples.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'EMPIRICAL_VLNS_IN_HIV', 'value'),
            c('COMM', 'SEX', 'AGEYRS', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_UNSUPPRESSED_POSTERIOR_SAMPLE'))
   nsinf.samples.by.age[, ROUND := paste0('R0', round)]
@@ -248,10 +326,14 @@ for(i in seq_along(rounds)){
   # keep
   nsinf[[i]] <- nsinf.by.age
   nsinf.samples[[i]] <- nsinf.samples.by.age
+  nspred[[i]] <- nspred.by.age
+  convergence.list[[i]] <- convergence
 }
 
 nsinf <- do.call('rbind', nsinf)
 nsinf.samples <- do.call('rbind', nsinf.samples)
+nspred <- do.call('rbind', nspred)
+convergence <- do.call('rbind', convergence.list)
 
 
 #########
@@ -281,12 +363,19 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_y_continuous(labels = scales::percent, limits= c(0,1))
 ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion.png')), w=9, h=8)
 
-ggplot(nsinf, aes(x = AGEYRS)) + 
-  geom_line(aes(y = PROP_UNSUPPRESSED_M, col = ROUND)) + 
-  geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_CL, ymax = PROP_UNSUPPRESSED_CU, fill = ROUND), alpha = 0.5) + 
-  geom_point(aes(y = PROP_UNSUPPRESSED_EMPIRICAL, col = ROUND), alpha = 0.5) + 
-  facet_grid(COMM~SEX) + 
-  theme_bw()
+# get proportion of predicted art use inside credible interval
+stats <- list()
+tmp <- nspred[COMM == 'inland' & !is.na(EMPIRICAL_VLNS_IN_HIV)]
+tmp[, within.CI := EMPIRICAL_VLNS_IN_HIV >= PROP_UNSUPPRESSED_CL & EMPIRICAL_VLNS_IN_HIV <= PROP_UNSUPPRESSED_CU]
+stats[['within.CI']] <- tmp[, paste0(round(mean(within.CI)*100, 2))]
+
+# get lowest rhat and lowest neff
+stats[['min_neff']]  = convergence[, round(min(neff))]
+stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
+
+# add percent of hiv positive with viral laod measurements 
+stats[['viral_load_measured']] = virperc
+
 
 #########
 
@@ -299,3 +388,6 @@ write.csv(nsinf, file = file.name, row.names = F)
 
 file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_', VIREMIC_VIRAL_LOAD, '_220818.csv'))
 write.csv(nsinf.samples, file = file.name, row.names = F)
+
+file.name <- file.path(outdir, paste0('RCCS_nonsuppressed_proportion_model_fit_221101.RDS'))
+saveRDS(stats, file = file.name)

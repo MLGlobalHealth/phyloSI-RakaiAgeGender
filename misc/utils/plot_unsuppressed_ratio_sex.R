@@ -10,7 +10,7 @@ indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'artcoverage_by_gender_loc_age')
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_ratio_sex_220926.csv'))
+file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
 file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
 
 unsuppressed_ratio <- as.data.table(read.csv(file.name))
@@ -58,11 +58,11 @@ for(i in seq_along(communities)){
           legend.position = 'none', 
           # legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
-    scale_y_continuous( limits = c(NA,  3.7), expand = expansion(mult = c(0.02, 0.1))) + 
+    scale_y_continuous( expand = expansion(mult = c(0.02, 0.1))) + 
     labs(y = 'Male-female ratio of the rate of infected\nindividuals that remain unsuppressed', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_220930.png')), w = 3.5,h = 3.15)
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_220930.pdf')), w = 3.5,h = 3.2)
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221101.png')), w = 3.5,h = 3.15)
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221101.pdf')), w = 3.5,h = 3.2)
     
 
 }

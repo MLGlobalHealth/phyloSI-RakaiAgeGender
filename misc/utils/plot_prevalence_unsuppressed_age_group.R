@@ -11,7 +11,7 @@ indir.repository <- '~/git/phyloflows'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
 file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
-infile.unsuppressed <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_coverage_age_group_220906.csv'))
+infile.unsuppressed <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_propunsuppressed_age_group_221101.csv'))
 infile.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_age_group_220830.csv'))
 
 load(file.path.round.timeline)
@@ -89,8 +89,8 @@ for(i in seq_along(communities)){
          x = 'Date (midpoint of survey interval)') + 
     scale_x_date(expand = c(0.03,0.03)) +
     guides(color = guide_legend(override.aes = list(shape = 16), order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_220930.png')), w = 7.5,h = 3.5)
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_220930.pdf')), w = 8,h = 3.5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221101.png')), w = 7.5,h = 3.5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221101.pdf')), w = 8,h = 3.5)
 }
 
 # find statistics
@@ -103,3 +103,4 @@ tmp2
 tmp1[, PREVALENCE_TO_UNSUPPRESSED_RATIO := `HIV prevalence` / `HIV-positive with\nunsuppressed viral load`  ]
 tmp2 <- tmp1[order(AGE_GROUP, SEX), .(AGE_GROUP, SEX, PREVALENCE_TO_UNSUPPRESSED_RATIO)]
 tmp2
+

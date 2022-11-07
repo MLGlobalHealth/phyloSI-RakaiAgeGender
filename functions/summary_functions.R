@@ -143,19 +143,24 @@ add_susceptible_infected <- function(eligible_count, proportion_prevalence)
   return(df)
 }
 
-add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppressed, participation, only.participant.treated)
+add_infected_unsuppressed <- function(eligible_count_round, treatment_cascade, participation, 
+                                      nonparticipants.treated.like.participants, 
+                                      nonparticipants.not.treated)
 {
   
   # ensure that the data are data.table objects
   di <- as.data.table(eligible_count_round)
-  pu <- as.data.table(proportion_unsuppressed)
+  pu <- as.data.table(treatment_cascade)
   pa <- as.data.table(participation)
   
   # select variable of interest
   di <- di[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE, INFECTED, SUSCEPTIBLE)]
   di[, ROUND := paste0('R0', ROUND)]
   
-  # merge to the proportion of unsuppressed 
+  # merge to the proportion of diagnosed and unsuppressed given diagnosed 
+  pu[, .(ROUND, COMM, AGEYRS, SEX, 
+         PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_PARTICIPANTS_CL, PROP_UNSUPPRESSED_PARTICIPANTS_CU, 
+         PROP_UNSUPPRESSED_NONPARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_CL, PROP_UNSUPPRESSED_NONPARTICIPANTS_CU)]
   df <- merge(di, pu, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
   # merge to participation (i.e., proporiton of census eligible population that participated)
@@ -163,25 +168,34 @@ add_infected_unsuppressed <- function(eligible_count_round, proportion_unsuppres
   pa[, ROUND := paste0('R0', ROUND)]
   df <- merge(df, pa, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
-  # get infected non suppressed
+  # get infected un suppressed
   
-  if(only.participant.treated){
+  if(nonparticipants.not.treated){
     # assuming that only participants are treated and non-participants are all unsuppressed
-    df[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_M + INFECTED * (1-PARTICIPATION) * 1]
-    df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_CL + INFECTED * (1-PARTICIPATION) * 1]
-    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_CU + INFECTED * (1-PARTICIPATION) * 1]
+    df[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_M + INFECTED * (1-PARTICIPATION) * 1]
+    df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_CL + INFECTED * (1-PARTICIPATION) * 1]
+    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PARTICIPATION * PROP_SUPPRESSED_PARTICIPANTS_CU + INFECTED * (1-PARTICIPATION) * 1]
+  }else if(nonparticipants.treated.like.participants){
+    # assuming that participant and non-participant are diagnosed and treated at the same proportion
+    df[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_PARTICIPANTS_M]
+    df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PROP_UNSUPPRESSED_PARTICIPANTS_CL]
+    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PROP_UNSUPPRESSED_PARTICIPANTS_CU]
   }else{
-    # assuming that participant and non-participant are treated at the same proportion
-    df[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_M]
-    df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PROP_UNSUPPRESSED_CL]
-    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PROP_UNSUPPRESSED_CU]
+    # assuming that participant and non-participant are treated not at the same proportion
+    # and using newly registered participants to inform suppression of non-participnats
+    df[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_M + INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_NONPARTICIPANTS_M]
+    df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_CL + INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_NONPARTICIPANTS_CL]
+    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_CU + INFECTED * (1-PARTICIPATION) * PROP_UNSUPPRESSED_NONPARTICIPANTS_CU]
+    
   }
-  
+
   # merge to df round
   df <- merge(df, unique(df_round[, .(COMM)]), by = c('COMM'))
   
   # rm unecessary variable
-  df <- select(df, -c('PROP_UNSUPPRESSED_M', "PROP_UNSUPPRESSED_CL", "PROP_UNSUPPRESSED_CU", 'PARTICIPATION'))
+  df <- select(df, -c('PROP_UNSUPPRESSED_PARTICIPANTS_M', 'PROP_UNSUPPRESSED_PARTICIPANTS_CL', 'PROP_UNSUPPRESSED_PARTICIPANTS_CU', 
+                      'PROP_UNSUPPRESSED_NONPARTICIPANTS_M', 'PROP_UNSUPPRESSED_NONPARTICIPANTS_CL', 'PROP_UNSUPPRESSED_NONPARTICIPANTS_CU',
+                      'PARTICIPATION'))
   
   return(df)
 }
@@ -1253,5 +1267,85 @@ get.age.aggregated.map <- function(age_aggregated)
   df_age_aggregated[AGE_INFECTION.RECIPIENT > (AGE_TRANSMISSION.SOURCE + 2.5), AGE_CLASSIFICATION.SOURCE := 'Younger']
   
   return(df_age_aggregated)
+}
+
+load_incidence_rates_samples <- function(file.incidence.samples.inland){
+  
+  incidence_rates_round.samples <- as.data.table(read.csv(file.incidence.samples.inland))
+  incidence_rates_round.samples[,COMM := 'inland']
+  incidence_rates_round.samples[, SEX := substr(Sex,1,1)]
+  incidence_rates_round.samples[, ROUND := gsub('Round: (.+)', '\\1', ROUND)]
+  incidence_rates_round.samples[, ROUND := paste0('R0', ROUND)]
+  setnames(incidence_rates_round.samples, 'age', 'AGEYRS')
+  setnames(incidence_rates_round.samples, 'inc', 'INCIDENCE.DRAW')
+  
+  # iterations: iterations over 50 data with imputed date of infection
+  # iterations within: iterations within dataset of estimated incidence rate using MLE mean/sd and assuming normality
+  # subsample otherwise the memory is excausted
+  incidence_rates_round.samples[, iterations := paste0(iterations, '-', iterations_within)]
+  
+  # keep var of interest
+  incidence_rates_round.samples <- incidence_rates_round.samples[, .(SEX, COMM, ROUND, AGEYRS, iterations, INCIDENCE.DRAW)]
+
+  # add rounds
+  incidence_rates_round.samples <- merge(incidence_rates_round.samples, df_round, by = c('ROUND', 'COMM'))
+  
+  return(incidence_rates_round.samples)
+}
+
+read_treatment_cascade <- function(file.treatment.cascade.prop.participants, 
+                                         file.treatment.cascade.prop.nonparticipants){
+  
+  # PROP_SUPPRESSED_M: Proportion of suppressed among infected
+  # PROP_DIAGNOSED_M: Proportion of diagnosed given infected
+  # PROP_ART_COVERAGE_M: Proportion of art used given infected
+  # SUPPRESSION_RATE_M: Prportion of suppressed given art use
+  
+  # participants
+  treatment_cascade_participants <- fread(file.treatment.cascade.prop.participants)
+  treatment_cascade_participants <- treatment_cascade_participants[, .(AGEYRS, SEX, COMM, ROUND, 
+                                                                       PROP_DIAGNOSED_M, 
+                                                                       PROP_ART_COVERAGE_M,
+                                                                       PROP_SUPPRESSED_M, PROP_SUPPRESSED_CL, PROP_SUPPRESSED_CU,
+                                                                       SUPPRESSION_RATE_M)]
+  setnames(treatment_cascade_participants, 'PROP_DIAGNOSED_M', 'PROP_DIAGNOSED_PARTICIPANTS_M')
+  setnames(treatment_cascade_participants, 'PROP_ART_COVERAGE_M', 'PROP_ART_COVERAGE_PARTICIPANTS_M')
+  setnames(treatment_cascade_participants, 'SUPPRESSION_RATE_M', 'SUPPRESSION_RATE_PARTICIPANTS_M')
+  setnames(treatment_cascade_participants, 'PROP_SUPPRESSED_M', 'PROP_SUPPRESSED_PARTICIPANTS_M')
+  setnames(treatment_cascade_participants, 'PROP_SUPPRESSED_CL', 'PROP_SUPPRESSED_PARTICIPANTS_CL')
+  setnames(treatment_cascade_participants, 'PROP_SUPPRESSED_CU', 'PROP_SUPPRESSED_PARTICIPANTS_CU')
+  treatment_cascade_participants[, PROP_UNSUPPRESSED_PARTICIPANTS_M := 1 - PROP_SUPPRESSED_PARTICIPANTS_M]
+  treatment_cascade_participants[, PROP_UNSUPPRESSED_PARTICIPANTS_CL := 1 - PROP_SUPPRESSED_PARTICIPANTS_CU]
+  treatment_cascade_participants[, PROP_UNSUPPRESSED_PARTICIPANTS_CU := 1 - PROP_SUPPRESSED_PARTICIPANTS_CL]
+  treatment_cascade_participants <- select(treatment_cascade_participants, -c('PROP_SUPPRESSED_PARTICIPANTS_M', 
+                                                                              'PROP_SUPPRESSED_PARTICIPANTS_CU', 
+                                                                              'PROP_SUPPRESSED_PARTICIPANTS_CL'))
+  
+  # non-participants
+  treatment_cascade_nonparticipants <- fread(file.treatment.cascade.prop.nonparticipants)
+  treatment_cascade_nonparticipants <- treatment_cascade_nonparticipants[, .(AGEYRS, SEX, COMM, ROUND, 
+                                                                             PROP_DIAGNOSED_M, 
+                                                                             PROP_ART_COVERAGE_M,
+                                                                             PROP_SUPPRESSED_M, PROP_SUPPRESSED_CL, PROP_SUPPRESSED_CU,
+                                                                             SUPPRESSION_RATE_M)]
+  setnames(treatment_cascade_nonparticipants, 'PROP_DIAGNOSED_M', 'PROP_DIAGNOSED_NONPARTICIPANTS_M')
+  setnames(treatment_cascade_nonparticipants, 'PROP_ART_COVERAGE_M', 'PROP_ART_COVERAGE_NONPARTICIPANTS_M')
+  setnames(treatment_cascade_nonparticipants, 'SUPPRESSION_RATE_M', 'SUPPRESSION_RATE_NONPARTICIPANTS_M')
+  setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_M', 'PROP_SUPPRESSED_NONPARTICIPANTS_M')
+  setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_CL', 'PROP_SUPPRESSED_NONPARTICIPANTS_CL')
+  setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_CU', 'PROP_SUPPRESSED_NONPARTICIPANTS_CU')
+  treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_M := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M]
+  treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_CL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_CU]
+  treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_CU := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_CL]
+  
+  treatment_cascade_nonparticipants <- select(treatment_cascade_nonparticipants, -c('PROP_SUPPRESSED_NONPARTICIPANTS_M', 
+                                                                                    'PROP_SUPPRESSED_NONPARTICIPANTS_CU',
+                                                                                    'PROP_SUPPRESSED_NONPARTICIPANTS_CL'))
+  
+  # merge
+  treatment_cascade <- merge(treatment_cascade_participants, treatment_cascade_nonparticipants, 
+                             by = c('AGEYRS', 'SEX', 'COMM', 'ROUND'))
+  
+  return(treatment_cascade)
 }
 

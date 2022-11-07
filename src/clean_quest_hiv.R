@@ -35,7 +35,7 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 
 ################################
 
-# load datasets round 14 only
+# load datasets round 10-14 
 quest.14<-as.data.table(read_dta(file.path.quest.614))
 quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate, arvmed, cuarvmed)]
 quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
@@ -65,7 +65,7 @@ quest[, range(ageyrs)]
 # remove unecessary column
 set(quest, NULL, c('birthdat2', 'birthdat'), NULL)
 
-# merge to 14
+# merge to 10-14 
 quest <- rbind(quest.14, quest)
 
 # `save
@@ -80,7 +80,7 @@ write.csv(quest, file = file.name, row.names = F)
 
 ################################
 
-# load datasets round 14 only
+# load datasets round 10-14 
 hiv.14<-as.data.table(read_dta(file.path.hiv.614))
 hiv.14 <- hiv.14[, .(study_id, round, hiv, intdate)]
 setnames(hiv.14, 'intdate', 'hivdate')

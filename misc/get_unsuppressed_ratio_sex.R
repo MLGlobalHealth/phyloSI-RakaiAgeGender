@@ -9,7 +9,7 @@ indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
-file.art.coverage <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_posterior_samples_220906.csv'))
+file.treatment.cascade <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.csv'))
 file.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
 
@@ -20,7 +20,7 @@ eligible_count <- as.data.table(read.csv(file.eligible.count))
 proportion_prevalence <- as.data.table(read.csv(file.prevalence))
 
 # load unsuppressed proportion 
-proportion_unsuppressed <- as.data.table(read.csv(file.art.coverage))
+treatment_cascade <- as.data.table(read.csv(file.treatment.cascade))
 
 
 #############################
@@ -30,9 +30,7 @@ proportion_unsuppressed <- as.data.table(read.csv(file.art.coverage))
 ############################
 
 # define round
-setnames(proportion_prevalence, 'iterations', 'iterations_prevalence')
-df <- merge(proportion_prevalence[iterations_prevalence %in% 9200:9500], # need to subsample otherwise internal vecseq reached physical limit
-            proportion_unsuppressed[iterations %in% 9200:9500], by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'), allow.cartesian = T)
+df <- merge(proportion_prevalence, treatment_cascade, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX', 'iterations'))
 df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
 
 # merge number of eligible and the prevalence
@@ -42,7 +40,9 @@ df <- merge(eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c(
 df[, INFECTED := ELIGIBLE * PREVALENCE_POSTERIOR_SAMPLE]
 
 # find infected unsuppressed
+df[, PROP_UNSUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_SUPPRESSED_POSTERIOR_SAMPLE]
 df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
+
 
 #####################################################
 
@@ -57,7 +57,7 @@ df[AGEYRS < 25, INDEX_AGE_GROUP := 1]
 df[, AGE_GROUP := c('15-24', '25-34', '35-49')[INDEX_AGE_GROUP]]
 df.agg <- df[, list(INFECTED = sum(INFECTED), 
                 UNSUPPRESSED = sum(UNSUPPRESSED), 
-                ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'COMM', 'AGE_GROUP', 'SEX', 'iterations', 'iterations_prevalence')]
+                ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'COMM', 'AGE_GROUP', 'SEX', 'iterations')]
 
 # find ART uptake
 df.agg[, SUPPRESSED := INFECTED - UNSUPPRESSED]
@@ -65,7 +65,7 @@ df.agg[, SUPPRESSION_RATE := SUPPRESSED / INFECTED]
 df.agg[, UNSUPPRESSION_RATE := UNSUPPRESSED / INFECTED]
 
 # find ratio of art uptake male to female
-df.agg <- dcast(df.agg, ROUND + COMM + AGE_GROUP + iterations + iterations_prevalence ~ SEX, value.var = 'UNSUPPRESSION_RATE')
+df.agg <- dcast(df.agg, ROUND + COMM + AGE_GROUP + iterations ~ SEX, value.var = 'UNSUPPRESSION_RATE')
 setnames(df.agg, c('M', 'F'), c('UNSUPPRESSION_RATE_M', 'UNSUPPRESSION_RATE_F'))
 df.agg[, UNSUPPRESSION_RATE_RATIO := UNSUPPRESSION_RATE_M / UNSUPPRESSION_RATE_F ]
 
@@ -94,7 +94,7 @@ ggplot(sing.age, aes(x = ROUND)) +
 
 df.agg <- df[, list(INFECTED = sum(INFECTED), 
                     UNSUPPRESSED = sum(UNSUPPRESSED), 
-                    ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'COMM', 'SEX', 'iterations', 'iterations_prevalence')]
+                    ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'COMM', 'SEX', 'iterations')]
 
 # find ART uptake
 df.agg[, SUPPRESSED := INFECTED - UNSUPPRESSED]
@@ -102,7 +102,7 @@ df.agg[, SUPPRESSION_RATE := SUPPRESSED / INFECTED]
 df.agg[, UNSUPPRESSION_RATE := UNSUPPRESSED / INFECTED]
 
 # find ratio of art uptake male to female
-df.agg <- dcast(df.agg, ROUND + COMM + iterations + iterations_prevalence ~ SEX, value.var = 'UNSUPPRESSION_RATE')
+df.agg <- dcast(df.agg, ROUND + COMM + iterations ~ SEX, value.var = 'UNSUPPRESSION_RATE')
 setnames(df.agg, c('M', 'F'), c('UNSUPPRESSION_RATE_M', 'UNSUPPRESSION_RATE_F'))
 df.agg[, UNSUPPRESSION_RATE_RATIO := UNSUPPRESSION_RATE_M / UNSUPPRESSION_RATE_F ]
 
@@ -129,7 +129,7 @@ ggplot(sing, aes(x = ROUND)) +
 #########################################
 
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM'))
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_ratio_sex_220926.csv'))
+file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
 write.csv(tmp, file = file.name, row.names = F)
 
 

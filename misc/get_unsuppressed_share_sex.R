@@ -9,7 +9,7 @@ indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
-file.art.coverage <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_posterior_samples_220906.csv'))
+file.treatment.cascade <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.csv'))
 file.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
 file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
 
@@ -20,7 +20,7 @@ eligible_count <- as.data.table(read.csv(file.eligible.count))
 proportion_prevalence <- as.data.table(read.csv(file.prevalence))
 
 # load unsuppressed proportion 
-proportion_unsuppressed <- as.data.table(read.csv(file.art.coverage))
+treatment_cascade <- as.data.table(read.csv(file.treatment.cascade))
 
 
 #############################
@@ -30,9 +30,7 @@ proportion_unsuppressed <- as.data.table(read.csv(file.art.coverage))
 ############################
 
 # define round
-setnames(proportion_prevalence, 'iterations', 'iterations_prevalence')
-df <- merge(proportion_prevalence[iterations_prevalence %in% 9200:9500], # need to subsample otherwise internal vecseq reached physical limit
-            proportion_unsuppressed[iterations %in% 9200:9500], by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'), allow.cartesian = T)
+df <- merge(proportion_prevalence, treatment_cascade, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX', 'iterations'))
 df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
 
 # merge number of eligible and the prevalence
@@ -42,7 +40,9 @@ df <- merge(eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c(
 df[, INFECTED := ELIGIBLE * PREVALENCE_POSTERIOR_SAMPLE]
 
 # find infected unsuppressed
+df[, PROP_UNSUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_SUPPRESSED_POSTERIOR_SAMPLE]
 df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
+
 
 #####################################################
 
@@ -51,8 +51,8 @@ df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 #####################################################
 
 # find share of unsuppressed by sex across age
-df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations', 'iterations_prevalence')]
-df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED, by = c('ROUND', 'COMM', 'AGEYRS', 'iterations', 'iterations_prevalence')]
+df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations')]
+df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED, by = c('ROUND', 'COMM', 'AGEYRS', 'iterations')]
 
 # summarise
 ps <- c(0.025,0.5,0.975)
@@ -64,7 +64,7 @@ sing.age = as.data.table(reshape2::dcast(sing.age, ... ~ q_label, value.var = "q
 setnames(sing.age, qlab, paste0('UNSUPPRESSED_SHARE_AGE_AND_SEX_', qlab))
 
 # plot
-ggplot(sing.age, aes(x = AGEYRS)) + 
+ggplot(sing.age[COMM == 'inland'], aes(x = AGEYRS)) + 
   geom_line(aes(y = UNSUPPRESSED_SHARE_AGE_AND_SEX_M)) + 
   geom_ribbon(aes(ymin = UNSUPPRESSED_SHARE_AGE_AND_SEX_CL, ymax = UNSUPPRESSED_SHARE_AGE_AND_SEX_CU), alpha = 0.5) + 
   facet_grid(ROUND~COMM+SEX) + 
@@ -104,5 +104,5 @@ ggplot(sing, aes(x = ROUND)) +
 #########################################
 
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_artcoverage_share_sex_220906.csv'))
+file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_share_sex_221101.csv'))
 write.csv(tmp, file = file.name, row.names = F)

@@ -183,10 +183,27 @@ clean_reported_contact <- function(df_reported_contact){
   reported_contact <- copy(df_reported_contact)
   
   # change name of variables
-  setnames(reported_contact, c('part.comm', 'part.round', 'part.age', 'part.sex'), c('COMM', 'ROUND', 'AGEYRS', 'SEX'))
+  setnames(reported_contact, c('part.comm', 'round', 'cont.sex', 'cont.age.group'), c('COMM', 'ROUND', 'SEX', 'AGE_GROUP'))
   
   # create variables
-  reported_contact[, LABEL_RECIPIENT := ifelse(SEX == 'F', 'Female recipients', 'Male recipients')]
+  reported_contact[, LABEL_RECIPIENT := ifelse(SEX == 'Female', 'Female recipients', 'Male recipients')]
+  
+  # keep age of interset
+  reported_contact <- reported_contact[AGE_GROUP != "[50,55)"]
+  
+  # reshape age group
+  reported_contact[AGE_GROUP == '[15,20)', AGE_GROUP := '15-19']
+  reported_contact[AGE_GROUP == '[20,25)', AGE_GROUP := '20-24']
+  reported_contact[AGE_GROUP == '[25,30)', AGE_GROUP := '25-29']
+  reported_contact[AGE_GROUP == '[30,35)', AGE_GROUP := '30-34']
+  reported_contact[AGE_GROUP == '[35,40)', AGE_GROUP := '35-39']
+  reported_contact[AGE_GROUP == '[40,45)', AGE_GROUP := '40-44']
+  reported_contact[AGE_GROUP == '[45,50)', AGE_GROUP := '45-49']
+  
+  # find mean age group
+  reported_contact[, mean_age_group := mean(c(as.numeric(gsub('(.+)-.*', '\\1', AGE_GROUP)), 
+                                 as.numeric(gsub('.*-(.+)', '\\1', AGE_GROUP)))), by = 'AGE_GROUP']
+  
   
   # find round label
   reported_contact <- merge(reported_contact , df_round, by = c('COMM', 'ROUND'))
