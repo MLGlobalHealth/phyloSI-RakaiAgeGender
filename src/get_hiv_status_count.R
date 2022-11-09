@@ -1,20 +1,14 @@
 library(data.table)
 library(dplyr)
-library(ggplot2)
 library(scales)
 library(lubridate)
-library(rstan)
 library("haven")
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.repository <- '~/git/phyloflows'
 
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
-
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
-path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
@@ -24,6 +18,12 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 quest <- as.data.table(read.csv(file.path.quest))
 hiv <- as.data.table(read.csv(file.path.hiv))
 
+
+#################################
+
+# HIV TESTS USING HIV DATA SET #
+
+#################################
 
 #################################
 
@@ -68,7 +68,6 @@ hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
 rprev <- hivs[, list(COUNT = sum(HIV == 'P'),
                      TOTAL_COUNT = length(HIV)), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
 
-write.csv(rprev, file.path(indir.repository, "data", "prevalence.csv"))
 
 #########
 
@@ -76,10 +75,4 @@ write.csv(rprev, file.path(indir.repository, "data", "prevalence.csv"))
 
 #########
 
-
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_estimates_220811.csv'))
-write.csv(nsinf, file = file.name, row.names = F)
-
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
-write.csv(nsinf.samples, file = file.name, row.names = F)
-
+write.csv(rprev, file.path(indir.repository, "data", "aggregated_count_hiv_positive.csv"), row.names = F)

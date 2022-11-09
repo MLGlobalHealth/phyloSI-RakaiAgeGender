@@ -1,26 +1,22 @@
-################
-# DEPENDENCIES #
-################
-
 library(data.table)
 library(ggplot2)
 library(Hmisc)
 library(rstan)
 
-# paths
+# directory of the repository
 indir.repository <-'~/git/phyloflows'
-indir.repository <- '~/Imperial/phyloflows'
 
-indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
+# outdir directory for stan fit
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
 outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
 
 # file
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
-path.data <- file.path(indir.repository, 'data', 'unsuppressed_proportion_non_participants.csv')
+path.data <- file.path(indir.repository, 'data', 'aggregated_participants_count_unsuppressed.csv')
 
-# Load data
+# Load count of participants with unsuppressed viral loads
 vla <- as.data.table( read.csv(path.data) )
+
 
 ##########################################
 
@@ -33,29 +29,35 @@ if(1){
   tmp[, `Non viremic` := HIV_N - VLNS_N] 
   setnames(tmp, 'VLNS_N', 'Viremic')
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'HIV_N'))
+  tmp[, variable := factor(variable, levels= c('Non viremic', 'Viremic'))]
   setnames(tmp, 'LOC_LABEL', 'COMM')
   setnames(tmp, 'SEX_LABEL', 'SEX')
   tmp[, ROUND := as.character(ROUND)]
   tmp[ROUND == '15.5', ROUND := '15S']
   tmp <- tmp[ROUND != '15S']
-  tmp[, ROUND_LABEL := paste0('ROUND: ', ROUND)]
+  tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
   tmp <- tmp[!(ROUND == '15S')]
   # tmp <- tmp[!(ROUND == '15')]
-  tmp[, SEX_LABEL := 'Female']
-  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, SEX_LABEL := 'Women']
+  tmp[SEX== 'M', SEX_LABEL := 'Men']
   tmp[, COMM_LABEL := 'Fishing\n communities']
   tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
+  tmp <- tmp[AGE_LABEL > 14 & AGE_LABEL < 50]
   
   # plot
-  p <- ggplot(tmp, aes(x = AGE_LABEL, y = value)) +
+  p <- ggplot(tmp[COMM == 'inland'], aes(x = AGE_LABEL, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'Age', y = 'Count HIV-positive newly registered participants', fill = 'Viral load') +
-    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+    labs(x = 'Age', y = 'Count HIV-positive participants', fill = '') +
+    facet_grid(ROUND_LABEL~SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1)))
-  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age_newlyregistered_221101.png')), w=9, h=8)
+          strip.text = element_text(size = rel(1))) + 
+    scale_fill_manual(values = c('#9F73AB', '#432C7A'), 
+                      labels = c('Viral load <= 1,000 copies/mL', 'Viral load > 1,000 copies/mL')) + 
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05))) + 
+    scale_x_continuous(expand = c(0,0))
+  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age_221104.pdf')), w=7, h=5.2)
   
 }
 
@@ -72,6 +74,7 @@ for(round in 15:18){
   # round <- 16
   # round <- 17
   # round <- 18
+  
   
   DT <- copy(vla[ROUND == round] )
   stopifnot(length(round) == 1)
@@ -109,7 +112,7 @@ for(round in 15:18){
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '_newlyregistered.rds')
+  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_1000.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
   
@@ -125,20 +128,35 @@ for(round in 15:18){
 rounds <- 15:18
 nsinf <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <-  vector(mode = 'list', length = length(rounds))
+nspred <- vector(mode = 'list', length = length(rounds))
+convergence.list <- vector(mode = 'list', length = length(rounds))
 for(i in seq_along(rounds)){
   
   round <- rounds[i]
   DT <- copy(vla[ROUND == round] )
   
-  # predicts age 
+  # age to predict
   x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '_newlyregistered.rds')
+  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_1000.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
-  #	summarise proportion of unsuppressed by sex and age
+  #
+  # Find rhat and neff
+  #
+  
+  sum_fit <- summary(fit)
+  neff <- na.omit(sum_fit$summary[, 9])
+  rhat <- na.omit(sum_fit$summary[, 10])
+  convergence <- data.table(ROUND = round, neff = neff, rhat = rhat)
+  
+  #
+  #	summarise estimated unsuppressed by sex and age
+  #
+  
+  # extract estimates
   ps <- c(0.025,0.5,0.975)
   qlab <- c('CL','M','CU')
   tmp <- as.data.table(reshape2::melt(1-re$p_predict_00))
@@ -158,8 +176,38 @@ for(i in seq_along(rounds)){
   nsinf.by.age = tmp[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
   nsinf.by.age = as.data.table(reshape2::dcast(nsinf.by.age, ... ~ q_label, value.var = "q"))
   
+  
+  #
+  #	summarise predicted unsuppressed by sex and age
+  #
+  
+  # merge to total count 
+  tmp <- merge(tmp, DT[, .(SEX, LOC, AGE_LABEL, HIV_N)], by = c('SEX', 'LOC', 'AGE_LABEL'), all.x = T)
+  
+  # predict count and predict unsuppressed
+  tmp[!is.na(HIV_N), COUNT_PREDICT := rbinom(1, HIV_N, value), by = c('SEX', 'LOC', 'AGE_LABEL', 'iterations')]
+  tmp[, UNSUPPRESSED_PREDICT := COUNT_PREDICT / HIV_N]
+  
+  # summarise
+  nspred.by.age = tmp[, list(q= quantile(UNSUPPRESSED_PREDICT, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
+  nspred.by.age = as.data.table(reshape2::dcast(nspred.by.age, ... ~ q_label, value.var = "q"))
+  
+  # sub-sample the last 9500 iterations
+  it <- data.table(iterations = tmp[, sort(unique(iterations))])
+  it[, iterations_rev := max(iterations):1]
+  tmp <- merge(it, tmp, by = 'iterations')
+  tmp <- tmp[iterations_rev %in% 1:9500]
+  tmp[, iterations := iterations - min(iterations)+ 1]
+  
+  
+  #
+  # POSTPROCESING
+  #
+  
+  # merge to data
   nsinf.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_VLNS_IN_HIV)), nsinf.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
   nsinf.samples.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_VLNS_IN_HIV)), tmp, by=c('SEX','LOC', 'AGE_LABEL'))
+  nspred.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, EMPIRICAL_VLNS_IN_HIV)), nspred.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
   
   # change of var name
   set(nsinf.by.age, NULL, 'SEX', NULL)
@@ -170,9 +218,20 @@ for(i in seq_along(rounds)){
   nsinf.by.age[, ROUND := paste0('R0', round)]
   
   # load change of var name
+  set(nspred.by.age, NULL, 'SEX', NULL)
+  set(nspred.by.age, NULL, 'LOC', NULL)
+  setnames(nspred.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'M', "CL", "CU"), 
+           c('COMM', 'SEX', 'AGEYRS', 'PROP_UNSUPPRESSED_M', 'PROP_UNSUPPRESSED_CL', 'PROP_UNSUPPRESSED_CU'))
+  nspred.by.age[, ROUND := paste0('R0', round)]
+  
+  # load change of var name
   set(nsinf.samples.by.age, NULL, 'SEX', NULL)
   set(nsinf.samples.by.age, NULL, 'LOC', NULL)
+  set(nsinf.samples.by.age, NULL, 'iterations_rev', NULL)
+  set(nsinf.samples.by.age, NULL, 'HIV_N', NULL)
   set(nsinf.samples.by.age, NULL, 'Var2', NULL)
+  set(nsinf.samples.by.age, NULL, 'UNSUPPRESSED_PREDICT', NULL)
+  set(nsinf.samples.by.age, NULL, 'COUNT_PREDICT', NULL)
   setnames(nsinf.samples.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'EMPIRICAL_VLNS_IN_HIV', 'value'),
            c('COMM', 'SEX', 'AGEYRS', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_UNSUPPRESSED_POSTERIOR_SAMPLE'))
   nsinf.samples.by.age[, ROUND := paste0('R0', round)]
@@ -180,37 +239,31 @@ for(i in seq_along(rounds)){
   # keep
   nsinf[[i]] <- nsinf.by.age
   nsinf.samples[[i]] <- nsinf.samples.by.age
+  nspred[[i]] <- nspred.by.age
+  convergence.list[[i]] <- convergence
 }
 nsinf <- do.call('rbind', nsinf)
 nsinf.samples <- do.call('rbind', nsinf.samples)
+nspred <- do.call('rbind', nspred)
+convergence <- do.call('rbind', convergence.list)
 
 
-#########
+###########################
 
-# PLOT #
+# STATISTICS FOR PAPER #
 
-#########
+###########################
 
-tmp <- copy(nsinf)
-tmp[, ROUND_LABEL := paste0('ROUND: ', gsub('R0(.+)', '\\1', ROUND))]
-tmp[, SEX_LABEL := 'Female']
-tmp[SEX== 'M', SEX_LABEL := 'Male']
-tmp[, COMM_LABEL := 'Fishing\n communities']
-tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
+# get proportion of predicted art use inside credible interval
+stats <- list()
+tmp <- nspred[COMM == 'inland' & !is.na(EMPIRICAL_VLNS_IN_HIV)]
 
-# plot
-ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_line(aes(y = 1-PROP_UNSUPPRESSED_M)) + 
-  geom_ribbon(aes(ymin = 1-PROP_UNSUPPRESSED_CL, ymax = 1-PROP_UNSUPPRESSED_CU), alpha = 0.5) + 
-  geom_point(aes(y = 1-PROP_UNSUPPRESSED_EMPIRICAL), alpha = 0.5, col = 'darkred') + 
-  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
-  labs(x = 'Age', y = 'Proportion of HIV-positive newly registered participants with suppressed viral load', fill = '') +
-  theme_bw() +
-  theme(legend.position = 'bottom', 
-        strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1))) + 
-  scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion_newlyregistered.png')), w=9, h=8)
+tmp[, within.CI := EMPIRICAL_VLNS_IN_HIV >= PROP_UNSUPPRESSED_CL & EMPIRICAL_VLNS_IN_HIV <= PROP_UNSUPPRESSED_CU]
+stats[['within.CI']] <- tmp[, paste0(round(mean(within.CI)*100, 2))]
+
+# get lowest rhat and lowest neff
+stats[['min_neff']]  = convergence[, round(min(neff))]
+stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 
 #########
@@ -219,8 +272,11 @@ ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion_newlyregist
 
 #########
 
-file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_vl_', VIREMIC_VIRAL_LOAD, '_newlyregistered_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_estimates_vl_1000_220803.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_', VIREMIC_VIRAL_LOAD, '_newlyregistered_221101.csv'))
-write.csv(nsinf.samples, file = file.name, row.names = F)
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
+saveRDS(nsinf.samples, file = file.name)
+
+file.name <- file.path(outdir, paste0('RCCS_nonsuppressed_proportion_model_fit_221101.RDS'))
+saveRDS(stats, file = file.name)
