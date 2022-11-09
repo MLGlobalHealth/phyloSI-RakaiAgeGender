@@ -195,69 +195,6 @@ stopifnot(nrow(df[COMM == 'fishing']) == df[, length(unique(AGEYRS))] * df[, len
 
 ####################################
 
-# PLOT
-
-####################################
-
-# label
-diagnosed.label = 'estimated proportion of diagnosed'
-on.art.label = "proportion of infected who report ART use"
-suppressed.label = "proportion of infected reporting ART use who had a viral load < 1,000 cps / mL blood"
-
-# add label
-tab <- copy(ns[variable %in% c('PROP_SUPPRESSION_GIVEN_ART',
-                                 'PROP_ART_COVERAGE_GIVEN_DIAGNOSED',
-                                 'PROP_DIAGNOSED')])
-tab[, VARIABLE_LEVEL := diagnosed.label]
-tab[variable == 'PROP_ART_COVERAGE_GIVEN_DIAGNOSED', VARIABLE_LEVEL := on.art.label]
-tab[variable == 'PROP_SUPPRESSION_GIVEN_ART', VARIABLE_LEVEL := suppressed.label]
-tab[, VARIABLE_LEVEL := factor(VARIABLE_LEVEL, 
-                               levels = c(diagnosed.label, on.art.label, suppressed.label))]
-tab[,SEX_LABEL := 'Men']
-tab[SEX == 'F',SEX_LABEL := 'Women']
-tab[,COMM_LABEL := 'Inland communities']
-tab[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
-
-tmp <- tab[ROUND == 'R018' & COMM == 'inland']
-ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_hline(aes(yintercept = 0.9), linetype='dashed', alpha = 0.5) +
-  geom_hline(aes(yintercept = 0.95), linetype='dashed', alpha = 0.5) +
-  geom_ribbon(aes(ymin = CL, ymax = CU, fill = VARIABLE_LEVEL), alpha = 0.25) + 
-  geom_line(aes(y = M, col = VARIABLE_LEVEL)) + 
-  facet_grid(~SEX_LABEL) + 
-  theme_bw() + 
-  labs(x = 'Age', y = '', col = '', fill = '') +
-  theme(legend.position = 'bottom', 
-        strip.background = element_rect(colour="white", fill="white")) +
-  ggsci::scale_color_jama()+
-  ggsci::scale_fill_jama()+
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) +
-  scale_x_continuous(expand = c(0,0)) + 
-  guides(color = guide_legend(byrow = T, nrow = 3),
-         fill = guide_legend(byrow = T, nrow = 3))
-ggsave(file = file.path(outdir, 'treatment_cascade_inland_population_221108.pdf'), w = 6.5, h = 4.5)  
-
-tmp <- tab[COMM == 'inland']
-ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_hline(aes(yintercept = 0.9), linetype='dashed', alpha = 0.5) +
-  geom_hline(aes(yintercept = 0.95), linetype='dashed', alpha = 0.5) +
-  geom_ribbon(aes(ymin = CL, ymax = CU, fill = VARIABLE_LEVEL), alpha = 0.25) + 
-  geom_line(aes(y = M, col = VARIABLE_LEVEL)) + 
-  facet_grid(ROUND~SEX_LABEL) + 
-  theme_bw() + 
-  labs(x = 'Age', y = '', col = '', fill = '') +
-  theme(legend.position = 'bottom', 
-        strip.background = element_rect(colour="white", fill="white")) +
-  ggsci::scale_color_jama()+
-  ggsci::scale_fill_jama()+
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) +
-  scale_x_continuous(expand = c(0,0)) + 
-  guides(color = guide_legend(byrow = T, nrow = 3),
-         fill = guide_legend(byrow = T, nrow = 3))
-
-
-####################################
-
 # SAVE
 
 ####################################
