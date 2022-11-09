@@ -6,69 +6,27 @@ library(lubridate)
 library(rstan)
 library("haven")
 
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-indir.repository <- '~/git/phyloflows'
+# directory to repository
+indir.repository <- "~/git/phyloflows"
 
+# outdir to save stan fit
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
+# files
+path.data <- file.path(indir.repository, 'data', 'aggregated_count_hiv_positive.csv')
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
-
-# load files
-community.keys <- as.data.table(read.csv(file.community.keys))
-quest <- as.data.table(read.csv(file.path.quest))
-hiv <- as.data.table(read.csv(file.path.hiv))
+# Load count of participants by hiv status
+rprev <- as.data.table( read.csv(path.data) )
 
 
 #################################
 
-# HIV TESTS USING HIV DATA SET #
+# PLOT #
 
 #################################
 
-if(0){ # check percentage with hiv tests
-  
-  for(Round in hiv[, sort(unique(round))]){
-    hiv_n <- hiv[round == Round, length(unique(study_id))]
-    participant_n <- quest[round == gsub(' ', '', Round), length(unique(study_id))]
-    cat('There is ', participant_n, 'participants in round', Round, ', ')
-    cat(hiv_n, 'of them have an hiv test result (', round(hiv_n  / participant_n, 4), '%)\n')
-  }
-  
-}
-
-# keep variable of interest
-rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, intdate)]
-
-# Set to date format
-rin[, intdate := as.Date(intdate, format = '%d-%b-%y')]
-
-# find  community
-community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
-rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
-
-# to upper
-colnames(rinc) <- toupper(colnames(rinc))
-
-# restric age
-rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
-
-# get hiv status
-rhiv <- hiv[, .(study_id, round, hiv)]
-rhiv[, round := gsub(" ", '', round, fixed = T)]
-colnames(rhiv) <- toupper(colnames(rhiv))
-hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
-
-# find HIV prevalence rate for participant
-rprev <- hivs[, list(COUNT = sum(HIV == 'P'),
-                     TOTAL_COUNT = length(HIV)), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
-
-# plot
 if(1){
   
   # tmp <- merge(rprev, df_round[, .(ROUND, LABEL_ROUND, COMM)], by = c('ROUND', 'COMM'))
@@ -103,7 +61,7 @@ if(1){
 
 ########################
 
-# FIND SMOOTH PREVENCE #
+# FIND EMPIRICAL PREVENCE #
 
 ########################
 
@@ -115,6 +73,13 @@ rprev[, ROW_ID:= seq_len(nrow(rprev))]
 
 # find empirical proportions
 rprev[, EMPIRICAL_PREVALENCE := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# prevalence
+
+
+########################
+
+# FIND SMOOTH PREVENCE #
+
+########################
 
 # find smooth proportion
 for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R016", "R017", "R018", "R015S")){
@@ -171,7 +136,7 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R016", "R017", "
 }
 
 # load results 
-rounds <- c(10:15, '15S', 16:18)
+rounds <- c(10:15, 16:18)
 nsinf <- vector(mode = 'list', length = length(rounds))
 nspred <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <- vector(mode = 'list', length = length(rounds))
@@ -217,14 +182,14 @@ for(i in seq_along(rounds)){
   tmp1 <- as.data.table(reshape2::melt(re$p_predict_11))
   tmp1[, `:=` (SEX = 1, LOC = 1)]
   tmp <- rbind(tmp, tmp1)
-
+  
   tmp[, AGE_LABEL := x_predict[Var2]]
   set(tmp, NULL, 'Var2', NULL)
-
+  
   # summarise
   nsinf.by.age = tmp[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
   nsinf.by.age = as.data.table(reshape2::dcast(nsinf.by.age, ... ~ q_label, value.var = "q"))
-
+  
   
   #
   #	summarise predicted prevalence by sex and age
@@ -264,14 +229,17 @@ for(i in seq_along(rounds)){
   setnames(nspred.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'M', "CL", "CU"), 
            c('COMM', 'SEX', 'AGEYRS', 'PREVALENCE_M', 'PREVALENCE_CL', 'PREVALENCE_CU'))
   nspred.by.age[, ROUND := paste0('R0', round)]
-
+  
   # load change of var name
   set(nsinf.samples.by.age, NULL, 'SEX', NULL)
   set(nsinf.samples.by.age, NULL, 'LOC', NULL)
+  set(nsinf.samples.by.age, NULL, 'COUNT_PREDICT', NULL)
+  set(nsinf.samples.by.age, NULL, 'TOTAL_COUNT', NULL)
+  set(nsinf.samples.by.age, NULL, 'PREVALENCE_PREDICT', NULL)
   setnames(nsinf.samples.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'value'),
            c('COMM', 'SEX', 'AGEYRS', 'PREVALENCE_POSTERIOR_SAMPLE'))
   nsinf.samples.by.age[, ROUND := paste0('R0', round)]
-
+  
   # keep
   nsinf[[i]] <- nsinf.by.age
   nspred[[i]] <- nspred.by.age
@@ -356,6 +324,12 @@ ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
 ggsave(file=file.path(outdir, paste0('smooth_estimated_prevalence_221101.pdf')),  w = 7, h = 7)
 
 
+###########################
+
+# STATISTICS FOR PAPER #
+
+###########################
+
 # get proportion of predicted prevalence inside credible interval
 stats <- list()
 tmp <- nspred[COMM == 'inland' & !is.na(EMPIRICAL_PREVALENCE)]
@@ -374,11 +348,11 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 #########
 
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_estimates_220811.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_estimates_220811.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
-write.csv(nsinf.samples, file = file.name, row.names = F)
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_220818.rds'))
+saveRDS(nsinf.samples, file = file.name)
 
 file.name <- file.path(outdir, paste0('RCCS_prevalence_model_fit_convergence_221101.RDS'))
 saveRDS(stats, file = file.name)

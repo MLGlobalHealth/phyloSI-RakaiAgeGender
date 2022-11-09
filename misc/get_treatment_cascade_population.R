@@ -1,24 +1,25 @@
-
 library(data.table)
 library(ggplot2)
 require(lubridate)
 library(dplyr)
 
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+# directory to repository
+indir.repository <- "~/git/phyloflows"
 
+# outdir to save figures
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 
 # posterior samples participants
-file.unsuppressedviralload <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.csv'))
-file.selfreportedart <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_posterior_samples_221101.csv'))
+file.unsuppressedviralload <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221101.rds'))
 
 # posterior samples non-participants
-file.unsuppressedviralload.np <- file.path(indir.deepsequencedata, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.csv'))
-file.selfreportedart.np <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_posterior_samples_newlyregistered_221101.csv'))
+file.unsuppressedviralload.np <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
+file.selfreportedart.np <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221101.rds'))
 
 # participation rate
-file.participation <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
+file.participation <- file.path(indir.repository, 'data', 'RCCS_participation_220915.csv')
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -31,12 +32,12 @@ qlab <- c('CL','M','CU')
 ###########################
 
 # load proportion unsuppressed viral load 
-uns.p <- as.data.table(read.csv(file.unsuppressedviralload))
-uns.np <- as.data.table(read.csv(file.unsuppressedviralload.np))
+uns.p <- as.data.table(readRDS(file.unsuppressedviralload))
+uns.np <- as.data.table(readRDS(file.unsuppressedviralload.np))
 
 # load proportion art
-sre.p <- as.data.table(read.csv(file.selfreportedart))
-sre.np <- as.data.table(read.csv(file.selfreportedart.np))
+sre.p <- as.data.table(readRDS(file.selfreportedart))
+sre.np <- as.data.table(readRDS(file.selfreportedart.np))
 
 # add label
 setnames(uns.p, 'PROP_UNSUPPRESSED_POSTERIOR_SAMPLE', 'PROP_UNSUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE')
@@ -80,6 +81,10 @@ df[, PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE := 1 - PROP_UNSUPPRESSED_N
 df[, SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE]
 df[, SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE]
 
+# add constraint that suppression rate must at maximum 1
+df[SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE > 1, SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE := 1]
+df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1, SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE := 1]
+
 
 ####################################
 
@@ -106,24 +111,26 @@ df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAM
 # for round 15 find % on art by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
 df[ROUND %in% c('R015'), SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE := SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE_R016, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
-df[ROUND %in% c('R015'), PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE / SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
+df[ROUND %in% c('R015'), PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE := min(1, PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE / SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
 set(df, NULL, 'SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE_R016', NULL)
 
 df[, SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
 df[ROUND %in% c('R015'), SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE := SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE_R016, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
-df[ROUND %in% c('R015'), PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE / SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
+df[ROUND %in% c('R015'), PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE := min(1, PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE / SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
 set(df, NULL, 'SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE_R016', NULL)
 
-# add constraint that suppression rate must be smaller than 1
-df <- df[PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE <= 1]
-df <- df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE <= 1]
+# add constraint that art coverage must be smaller than prop suppression (can occur if prop suppression > art coverage)
+df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE < PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE, PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE]
+df[PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE < PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE, PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE]
+stopifnot(nrow(df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
 
 # find art coverage in population
 df[, PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
 # find art coverage given diagnosed in population
-df[, PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE]
+df[, PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := min(1, PROP_ART_COVERAGE_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
 
+stopifnot(nrow(df[PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE>1]) == 0)
 
 
 ####################################
@@ -145,15 +152,23 @@ df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_SUPPRESSE
 df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_UNSUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE]
 set(df, NULL, 'SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE_R016', NULL)
 
-# add constraint that suppression rate must be smaller than 1
-df <- df[SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE <= 1]
-df <- df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE <= 1]
+stopifnot(nrow(df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
+stopifnot(nrow(df[SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
+
+
+####################################
+
+# FIND PROPORTION OF SUPPRESSION RATE 
+
+####################################
 
 # find suppression in the population
 df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE * PARTICIPATION + PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
 # find suppression given art use in the population (i.e., suppression rate)
 df[, PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_POSTERIOR_SAMPLE ]
+
+stopifnot(nrow(df[PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE > 1]) == 0)
 
 
 ####################################
@@ -172,19 +187,8 @@ ns = as.data.table(reshape2::dcast(ns, AGEYRS + SEX + COMM + ROUND + variable ~ 
 # check all entries are complete
 stopifnot(nrow(ns[COMM == 'inland']) == ns[, length(unique(AGEYRS))] * ns[, length(unique(SEX))] * ns[, length(unique(variable))] * ns[COMM == 'inland', length(unique(ROUND))])
 stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, length(unique(SEX))] * ns[, length(unique(variable))] * ns[COMM == 'fishing', length(unique(ROUND))])
-
-
-####################################
-
-# SAVE
-
-####################################
-
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.csv'))
-write.csv(df, file = file.name, row.names = F)
-
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_treatment_cascade_population_estimates_221101.csv'))
-write.csv(ns, file = file.name, row.names = F)
+stopifnot(nrow(df[COMM == 'inland']) == df[, length(unique(AGEYRS))] * df[, length(unique(SEX))] * df[, length(unique(iterations))] * df[COMM == 'inland', length(unique(ROUND))])
+stopifnot(nrow(df[COMM == 'fishing']) == df[, length(unique(AGEYRS))] * df[, length(unique(SEX))] * df[, length(unique(iterations))] * df[COMM == 'fishing', length(unique(ROUND))])
 
 
 ####################################
@@ -223,10 +227,40 @@ ggplot(tmp, aes(x = AGEYRS)) +
         strip.background = element_rect(colour="white", fill="white")) +
   ggsci::scale_color_jama()+
   ggsci::scale_fill_jama()+
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) +
   scale_x_continuous(expand = c(0,0)) + 
   guides(color = guide_legend(byrow = T, nrow = 3),
          fill = guide_legend(byrow = T, nrow = 3))
-ggsave(file = file.path(outdir, 'treatment_cascade_inland_population.pdf'), w = 6.5, h = 4.5)  
+ggsave(file = file.path(outdir, 'treatment_cascade_inland_population_221108.pdf'), w = 6.5, h = 4.5)  
 
+tmp <- tab[COMM == 'inland']
+ggplot(tmp, aes(x = AGEYRS)) + 
+  geom_hline(aes(yintercept = 0.9), linetype='dashed', alpha = 0.5) +
+  geom_hline(aes(yintercept = 0.95), linetype='dashed', alpha = 0.5) +
+  geom_ribbon(aes(ymin = CL, ymax = CU, fill = VARIABLE_LEVEL), alpha = 0.25) + 
+  geom_line(aes(y = M, col = VARIABLE_LEVEL)) + 
+  facet_grid(ROUND~SEX_LABEL) + 
+  theme_bw() + 
+  labs(x = 'Age', y = '', col = '', fill = '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  ggsci::scale_color_jama()+
+  ggsci::scale_fill_jama()+
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) +
+  scale_x_continuous(expand = c(0,0)) + 
+  guides(color = guide_legend(byrow = T, nrow = 3),
+         fill = guide_legend(byrow = T, nrow = 3))
+
+
+####################################
+
+# SAVE
+
+####################################
+
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.rds'))
+saveRDS(df, file = file.name)
+
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221101.csv'))
+write.csv(ns, file = file.name, row.names = F)
 

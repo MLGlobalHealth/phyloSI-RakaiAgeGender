@@ -1,108 +1,21 @@
-################
-# DEPENDENCIES #
-################
-
 library(data.table)
 library(ggplot2)
 library(Hmisc)
 library(rstan)
 
-# paths
-indir.repository <-'~/git/phyloflows/misc'
-indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
+# directory of the repository
+indir.repository <-'~/git/phyloflows'
+
+# outdir directory for stan fit
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
 outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
 
 # file
-path.stan <- file.path(indir.repository, 'stan_models', 'binomial_gp.stan')
-path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
+path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
+path.data <- file.path(indir.repository, 'data', 'aggregated_participants_count_unsuppressed.csv')
 
-# tuning
-VL_DETECTABLE = 400
-VIREMIC_VIRAL_LOAD = 1000 # WHO standards
-
-
-#################
-
-# PREPARE DATE #
-
-#################
-
-# Load data: exclude round 20 as incomplete
-dall <- fread(path.tests)
-dall <- dall[ROUND %in% c(15:18, 15.5)]
-# dall <- dall[ROUND == round]
-
-# percent of hiv positive with viral laod measurements 
-virperc <- dall[HIV_STATUS == 1 & COMM == 'inland']
-virperc <- virperc[, paste0(round(mean(!is.na(HIV_VL))*100, 2)), by = 'ROUND']
-
-# rename variables according to Oli's old script + remove 1 unknown sex
-setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
-dall[, HIV_AND_VL := ifelse( HIV_STATUS == 1 & !is.na(VL_COPIES), 1, 0)]
-dall <- dall[! SEX=='']
-
-# keep within census eligible age
-DT <- subset(dall, AGEYRS <= 50)
-
-# remove HIV+ individuals with missing VLs  
-DT <- subset(DT, HIV_STATUS==0 | HIV_AND_VL==1)
-
-# set ARVMED to 0 for HIV-
-set(DT, DT[, which(ARVMED==1 & HIV_STATUS==0)], 'ARVMED', 0) 
-
-# define VLC as VL_COPIES for HIV+ and as 0 for HIV-
-set(DT, NULL, 'VLC', DT$VL_COPIES)
-set(DT, DT[,which(HIV_STATUS==0)], 'VLC', 0)
-
-# define detectable VL as VLD and undetectable VL as VLU (machine-undetectable)
-set(DT, NULL, 'VLU', DT[, as.integer(VLC<VL_DETECTABLE)])
-set(DT, NULL, 'VLD', DT[, as.integer(VLC>=VL_DETECTABLE)])
-
-# define suppressed VL as VLS and unsuppressed as VLNS (according to WHO criteria)	
-set(DT, NULL, 'VLS', DT[, as.integer(VLC<VIREMIC_VIRAL_LOAD)])
-set(DT, NULL, 'VLNS', DT[, as.integer(VLC>=VIREMIC_VIRAL_LOAD)])
-
-# find HIV+ and detectable
-set(DT, NULL, 'HIV_AND_VLD', DT[, as.integer(VLD==1 & HIV_AND_VL==1)])
-
-# reset undetectable to VLC 0
-set(DT, DT[, which(HIV_AND_VL==1 & VLU==1)], 'VLC', 0)
-setkey(DT, ROUND, FC, SEX, AGEYRS)
-
-# get count for every categories
-tmp <- seq.int(min(DT$AGEYRS), max(DT$AGEYRS))
-tmp1 <- DT[, sort(unique(ROUND))]
-vla <- as.data.table(expand.grid(ROUND=tmp1,
-                                 FC=c('fishing','inland'),
-                                 SEX=c('M','F'),
-                                 AGEYRS=tmp))
-vla <- vla[, {		
-  z <- which(DT$ROUND==ROUND & DT$FC==FC & DT$SEX==SEX & DT$AGEYRS==AGEYRS)	
-  list(N          = length(z), # number of participants
-       HIV_N      = sum(DT$HIV_STATUS[z]==1), # number of HIV+
-       VLNS_N     = sum(DT$VLNS[z]==1), # number of unsuppressed from viral load
-       ARV_N      = sum(DT$ARVMED[z]==0 & DT$HIV_STATUS[z]==1 & !is.na(DT$ARVMED[z])) # number of unsuppressed from self-reporting
-  )				
-}, by=names(vla)]
-
-setnames(vla, c('FC','SEX','AGEYRS'), c('LOC_LABEL','SEX_LABEL','AGE_LABEL'))
-vla[, LOC:= as.integer(LOC_LABEL=='fishing')]
-vla[, SEX:= as.integer(SEX_LABEL=='M')]
-vla[, AGE:= AGE_LABEL-14L]
-vla[, ROW_ID:= seq_len(nrow(vla))]
-
-
-##########################################
-
-# FIND UNSUPPRESSED PROPORTION CRUDE ESTIMATE #
-
-##########################################
-
-# find empirical proportions
-vla[, NONVLNS := HIV_N-VLNS_N]
-vla[, EMPIRICAL_NONVLNS_IN_HIV := NONVLNS / HIV_N, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# proportion of suppressed
-vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsuppressed
+# Load count of participants with unsuppressed viral loads
+vla <- as.data.table( read.csv(path.data) )
 
 
 ##########################################
@@ -199,7 +112,7 @@ for(round in 15:18){
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '.rds')
+  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_1000.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
   
@@ -226,7 +139,7 @@ for(i in seq_along(rounds)){
   x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_', VIREMIC_VIRAL_LOAD, '.rds')
+  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_1000.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -285,7 +198,7 @@ for(i in seq_along(rounds)){
   tmp <- merge(it, tmp, by = 'iterations')
   tmp <- tmp[iterations_rev %in% 1:9500]
   tmp[, iterations := iterations - min(iterations)+ 1]
-
+  
   
   #
   # POSTPROCESING
@@ -329,52 +242,28 @@ for(i in seq_along(rounds)){
   nspred[[i]] <- nspred.by.age
   convergence.list[[i]] <- convergence
 }
-
 nsinf <- do.call('rbind', nsinf)
 nsinf.samples <- do.call('rbind', nsinf.samples)
 nspred <- do.call('rbind', nspred)
 convergence <- do.call('rbind', convergence.list)
 
 
-#########
+###########################
 
-# PLOT #
+# STATISTICS FOR PAPER #
 
-#########
-
-tmp <- copy(nsinf)
-tmp[, ROUND_LABEL := paste0('ROUND: ', gsub('R0(.+)', '\\1', ROUND))]
-tmp[, SEX_LABEL := 'Female']
-tmp[SEX== 'M', SEX_LABEL := 'Male']
-tmp[, COMM_LABEL := 'Fishing\n communities']
-tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
-
-# plot
-ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_line(aes(y = 1-PROP_UNSUPPRESSED_M)) + 
-  geom_ribbon(aes(ymin = 1-PROP_UNSUPPRESSED_CL, ymax = 1-PROP_UNSUPPRESSED_CU), alpha = 0.5) + 
-  geom_point(aes(y = 1-PROP_UNSUPPRESSED_EMPIRICAL), alpha = 0.5, col = 'darkred') + 
-  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
-  labs(x = 'Age', y = 'Proportion of HIV-positive participants with suppressed viral load', fill = '') +
-  theme_bw() +
-  theme(legend.position = 'bottom', 
-        strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1))) + 
-  scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_unsuppressed_proportion.png')), w=9, h=8)
+###########################
 
 # get proportion of predicted art use inside credible interval
 stats <- list()
 tmp <- nspred[COMM == 'inland' & !is.na(EMPIRICAL_VLNS_IN_HIV)]
+
 tmp[, within.CI := EMPIRICAL_VLNS_IN_HIV >= PROP_UNSUPPRESSED_CL & EMPIRICAL_VLNS_IN_HIV <= PROP_UNSUPPRESSED_CU]
 stats[['within.CI']] <- tmp[, paste0(round(mean(within.CI)*100, 2))]
 
 # get lowest rhat and lowest neff
 stats[['min_neff']]  = convergence[, round(min(neff))]
 stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
-
-# add percent of hiv positive with viral laod measurements 
-stats[['viral_load_measured']] = virperc
 
 
 #########
@@ -383,11 +272,11 @@ stats[['viral_load_measured']] = virperc
 
 #########
 
-file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_vl_', VIREMIC_VIRAL_LOAD, '_220803.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_estimates_vl_1000_220803.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_', VIREMIC_VIRAL_LOAD, '_220818.csv'))
-write.csv(nsinf.samples, file = file.name, row.names = F)
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
+saveRDS(nsinf.samples, file = file.name)
 
 file.name <- file.path(outdir, paste0('RCCS_nonsuppressed_proportion_model_fit_221101.RDS'))
 saveRDS(stats, file = file.name)

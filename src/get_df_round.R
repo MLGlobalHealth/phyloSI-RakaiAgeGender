@@ -7,6 +7,7 @@ library("haven")
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
@@ -104,6 +105,6 @@ if(0){
 # SAVE ROUND TIMELINE
 #
 
-save(df_round_inland, df_round_fishing, file = file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData'), row.names = F)
+save(df_round_inland, df_round_fishing, file = file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData'), row.names = F)
 
 

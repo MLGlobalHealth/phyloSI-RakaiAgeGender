@@ -4,15 +4,17 @@ require(lubridate)
 library(dplyr)
 library(ggpubr)
 
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+# directory repository
 indir.repository <- '~/git/phyloflows'
 
+# directory to save the figures
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
-file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
-infile.unsuppressed <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_propunsuppressed_age_group_221101.csv'))
-infile.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_age_group_220830.csv'))
+# files
+file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
+infile.unsuppressed <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221101.csv'))
+infile.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_age_group_220830.csv'))
 
 load(file.path.round.timeline)
 prevalence <- as.data.table(read.csv(infile.prevalence))
@@ -89,8 +91,8 @@ for(i in seq_along(communities)){
          x = 'Date (midpoint of survey interval)') + 
     scale_x_date(expand = c(0.03,0.03)) +
     guides(color = guide_legend(override.aes = list(shape = 16), order = 1), linetype = guide_legend(order = 2), shape = guide_legend(order = 2))
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221101.png')), w = 7.5,h = 3.5)
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221101.pdf')), w = 8,h = 3.5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221107.png')), w = 7.5,h = 3.5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221107.pdf')), w = 8,h = 3.5)
 }
 
 # find statistics
