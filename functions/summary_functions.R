@@ -986,14 +986,6 @@ print.statements.about.pairs <- function(pairs)
   cat(nrow(pairs[!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPIENT)]), ' pairs have a proxy for the age at infection of the source and recipient\n')
   cat(nrow(pairs[((SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M') | (SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F')) & (!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPIENT))]), ' pairs are heteroxuals have a proxy for the time of infection of the source and recipient\n\n')                
   
-  #   cat('\nPairs by cohort')
-  #   tab <- pairs[, list(count = .N), by = c('cohort.SOURCE', 'cohort.RECIPIENT')]
-  #   print_table(tab)
-  
-  #   cat('\nPairs enrolled in RCCS by cohort round')
-  #   tab <- pairs[cohort.RECIPIENT == 'RCCS' & cohort.SOURCE == 'RCCS', list(count = .N), by = c('cohort_round.SOURCE', 'cohort_round.RECIPIENT')]
-  #   print_table(tab)
-  
   cat('\nPairs by sex')
   tab <- pairs[, list(count = .N), by = c('SEX.SOURCE', 'SEX.RECIPIENT')]
   print_table(tab)
@@ -1002,12 +994,6 @@ print.statements.about.pairs <- function(pairs)
   tab <- pairs[, list(count = .N), by = c('COMM.SOURCE', 'COMM.RECIPIENT')]
   print_table(tab)
   
-  cat('\nPairs by round')
-  tab <- pairs[, list(count = .N), by = c('ROUND.SOURCE')]
-  print_table(tab[order(ROUND.SOURCE)])
-  
-  tab <- pairs[, list(count = .N), by = c('ROUND.RECIPIENT')]
-  print_table(tab[order(ROUND.RECIPIENT)])
 }
 
 print.statements.about.basefreq.files <- function(chain)
@@ -1282,6 +1268,7 @@ load_incidence_rates_samples <- function(file.incidence.samples.inland){
   # iterations: iterations over 50 data with imputed date of infection
   # iterations within: iterations within dataset of estimated incidence rate using MLE mean/sd and assuming normality
   # subsample otherwise the memory is excausted
+  incidence_rates_round.samples <- incidence_rates_round.samples[iterations_within %in%1:500]
   incidence_rates_round.samples[, iterations := paste0(iterations, '-', iterations_within)]
   
   # keep var of interest
@@ -1347,5 +1334,12 @@ read_treatment_cascade <- function(file.treatment.cascade.prop.participants,
                              by = c('AGEYRS', 'SEX', 'COMM', 'ROUND'))
   
   return(treatment_cascade)
+}
+
+read_pairs <- function(file.pairs){
+  pairs.all <- as.data.table(readRDS(file.pairs))
+  setnames(pairs.all, 'M', 'DATE_INFECTION.RECIPIENT')
+  pairs.all <- select(pairs.all, -c('CL', 'IL', 'IU', 'CU', 'ROUND.M', 'DIRECTION'))
+  return(pairs.all)
 }
 

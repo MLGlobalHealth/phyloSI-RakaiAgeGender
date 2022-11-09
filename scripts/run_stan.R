@@ -1,12 +1,9 @@
 library(data.table)
-library(igraph)
 library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(knitr)
 library(grid)
-library(ggtree)
-library(ggnet)
 require(lubridate)
 library(rstan)
 library(gridExtra)
@@ -15,9 +12,6 @@ library(gridExtra)
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 {
   indir <- '~/git/phyloflows'
-  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
-  indir.deepsequence_xiaoyue <- '~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'new_period'
@@ -29,22 +23,12 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 if(dir.exists('/home/andrea'))
 {
   indir <-'~/git/phyloflows'
-  indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live'
-  indir.deepsequence_xiaoyue   <- '~/Documents/Box/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata'
   outdir <- '~/Documents/Box/2021/phyloflows'
 
   jobname <- 'test'
   stan_model <- 'gp_220911a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
-}
-
-if(dir.exists('/rds/general'))
-{
-  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_deepseq_analyses/live'
-  indir.deepsequence_xiaoyue   <- '/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live'
 }
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
@@ -68,13 +52,8 @@ if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
 if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 
 # indicators
-include.only.heterosexual.pairs <- T
 include.pairs.uncleardirection.disparateviralloads.complextopology <- F
 threshold.likely.connected.pairs <- 0.5
-use.tsi.estimates <- F
-use.network.derived.infection.dates <- T
-use.tsi.oneyear.before.first.positive <- F
-remove.inconsistent.infection.dates <- F
 remove.young.individuals <- T
 remove.missing.community.recipient <- T
 remove.neuro.individuals <- T
@@ -88,30 +67,26 @@ nonparticipants.not.treated <- F
 remove.pairs.from.rounds <- NULL
 only.one.community <- 'inland'
 
-# file paths
-file.path.chains.data <- file.path(indir.deepsequence_xiaoyue,'211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
-# file.path.tsiestimates <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', 'TSI_estimates_220119.csv')
-file.path.tsiestimates <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS_UVRI_TSI2','2022_07_26_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T', 'aggregated_adjusted_TSI_with_estimated_dates.csv')
-file.anonymisation.keys <- file.path(indir.deepsequence_xiaoyue,'important_anonymisation_keys_210119.csv')
+# obtained in EMODO_RAKAI repo
+file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
+file.incidence.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
 
-# from EMODO_RAKAI repo
-file.incidence.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_inland_221101.csv")
-file.incidence.samples.inland	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_incpredictions_samples_inland_221101.csv")
+# obtained in src/ for analysis
+file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData')
+file.eligible.count <- file.path(indir, 'data', 'RCCS_census_eligible_individuals_220830.csv')
+file.participation <- file.path(indir, 'data', 'RCCS_participation_220915.csv')
+file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_220811.csv')
 
-# from misc/ for analysis
-file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
-file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
-file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
-file.participation <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
-file.prevalence.prop <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_prevalence_estimates_220811.csv')
-file.treatment.cascade.prop.participants <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "RCCS_treatment_cascade_participants_estimates_221101.csv")
-file.treatment.cascade.prop.nonparticipants <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "RCCS_treatment_cascade_nonparticipants_estimates_221101.csv")
+# obtained in misc/ for analysis
+file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11.rds')
+file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221101.csv")
+file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221101.csv")
 
-# from misc/ for plots
-file.unsuppressed.share <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_share_sex_221101.csv'))
-file.unsuppressed_rate_ratio <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
-file.prevalence.share <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_share_sex_220830.csv'))
-file.reported.sexual.partnerships <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('age-age-group-est-cntcts-r15.rds'))
+# obtained in misc/ for plots
+file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221101.csv'))
+file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
+file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_220830.csv'))
+file.reported.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
 
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
@@ -122,24 +97,12 @@ source(file.path(indir, 'functions', 'plotting_functions.R'))
 source(file.path(indir, 'functions', 'statistics_functions.R'))
 source(file.path(indir, 'functions', 'stan_utils.R'))
 
-# check args
-stopifnot( use.tsi.estimates + use.network.derived.infection.dates + use.tsi.oneyear.before.first.positive == 1)
+# load pairs
+pairs.all <- read_pairs(file.pairs)
 
-# load anonymous aid
-aik <- .read(file.anonymisation.keys); aik$X <- NULL
-
-# load chains
-load(file.path.chains.data)
-dchain <- as.data.table(dchain)
-
-# load meta data and round timeline
-load(file.path.meta)
+# load round timeline
 load(file.path.round.timeline)
 df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
-
-# load Tanya's estimate time since infection using phylogenetic data
-if(use.tsi.estimates)
-        time.since.infection <- make.time.since.infection(fread(file.path.tsiestimates))
 
 # load census eligible ount
 eligible_count_smooth <- fread(file.eligible.count)
@@ -207,69 +170,16 @@ incidence_cases[, table(PERIOD, COMM)]
 #
 # Find phylo pairs 
 #
-
-# get time of infection (using Tanya's estimate if use.tsi.estimates == T)
-meta_data <- find.time.of.infection(meta_data, time.since.infection, use.tsi.estimates)
-
-# get likely transmission pairs
-chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
-
-# merge meta data to source and recipient
-pairs.all <- pairs.get.meta.data(chain, meta_data, aik)
-
-if(use.tsi.estimates){
-  plot.coherent.tsi.estimates.with.seroconversion(outfile.figures)
-  plot.tsi.relationships.among.source.recipient.pairs(outfile.figures)
-}
-
-if(include.only.heterosexual.pairs)
+if(1)
 {
   cat('Keep only heterosexual pairs\n')
   cat('Removing ', nrow(pairs.all[! ((SEX.RECIPIENT == 'M' & SEX.SOURCE == 'F') | (SEX.RECIPIENT == 'F' & SEX.SOURCE == 'M'))]), ' pairs\n')
   pairs.all <- pairs.all[(SEX.RECIPIENT == 'M' & SEX.SOURCE == 'F') | (SEX.RECIPIENT == 'F' & SEX.SOURCE == 'M')]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
-
-  # remove from chain too for later step.
-  setkey(chain, SOURCE, RECIPIENT)
-  chain <- chain[pairs.all[, .(SOURCE, RECIPIENT)]]
-}
-
-# this below changes the values of metadata, chain & pairs.all
-if(use.network.derived.infection.dates)
-{
-        cat('Assign infection dates according to network relationships...\n')
-
-        # helper functions here are in helpers.
-        filename <- paste0('network_attributed_doi',
-                           '_chains', .assign.code.meta(file.path.meta),
-                           '_meta',  .assign.code.chain(file.path.chains.data),
-                           '_onlyhetero', as.integer(include.only.heterosexual.pairs),
-                           '.rds')
-        if(filename %like% 'NA')
-                stop('Updated path for chains/meta? Need to update .assign.code.meta/meta\n')
-
-        filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', filename)
-
-        out <- update.meta.pairs.after.doi.attribution(path=filename, outfile.figures, overwrite = F)
-        stopifnot(nrow(meta_data) == nrow(out$meta_data))
-        
-
-        cat('\t Because of plausible dates of infection inconsistencies:\n')
-        .f <- function(DT){DT[, .(SOURCE, RECIPIENT)]}
-        tmp <- setdiff(.f(out$pairs.all), .f(pairs.all))[, .N]
-        cat('\t - switched direction of transmission for', tmp,'couples.\n')
-        tmp <- nrow(pairs.all) - nrow(out$pairs.all)
-        cat('\t - Removed', tmp,' couples.\n\n')
-
-        pairs.all <- out$pairs.all
-        chain <- out$chain
-        meta_data <- out$meta_data
-}
-
-if(remove.inconsistent.infection.dates){
-  cat('Remove infections for which estimated date at infection of source is after the estimated date at infection of the recipient.\n ')
-  cat('Removing ', nrow(pairs.all[ DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]), ' pairs\n')
-  pairs.all <- pairs.all[! DATE_INFECTION.SOURCE >= DATE_INFECTION.RECIPIENT ]
+  
+  cat('Keep only RCCS participants\n')
+  cat('Removing ', nrow(pairs.all[(COMM.SOURCE == 'neuro' | COMM.RECIPIENT == "neuro")]), ' pairs\n')
+  pairs.all <- pairs.all[COMM.SOURCE != 'neuro' & COMM.RECIPIENT != "neuro"]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
 if(remove.young.individuals){
@@ -279,10 +189,6 @@ if(remove.young.individuals){
   pairs.all <- pairs.all[AGE_TRANSMISSION.SOURCE >= 15 & AGE_INFECTION.RECIPIENT >= 15]
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
-
-# plot time of infection
-plot_hist_time_infection(copy(pairs.all), cutoff_date, outfile.figures)
-
 if(!is.null(only.one.community)){
   cat('\nExcluding sources and recipients in ',   pairs.all[COMM.RECIPIENT != only.one.community, unique(COMM.RECIPIENT)] ,'\n')
   cat('Removing ', nrow(pairs.all[COMM.RECIPIENT != only.one.community]), ' pairs\n')
@@ -296,7 +202,6 @@ if(only.transmission.after.start.observational.period){
 
   cat('resulting in a total of ', nrow(pairs.all),' pairs\n\n')
 }
-
 if(only.transmission.before.stop.observational.period){
   cat('\nFor inland excluding recipients infected after ', as.character(stop_observational_period_inland), '\n')
   cat('Removing ', nrow(pairs.all[DATE_INFECTION.RECIPIENT > stop_observational_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
@@ -399,8 +304,8 @@ if(1){
   save_statistics_transmission_events(pairs, outdir.table)
   
   # plot incident rates and cases over time
-  incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
   plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
+  incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
   plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
   plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
     
@@ -408,14 +313,13 @@ if(1){
   plot_offset(stan_data, outfile.figures)
   
   # plot pair from chains
-  # phsc.plot.transmission.network(copy(as.data.table(dchain)), copy(as.data.table(dc)), pairs,outdir=outfile, arrow=arrow(length=unit(0.02, "npc"), type="open"), edge.size = 0.1)
   plot_hist_age_infection(copy(pairs), outfile.figures)
+  plot_hist_time_infection(copy(pairs), cutoff_date, outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M'], 'Female -> Male', 'FM', outfile.figures)
   plot_pairs(pairs, outfile.figures)
   plot_CI_age_infection(pairs, outfile.figures)
   plot_CI_age_transmission(pairs, outfile.figures)
-
 }
 
 
