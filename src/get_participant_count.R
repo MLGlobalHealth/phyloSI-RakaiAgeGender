@@ -15,9 +15,9 @@ indir.repository <- '~/git/phyloflows'
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
-file.census.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
+file.census.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv')
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-file.path.round.timeline <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_round_timeline_220905.RData')
+file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
 
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
 
@@ -27,9 +27,10 @@ ncen <- as.data.table(read.csv(file.census.count))
 quest <- as.data.table(read.csv(file.path.quest))
 load(file.path.round.timeline)
 
+
 ################################
 
-# FIND PARTICIPATION
+# FIND COUNT OF PARTICIPANT
 
 ################################
 
@@ -61,7 +62,13 @@ rinc <- rinc[, {
   list(AGEYRS = AGEYRS, PARTICIPANT_SMOOTH = smoothed50, PARTICIPANT = PARTICIPANT)
 }, by = c('COMM', 'SEX', 'ROUND')]
 
+
+################################
+
 # GET PROPORTION OF PARITCIPATION
+
+################################
+
 tmp <- select(ncen, c('AGEYRS', 'ROUND', 'SEX', 'COMM', 'ELIGIBLE_NOT_SMOOTH', 'ELIGIBLE'))
 rinc[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
 rpr <- merge(rinc,tmp , by =  c('AGEYRS', 'ROUND', 'SEX', 'COMM'))
@@ -70,7 +77,13 @@ rpr[, PARTICIPATION_SMOOTH := PARTICIPANT_SMOOTH / ELIGIBLE]
 rpr[PARTICIPATION > 1, PARTICIPATION := 1]
 rpr[PARTICIPATION_SMOOTH > 1, PARTICIPATION_SMOOTH := 1]
 
+
+################################
+
 # PLOT
+
+################################
+
 tmp <- copy(rpr)
 tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
 tmp <- tmp[!(ROUND == '15S' & COMM == 'inland')]
@@ -107,7 +120,6 @@ p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09") & COMM=='inland'], aes(x =
   scale_y_continuous(labels = scales::percent, limits = c(0,1), expand = c(0,0)) + 
   scale_x_continuous(expand = c(0,0))
 ggsave(p, file = file.path(outdir, 'Participation.pdf'), w = 8, h = 10)
-
 
 # plot count participation rate over age pretty
 tmp1 <- tmp[, list(PARTICIPANT = sum(PARTICIPANT), ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'SEX_LABEL', 'COMM_LABEL', 'COMM')]
@@ -182,12 +194,16 @@ p <- ggplot(tmp1[COMM == 'inland']) +
 ggsave(p, file = file.path(outdir, 'Participants_aggregated_age_221104.pdf'), w = 3.2, h = 6.2)
 
 
+################################
 
-## save
+# SAVE
+
+################################
+
 tmp <- rpr[!ROUND %in% c("06", "07", "08", "09"), list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]
 saveRDS(tmp, file.path(outdir, 'Participation.rds'))
 
-file <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'RCCS_participation_220915.csv')
+file <- file.path(indir.repository, 'data', 'RCCS_participation_220915.csv')
 tmp <- rpr[, .(AGEYRS, ROUND, SEX, COMM, PARTICIPANT, PARTICIPATION_SMOOTH)]
 setnames(tmp, 'PARTICIPATION_SMOOTH', 'PARTICIPATION')
 write.csv(tmp, file = file, row.names = F)
