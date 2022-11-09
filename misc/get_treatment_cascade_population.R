@@ -177,7 +177,9 @@ stopifnot(nrow(df[PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE > 1]) == 0)
 
 ####################################
 
-tmp <- df[, .(ROUND, SEX, COMM, AGEYRS, iterations, PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE, 
+tmp <- df[, .(ROUND, SEX, COMM, AGEYRS, iterations, 
+              PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE, 
+              PROP_SUPPRESSED_POSTERIOR_SAMPLE,PROP_ART_COVERAGE_POSTERIOR_SAMPLE,
              PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE, PROP_DIAGNOSED_POSTERIOR_SAMPLE)]
 tmp <- melt.data.table(tmp, id.vars= c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations'))
 tmp[, variable := gsub('(.+)_POSTERIOR_SAMPLE', '\\1', variable)]
@@ -203,7 +205,9 @@ on.art.label = "proportion of infected who report ART use"
 suppressed.label = "proportion of infected reporting ART use who had a viral load < 1,000 cps / mL blood"
 
 # add label
-tab <- copy(ns)
+tab <- copy(ns[variable %in% c('PROP_SUPPRESSION_GIVEN_ART',
+                                 'PROP_ART_COVERAGE_GIVEN_DIAGNOSED',
+                                 'PROP_DIAGNOSED')])
 tab[, VARIABLE_LEVEL := diagnosed.label]
 tab[variable == 'PROP_ART_COVERAGE_GIVEN_DIAGNOSED', VARIABLE_LEVEL := on.art.label]
 tab[variable == 'PROP_SUPPRESSION_GIVEN_ART', VARIABLE_LEVEL := suppressed.label]
