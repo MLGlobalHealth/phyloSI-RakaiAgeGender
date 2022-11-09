@@ -17,11 +17,6 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
   data[, `Community source` := COMM.SOURCE]
   data[, `Community recipient` := COMM.RECIPIENT]
   
-  data[, COHORT_ROUND.SOURCE := substr(ROUND.SOURCE, 1, 4)]
-  data[, COHORT_ROUND.RECIPIENT := substr(ROUND.RECIPIENT, 1, 4)]
-  data[, `Cohort round recipient` := COHORT_ROUND.RECIPIENT]
-  data[, `Cohort round source` := COHORT_ROUND.SOURCE]
-  
   # all pairs
   p <- ggplot(data, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
     geom_point() + 
@@ -36,35 +31,6 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = N
       ggsave(p, filename = paste0(outdir, '-data-AgeInfection_AllPairs_', plotlab, '.png'), w = 4, h = 4)
   plots = c(plots, list(p))
   
-  # by cohort round
-  p1 <- ggplot(data, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
-    geom_point(aes(col = `Cohort round source`)) + 
-    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
-    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
-    theme_bw() + 
-    coord_fixed() +
-    scale_x_continuous(limits = range(c(data$AGE_TRANSMISSION.SOURCE, data$AGE_INFECTION.RECIPIENT)))+
-    scale_y_continuous(limits = range(c(data$AGE_TRANSMISSION.SOURCE, data$AGE_INFECTION.RECIPIENT))) +
-    ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
-    theme(legend.position = 'bottom')+
-    guides(col=guide_legend(nrow=2,byrow=TRUE))
-
-  p2 <- ggplot(data, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
-    geom_point(aes(col = `Cohort round recipient`)) + 
-    labs(y = 'Age at transmission source', x = 'Age at infection recipient') +
-    geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
-    theme_bw() + 
-    coord_fixed() +
-    scale_x_continuous(limits = range(c(data$AGE_TRANSMISSION.SOURCE, data$AGE_INFECTION.RECIPIENT)))+
-    scale_y_continuous(limits = range(c(data$AGE_TRANSMISSION.SOURCE, data$AGE_INFECTION.RECIPIENT))) +
-    ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
-    theme(legend.position = 'bottom') +
-    guides(col=guide_legend(nrow=2,byrow=TRUE))
-
-  p <- ggarrange(p1, p2, ncol = 2)
-  if(!is.null(outdir))
-    ggsave(p, filename = paste0(outdir, '-data-AgeInfection_CohortRound_', plotlab, '.png'), w = 9, h = 7)
-  plots = c(plots, list(p))
   
   # by age infection round
   p <- ggplot(data, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
@@ -161,28 +127,17 @@ plot_hist_age_infection <- function(pairs, outdir = NULL)
 plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL)
 {
   
-  # pairs[, COHORT_ROUND.SOURCE := substr(ROUND.SOURCE, 1, 4)]
-  pairs[, COHORT_ROUND.RECIPIENT := substr(ROUND.RECIPIENT, 1, 4)]
-  # pairs[, `Round source` := COHORT_ROUND.SOURCE]
-  pairs[, Round_recipient := paste0('Round recipient:\n', COHORT_ROUND.RECIPIENT)]
-  pairs <- pairs[COHORT_ROUND.RECIPIENT != 'neur']
- 
-  if(use.tsi.estimates){
-    pairs[, type := 'With TSI estimates']
-  }else{
-    pairs[, type := 'Date infection = Date first visit - 1 year']
-    pairs[!is.na(AGE_FIRST_POSITIVE.RECIPIENT) , type := 'Date infection = Date first positive - 1 year']
-    pairs[AGE_FIRST_POSITIVE.RECIPIENT == AGE_FIRST_VISIT.RECIPIENT, type := 'Date infection = Date first visit(=first positive) - 1 year']
-  }
-
-  # inland
-  tmp <- pairs[COMM.RECIPIENT == 'inland']
-  tmp_round <- df_round[COMM == 'inland']
+  # find round of infection
+  tmp <- merge(pairs, df_round,by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian = T)
+  tmp <- tmp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MAX_SAMPLE_DATE]
+  setnames(tmp, 'LABEL_ROUND', 'LABEL_ROUND_BIS') # to avoid rect to be only in one facet
+  
+  # plot
   p <- ggplot(tmp) +
-    geom_rect(data = tmp_round, aes(ymin = -Inf, ymax = Inf, xmin = MIN_SAMPLE_DATE, 
+    geom_rect(data = df_round, aes(ymin = -Inf, ymax = Inf, xmin = MIN_SAMPLE_DATE, 
                                     xmax = MAX_SAMPLE_DATE, fill = ROUND), alpha = 0.5) + 
     geom_histogram(aes(x = DATE_INFECTION.RECIPIENT), bins = 100) +
-    facet_grid(Round_recipient~type) +
+    facet_grid(LABEL_ROUND_BIS~.) +
     theme_bw() + 
     labs(x = 'Date of infection recipient') + 
     geom_vline(xintercept = cutoff_date, linetype = 'dashed') + 
@@ -674,7 +629,6 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
     theme_bw() +
     theme(legend.position = 'bottom')
   ggsave(paste0(outdir, '-data-census_eligible_susceptible_round.png'), w = 7, h = 6)
-  
   
   #
   # proportion of unsuppressed among participants
