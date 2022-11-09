@@ -7,16 +7,18 @@ library(ggsci)
 library(gridExtra)
 library(ggpubr)
 
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+# directory repository
+indir.repository <- '~/git/phyloflows'
 
+# directory to save the figures
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 
 # treatment cascade participants
-file.cascade.participants <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_treatment_cascade_participants_estimates_221101.csv'))
+file.cascade.participants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221101.csv'))
 
 # treatment cascade non-participants
-file.cascade.nonparticipants <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221101.csv'))
+file.cascade.nonparticipants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221101.csv'))
 
 
 ##############
@@ -100,7 +102,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0)) + 
   guides(color = guide_legend(byrow = T, nrow = 3),
          fill = guide_legend(byrow = T, nrow = 3))
-ggsave(file = file.path(outdir, 'treatment_cascade_inland_participants_vs_nonparticipants.pdf'), w = 6.5, h = 6.5)  
+ggsave(file = file.path(outdir, 'treatment_cascade_inland_participants_vs_nonparticipants_221108.pdf'), w = 6.5, h = 6.5)  
 
 
 ###########################
@@ -136,7 +138,7 @@ ggplot(tab, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'participants_smooth_unsuppressed.pdf'), w = 7, h = 7)  
+ggsave(file = file.path(outdir, 'participants_smooth_unsuppressed_221108.pdf'), w = 7, h = 7)  
 
 # for non-participants
 tab <- uns[type == 'Non participants' & COMM == 'inland' & ROUND != 'R015S']
@@ -156,7 +158,7 @@ ggplot(tab, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'nonparticipants_smooth_unsuppressed.pdf'), w = 7, h = 7)  
+ggsave(file = file.path(outdir, 'nonparticipants_smooth_unsuppressed_221108.pdf'), w = 7, h = 7)  
 
 
 ###########################
@@ -193,7 +195,7 @@ ggplot(tab, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'participants_smooth_art.pdf'), w = 7, h = 7)  
+ggsave(file = file.path(outdir, 'participants_smooth_art_221108.pdf'), w = 7, h = 7)  
 
 # for non-participants
 tab <- art[type == 'Non participants' & COMM == 'inland' & ROUND != 'R015S']
@@ -213,7 +215,7 @@ ggplot(tab, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'nonparticipants_smooth_art.pdf'), w = 7, h = 7)  
+ggsave(file = file.path(outdir, 'nonparticipants_smooth_art_221108.pdf'), w = 7, h = 7)  
 
 
 ###########################
@@ -236,7 +238,7 @@ art[,ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
 #
 
 # suppression rate
-tab <- art[type == 'Participants' & COMM == 'inland' & !ROUND %in% c('R010', 'R011', 'R012', 'R013',  'R014', 'R015S')]
+tab <- art[type == 'Participants' & COMM == 'inland' & !ROUND %in% c('R010', 'R011', 'R012', 'R013',  'R014', 'R015S', 'R015')]
 p1 <- ggplot(tab, aes(x = AGEYRS)) + 
   geom_ribbon(aes(ymin = SUPPRESSION_RATE_CL, ymax = SUPPRESSION_RATE_CU, fill = SEX_LABEL), alpha = 0.5) + 
   geom_line(aes(y = SUPPRESSION_RATE_M, col = SEX_LABEL)) + 
@@ -267,12 +269,12 @@ p2 <- ggplot(tab, aes(x = AGEYRS)) +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white")) +
   scale_color_manual(values = cols) + 
-  scale_y_log10( limits = c(1,NA)) + 
+  scale_y_log10() + 
   scale_x_continuous(expand = c(0,0))
 p2 <- ggarrange(p2, labels = c('b'))
 
 p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6, 0.4), widths = c(0.45, 0.55))
-ggsave(p, file = file.path(outdir, 'participants_suppression_rate.pdf'), w = 8, h = 7)
+ggsave(p, file = file.path(outdir, 'participants_suppression_rate_221108.pdf'), w = 8, h = 7)
 
 
 #
@@ -280,7 +282,7 @@ ggsave(p, file = file.path(outdir, 'participants_suppression_rate.pdf'), w = 8, 
 #
 
 # suppression rate
-tab <- art[type == 'Non participants' & COMM == 'inland' & !ROUND %in% c('R010', 'R011', 'R012', 'R013',  'R014', 'R015S')]
+tab <- art[type == 'Non participants' & COMM == 'inland' & !ROUND %in% c('R010', 'R011', 'R012', 'R013',  'R014', 'R015S', 'R015')]
 p1 <- ggplot(tab, aes(x = AGEYRS)) + 
   geom_ribbon(aes(ymin = SUPPRESSION_RATE_CL, ymax = SUPPRESSION_RATE_CU, fill = SEX_LABEL), alpha = 0.5) + 
   geom_line(aes(y = SUPPRESSION_RATE_M, col = SEX_LABEL)) + 
@@ -311,10 +313,10 @@ p2 <- ggplot(tab, aes(x = AGEYRS)) +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white")) +
   scale_color_manual(values = cols) + 
-  scale_y_log10( limits = c(1,NA)) + 
+  scale_y_log10() + 
   scale_x_continuous(expand = c(0,0))
 p2 <- ggarrange(p2, labels = c('b'))
 
 p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6, 0.4), widths = c(0.45, 0.55))
-ggsave(p, file = file.path(outdir, 'nonparticipants_suppression_rate.pdf'), w = 8, h = 7)
+ggsave(p, file = file.path(outdir, 'nonparticipants_suppression_rate_221108.pdf'), w = 8, h = 7)
 
