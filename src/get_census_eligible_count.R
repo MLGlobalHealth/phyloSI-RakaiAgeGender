@@ -196,5 +196,5 @@ ncen[, ELIGIBLE := ELIGIBLE_SMOOTH]
 ncen <- select(ncen, -'ELIGIBLE_SMOOTH')
 
 # save
-write.csv(ncen, file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv'), row.names = F)
+write.csv(ncen, file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv'), row.names = F)
 

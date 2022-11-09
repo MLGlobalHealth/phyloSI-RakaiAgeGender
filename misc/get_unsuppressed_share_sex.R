@@ -3,24 +3,22 @@ library(ggplot2)
 require(lubridate)
 library(dplyr)
 
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+# directory to repository
 indir.repository <- '~/git/phyloflows'
 
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
-
-file.treatment.cascade <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.csv'))
-file.prevalence <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('RCCS_prevalence_posterior_sample_220818.csv'))
-file.eligible.count <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'RCCS_census_eligible_individuals_220830.csv')
+# files
+file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.rds'))
+file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_220818.rds'))
+file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv')
 
 # load census eligible ount
 eligible_count <- as.data.table(read.csv(file.eligible.count))
 
 # load proportion prevalence
-proportion_prevalence <- as.data.table(read.csv(file.prevalence))
+proportion_prevalence <- as.data.table(readRDS(file.prevalence))
 
 # load unsuppressed proportion 
-treatment_cascade <- as.data.table(read.csv(file.treatment.cascade))
+treatment_cascade <- as.data.table(readRDS(file.treatment.cascade))
 
 
 #############################
@@ -53,6 +51,11 @@ df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 # find share of unsuppressed by sex across age
 df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations')]
 df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED, by = c('ROUND', 'COMM', 'AGEYRS', 'iterations')]
+
+df[COMM == 'inland' & ROUND == '18' & iterations == 1 & UNSUPPRESSED_SHARE > 0.05]
+ggplot(df[COMM == 'inland' & ROUND == '18' & iterations == 1, ]) + 
+  geom_point(aes(x = UNSUPPRESSED_SHARE, y = PROP_UNSUPPRESSED_POSTERIOR_SAMPLE))
+
 
 # summarise
 ps <- c(0.025,0.5,0.975)
@@ -104,5 +107,5 @@ ggplot(sing, aes(x = ROUND)) +
 #########################################
 
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_unsuppressed_share_sex_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_share_sex_221101.csv'))
 write.csv(tmp, file = file.name, row.names = F)

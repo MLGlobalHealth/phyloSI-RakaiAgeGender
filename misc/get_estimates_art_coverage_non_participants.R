@@ -6,165 +6,19 @@ library(lubridate)
 library(rstan)
 library("haven")
 
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+# directory of the repository
 indir.repository <- '~/git/phyloflows'
 
+# outdir directory for stan fit
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
+# files
+data.path <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage.csv')
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
-path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
-
-# load files
-community.keys <- as.data.table(read.csv(file.community.keys))
-quest <- as.data.table(read.csv(file.path.quest))
-hiv <- as.data.table(read.csv(file.path.hiv))
-
-
-
-#################################
-
-# FIND SELF-REPORTED ART USE  #
-
-#################################
-
-# keep variable of interest
-rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, intdate, arvmed, cuarvmed)]
-
-# find  community
-community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
-rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
-
-# to upper
-colnames(rinc) <- toupper(colnames(rinc))
-
-# find index of round
-rinc <- rinc[order(STUDY_ID, ROUND)]
-rinc[, INDEX_ROUND := 1:length(ROUND), by = 'STUDY_ID']
-
-# restric age
-rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
-
-# get hiv status
-rhiv <- hiv[, .(study_id, round, hiv)]
-rhiv[, round := gsub(" ", '', round, fixed = T)]
-colnames(rhiv) <- toupper(colnames(rhiv))
-hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
-
-# keep HIV positive
-rprev <- hivs[HIV == 'P']
-
-# get ART status
-rprev[, ART := ARVMED ==1]
-rprev[is.na(ARVMED), ART := F]
-rprev[, table(ROUND)]
-
-
-#################################
-
-# ADD VIRAL LOAD DATA  #
-
-#################################
-
-# for round with suppressed set art to true if indiv is suppressed
-
-# tuning
-VL_DETECTABLE = 400
-VIREMIC_VIRAL_LOAD = 1000 # WHO standards
-
-# Load data: exclude round 20 as incomplete
-dall <- fread(path.tests)
-dall <- dall[ROUND %in% c(15:18, 15.5)]
-
-# rename variables according to Oli's old script + remove 1 unknown sex
-setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
-dall[, HIV_AND_VL := ifelse( HIV_STATUS == 1 & !is.na(VL_COPIES), 1, 0)]
-dall <- dall[! SEX=='']
-
-# remove HIV+ individuals with missing VLs  
-DT <- subset(dall, HIV_STATUS==0 | HIV_AND_VL==1)
-
-# set ARVMED to 0 for HIV-
-set(DT, DT[, which(ARVMED==1 & HIV_STATUS==0)], 'ARVMED', 0) 
-
-# define VLC as VL_COPIES for HIV+ and as 0 for HIV-
-set(DT, NULL, 'VLC', DT$VL_COPIES)
-set(DT, DT[,which(HIV_STATUS==0)], 'VLC', 0)
-
-# define detectable VL as VLD and undetectable VL as VLU (machine-undetectable)
-set(DT, NULL, 'VLU', DT[, as.integer(VLC<VL_DETECTABLE)])
-set(DT, NULL, 'VLD', DT[, as.integer(VLC>=VL_DETECTABLE)])
-
-# define suppressed VL as VLS and unsuppressed as VLNS (according to WHO criteria)	
-set(DT, NULL, 'VLS', DT[, as.integer(VLC<VIREMIC_VIRAL_LOAD)])
-set(DT, NULL, 'VLNS', DT[, as.integer(VLC>=VIREMIC_VIRAL_LOAD)])
-
-# find HIV+ and detectable
-set(DT, NULL, 'HIV_AND_VLD', DT[, as.integer(VLD==1 & HIV_AND_VL==1)])
-
-# reset undetectable to VLC 0
-set(DT, DT[, which(HIV_AND_VL==1 & VLU==1)], 'VLC', 0)
-setkey(DT, ROUND, FC, SEX, AGEYRS)
-
-# keep within census eligible age
-DT <- subset(DT, AGEYRS <= 50)
-
-# keep infected
-DT <- DT[HIV_STATUS ==1]
-
-# get ART status
-DT[, ART := ARVMED ==1]
-DT[is.na(ARVMED), ART := F]
-
-# merge to self-reported data
-tmp <- DT[, .(STUDY_ID, ROUND, SEX, FC, VLNS, AGEYRS)]
-tmp[, ROUND := paste0('R0', ROUND)]
-setnames(tmp, 'AGEYRS', 'AGEYRS2')
-rprev <- merge(rprev, tmp, by.x = c('STUDY_ID', 'ROUND', 'SEX', 'COMM'), by.y = c('STUDY_ID', 'ROUND', 'SEX', 'FC'), all.x = T, all.y = T)
-
-# set ageyrs to the viral load data if available
-rprev[!is.na(AGEYRS2), AGEYRS := AGEYRS2]
-set(rprev, NULL, 'AGEYRS2', NULL)
-
-# set art to true if viremic viral load
-rprev[VLNS == 0, ART := T]
-rprev <- rprev[!is.na(ART)]
-
-# remove na vlns for round 16 onwards otherwise it leads to % art < % suppressed
-nrow(rprev[ROUND == 'R016' & is.na(VLNS)]) / nrow(rprev[ROUND == 'R016' & !is.na(VLNS)])
-nrow(rprev[ROUND == 'R017' & is.na(VLNS)]) / nrow(rprev[ROUND == 'R017' & !is.na(VLNS)])
-nrow(rprev[ROUND == 'R018' & is.na(VLNS)]) / nrow(rprev[ROUND == 'R018' & !is.na(VLNS)])
-rprev <- rprev[!(ROUND %in% c('R016', 'R017', 'R018') & is.na(VLNS))]
-
-
-#################################
-
-# KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
-# THAT ARE THE CLOSEST TO NON-PARTICIPANTS
-
-#################################
-
-# get proportion of participants seen for the first time 
-newpart <- rprev[HIV == 'P' & COMM == 'inland', round(sum(INDEX_ROUND == 1) / sum(INDEX_ROUND != 1) * 100, 2), by = 'ROUND']
-newpart <- newpart[!ROUND %in% c('R006', 'R007', 'R008', 'R009', 'R015S'), range(V1) ]
-
-#KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
-rprev <- rprev[INDEX_ROUND == 1]
-
-
-#################################
-
-# AGGREGATE BY ROUND, SEX, COMM AND AGE  #
-
-#################################
-
-# find self reported under art for participant
-rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
+# find count of newly registered participants who reported art use
+rart <- as.data.table( read.csv(data.path) )
 
 
 #################################
@@ -285,7 +139,7 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 
 }
 
 # load results 
-rounds <- c(10:15, '15S', '16', '17', '18')
+rounds <- c(10:15, '16', '17', '18')
 nsinf <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <- vector(mode = 'list', length = length(rounds))
 nspred <- vector(mode = 'list', length = length(rounds))
@@ -418,46 +272,21 @@ stopifnot(nrow(nsinf[COMM == 'inland']) == nsinf[, length(unique(AGEYRS))] * nsi
 stopifnot(nrow(nsinf[COMM == 'fishing']) == nsinf[, length(unique(AGEYRS))] * nsinf[, length(unique(SEX))] * nsinf[COMM == 'fishing', length(unique(ROUND))])
 
 
-#########
+###########################
 
-# PLOT #
+# STATISTICS FOR PAPER #
 
-#########
-
-tmp <- copy(nsinf)
-tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
-tmp <- tmp[!(ROUND == 'R015')]
-tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
-tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
-tmp[, SEX_LABEL := 'Female']
-tmp[SEX== 'M', SEX_LABEL := 'Male']
-tmp[, COMM_LABEL := 'Fishing\n communities']
-tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
-ggplot(tmp, aes(x = AGEYRS)) +
-  geom_point(aes(y = PROP_ART_COVERAGE_EMPIRICAL), alpha = 0.5, col = 'darkred') +
-  geom_line(aes(y = PROP_ART_COVERAGE_M)) +
-  geom_ribbon(aes(ymin = PROP_ART_COVERAGE_CL, ymax = PROP_ART_COVERAGE_CU), alpha = 0.5) +
-  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
-  theme_bw() +
-  theme(legend.position = 'bottom',
-        strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1))) +
-  labs(x = 'Age', y = 'Self-reported ART coverage among newly registered participants') + 
-  scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_artcoverage_newlyregistered_221101.png')), w=8, h=8)
+###########################
 
 # get proportion of predicted art use inside credible interval
 stats <- list()
-tmp <- nspred[COMM == 'inland' & !is.na(PROP_ART_COVERAGE_EMPIRICAL)]
+tmp <- nspred[ !is.na(PROP_ART_COVERAGE_EMPIRICAL)]
 tmp[, within.CI := PROP_ART_COVERAGE_EMPIRICAL >= PROP_ART_COVERAGE_CL & PROP_ART_COVERAGE_EMPIRICAL <= PROP_ART_COVERAGE_CU]
 stats[['within.CI']] <- tmp[, paste0(round(mean(within.CI)*100, 2))]
 
 # get lowest rhat and lowest neff
-stats[['min_neff']]  = convergence[ROUND != '15S', round(min(neff))]
+stats[['min_neff']]  = convergence[, round(min(neff))]
 stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
-
-# add proporiton of new participant
-stats[['proportion_of_newly_registered_part']] = newpart
 
 
 #########
@@ -466,12 +295,11 @@ stats[['proportion_of_newly_registered_part']] = newpart
 
 #########
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_estimates_newlyregistered_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_estimates_newlyregistered_221101.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_posterior_samples_newlyregistered_221101.csv'))
-write.csv(nsinf.samples, file = file.name, row.names = F)
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221101.rds'))
+saveRDS(nsinf.samples, file = file.name)
 
 file.name <- file.path(outdir, paste0('RCCS_art_model_fit_newlyregistered_221101.RDS'))
 saveRDS(stats, file = file.name)
-
