@@ -1,12 +1,7 @@
-################
-# DEPENDENCIES #
-################
-
 library(data.table)
 
 # paths
-# indir.repository <-'~/git/phyloflows'
-indir.repository <- '~/Imperial/phyloflows'
+indir.repository <-'~/git/phyloflows'
 
 indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
@@ -14,11 +9,11 @@ outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfec
 
 # file
 path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
-file.path.quest <- file.path(indir.deepsequence.data, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
 
 # tuning
 VL_DETECTABLE = 400
 VIREMIC_VIRAL_LOAD = 1000 # WHO standards
+
 
 #################
 
@@ -30,6 +25,11 @@ VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 dall <- fread(path.tests)
 dall <- dall[ROUND %in% c(15:18, 15.5)]
 # dall <- dall[ROUND == round]
+
+# percent of hiv positive with viral laod measurements 
+virperc <- dall[HIV_STATUS == 1 & COMM == 'inland']
+virperc <- virperc[, paste0(round(mean(!is.na(HIV_VL))*100, 2)), by = 'ROUND']
+print(virperc)
 
 # rename variables according to Oli's old script + remove 1 unknown sex
 setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
@@ -63,42 +63,6 @@ set(DT, NULL, 'HIV_AND_VLD', DT[, as.integer(VLD==1 & HIV_AND_VL==1)])
 # reset undetectable to VLC 0
 set(DT, DT[, which(HIV_AND_VL==1 & VLU==1)], 'VLC', 0)
 setkey(DT, ROUND, FC, SEX, AGEYRS)
-
-
-#################################
-
-# KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
-# THAT ARE THE CLOSEST TO NON-PARTICIPANTS
-
-#################################
-
-# keep variable of interest
-quest <- as.data.table(read.csv(file.path.quest))
-rinc <- quest[, .(round, study_id)]
-
-# to upper
-colnames(rinc) <- toupper(colnames(rinc))
-
-# find index of round
-rinc <- rinc[order(STUDY_ID, ROUND)]
-rinc[, INDEX_ROUND := 1:length(ROUND), by = 'STUDY_ID']
-
-# format round as in DT
-rinc[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
-rinc[ROUND == '15S', ROUND := '15.1']
-rinc[, ROUND := as.numeric(ROUND)]
-
-# merge
-DT <- merge(DT, rinc, by= c('STUDY_ID', 'ROUND'))
-
-# keep participants seen for the first time 
-DT <- DT[INDEX_ROUND == 1]
-
-#################################
-
-# AGGREGATE BY ROUND, SEX, COMM AND AGE  #
-
-#################################
 
 # get count for every categories
 tmp <- seq.int(min(DT$AGEYRS), max(DT$AGEYRS))
@@ -134,11 +98,13 @@ vla[, NONVLNS := HIV_N-VLNS_N]
 vla[, EMPIRICAL_NONVLNS_IN_HIV := NONVLNS / HIV_N, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# proportion of suppressed
 vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsuppressed
 
-##########################################
-
-# SAVE DE-IDENTIFIED DATA #
 
 ##########################################
 
-write.csv(vla, file.path(indir.repository, 'data', 'unsuppressed_proportion_non_participants.csv'))
+# SAVE DE-INDENTIFIED DATA #
+
+##########################################
+
+write.csv(vla, file.path(indir.repository, 'data', 'aggregated_participants_count_unsuppressed.csv'), row.names = F)
+
 

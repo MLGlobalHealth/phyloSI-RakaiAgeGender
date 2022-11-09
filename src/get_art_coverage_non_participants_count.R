@@ -6,19 +6,22 @@ library(lubridate)
 library(rstan)
 library("haven")
 
-indir.repository <- '~/Imperial/phyloflows'
-# outdir <- file.path(indir.repository, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
+indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+indir.repository <- '~/git/phyloflows'
 
-file.community.keys <- file.path(indir.repository, 'data', 'community_names.csv')
+file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
-file.path.hiv <- file.path(indir.repository, 'data', 'HIV_R6_R18_220909.csv')
-file.path.quest <- file.path(indir.repository, 'data', 'Quest_R6_R18_220909.csv')
-path.tests <- file.path(indir.repository, 'data', 'all_participants_hivstatus_vl_220729.csv')
+file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
+path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
 quest <- as.data.table(read.csv(file.path.quest))
 hiv <- as.data.table(read.csv(file.path.hiv))
+
+
 
 #################################
 
@@ -142,6 +145,11 @@ rprev <- rprev[!(ROUND %in% c('R016', 'R017', 'R018') & is.na(VLNS))]
 
 #################################
 
+# get proportion of participants seen for the first time 
+newpart <- rprev[HIV == 'P' & COMM == 'inland', round(sum(INDEX_ROUND == 1) / sum(INDEX_ROUND != 1) * 100, 2), by = 'ROUND']
+print(newpart)
+
+#KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
 rprev <- rprev[INDEX_ROUND == 1]
 
 
@@ -159,4 +167,5 @@ rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('
 # SAVE DE-IDENTIFIED DATA  #
 
 #################################
-write.csv(rart, file = file.path(indir.repository, 'data', 'art_coverage_non_participants.csv'))
+
+write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage.csv'), row.names = F)

@@ -6,17 +6,20 @@ library(lubridate)
 library(rstan)
 library("haven")
 
-indir.repository <- '~/Imperial/phyloflows'
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+# directory of the repository
+indir.repository <- '~/git/phyloflows'
 
+# outdir directory for stan fit
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 
-data.path <- file.path(indir.repository, 'data', 'art_coverage.csv')
+# files
+data.path <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage.csv')
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
-# find self reported under art for participant
+# find count of newly registered participants who reported art use
 rart <- as.data.table( read.csv(data.path) )
+
 
 #################################
 
@@ -31,27 +34,30 @@ if(1){
   tmp[, `Do not use` := TOTAL_COUNT - COUNT] 
   setnames(tmp, 'COUNT', 'Use')
   tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'COMM', 'SEX', 'AGEYRS', 'TOTAL_COUNT'))
+  tmp[, variable := factor(variable, levels = c('Use', 'Do not use'))]
   tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
   tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
   tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
-  tmp[, SEX_LABEL := 'Female']
-  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, SEX_LABEL := 'Women']
+  tmp[SEX== 'M', SEX_LABEL := 'Men']
   tmp[, COMM_LABEL := 'Fishing\n communities']
   tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
+  tmp <- tmp[AGEYRS > 14 & AGEYRS < 50]
   
   # plot
-  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09")], aes(x = AGEYRS, y = value)) +
+  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", '10') & COMM == 'inland'], aes(x = AGEYRS, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'Age', y = 'Count newly registered HIV-positive newly registered participants', fill = 'Self-reported ART use') +
-    facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
+    labs(x = 'Age', y = 'Count newly registered HIV-positive participants', fill = '') +
+    facet_grid(ROUND_LABEL~SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1))) +
-    scale_y_continuous(expand = expansion(mult = c(0, 0.05)))
-  
-  # TODO: Change to Supp figure No.
-  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_newlyregistered_221101.png')), w=8, h=12)
+    scale_y_continuous(expand = expansion(mult = c(0, 0.05))) + 
+    scale_x_continuous(expand = c(0,0))+ 
+    scale_fill_manual(values = c('#90B77D', '#425F57'), 
+                      labels = c('Reported ART use', 'Did not report ART use')) 
+  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_newlyregistered_221101.pdf')), w=7, h=9)
   
 }
 
@@ -80,7 +86,7 @@ rart[, PROP_ART_COVERAGE_EMPIRICAL := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC'
 
 # find smooth proportion
 for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 'R017', 'R018')){
-  round <- 'R018'
+  # round <- 'R017'
   
   DT <- copy(rart[ROUND == round] )
   DT <- DT[order(SEX, LOC, AGE_LABEL)]
@@ -133,9 +139,11 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 
 }
 
 # load results 
-rounds <- c(10:15, '15S', '16', '17', '18')
+rounds <- c(10:15, '16', '17', '18')
 nsinf <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <- vector(mode = 'list', length = length(rounds))
+nspred <- vector(mode = 'list', length = length(rounds))
+convergence.list <- vector(mode = 'list', length = length(rounds))
 for(i in seq_along(rounds)){
   
   round <- rounds[i]
@@ -149,7 +157,7 @@ for(i in seq_along(rounds)){
   DT[is.na(TOTAL_COUNT), TOTAL_COUNT := 0]
   DT <- DT[order(SEX, LOC, AGE_LABEL)]
   
-  # predicts age 
+  # age to predict
   x_predict <- seq(rart[, min(AGE_LABEL)], rart[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
@@ -158,7 +166,19 @@ for(i in seq_along(rounds)){
   re <- rstan::extract(fit)
   
   #
-  #	summarise prevalence by sex and age
+  # Find rhat and neff
+  #
+  
+  sum_fit <- summary(fit)
+  neff <- na.omit(sum_fit$summary[, 9])
+  rhat <- na.omit(sum_fit$summary[, 10])
+  convergence <- data.table(ROUND = round, neff = neff, rhat = rhat)
+  
+  #
+  #	summarise estimated art use by sex and age
+  #
+  
+  # extract estimates
   ps <- c(0.025,0.5,0.975)
   qlab <- c('CL','M','CU')
   tmp <- as.data.table(reshape2::melt(re$p_predict_00))
@@ -178,9 +198,37 @@ for(i in seq_along(rounds)){
   nsinf.by.age = tmp[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
   nsinf.by.age = as.data.table(reshape2::dcast(nsinf.by.age, ... ~ q_label, value.var = "q"))
   
-  # merge 
+  #
+  #	summarise predicted art use by sex and age
+  #
+  
+  # merge to total count 
+  tmp <- merge(tmp, DT[, .(SEX, LOC, AGE_LABEL, TOTAL_COUNT)], by = c('SEX', 'LOC', 'AGE_LABEL'), all.x = T)
+  
+  # predict count and predict art use
+  tmp[!is.na(TOTAL_COUNT), COUNT_PREDICT := rbinom(1, TOTAL_COUNT, value), by = c('SEX', 'LOC', 'AGE_LABEL', 'iterations')]
+  tmp[, ART_USE_PREDICT := COUNT_PREDICT / TOTAL_COUNT]
+  
+  # summarise
+  nspred.by.age = tmp[, list(q= quantile(ART_USE_PREDICT, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
+  nspred.by.age = as.data.table(reshape2::dcast(nspred.by.age, ... ~ q_label, value.var = "q"))
+  
+  # sub-sample the last 9500 iterations
+  it <- data.table(iterations = tmp[, sort(unique(iterations))])
+  it[, iterations_rev := max(iterations):1]
+  tmp <- merge(it, tmp, by = 'iterations')
+  tmp <- tmp[iterations_rev %in% 1:9500]
+  tmp[, iterations := iterations - min(iterations)+ 1]
+  set(tmp, NULL, 'iterations_rev', NULL)
+  
+  #
+  # POSTPROCESING
+  #
+  
+  # merge to data
   nsinf.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, PROP_ART_COVERAGE_EMPIRICAL)), nsinf.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
   nsinf.samples.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, PROP_ART_COVERAGE_EMPIRICAL)), tmp, by=c('SEX','LOC', 'AGE_LABEL'))
+  nspred.by.age <- merge(subset(DT, select=c(SEX,SEX_LABEL,LOC,LOC_LABEL,AGE_LABEL, PROP_ART_COVERAGE_EMPIRICAL)), nspred.by.age, by=c('SEX','LOC', 'AGE_LABEL'))
   
   # load change of var name
   set(nsinf.by.age, NULL, 'SEX', NULL)
@@ -190,8 +238,18 @@ for(i in seq_along(rounds)){
   nsinf.by.age[, ROUND := paste0('R0', round)]
   
   # load change of var name
+  set(nspred.by.age, NULL, 'SEX', NULL)
+  set(nspred.by.age, NULL, 'LOC', NULL)
+  setnames(nspred.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'M', "CL", "CU"), 
+           c('COMM', 'SEX', 'AGEYRS', 'PROP_ART_COVERAGE_M', 'PROP_ART_COVERAGE_CL', 'PROP_ART_COVERAGE_CU'))
+  nspred.by.age[, ROUND := paste0('R0', round)]
+  
+  # load change of var name
   set(nsinf.samples.by.age, NULL, 'SEX', NULL)
   set(nsinf.samples.by.age, NULL, 'LOC', NULL)
+  set(nsinf.samples.by.age, NULL, 'TOTAL_COUNT', NULL)
+  set(nsinf.samples.by.age, NULL, 'COUNT_PREDICT', NULL)
+  set(nsinf.samples.by.age, NULL, 'ART_USE_PREDICT', NULL)
   set(nsinf.samples.by.age, NULL, 'Var2', NULL)
   setnames(nsinf.samples.by.age, c('LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'value'),
            c('COMM', 'SEX', 'AGEYRS', 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE'))
@@ -200,44 +258,35 @@ for(i in seq_along(rounds)){
   
   # keep
   nsinf[[i]] <- nsinf.by.age
+  nspred[[i]] <- nspred.by.age
   nsinf.samples[[i]] <- nsinf.samples.by.age
+  convergence.list[[i]] <- convergence
 }
 nsinf <- do.call('rbind', nsinf)
 nsinf.samples <- do.call('rbind', nsinf.samples)
+nspred <- do.call('rbind', nspred)
+convergence <- do.call('rbind', convergence.list)
 
 # check all entries are complete
 stopifnot(nrow(nsinf[COMM == 'inland']) == nsinf[, length(unique(AGEYRS))] * nsinf[, length(unique(SEX))] * nsinf[COMM == 'inland', length(unique(ROUND))])
 stopifnot(nrow(nsinf[COMM == 'fishing']) == nsinf[, length(unique(AGEYRS))] * nsinf[, length(unique(SEX))] * nsinf[COMM == 'fishing', length(unique(ROUND))])
 
 
-#########
+###########################
 
-# PLOT #
+# STATISTICS FOR PAPER #
 
-#########
+###########################
 
-tmp <- copy(nsinf)
-tmp <- tmp[!(ROUND == 'R015S' & COMM == 'inland')]
-tmp <- tmp[!(ROUND == 'R015')]
-tmp[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
-tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
-tmp[, SEX_LABEL := 'Female']
-tmp[SEX== 'M', SEX_LABEL := 'Male']
-tmp[, COMM_LABEL := 'Fishing\n communities']
-tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
-ggplot(tmp, aes(x = AGEYRS)) +
-  geom_point(aes(y = PROP_ART_COVERAGE_EMPIRICAL), alpha = 0.5, col = 'darkred') +
-  geom_line(aes(y = PROP_ART_COVERAGE_M)) +
-  geom_ribbon(aes(ymin = PROP_ART_COVERAGE_CL, ymax = PROP_ART_COVERAGE_CU), alpha = 0.5) +
-  facet_grid(ROUND_LABEL~COMM_LABEL + SEX_LABEL) +
-  theme_bw() +
-  theme(legend.position = 'bottom',
-        strip.background = element_rect(colour="white", fill="white"),
-        strip.text = element_text(size = rel(1))) +
-  labs(x = 'Age', y = 'Self-reported ART coverage among newly registered participants') + 
-  scale_y_continuous(labels = scales::percent, limits= c(0,1))
-ggsave(file=file.path(outdir, paste0('smooth_artcoverage_newlyregistered_221101.png')), w=8, h=8)
+# get proportion of predicted art use inside credible interval
+stats <- list()
+tmp <- nspred[ !is.na(PROP_ART_COVERAGE_EMPIRICAL)]
+tmp[, within.CI := PROP_ART_COVERAGE_EMPIRICAL >= PROP_ART_COVERAGE_CL & PROP_ART_COVERAGE_EMPIRICAL <= PROP_ART_COVERAGE_CU]
+stats[['within.CI']] <- tmp[, paste0(round(mean(within.CI)*100, 2))]
 
+# get lowest rhat and lowest neff
+stats[['min_neff']]  = convergence[, round(min(neff))]
+stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 
 #########
@@ -246,8 +295,11 @@ ggsave(file=file.path(outdir, paste0('smooth_artcoverage_newlyregistered_221101.
 
 #########
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_estimates_newlyregistered_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_estimates_newlyregistered_221101.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', paste0('RCCS_art_posterior_samples_newlyregistered_221101.csv'))
-write.csv(nsinf.samples, file = file.name, row.names = F)
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221101.rds'))
+saveRDS(nsinf.samples, file = file.name)
+
+file.name <- file.path(outdir, paste0('RCCS_art_model_fit_newlyregistered_221101.RDS'))
+saveRDS(stats, file = file.name)
