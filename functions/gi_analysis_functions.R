@@ -107,14 +107,17 @@ get.infection.range.from.testing <- function()
 
 }
 
-get.infection.range.from.tsi <- function()
+get.infection.range.from.tsi <- function(chain_subset=TRUE)
 {
-    idx <- chain[, unique(c(SOURCE, RECIPIENT)) ]
     cols <- c('RENAME_ID', 'pred_doi_min', 'pred_doi_max')
     drange_tsi <- fread(file.path.tsiestimates, select = cols) 
     setnames(drange_tsi, cols, c('AID', 'MIN', 'MAX'))
     drange_tsi[, `:=` (AID=gsub('-fq[0-9]', '', AID)) ] 
-    drange_tsi <- drange_tsi[ AID %in% idx, ]
+    if(chain_subset)
+    {
+        idx <- chain[, unique(c(SOURCE, RECIPIENT)) ]
+        drange_tsi <- drange_tsi[ AID %in% idx, ]
+    }
     drange_tsi
 }
 
@@ -1360,12 +1363,12 @@ if(0)   # 2D, uniform pdf
         dcohords <- merge(dcohords, tmp, all.x=TRUE)
 }
 
-prepare.pairs.input.for.bayesian.model <- function()
+prepare.pairs.input.for.bayesian.model <- function(DT)
 {
     # get predictions for time of infection
     merge(
         chain[, .(SOURCE,RECIPIENT)],
-        centroids,
+        DT,
         by.x='RECIPIENT', by.y='ID'
     ) -> dresults
     dresults
@@ -1380,7 +1383,7 @@ prepare.pairs.input.for.bayesian.model <- function()
           ) -> dresults
     dresults[, AGE_INFECTION:= as.numeric(round( (M - DB)/365.25, 1))]
     dresults[, DB := NULL]
-    setnames(dresults, c('AGE_INFECTION', 'SEX'), c('AGE_INFECTION.SOURCE', 'SEX.SOURCE') )
+    setnames(dresults, c('AGE_INFECTION', 'SEX'), c('AGE_TRANSMISSION.SOURCE', 'SEX.SOURCE') )
 
     merge(
           dresults,
@@ -1396,7 +1399,9 @@ prepare.pairs.input.for.bayesian.model <- function()
         dresults[M %between% df_round[ROUND == r, c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE)], ROUND.M := r]
 
     dresults[, GROUP := NULL]
-    setcolorder(dresults, c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'CL', 'IL', 'M', 'IU', 'CU', 'AGE_INFECTION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'ROUND.M'))
+    cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'CL', 'IL', 'M', 'IU', 'CU', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'ROUND.M')
+    cols <- intersect(cols, names(dresults))
+    setcolorder(dresults, cols)
 
     cols <- c('SOURCE','RECIPIENT')
     chain_tmp <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
@@ -1404,5 +1409,36 @@ prepare.pairs.input.for.bayesian.model <- function()
     idx[, DIRECTION := 'phyloscanner']
     dresults <- merge(dresults, idx, all.x=TRUE, by=cols)
     dresults[, DIRECTION:=fcoalesce(DIRECTION, 'testinghistory')]
+
     dresults
+}
+
+get.community.type.at.infection.date <- function(DT)
+{
+    meta_env <- new.env()
+    load(file.path.meta, envir=meta_env)
+    meta_env$meta_data
+    cols <- c('aid', 'comm', 'round', 'sample_date')
+    dcomms <- subset(meta_env$meta_data, select=cols)
+    # dcomms <- dcomms[aid %in% dresults[, c(SOURCE,RECIPIENT)]]
+    names(dcomms) <- toupper( names(dcomms) )
+    dcomms[ROUND == 'neuro', COMM:='neuro']
+
+    # For participants with date of infection, set 
+    # community as the comm with visit date closest to estimated infection time
+    .f <- function(x) which.min(abs(fcoalesce(x, Inf)))
+
+    DT[, {
+        idx <- c(SOURCE, RECIPIENT)
+        tmp <- dcomms[AID %in% idx, ]
+        out <- tmp[, .(C=COMM[.f(as.numeric(SAMPLE_DATE - M)) ]), by='AID' ]
+        CS <- out[AID == SOURCE, C]
+        CR <- out[AID == RECIPIENT, C]
+        list(SOURCE=SOURCE, COMM.SOURCE=CS, COMM.RECIPIENT=CR)
+    }, by='RECIPIENT'] -> tmp
+
+    DT <- merge(DT, tmp, by=c('SOURCE', 'RECIPIENT'), all.x=TRUE) 
+    DT[ is.na(COMM.RECIPIENT) & is.na(COMM.SOURCE)]
+    
+    return(DT)
 }
