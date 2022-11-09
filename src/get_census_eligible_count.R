@@ -160,37 +160,6 @@ if(0){
 ncen[, ELIGIBLE_SMOOTH := ELIGIBLE_SMOOTH.50]
 ncen <- select(ncen, -c('ELIGIBLE_SMOOTH.25', 'ELIGIBLE_SMOOTH.50', 'ELIGIBLE_SMOOTH.75'))
 
-# table and plot
-tmp <- ncen[, list(count = sum(ELIGIBLE), COUNT_SMOOTH = sum(ELIGIBLE_SMOOTH)), by = c('ROUND', 'SEX', 'COMM')]
-tmp[, mean(abs(count - COUNT_SMOOTH))]
-knitr::kable(tmp[order(COMM,SEX,ROUND)])
-
-if(1){
-  tmp <- copy(ncen)
-  tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
-  tmp <- tmp[!(ROUND == '15S' & COMM == 'inland')]
-  tmp[, SEX_LABEL := 'Women']
-  tmp[SEX== 'M', SEX_LABEL := 'Men']
-  tmp[, COMM_LABEL := 'Fishing\n communities']
-  tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
-  
-  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09") & COMM == 'inland'], aes(x = AGEYRS)) +
-    geom_bar(aes(y = ELIGIBLE, fill = SEX_LABEL), stat = 'identity') +
-    geom_line(aes(y = ELIGIBLE_SMOOTH, col  = SEX_LABEL)) +
-    labs(y = 'Census eligible individuals', x = 'Age', col = '', fill = '') +
-    facet_grid(ROUND_LABEL~SEX_LABEL) +
-    scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
-    scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) +
-    theme_bw() +
-    theme(legend.position = 'bottom', 
-          strip.background = element_rect(colour="white", fill="white"),
-          strip.text = element_text(size = rel(1))) + 
-    scale_x_continuous(expand = c(0,0)) + 
-    scale_y_continuous(expand = expansion(mult = c(0,0.1)))  
-  ggsave(p, file = file.path(outdir, 'CensusEligibleIndividuals_221101.pdf'), w = 8, h = 10)
-
-}
-
 ncen[, ELIGIBLE_NOT_SMOOTH := ELIGIBLE]
 ncen[, ELIGIBLE := ELIGIBLE_SMOOTH]
 ncen <- select(ncen, -'ELIGIBLE_SMOOTH')
