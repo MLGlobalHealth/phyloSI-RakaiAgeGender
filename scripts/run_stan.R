@@ -300,10 +300,6 @@ if(1){
   plot_data_by_round(eligible_count_round, treatment_cascade, proportion_prevalence, outfile.figures)
   plot_data_by_period(incidence_cases, outfile.figures)
   
-  # plot tansmission events over time
-  plot_transmission_events_over_time(pairs, outfile.figures)
-  save_statistics_transmission_events(pairs, outdir.table)
-  
   # plot incident rates and cases over time
   plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
   incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
@@ -318,9 +314,12 @@ if(1){
   plot_hist_time_infection(copy(pairs), cutoff_date, outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)
   plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M'], 'Female -> Male', 'FM', outfile.figures)
-  plot_pairs(pairs, outfile.figures)
   plot_CI_age_infection(pairs, outfile.figures)
   plot_CI_age_transmission(pairs, outfile.figures)
+  plot_pairs(pairs, outfile.figures)
+  plot_pairs_all(pairs.all, outfile.figures)
+  plot_transmission_events_over_time(pairs, outfile.figures)
+  save_statistics_transmission_events(pairs, outdir.table)
 }
 
 
