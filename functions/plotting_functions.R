@@ -1,7 +1,7 @@
 naturemed_reqs <- function() 
 {
     # call this before doing your plots
-    reqs <<- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'))
+    reqs <<- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'), legend.text=element_text(size=7, family='sans'))
 }
 
 ggarrange_nature <- function(
@@ -23,7 +23,7 @@ ggarrange_nature <- function(
   add_reqs=TRUE
 ){
     if(add_reqs)
-    reqs <- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'))
+        reqs <- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'), legend.text=element_text(size=7, family='sans'))
 
     plots <- c(list(...), plotlist)
 
@@ -62,7 +62,7 @@ ggsave_nature <- function(filename, p, w=18,h=24, add_reqs=TRUE)
     # https://stackoverflow.com/questions/74379207/simultaneously-applying-same-modification-to-all-ggarrange-subplots
     if(add_reqs)
     {
-        reqs <- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'))
+        reqs <- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'), legend.text=element_text(size=7, family='sans'))
         p <- p + reqs
     }
 
