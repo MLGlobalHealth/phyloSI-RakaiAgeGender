@@ -112,6 +112,7 @@ source(file.path(indir, 'functions', 'summary_functions.R'))
 # source(file.path(indir, 'functions', 'statistics_functions.R'))
 # source(file.path(indir, 'functions', 'stan_utils.R'))
 # source(file.path(indir, 'functions', 'check_potential_TNet.R'))
+find_palette_round()
 
 
 plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table())
@@ -125,7 +126,7 @@ plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table
         fcase(x=='', 'blue', x=='TSI', 'red', x=='INTERSECT','orange')
     .s <- 'SOURCE'; .r <- 'RECIPIENT'
 
-    plot_dt <- double.merge(chain, DT)
+    plot_dt <- double.merge(chain, DT, by=c('SOURCE', 'RECIPIENT'))
     setkey(plot_dt, SOURCE,RECIPIENT)
     setkey(idx, SOURCE,RECIPIENT)
     values[.p(values, 'MIN', .s) %in% names(DT)]
@@ -186,6 +187,7 @@ load(file.path.meta, envir=meta_env)
 meta <- subset(meta_env$meta_data,
                select=c('aid', 'sex', 'date_birth', 'date_first_positive', 'date_last_negative'))
 meta <- unique(meta[!is.na(aid)])
+# idx <- meta[, uniqueN(comm) == 2, by=aid][V1==TRUE, aid]
 stopifnot(meta[, uniqueN(aid) == .N])
 
 # exclude non-RCCS
@@ -253,9 +255,11 @@ if(0)
     for(i in 1:100)
     {
         idx <- chain[i, .(SOURCE,RECIPIENT)]
-        p <- plot.rectangles(tmp, idx=idx)
+        p <- plot.rectangles(tmp, idx=idx, values = c("", "TSI"))
         print(p)
         Sys.sleep(1.5)
+        if(i == 10)
+            plot.rect <- copy(p)
     }
 }
 
@@ -275,6 +279,8 @@ with(args,
 ) -> dinfectiousness
 dinfectiousness[, END := c(START[-1], Inf)]
 setcolorder(dinfectiousness, c('START', 'END', 'VALUE'))
+
+
 
 # Load tranmsission pairs and run MC
 # __________________________________
@@ -405,25 +411,431 @@ if(nrow(df_round))
 
 # prepare input for Bayesian model
 centroids <- dcohords[, CENTROIDS[[1]], by='GROUP']
-dresults <- prepare.pairs.input.for.bayesian.model()
+dresults <- prepare.pairs.input.for.bayesian.model(centroids)
 dhomosexualpairs[, DIRECTION := 'phyloscanner']
+dhomosexualpairs <- dhomosexualpairs[! RECIPIENT %in% dresults$RECIPIENT]
 rbind(
     dresults,
     dhomosexualpairs,
     fill=TRUE
 ) -> dresults
+dresults <- get.community.type.at.infection.date(dresults)
 
 filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
 saveRDS(dresults, filename)    
+dresults <- readRDS(filename)
 
 
 # make table
-cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'M', 'AGE_INFECTION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'DIRECTION')
+cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'M', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'DIRECTION')
 dtable <- subset(dresults,select=cols)
 dtable[, table(SEX.SOURCE,SEX.RECIPIENT)]
 setnames(dtable, 'M', 'INFECTION_DATE')
 filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_table_toshare', suffix, '.csv'))
 fwrite(dtable, filename)
+
+
+##############################
+#   EXTENDED DATA FIGURES   # 
+##############################
+
+library(ggpubr)
+
+# For plots, only select pairs which appear in the analysis
+dresults <- dresults[SEX.SOURCE!=SEX.RECIPIENT]
+dresults <- dresults[ COMM.SOURCE != 'neuro' & COMM.RECIPIENT != 'neuro'] 
+dresults <- dresults[COMM.RECIPIENT == 'inland', ]
+dresults <- dresults[! is.na(ROUND.M) ]
+cat(dresults[, .N], 'source-recipient pairs selected\n')
+# dresults[, table(COMM.SOURCE)]
+
+naturemed_reqs()
+
+if(1)
+{
+    # plot final predcitions v1
+    {
+        tmp_aids <- dresults[!is.na(M), .(SOURCE,RECIPIENT, M)][, RECIPIENT[order(M)] ]
+
+        drange_topo <- get.infection.range.from.testing()
+        drange_test <- copy(drange_topo)
+        shrink.intervals(drange_topo)
+        
+        drange_final <- copy(drange)
+        lvls <- c('Demographic and testing', '+ directionality', '+ phyloTSI')
+        drange_test[, TYPE:=lvls[1]]
+        drange_topo[, TYPE:=lvls[2]]
+        drange_final[, TYPE:=lvls[3]]
+        drange_tmp <- rbind(drange_topo, drange_test, drange_final)
+        drange_tmp[, TYPE := ordered(TYPE, levels=lvls)]
+
+        if(0)
+        {
+            p_predictions <- ggplot(dresults[!is.na(M)], aes(y=ordered(RECIPIENT, levels= tmp_aids) )) + 
+                geom_point(aes(x=M), color='red')  +
+                geom_vline(data=df_round, aes(xintercept=MIN_SAMPLE_DATE), linetype='dotted') +
+                geom_vline(data=df_round, aes(xintercept=MAX_SAMPLE_DATE), linetype='dotted') +
+                geom_vline(data=df_round[round==15], aes(xintercept=MAX_SAMPLE_DATE), color='red') +
+                geom_rect(data = df_round, aes(y=NULL, ymin = first(tmp_aids), ymax = last(tmp_aids), 
+                                                xmin = MIN_SAMPLE_DATE, xmax = MAX_SAMPLE_DATE,
+                                                fill = as.ordered(round)), alpha = 0.5) + 
+                geom_linerange(data=drange_tmp[AID %in% tmp_aids], aes(xmin=MIN, xmax=MAX, y=AID, color=TYPE)) +
+                geom_point(aes(x=M), color='red')  +
+                scale_fill_manual(values=palette_round) +
+                scale_color_manual(values=c('grey80', 'grey30', 'black') )  +
+                guides(color=guide_legend(nrow=1, byrow=TRUE, override.aes=list(size=3))) + 
+                guides(fill=guide_legend(nrow=1, byrow=TRUE, override.aes=list(size=1))) + 
+                theme_bw() + 
+                theme(panel.border = element_blank(), 
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      axis.line = element_line(colour = "black")) +
+                theme(legend.position='bottom', legend.box="vertical", 
+                      axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
+                labs(x='Date of infection', y='Recipient', fill='Round', pch='median doi', color='Infection range')
+
+        }
+
+        tmp <- unique(dresults[, .(RECIPIENT, CL, M, CU)])
+
+        cols <- c('RENAME_ID','pred_doi_mid',  'pred_doi_min', 'pred_doi_max')
+        drange_tsi2 <- fread(file.path.tsiestimates, select = cols) 
+        cols_new <- c('RECIPIENT', 'MID','MIN', 'MAX')
+        setnames(drange_tsi2, cols, cols_new)
+        drange_tsi2[, `:=` (RECIPIENT=gsub('-fq[0-9]', '', RECIPIENT)) ] 
+        cols_new <- setdiff(cols_new, 'RECIPIENT')
+        drange_tsi2[, (cols_new) := lapply(.SD, as.Date) , .SDcols=cols_new]
+        drange_tsi2 <- drange_tsi2[RECIPIENT %in% tmp$RECIPIENT]
+        tmp <- merge(tmp, drange_tsi2, by='RECIPIENT', all.x=TRUE)
+        tmp[, INTERSECT := pmax(CL, MIN) <= pmin(CU, MAX)]
+        tmp <- tmp[!is.na(MIN)]
+
+
+        p_predictions2 <- ggplot(tmp) + 
+            geom_rect(data=df_round, aes(xmin=MIN_SAMPLE_DATE, xmax=MAX_SAMPLE_DATE, 
+                                         ymin=MIN_SAMPLE_DATE, ymax=MAX_SAMPLE_DATE, fill=as.ordered(round))) + 
+            geom_rect(data=df_round, aes(xmin=as.Date(-Inf), xmax=MAX_SAMPLE_DATE , 
+                                        ymin=MIN_SAMPLE_DATE, ymax=MAX_SAMPLE_DATE, 
+                                         fill=as.ordered(round)), alpha=.1) + 
+            geom_rect(data=df_round, aes(ymin=as.Date(-Inf), ymax=MAX_SAMPLE_DATE , 
+                                        xmin=MIN_SAMPLE_DATE, xmax=MAX_SAMPLE_DATE, 
+                                        fill=as.ordered(round)), alpha=.1) + 
+            geom_abline(aes(slope=1, intercept=0), linetype='dashed', color='red' ) + 
+            geom_point(aes(x=MID, y=M), size=.5) + 
+            geom_errorbar(aes(x=MID ,ymin=CL, ymax=CU), alpha=.1) + 
+            geom_errorbarh(aes(y=M ,xmin=MIN, xmax=MAX), alpha=.1) + 
+            scale_fill_manual(values=palette_round) +
+            guides(fill=guide_legend(ncol=1, override.aes=list(size=1))) + 
+            theme_bw() + 
+            labs(x="infection time estimates using phyloTSI on deep-sequence data",
+                 y="refined infection time estimates accounting further for sero-history and transmission direction",
+                 fill='Round', alpha='') + 
+            theme(legend.position='right', legend.direction='vertical', 
+                  panel.border = element_blank(), 
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  axis.line = element_line(colour = "black"))
+        force(p_predictions2)
+
+        # get MAE for people with last negative test
+        # Median absolute error for 
+        dsero <- meta[!is.na(date_first_positive) & !is.na(date_last_negative), 
+                      .(AID=aid, MIN=as.Date(date_last_negative), MAX=as.Date(date_first_positive))]
+        dsero <- dsero[, list( midpoint=mean(c(MIN, MAX)) ), by='AID']
+
+        tmp1 <- merge(tmp, dsero, by.x='RECIPIENT', by.y='AID')
+        tmp1[, final := as.numeric(abs(M - midpoint)/365.25)]
+        tmp1[, phyloTSI := as.numeric(abs(MID - midpoint)/365.25)]
+        tmp2 <- melt( tmp1[, .(RECIPIENT, final, phyloTSI)],
+                     id.vars='RECIPIENT', variable.name='METHOD', value.name='AE') 
+        means <- tmp2[, .(MEAN=mean(AE)), by='METHOD']
+
+        .rm <- function(x)
+            fifelse(x %like% 'final|Final',
+                    yes='refined infection time estimates accounting\nfurther for serohistory and transmission direction',
+                    no='phyloTSI on\ndeep sequence data')
+
+        change_histogram_colors <- function(p)
+        {
+            p + scale_color_manual(values=c('red', 'blue')) + 
+                scale_fill_manual(values=c('red', 'blue')) + 
+                scale_alpha_manual(values=c(.4, .5))
+        }
+
+        plot_mae <- ggplot(tmp2, aes(color=.rm(METHOD), fill=.rm(METHOD))) + 
+            geom_histogram(aes(AE, alpha=.rm(METHOD)), center=.25, binwidth=.5,
+                           position='identity' ) + 
+            geom_point(data=means, aes(y=3.6, x=MEAN, color=.rm(METHOD)), pch=25, size=4)+ 
+            # geom_vline(data=means, aes(xintercept=MEAN, color=METHOD)) +
+            theme_bw() +
+            theme(legend.position='bottom') + 
+            scale_x_continuous(expand = c(0.01, .1), breaks = 1:20) +
+            scale_y_continuous(limits=c(0, 150), expand = c(0, 0)) +
+            labs(fill='', color='', alpha='',
+                 x='absolute difference between infection time estimates and\nthe midpoint of the seroconversion interval',
+                 y='source-recipient pairs in which recipient has a last negative test') 
+
+        plot_mae <- change_histogram_colors(plot_mae)
+        force(plot_mae)
+        tmp2[]
+
+
+        # get ages and rounds if TSI criterion is used
+        tsi_predictions <- copy(tmp)
+        tsi_predictions <- tsi_predictions[ , .(ID=RECIPIENT, CL=MIN, M=MID, CU=MAX)]
+
+        dresults[ ! RECIPIENT %in% tsi_predictions$ID]
+        dresults_tsi <- prepare.pairs.input.for.bayesian.model(tsi_predictions)
+
+        plot.age.comparison <- function(part)
+        {
+            stopifnot(part %in% c('SOURCE', 'RECIPIENT'))
+            part_age_col <- fifelse(part=='SOURCE', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT')
+
+            part_age_col %in% names(dresults)
+            part_age_col %in% names(dresults_tsi)
+
+            cols <- c(part, part_age_col)
+            .f <- function(DT) subset(DT, select=cols)
+            dage_comparison <- list(.f(dresults_tsi), .f(dresults))
+            
+
+            stopifnot(part %in% names(dage_comparison[[1]]))
+            stopifnot(part %in% names(dage_comparison[[2]]))
+
+            dage_comparison <- merge(dage_comparison[[1]], dage_comparison[[2]], all.y=TRUE, by=part)
+
+            if(part=='RECIPIENT')
+            {
+                dage_comparison <- melt(dage_comparison, id.vars='RECIPIENT',
+                                        value.name='AGE_INFECTION.RECIPIENT',
+                                        variable.name='METHOD')
+            }else{
+                dage_comparison <- melt(dage_comparison, id.vars='SOURCE',
+                                        value.name='AGE_TRANSMISSION.SOURCE',
+                                        variable.name='METHOD')
+            }
+            dage_comparison[METHOD %like% '.x$', METHOD := 'phyloTSI' ]
+            dage_comparison[METHOD %like% '.y$', METHOD := 'final' ]
+
+            if(part=='RECIPIENT')
+            {
+                medians2 <- dage_comparison[, .(MEDIAN=median(AGE_INFECTION.RECIPIENT, na.rm=TRUE)), by='METHOD']
+            }else{
+                medians2 <- dage_comparison[, .(MEDIAN=median(AGE_TRANSMISSION.SOURCE, na.rm=TRUE)), by='METHOD']
+            }
+
+            setnames(dage_comparison, part_age_col,'X')
+
+            plot_age_comparison <- ggplot(dage_comparison, aes(color=.rm(METHOD), fill=.rm(METHOD))) + 
+                geom_histogram(aes(x=X),
+                               center=.5, binwidth=1,
+                               position='identity', alpha=.5) +
+                geom_point(data=medians2, aes(y=.6, x=MEDIAN, color=.rm(METHOD)), size=4, pch=25)+ 
+                theme_bw() +
+                theme(legend.position='bottom') + 
+                scale_x_continuous(expand = c(0.01, .1), breaks=seq(0, 100, 5)) +
+                scale_y_continuous(limits=c(0, 25), expand = c(0, 0)) +
+                labs(fill='', color='', alpha='',
+                     y = "source-recipient pairs",
+                     x = paste("estimated age of the phylogenetically likely\n",tolower(part),"at time of infection"))
+
+            plot_age_comparison <- change_histogram_colors(plot_age_comparison)
+            plot_age_comparison
+        }
+        plot_age_comparison_source <- plot.age.comparison(part='SOURCE')
+        plot_age_comparison_recipient <- plot.age.comparison(part='RECIPIENT')
+        plot_age_comparison_source
+    }
+
+
+    # plot seroconverters
+    {
+        cols <- c('RENAME_ID', 'pred_doi_min', 'pred_doi_max', 'visit_dt')
+        drange_tsi2 <- fread(file.path.tsiestimates, select = cols) 
+        cols_new <- c('AID', 'MIN', 'MAX', 'visit_dt')
+        setnames(drange_tsi2, cols, cols_new)
+        cols_new <- setdiff(cols_new, 'AID')
+        drange_tsi2[, (cols_new) := lapply(.SD, as.Date) , .SDcols=cols_new]
+        drange_tsi2[, `:=` (AID=gsub('-fq[0-9]', '', AID)) ] 
+        dsero <- meta[!is.na(date_first_positive) & !is.na(date_last_negative), 
+                      .(AID=aid, MIN=date_last_negative, MAX=date_first_positive, TYPE='Testing')]
+
+        # note: 157 seroconverters do not appear in the tsi predictions although they appear in db sharing....
+        # maybe those are the 'poorly' sequenced? But then why do they have an AID????
+        idx <- dsero[! AID %in% drange_tsi2$AID , AID]
+        
+        dvisits <- drange_tsi2[, .(AID, visit_dt)]
+        drange_tsi2 <- drange_tsi2[, -'visit_dt']
+        drange_tsi2[, TYPE := 'HIV-PhyloTSI']
+
+        # intersect
+        idx <- intersect(drange_tsi2$AID, dsero$AID)
+        tmp <- rbind( drange_tsi2[AID %in% idx, ], dsero[AID %in% idx, ])
+
+        setorder(dvisits, visit_dt)
+        dvisits[, AID := ordered(AID, levels=dvisits$AID)]
+        tmp[, AID := ordered(AID, levels=dvisits$AID )]
+        setkey(tmp, AID)
+        setorder(tmp, AID)
+        
+        # median lenghts of intervals...
+        tmp[, as.numeric(median(MAX - MIN)/365.25), by='TYPE']
+        # proportion of intersecting...
+        tmp[, max(MIN) <= min(MAX), by='AID'][, paste0(round(mean(V1)*100, 2), '%') ]
+        
+
+        p_tsisero <- ggplot(tmp, aes(y=AID)) +
+            geom_point(data=dvisits[AID %in% tmp$AID], aes(x=visit_dt)) + 
+            geom_linerange(aes(xmin=MIN, xmax=MAX, color=TYPE), alpha=.5) + 
+            scale_color_manual(values=c('red', 'blue'))  +
+            theme_bw() + 
+            theme(panel.border = element_blank(), 
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  axis.line = element_line(colour = "black")) +
+            theme(legend.position='bottom', axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
+            labs(x='Date of infection', y='Seroconverters', fill='Round', pch='median doi', color='Infection range')
+        p_tsisero
+    } 
+
+    # Plot schema
+    {
+        i <- 17
+        idx <- dresults[i, .(SOURCE,RECIPIENT)]
+        # IDX <- copy(idx)
+        tmp <- merge(idx, drange_test[, .(AID, MIN.SOURCE=MIN, MAX.SOURCE=MAX)], by.x='SOURCE', by.y='AID')
+        tmp <- merge(tmp, drange_test[, .(AID, MIN.RECIPIENT=MIN, MAX.RECIPIENT=MAX)], by.x='RECIPIENT', by.y='AID')
+        cols <- names(tmp)[names(tmp) %like% '^MIN|^MAX'] 
+        setnames(tmp, cols, paste0('TESTING.', cols))
+
+        tmp1 <- merge(idx,  drange_tsi2[, .(AID, MIN.SOURCE=MIN, MAX.SOURCE=MAX)], by.x='SOURCE', by.y='AID')
+        tmp1 <- merge(tmp1, drange_tsi2[, .(AID, MIN.RECIPIENT=MIN, MAX.RECIPIENT=MAX)], by.x='RECIPIENT', by.y='AID')
+        cols <- names(tmp1)[names(tmp1) %like% '^MIN|^MAX'] 
+        setnames(tmp1, cols, paste0('TSI.', cols))
+        tmp1
+
+        tmp2 <- merge(idx,  drange_tsi[, .(AID, MIN.SOURCE=TSI.MIN, MAX.SOURCE=TSI.MAX)], by.x='SOURCE', by.y='AID')
+        tmp2 <- merge(tmp2, drange_tsi[, .(AID, MIN.RECIPIENT=TSI.MIN, MAX.RECIPIENT=TSI.MAX)], by.x='RECIPIENT', by.y='AID')
+        cols <- names(tmp2)[names(tmp2) %like% '^MIN|^MAX'] 
+        setnames(tmp2, cols, paste0('TSI.', cols))
+
+        trap <- tmp[,list(
+                          X=c(TESTING.MIN.RECIPIENT, TESTING.MIN.SOURCE, TESTING.MIN.SOURCE, TESTING.MAX.RECIPIENT),
+                          Y=c(TESTING.MIN.RECIPIENT, TESTING.MIN.RECIPIENT, TESTING.MAX.RECIPIENT, TESTING.MAX.RECIPIENT)
+        )]
+        trap1 <- tmp1[,list(
+                          X=c(TSI.MIN.SOURCE, TSI.MIN.SOURCE, TSI.MAX.RECIPIENT),
+                          Y=c(TSI.MIN.SOURCE, TSI.MAX.RECIPIENT, TSI.MAX.RECIPIENT)
+        )]
+        trap2 <- tmp2[,list(
+                          X=c(TSI.MIN.SOURCE, TSI.MIN.SOURCE, TSI.MAX.RECIPIENT),
+                          Y=c(TSI.MIN.RECIPIENT, TSI.MAX.RECIPIENT, TSI.MAX.RECIPIENT)
+        )]
+        triangle <- data.table(X=c(tmp1$TSI.MIN.SOURCE, tmp1$TSI.MIN.SOURCE, tmp$TESTING.MAX.RECIPIENT),
+                               Y=c(tmp1$TSI.MIN.SOURCE, tmp$TESTING.MAX.RECIPIENT, tmp$TESTING.MAX.RECIPIENT))
+
+        .f <- function(x) sort(unique(x))
+        center.of.mass <- triangle[, lapply(.SD,.f ),]
+        center.of.mass <- center.of.mass[,.( 
+                                         X = weighted.mean(X, c(2,1)),
+                                         Y = weighted.mean(X, c(1,2))
+                                         )]
+
+        .d <- as.Date(-Inf)
+
+
+        p_schema <- ggplot(data=tmp) +
+            geom_rect(data=tmp,
+                      aes(xmin=TESTING.MIN.SOURCE, xmax=TESTING.MAX.SOURCE,
+                          ymin=TESTING.MIN.RECIPIENT, ymax=TESTING.MAX.RECIPIENT),
+                      fill=NA, color='blue', linetype='dotted'
+                      ) +
+            geom_polygon(data=trap, aes(x=X, y=Y),
+                         alpha=.2, fill='blue') + 
+            geom_linerange(data=tmp, aes(y=as.Date(-Inf),
+                                         xmin=TESTING.MIN.SOURCE,
+                                         xmax=TESTING.MAX.RECIPIENT),
+                           color='blue', size=3, alpha=.4) +
+            geom_linerange(data=tmp, aes(x=as.Date(-Inf),
+                                         ymin=TESTING.MIN.RECIPIENT,
+                                         ymax=TESTING.MAX.RECIPIENT),
+                           color='blue', size=3, alpha=.4) +
+            geom_rect(data=tmp1,
+                      aes(xmin=TSI.MIN.SOURCE, xmax=TSI.MAX.SOURCE,
+                          ymin=TSI.MIN.RECIPIENT, ymax=TSI.MAX.RECIPIENT),
+                      fill=NA, color='red', linetype='dotted'
+                      ) +
+            geom_linerange(data=tmp1, aes(y=as.Date(-Inf),
+                                         xmin=TSI.MIN.SOURCE,
+                                         xmax=TSI.MAX.RECIPIENT),
+                           color='red', size=3, alpha=.4) +
+            geom_linerange(data=tmp1, aes(x=as.Date(-Inf) + 1000,
+                                         ymin=TSI.MIN.RECIPIENT,
+                                         ymax=TSI.MAX.RECIPIENT),
+                           color='red', size=3, alpha=.4) +
+            geom_polygon(data=trap1, aes(x=X, y=Y),
+                         alpha=.2, fill='red') + 
+            geom_polygon(data=triangle, aes(x=X, y=Y),
+                         alpha=.2, color='purple', size=2) + 
+            geom_point(data=center.of.mass, aes(x=X, y=Y), 
+                       color='purple', size=5, pch=4) + 
+            geom_abline(slope=1, linetype='dashed') +
+            theme_bw() +
+            theme(panel.border = element_blank(), 
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  axis.line = element_line(colour = "black")) +
+            labs(x='Source date of infection', y='Recipient date of infection') +
+            reqs + coord_flip()
+
+        print(p_schema)
+        filename <- file.path(out.dir, 'supp_triangle_schema.pdf')
+        ggsave(filename, p_schema, width=10, height=10, units = 'cm')
+    }
+
+
+    tmp <- ggarrange_nature(plot_mae + theme(legend.spacing.x=unit(.3, 'cm')),
+                            plot_age_comparison_source, plot_age_comparison_recipient,
+                            common.legend = TRUE, legend = 'bottom',
+                            labels = c('b','c','d'), ncol=3)
+    tmp <- ggarrange_nature(p_predictions2, tmp, ncol=1, heights = c(6,4), labels=c('a', '')) 
+    filename <- file.path(out.dir, 'edf_tsis_v_v2.pdf')
+    ggsave_nature(filename, tmp, add_reqs=FALSE)
+
+    
+    # vertical layout
+    p_tmp <- ggarrange(p_schema , p_tsisero, common.legend = TRUE, legend='bottom')
+    p1 <- ggarrange(p_predictions, p_tmp, ncol=1, heights=c(.6, .4))
+    # horizontal layour
+    p_tmp_h <- ggarrange(p_schema+coord_flip() + reqs , p_tsisero+reqs, ncol=1, 
+                         common.legend = TRUE, legend='bottom',
+                         heights=c(.4, .6),
+                         labels=c('b','c'), font.label=list(size=8))
+    p_hor <- ggarrange(p_predictions+reqs, p_tmp_h,
+                       ncol=2, widths=c(.6, .4),
+                       labels=c('a', ''), font.label=list(size=8))
+
+    filename <- file.path(out.dir, 'edf_tsis_v.pdf')
+    ggsave(filename, p_hor, width=17, height=18, units = 'cm')
+
+
+    p_tmp_h <- ggarrange(plot_mae + reqs, plot_age_comparison+reqs,
+                         common.legend = TRUE, legend='right',
+                         labels=c('b','c'), font.label=list(size=8))
+
+    .v_leg <- theme(legend.position='right', legend.direction='vertical', legend.box='vertical')
+    p_hor2 <- ggarrange(p_predictions2 + reqs +
+                        .v_leg + 
+                        guides(fill=guide_legend(ncol=1, byrow=TRUE, override.aes=list(size=1))),
+                    p_tmp_h, 
+                        ncol=1, heights=c(6.5,3.5), 
+                        labels=c('a', ''), font.label=list(size=8))
+
+    filename <- file.path(out.dir, 'edf_tsis_v_v2.pdf')
+    ggsave(filename, p_hor2, width=17, height=18, units = 'cm')
+
+}
 
 
 if(0)
