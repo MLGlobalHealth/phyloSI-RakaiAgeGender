@@ -88,23 +88,7 @@ df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1, SUPPRESSION_RATE_NONPA
 
 ####################################
 
-# FIND PROPORTION OF DIAGNOSED
-
-####################################
-
-# all participants are diagnosed
-df[, PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE := 1]
-
-# assume that proportion diagnosed in non -participants = proportion on art
-df[, PROP_DIAGNOSED_NONPARTICIPANT_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE]
-
-# find proportion diagnosed in the population
-df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE * PARTICIPATION + PROP_DIAGNOSED_NONPARTICIPANT_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
-
-
-####################################
-
-# FIND PROPORTION OF ART USE GIVEN DIAGNOSED
+# FIND PROPORTION OF ART USE GIVEN INFECTED
 
 ####################################
 
@@ -127,15 +111,26 @@ stopifnot(nrow(df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
 # find art coverage in population
 df[, PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
-# find art coverage given diagnosed in population
-df[, PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := min(1, PROP_ART_COVERAGE_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
 
-stopifnot(nrow(df[PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE>1]) == 0)
+####################################
+
+# FIND PROPORTION OF DIAGNOSED
+
+####################################
+
+# all participants are diagnosed
+df[, PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE := 1]
+
+# assume that proportion diagnosed in non -participants = proportion on art
+df[, PROP_DIAGNOSED_NONPARTICIPANT_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE]
+
+# find proportion diagnosed in the population
+df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE * PARTICIPATION + PROP_DIAGNOSED_NONPARTICIPANT_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
 
 ####################################
 
-# FIND SUPPRESSION RATE FOR ALL ROUND
+# FIND PROPORTIN OF SUPPRESSION GIVEN INFECTED
 
 ####################################
 
@@ -155,20 +150,28 @@ set(df, NULL, 'SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE_R016', NULL)
 stopifnot(nrow(df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
 stopifnot(nrow(df[SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
 
-
-####################################
-
-# FIND PROPORTION OF SUPPRESSION RATE 
-
-####################################
-
 # find suppression in the population
 df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE * PARTICIPATION + PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
+
+##########################################################
+
+# FIND PROPORTION OF ON ART AND SUPPRESSED GIVEN DIAGNOSED
+
+##########################################################
+
+# find art coverage given diagnosed in population
+df[, PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := min(1, PROP_ART_COVERAGE_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
+
+stopifnot(nrow(df[PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE>1]) == 0)
+
 # find suppression given art use in the population (i.e., suppression rate)
 df[, PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_POSTERIOR_SAMPLE ]
-
 stopifnot(nrow(df[PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE > 1]) == 0)
+
+# find suppression given diagnosed use in the population 
+df[, PROP_SUPPRESSION_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE ]
+stopifnot(nrow(df[PROP_SUPPRESSION_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE > 1]) == 0)
 
 
 ####################################
@@ -179,8 +182,11 @@ stopifnot(nrow(df[PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE > 1]) == 0)
 
 tmp <- df[, .(ROUND, SEX, COMM, AGEYRS, iterations, 
               PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE, 
-              PROP_SUPPRESSED_POSTERIOR_SAMPLE,PROP_ART_COVERAGE_POSTERIOR_SAMPLE,
-             PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE, PROP_DIAGNOSED_POSTERIOR_SAMPLE)]
+              PROP_SUPPRESSION_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE,
+              PROP_SUPPRESSED_POSTERIOR_SAMPLE,
+              PROP_ART_COVERAGE_POSTERIOR_SAMPLE,
+             PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE, 
+              PROP_DIAGNOSED_POSTERIOR_SAMPLE)]
 tmp <- melt.data.table(tmp, id.vars= c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations'))
 tmp[, variable := gsub('(.+)_POSTERIOR_SAMPLE', '\\1', variable)]
 ns = tmp[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'variable')]
