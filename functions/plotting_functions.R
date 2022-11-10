@@ -60,7 +60,7 @@ ggsave_nature <- function(filename, p, w=18,h=24, add_reqs=TRUE)
     # apply changes: for the moment only works for simple plots, but not for ggarrange.
     # Let's see if anyone answers this:
     # https://stackoverflow.com/questions/74379207/simultaneously-applying-same-modification-to-all-ggarrange-subplots
-    if(addreqs)
+    if(add_reqs)
     {
         reqs <- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'))
         p <- p + reqs
