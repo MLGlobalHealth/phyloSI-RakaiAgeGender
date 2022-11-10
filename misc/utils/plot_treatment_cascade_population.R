@@ -93,20 +93,20 @@ ggplot(tmp, aes(x = AGEYRS)) +
 
 ####################################
 
-tab <- copy(ns[variable %in% c('PROP_SUPPRESSION_GIVEN_ART')])
+tab <- copy(ns[variable %in% c('PROP_SUPPRESSION_GIVEN_DIAGNOSED')])
 tab[,SEX_LABEL := 'Men']
 tab[SEX == 'F',SEX_LABEL := 'Women']
 tab[,COMM_LABEL := 'Inland communities']
 tab[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
 tab[, ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
 
-tmp <- tab[ COMM == 'inland' & !ROUND %in% c('R010', 'R011', 'R012', 'R013',  'R014', 'R015S')]
+tmp <- tab[ COMM == 'inland' & !ROUND %in% c( 'R015S')]
 p1 <- ggplot(tmp, aes(x = AGEYRS)) + 
   geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX_LABEL), alpha = 0.5) + 
   geom_line(aes(y = M, col = SEX_LABEL)) + 
-  facet_wrap(~ROUND_LABEL, ncol = 1) + 
+  facet_wrap(~ROUND_LABEL, ncol = 2) + 
   theme_bw() + 
-  labs(x = 'Age', y = 'Viral suppression rate in HIV-infected population', 
+  labs(x = 'Age', y = 'Viral suppression rate in infected population', 
        col = '', fill = '', shape = '', linetype= '') +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white")) +
@@ -121,21 +121,23 @@ p1 <- ggarrange(p1, labels = c('a'))
 # suppression rate ratio
 tab <- dcast.data.table(tmp, ROUND_LABEL + AGEYRS + COMM ~ SEX, value.var = 'M')
 tab[, SUPPRESSION_RATE_RATIO := `F`/`M`]
-cols <<- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(4)
-p2 <- ggplot(tab, aes(x = AGEYRS)) + 
+tmp <- tab[!grepl('11|13|15|17', ROUND_LABEL)]
+cols <<- grDevices::colorRampPalette(c("#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"))(9)[c(1,3,5,7,9)]
+p2 <- ggplot(tmp, aes(x = AGEYRS)) + 
   geom_hline(aes(yintercept = 1), linetype = 'dashed', col = 'grey50') + 
   geom_line(aes(y = SUPPRESSION_RATE_RATIO, col = ROUND_LABEL)) + 
   theme_bw() + 
-  labs(x = 'Age', y = 'Female-to-male viral suppression rate\nratio in HIV-infected population', 
+  labs(x = 'Age', y = 'Female-to-male viral suppression rate\nratio in infected population', 
        col = '', fill = '') +
   theme(legend.position = 'bottom', 
         strip.background = element_rect(colour="white", fill="white")) +
   scale_color_manual(values = cols) + 
   scale_y_log10() + 
-  scale_x_continuous(expand = c(0,0))
+  scale_x_continuous(expand = c(0,0)) +
+  guides(color = guide_legend(byrow = T, nrow = 2))
 p2 <- ggarrange(p2, labels = c('b'))
 
 p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6, 0.4), widths = c(0.45, 0.55))
-ggsave(p, file = file.path(outdir, 'population_suppression_rate_221108.pdf'), w = 8, h = 7)
+ggsave(p, file = file.path(outdir, 'population_suppression_rate_221110.pdf'), w = 8, h = 8)
 
 
