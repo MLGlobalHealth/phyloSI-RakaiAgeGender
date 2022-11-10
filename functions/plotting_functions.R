@@ -21,8 +21,7 @@ ggarrange_nature <- function(
   common.legend = FALSE,
   legend.grob = NULL, 
   add_reqs=TRUE
-)
-{
+){
     if(add_reqs)
     reqs <- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'))
 
@@ -48,8 +47,6 @@ ggarrange_nature <- function(
                      legend.grob = legend.grob)
     return(out)
 }
-
-ggarrange_nature <- function()
 
 ggsave_nature <- function(filename, p, w=18,h=24, add_reqs=TRUE)
 {
