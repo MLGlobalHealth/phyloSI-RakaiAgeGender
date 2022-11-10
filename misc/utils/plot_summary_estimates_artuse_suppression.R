@@ -61,7 +61,7 @@ tmp <- tmp[AGEYRS > 14 & AGEYRS < 50]
 tmp1 <- tmp[!ROUND %in% c("06", "07", "08", "09", '10') & COMM == 'inland' & SEX == 'M']
 pP.M <- ggplot(tmp1, aes(x = AGEYRS, y = value)) +
   geom_bar(aes(fill = variable), stat = 'identity') + 
-  labs(x = 'Age', y = 'Count HIV-positive male participants', fill = '') +
+  labs(x = 'Age', y = 'Count infected male participants', fill = '') +
   facet_grid(ROUND_LABEL~.) +
   theme_bw() +
   theme(legend.position = 'bottom', 
@@ -91,7 +91,7 @@ tmp <- tmp[AGEYRS > 14 & AGEYRS < 50]
 tmp1 <- tmp[!ROUND %in% c("06", "07", "08", "09", '10') & COMM == 'inland' & SEX == 'M']
 pNP.M <- ggplot(tmp1, aes(x = AGEYRS, y = value)) +
   geom_bar(aes(fill = variable), stat = 'identity') + 
-  labs(x = 'Age', y = 'Count HIV-positive first-time male participants', fill = '') +
+  labs(x = 'Age', y = 'Count infected first-time male participants', fill = '') +
   facet_grid(ROUND_LABEL~.) +
   theme_bw() +
   theme(legend.position = 'none', 
@@ -144,7 +144,7 @@ p.ART <-ggplot(tab, aes(x = AGEYRS)) +
   geom_line(data = tabpop, aes(y = PROP_ART_COVERAGE_M, col = SEX_LABEL, size = label.population), linetype = 'dashed') + 
   facet_grid(ROUND_LABEL~.) + 
   theme_bw() + 
-  labs(x = 'Age', y = 'Proportion of HIV-infected who use ART', 
+  labs(x = 'Age', y = 'Proportion of infected individuals who report ART use', 
        col = '', fill = '', shape = '', linetype= '', size = '') +
   theme(legend.position = 'none', 
         # legend.box = 'vertical',
@@ -202,7 +202,7 @@ p.US <-ggplot(tab, aes(x = AGEYRS)) +
   geom_line(data = tabpop, aes(y = PROP_SUPPRESSED_M, col = SEX_LABEL, size = label.population), linetype = 'dashed') + 
   facet_grid(ROUND_LABEL~.) + 
   theme_bw() + 
-  labs(x = 'Age', y = 'Proportion of HIV-infected with suppressed viral load', 
+  labs(x = 'Age', y = 'Proportion of infected individuals with suppressed virus', 
        col = '', fill = '', shape = '', linetype= '', size = '') +
   theme(legend.position = 'bottom', 
         legend.direction = 'vertical',
