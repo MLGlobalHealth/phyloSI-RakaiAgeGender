@@ -105,7 +105,6 @@ print(args)
 #    HELPERS   #
 ################
 
-find_palette_round()
 source(file.path(indir, 'functions', 'utils.R'))
 source(file.path(indir, 'functions', 'gi_analysis_functions.R'))
 source(file.path(indir, 'functions', 'plotting_functions.R'))
@@ -113,6 +112,7 @@ source(file.path(indir, 'functions', 'summary_functions.R'))
 # source(file.path(indir, 'functions', 'statistics_functions.R'))
 # source(file.path(indir, 'functions', 'stan_utils.R'))
 # source(file.path(indir, 'functions', 'check_potential_TNet.R'))
+find_palette_round()
 
 
 plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table())
@@ -435,14 +435,21 @@ filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_
 fwrite(dtable, filename)
 
 
-dresults <- dresults[SEX.SOURCE!=SEX.RECIPIENT]
-dresults <- dresults[ COMM.SOURCE != 'neuro' & COMM.RECIPIENT != 'neuro'] 
-# dresults[, table(COMM.SOURCE)]
-
-# make extended data figure plot
+##############################
+#   EXTENDED DATA FIGURES   # 
+##############################
 
 library(ggpubr)
-reqs <- theme(text = element_text(size=6))
+
+# For plots, only select pairs which appear in the analysis
+dresults <- dresults[SEX.SOURCE!=SEX.RECIPIENT]
+dresults <- dresults[ COMM.SOURCE != 'neuro' & COMM.RECIPIENT != 'neuro'] 
+dresults <- dresults[COMM.RECIPIENT == 'inland', ]
+dresults <- dresults[! is.na(ROUND.M) ]
+cat(dresults[, .N], 'source-recipient pairs selected\n')
+# dresults[, table(COMM.SOURCE)]
+
+naturemed_reqs()
 
 if(1)
 {
@@ -462,31 +469,32 @@ if(1)
         drange_tmp <- rbind(drange_topo, drange_test, drange_final)
         drange_tmp[, TYPE := ordered(TYPE, levels=lvls)]
 
-        # setorder(dresults, 'M')
-        #lvls <- dresults[!is.na(M), uniqueN(RECIPIENT)]
-        # dresults[, RECIPIENT := ordered(RECIPIENT, levels=lvls)]
-        p_predictions <- ggplot(dresults[!is.na(M)], aes(y=ordered(RECIPIENT, levels= tmp_aids) )) + 
-            geom_point(aes(x=M), color='red')  +
-            geom_vline(data=df_round, aes(xintercept=MIN_SAMPLE_DATE), linetype='dotted') +
-            geom_vline(data=df_round, aes(xintercept=MAX_SAMPLE_DATE), linetype='dotted') +
-            geom_vline(data=df_round[round==15], aes(xintercept=MAX_SAMPLE_DATE), color='red') +
-            geom_rect(data = df_round, aes(y=NULL, ymin = first(tmp_aids), ymax = last(tmp_aids), 
-                                            xmin = MIN_SAMPLE_DATE, xmax = MAX_SAMPLE_DATE,
-                                            fill = as.ordered(round)), alpha = 0.5) + 
-            geom_linerange(data=drange_tmp[AID %in% tmp_aids], aes(xmin=MIN, xmax=MAX, y=AID, color=TYPE)) +
-            geom_point(aes(x=M), color='red')  +
-            scale_fill_manual(values=palette_round) +
-            scale_color_manual(values=c('grey80', 'grey30', 'black') )  +
-            guides(color=guide_legend(nrow=1, byrow=TRUE, override.aes=list(size=3))) + 
-            guides(fill=guide_legend(nrow=1, byrow=TRUE, override.aes=list(size=1))) + 
-            theme_bw() + 
-            theme(panel.border = element_blank(), 
-                  panel.grid.major = element_blank(),
-                  panel.grid.minor = element_blank(),
-                  axis.line = element_line(colour = "black")) +
-            theme(legend.position='bottom', legend.box="vertical", 
-                  axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
-            labs(x='Date of infection', y='Recipient', fill='Round', pch='median doi', color='Infection range')
+        if(0)
+        {
+            p_predictions <- ggplot(dresults[!is.na(M)], aes(y=ordered(RECIPIENT, levels= tmp_aids) )) + 
+                geom_point(aes(x=M), color='red')  +
+                geom_vline(data=df_round, aes(xintercept=MIN_SAMPLE_DATE), linetype='dotted') +
+                geom_vline(data=df_round, aes(xintercept=MAX_SAMPLE_DATE), linetype='dotted') +
+                geom_vline(data=df_round[round==15], aes(xintercept=MAX_SAMPLE_DATE), color='red') +
+                geom_rect(data = df_round, aes(y=NULL, ymin = first(tmp_aids), ymax = last(tmp_aids), 
+                                                xmin = MIN_SAMPLE_DATE, xmax = MAX_SAMPLE_DATE,
+                                                fill = as.ordered(round)), alpha = 0.5) + 
+                geom_linerange(data=drange_tmp[AID %in% tmp_aids], aes(xmin=MIN, xmax=MAX, y=AID, color=TYPE)) +
+                geom_point(aes(x=M), color='red')  +
+                scale_fill_manual(values=palette_round) +
+                scale_color_manual(values=c('grey80', 'grey30', 'black') )  +
+                guides(color=guide_legend(nrow=1, byrow=TRUE, override.aes=list(size=3))) + 
+                guides(fill=guide_legend(nrow=1, byrow=TRUE, override.aes=list(size=1))) + 
+                theme_bw() + 
+                theme(panel.border = element_blank(), 
+                      panel.grid.major = element_blank(),
+                      panel.grid.minor = element_blank(),
+                      axis.line = element_line(colour = "black")) +
+                theme(legend.position='bottom', legend.box="vertical", 
+                      axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
+                labs(x='Date of infection', y='Recipient', fill='Round', pch='median doi', color='Infection range')
+
+        }
 
         tmp <- unique(dresults[, .(RECIPIENT, CL, M, CU)])
 
@@ -498,61 +506,78 @@ if(1)
         cols_new <- setdiff(cols_new, 'RECIPIENT')
         drange_tsi2[, (cols_new) := lapply(.SD, as.Date) , .SDcols=cols_new]
         drange_tsi2 <- drange_tsi2[RECIPIENT %in% tmp$RECIPIENT]
-
         tmp <- merge(tmp, drange_tsi2, by='RECIPIENT', all.x=TRUE)
         tmp[, INTERSECT := pmax(CL, MIN) <= pmin(CU, MAX)]
         tmp <- tmp[!is.na(MIN)]
 
+
         p_predictions2 <- ggplot(tmp) + 
             geom_rect(data=df_round, aes(xmin=MIN_SAMPLE_DATE, xmax=MAX_SAMPLE_DATE, 
                                          ymin=MIN_SAMPLE_DATE, ymax=MAX_SAMPLE_DATE, fill=as.ordered(round))) + 
-            geom_hline(data=df_round, aes(yintercept=df_round[round==15, MAX_SAMPLE_DATE]), color="#F0AD64") + 
-            geom_vline(data=df_round, aes(xintercept=df_round[round==15, MAX_SAMPLE_DATE]), color="#F0AD64") + 
-            # geom_rect(data=df_round, aes(xmin=as.Date(-Inf), xmax=as.Date(Inf) , 
-            #                             ymin=MIN_SAMPLE_DATE, ymax=MAX_SAMPLE_DATE, 
-            #                             alpha=.1, fill=as.ordered(round))) + 
+            geom_rect(data=df_round, aes(xmin=as.Date(-Inf), xmax=MAX_SAMPLE_DATE , 
+                                        ymin=MIN_SAMPLE_DATE, ymax=MAX_SAMPLE_DATE, 
+                                         fill=as.ordered(round)), alpha=.1) + 
+            geom_rect(data=df_round, aes(ymin=as.Date(-Inf), ymax=MAX_SAMPLE_DATE , 
+                                        xmin=MIN_SAMPLE_DATE, xmax=MAX_SAMPLE_DATE, 
+                                        fill=as.ordered(round)), alpha=.1) + 
             geom_abline(aes(slope=1, intercept=0), linetype='dashed', color='red' ) + 
-            geom_point(aes(x=MID, y=M, color=INTERSECT, pch=INTERSECT)) + 
-            geom_errorbar(aes(x=MID ,ymin=CL, ymax=CU, color=INTERSECT), alpha=.3) + 
-            geom_errorbarh(aes(y=M ,xmin=MIN, xmax=MAX, color=INTERSECT), alpha=.3) + 
-            scale_color_manual(values=c('red', 'black')) +
+            geom_point(aes(x=MID, y=M), size=.5) + 
+            geom_errorbar(aes(x=MID ,ymin=CL, ymax=CU), alpha=.1) + 
+            geom_errorbarh(aes(y=M ,xmin=MIN, xmax=MAX), alpha=.1) + 
             scale_fill_manual(values=palette_round) +
-            guides(fill=guide_legend(nrow=1, byrow=TRUE, override.aes=list(size=1))) + 
+            guides(fill=guide_legend(ncol=1, override.aes=list(size=1))) + 
             theme_bw() + 
-            theme(legend.position='bottom') +
-            labs(x='HIV-phyloTSI prediction range', y='Final predictions range',  fill='Round',
-                 color='Intersecting ranges', pch='Intersecting ranges')
-        p_predictions2
-
-        # idx <- tmp[MAX - MIN <= 500 & MID > '2016-01-01' & CU - CL > 500, RECIPIENT]
-        drange_tsi2[! RECIPIENT %in% dresults$RECIPIENT]
-
-        idx <- setdiff(dresults$RECIPIENT, drange_tsi2$RECIPIENT)
-        idx <- aik[AID %in% idx, PT_ID]
-        idx
+            labs(x="infection time estimates using phyloTSI on deep-sequence data",
+                 y="refined infection time estimates accounting further for sero-history and transmission direction",
+                 fill='Round', alpha='') + 
+            theme(legend.position='right', legend.direction='vertical', 
+                  panel.border = element_blank(), 
+                  panel.grid.major = element_blank(),
+                  panel.grid.minor = element_blank(),
+                  axis.line = element_line(colour = "black"))
+        force(p_predictions2)
 
         # get MAE for people with last negative test
         # Median absolute error for 
         dsero <- meta[!is.na(date_first_positive) & !is.na(date_last_negative), 
-                      .(AID=aid, MIN=.f(date_last_negative), MAX=.f(date_first_positive))]
+                      .(AID=aid, MIN=as.Date(date_last_negative), MAX=as.Date(date_first_positive))]
         dsero <- dsero[, list( midpoint=mean(c(MIN, MAX)) ), by='AID']
 
         tmp1 <- merge(tmp, dsero, by.x='RECIPIENT', by.y='AID')
         tmp1[, final := as.numeric(abs(M - midpoint)/365.25)]
         tmp1[, phyloTSI := as.numeric(abs(MID - midpoint)/365.25)]
-        tmp2 <- melt( tmp1[, .(RECIPIENT, final, phyloTSI)], id.vars='RECIPIENT', variable.name='METHOD', value.name='AE') 
+        tmp2 <- melt( tmp1[, .(RECIPIENT, final, phyloTSI)],
+                     id.vars='RECIPIENT', variable.name='METHOD', value.name='AE') 
+        means <- tmp2[, .(MEAN=mean(AE)), by='METHOD']
 
-        medians <- tmp2[, .(MEDIAN=median(AE)), by='METHOD']
+        .rm <- function(x)
+            fifelse(x %like% 'final|Final',
+                    yes='refined infection time estimates accounting\nfurther for serohistory and transmission direction',
+                    no='phyloTSI on\ndeep sequence data')
 
-        plot_mae <- ggplot(tmp2, aes(color=METHOD, fill=METHOD)) + 
-            geom_histogram(aes(AE), center=.5, binwidth=1,
-                           position='dodge', alpha=.5) + 
-            geom_vline(data=medians, aes(xintercept=MEDIAN, color=METHOD))+ 
+        change_histogram_colors <- function(p)
+        {
+            p + scale_color_manual(values=c('red', 'blue')) + 
+                scale_fill_manual(values=c('red', 'blue')) + 
+                scale_alpha_manual(values=c(.4, .5))
+        }
+
+        plot_mae <- ggplot(tmp2, aes(color=.rm(METHOD), fill=.rm(METHOD))) + 
+            geom_histogram(aes(AE, alpha=.rm(METHOD)), center=.25, binwidth=.5,
+                           position='identity' ) + 
+            geom_point(data=means, aes(y=3.6, x=MEAN, color=.rm(METHOD)), pch=25, size=4)+ 
+            # geom_vline(data=means, aes(xintercept=MEAN, color=METHOD)) +
             theme_bw() +
             theme(legend.position='bottom') + 
-            scale_x_continuous(expand = c(0.01, .1)) +
+            scale_x_continuous(expand = c(0.01, .1), breaks = 1:20) +
             scale_y_continuous(limits=c(0, 150), expand = c(0, 0)) +
-            labs(fill='Attribution method', color='Attribution method', x='Absolute Error relative to midpoint', y='Number of seroconverters in source reicipient pairs') 
+            labs(fill='', color='', alpha='',
+                 x='absolute difference between infection time estimates and\nthe midpoint of the seroconversion interval',
+                 y='source-recipient pairs in which recipient has a last negative test') 
+
+        plot_mae <- change_histogram_colors(plot_mae)
+        force(plot_mae)
+        tmp2[]
 
 
         # get ages and rounds if TSI criterion is used
@@ -562,35 +587,65 @@ if(1)
         dresults[ ! RECIPIENT %in% tsi_predictions$ID]
         dresults_tsi <- prepare.pairs.input.for.bayesian.model(tsi_predictions)
 
-        
-        cols <- c('RECIPIENT', 'ROUND.M')
-        .f <- function(DT) subset(DT, select=cols)
-        round_comparison_table <- merge(.f(dresults_tsi), .f(dresults), all.y=TRUE, by='RECIPIENT')
-        round_comparison_table[, table(TSI.ATTRIBUTION=ROUND.M.x, 
-                                       FINAL.ATTRIBUTION=ROUND.M.y,
-                                       useNA = "ifany")] |> xtable()
+        plot.age.comparison <- function(part)
+        {
+            stopifnot(part %in% c('SOURCE', 'RECIPIENT'))
+            part_age_col <- fifelse(part=='SOURCE', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT')
 
-        cols <- c('RECIPIENT', 'AGE_INFECTION.RECIPIENT')
-        dage_comparison <- merge(.f(dresults_tsi), .f(dresults), all.y=TRUE, by='RECIPIENT')
-        dage_comparison <- melt(dage_comparison, id.var='RECIPIENT', 
-                                variable.name='METHOD', value='AGE_INFECTION.RECIPIENT')
-        dage_comparison[METHOD %like% '.x$', METHOD := 'phyloTSI' ]
-        dage_comparison[METHOD %like% '.y$', METHOD := 'Final' ]
-        medians2 <- dage_comparison[, .(MEDIAN=median(AGE_INFECTION.RECIPIENT, na.rm=TRUE)), by='METHOD']
+            part_age_col %in% names(dresults)
+            part_age_col %in% names(dresults_tsi)
 
-        plot_age_comparison <- ggplot(dage_comparison, aes(color=METHOD, fill=METHOD)) + 
-            geom_histogram(aes(AGE_INFECTION.RECIPIENT), center=.5, binwidth=1,
-                           position='dodge', alpha=.5) + 
-            geom_vline(data=medians2, aes(xintercept=MEDIAN, color=METHOD))+ 
-            theme_bw() +
-            theme(legend.position='bottom') + 
-            scale_x_continuous(expand = c(0.01, .1)) +
-            scale_y_continuous(limits=c(0, 50), expand = c(0, 0)) +
-            labs(fill='Attribution method', color='Attribution method', 
-                 x='Attributed age at infection',
-                 y='Number of recipients') 
-        plot_age_comparison
+            cols <- c(part, part_age_col)
+            .f <- function(DT) subset(DT, select=cols)
+            dage_comparison <- list(.f(dresults_tsi), .f(dresults))
+            
 
+            stopifnot(part %in% names(dage_comparison[[1]]))
+            stopifnot(part %in% names(dage_comparison[[2]]))
+
+            dage_comparison <- merge(dage_comparison[[1]], dage_comparison[[2]], all.y=TRUE, by=part)
+
+            if(part=='RECIPIENT')
+            {
+                dage_comparison <- melt(dage_comparison, id.vars='RECIPIENT',
+                                        value.name='AGE_INFECTION.RECIPIENT',
+                                        variable.name='METHOD')
+            }else{
+                dage_comparison <- melt(dage_comparison, id.vars='SOURCE',
+                                        value.name='AGE_TRANSMISSION.SOURCE',
+                                        variable.name='METHOD')
+            }
+            dage_comparison[METHOD %like% '.x$', METHOD := 'phyloTSI' ]
+            dage_comparison[METHOD %like% '.y$', METHOD := 'final' ]
+
+            if(part=='RECIPIENT')
+            {
+                medians2 <- dage_comparison[, .(MEDIAN=median(AGE_INFECTION.RECIPIENT, na.rm=TRUE)), by='METHOD']
+            }else{
+                medians2 <- dage_comparison[, .(MEDIAN=median(AGE_TRANSMISSION.SOURCE, na.rm=TRUE)), by='METHOD']
+            }
+
+            setnames(dage_comparison, part_age_col,'X')
+
+            plot_age_comparison <- ggplot(dage_comparison, aes(color=.rm(METHOD), fill=.rm(METHOD))) + 
+                geom_histogram(aes(x=X),
+                               center=.5, binwidth=1,
+                               position='identity', alpha=.5) +
+                geom_point(data=medians2, aes(y=.6, x=MEDIAN, color=.rm(METHOD)), size=4, pch=25)+ 
+                theme_bw() +
+                theme(legend.position='bottom') + 
+                scale_x_continuous(expand = c(0.01, .1), breaks=seq(0, 100, 5)) +
+                scale_y_continuous(limits=c(0, 25), expand = c(0, 0)) +
+                labs(fill='', color='', alpha='',
+                     y = "source-recipient pairs",
+                     x = paste("estimated age of the phylogenetically likely\n",tolower(part),"at time of infection"))
+
+            plot_age_comparison <- change_histogram_colors(plot_age_comparison)
+            plot_age_comparison
+        }
+        plot_age_comparison_source <- plot.age.comparison(part='SOURCE')
+        plot_age_comparison_recipient <- plot.age.comparison(part='RECIPIENT')
+        plot_age_comparison_source
     }
 
 
@@ -646,7 +701,7 @@ if(1)
 
     # Plot schema
     {
-        i <- 37
+        i <- 17
         idx <- dresults[i, .(SOURCE,RECIPIENT)]
         # IDX <- copy(idx)
         tmp <- merge(idx, drange_test[, .(AID, MIN.SOURCE=MIN, MAX.SOURCE=MAX)], by.x='SOURCE', by.y='AID')
@@ -689,7 +744,6 @@ if(1)
 
         .d <- as.Date(-Inf)
 
-        p_schema
 
         p_schema <- ggplot(data=tmp) +
             geom_rect(data=tmp,
@@ -732,12 +786,22 @@ if(1)
                   panel.grid.major = element_blank(),
                   panel.grid.minor = element_blank(),
                   axis.line = element_line(colour = "black")) +
-            labs(x='Source date of infection', y='Recipient date of infection')
+            labs(x='Source date of infection', y='Recipient date of infection') +
+            reqs + coord_flip()
 
+        print(p_schema)
         filename <- file.path(out.dir, 'supp_triangle_schema.pdf')
-        ggsave(filename, p_schema + reqs + coord_flip(), width=10, height=10, units = 'cm')
-
+        ggsave(filename, p_schema, width=10, height=10, units = 'cm')
     }
+
+
+    tmp <- ggarrange_nature(plot_mae + theme(legend.spacing.x=unit(.3, 'cm')),
+                            plot_age_comparison_source, plot_age_comparison_recipient,
+                            common.legend = TRUE, legend = 'bottom',
+                            labels = c('b','c','d'), ncol=3)
+    tmp <- ggarrange_nature(p_predictions2, tmp, ncol=1, heights = c(6,4), labels=c('a', '')) 
+    filename <- file.path(out.dir, 'edf_tsis_v_v2.pdf')
+    ggsave_nature(filename, tmp, add_reqs=FALSE)
 
     
     # vertical layout
