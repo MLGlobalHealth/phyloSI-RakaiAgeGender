@@ -1167,6 +1167,48 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   save_statistics_incidence_rate_ratio_trends(ic, outdir.table)
 }
 
+plot_pairs_all <- function(pairs.all, outdir){
+  
+  tmp <- pairs.all[COMM.SOURCE != 'neuro' & COMM.RECIPIENT != "neuro"]
+  
+  # find direction label
+  tmp[, DIRECTION := 'Male to Female' ]
+  tmp[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M', DIRECTION := 'Female to Male' ]
+  tmp[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'F', DIRECTION := 'Female to Female' ]
+  tmp[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'M', DIRECTION := 'Male to Male' ]
+  tmp[, DIRECTION := factor(DIRECTION, levels = c('Female to Female', 
+                                                  'Male to Male', 
+                                                  'Female to Male', 
+                                                  'Male to Female'))]
+  
+  # find count and percentage
+  tmp <- tmp[, list(COUNT = .N), by = c('DIRECTION')]
+  tmp[, PROPORTION := paste0(round(COUNT / sum(COUNT)*100, 1), '%')]
+  
+  male_to_female_color <- 'lightblue3'
+  female_to_male_color <- 'lightpink2'
+  male_to_male_color <- 'grey50'
+  female_to_female_color <- 'grey70'
+  
+  # plot
+  p <- ggplot(tmp, aes(x = DIRECTION, y = COUNT, fill=DIRECTION, label=PROPORTION))+
+    geom_col(width=0.6)+
+    theme_bw() +
+    geom_text(nudge_y= 15,color="black",size = 5,fontface="bold") + 
+    labs(y="Number of source-recipient \npairs in RCCS")+
+    theme(legend.position="none", 
+          axis.text.x = element_text(angle = 10, hjust = 1), 
+          panel.grid.major.x = element_blank(),
+          panel.grid.minor.x = element_blank(), 
+          axis.title.x = element_blank())+
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) + 
+    scale_fill_manual(values = c('Male to Female'=male_to_female_color,'Female to Male'=female_to_male_color, 
+                                 'Female to Female'=female_to_female_color,'Male to Male'=male_to_male_color)) 
+    ggsave(p, file = paste0(outdir, '-data-PairsAll.pdf'), w = 4, h = 2.5)
+  
+}
+
+
 plot_pairs <- function(pairs, outdir)
 {
   
