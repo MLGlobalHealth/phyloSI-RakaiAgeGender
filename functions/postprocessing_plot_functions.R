@@ -243,7 +243,7 @@ plot_PPC_observed_recipient <- function(predict_y, count_data, outdir){
     df <- merge(df, unique(df_age_aggregated[, .(AGE_INFECTION.RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT)]), by = c('AGE_INFECTION.RECIPIENT'))
     df[, AGE_GROUP_INFECTION.RECIPIENT := paste0('Age: ', AGE_GROUP_INFECTION.RECIPIENT)]
     set.seed(12)
-    df[, jitter := runif(length(count), -0.5, 0.5), by= c('AGE_INFECTION.RECIPIENT', 'LABEL_RECIPIENT', 'PERIOD', 'count')]
+    df[, jitter := runif(length(count), 0, 0.5), by= c('AGE_INFECTION.RECIPIENT', 'LABEL_RECIPIENT', 'PERIOD', 'count')]
     df[, count_jitter := count + jitter]
     df[, CL_jitter := CL + jitter]
     df[, CU_jitter := CU + jitter]
@@ -346,7 +346,7 @@ plot_PPC_incidence_rate_round <- function(predict_incidence_rate_round, incidenc
     df[, AGE_GROUP_INFECTION.RECIPIENT := paste0('Age: ', AGE_GROUP_INFECTION.RECIPIENT)]
     
     set.seed(12)
-    df[, jitter := runif(length(INCIDENCE), -0.005, 0.005), by= c('AGE_GROUP_INFECTION.RECIPIENT', 'LABEL_RECIPIENT', 'ROUND', 'INCIDENCE')]
+    df[, jitter := runif(length(INCIDENCE), 0, 0.005), by= c('AGE_GROUP_INFECTION.RECIPIENT', 'LABEL_RECIPIENT', 'ROUND', 'INCIDENCE')]
     df[, INCIDENCE_jitter := (INCIDENCE + jitter)*100]
     df[, CL_jitter := (CL + jitter)*100]
     df[, CU_jitter := (CU + jitter)*100]
