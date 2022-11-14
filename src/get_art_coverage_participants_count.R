@@ -123,6 +123,18 @@ rprev <- merge(rprev, tmp, by.x = c('STUDY_ID', 'ROUND', 'SEX', 'COMM'), by.y = 
 rprev[!is.na(AGEYRS2), AGEYRS := AGEYRS2]
 set(rprev, NULL, 'AGEYRS2', NULL)
 
+# find percentage of participant who did not report art but had not viremic viral load
+tmp <- rprev[COMM == 'inland' & ART == F & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
+                                        N = length(STUDY_ID)), by = 'ROUND']
+tmp[, PROP := round(X / N * 100, 2)]
+tmp
+
+# find percentage of participant who report art and had not viremic viral load
+tmp <- rprev[COMM == 'inland' & ART == T & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
+                                                              N = length(STUDY_ID)), by = 'ROUND']
+tmp[, PROP := round(X / N * 100, 2)]
+tmp
+
 # set art to true if viremic viral load
 rprev[VLNS == 0, ART := T]
 rprev <- rprev[!is.na(ART)]

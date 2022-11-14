@@ -222,6 +222,7 @@ plot_PPC_observed_recipient <- function(predict_y, count_data, outdir){
     tmp <- predict_y[ COMM == communities[i]]
     tmp1 <- data[ LABEL_COMMUNITY == tmp[, unique(LABEL_COMMUNITY)]]
     
+    # plot 1
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M, linetype = 'Fit')) + 
       geom_ribbon(aes(ymin = CL, ymax = CU, linetype = 'Fit'), alpha = 0.5) + 
@@ -236,7 +237,34 @@ plot_PPC_observed_recipient <- function(predict_y, count_data, outdir){
             legend.position = 'bottom') +
       guides(size = guide_legend(order = 1))
     ggsave(p, file = paste0(outdir, '-output-PPC_observed_recipient_', communities[i], '.png'), w = 7, h = 5)
-    ggsave(p, file = paste0(outdir, '-output-PPC_observed_recipient_', communities[i], '.pdf'), w = 7, h = 5)
+
+    # plot 2
+    df <- merge(tmp, tmp1, by = c('LABEL_RECIPIENT', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_INFECTION.RECIPIENT', 'PERIOD_SPAN'))
+    df <- merge(df, unique(df_age_aggregated[, .(AGE_INFECTION.RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT)]), by = c('AGE_INFECTION.RECIPIENT'))
+    df[, AGE_GROUP_INFECTION.RECIPIENT := paste0('Age: ', AGE_GROUP_INFECTION.RECIPIENT)]
+    set.seed(12)
+    df[, jitter := runif(length(count), 0, 0.5), by= c('AGE_INFECTION.RECIPIENT', 'LABEL_RECIPIENT', 'PERIOD', 'count')]
+    df[, count_jitter := count + jitter]
+    df[, CL_jitter := CL + jitter]
+    df[, CU_jitter := CU + jitter]
+    df[, M_jitter := M + jitter]
+    
+    p <- ggplot(df) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+      geom_errorbar(aes(x=count_jitter, ymin=CL_jitter, ymax=CU_jitter),  color = 'grey50', width = 0, size = 0.5)+
+      geom_point(aes(y=M_jitter, x=count_jitter, color=PERIOD), size = 1) + 
+      theme_bw() + 
+      labs(x = 'Observed transmission events\nin RCCS participants',
+           y = 'Predicted transmission events\nin RCCS participants', 
+           col ='', fill = '') +
+        scale_color_viridis_d(option = 'A', end = 0.9, begin = 0.1) + 
+      facet_wrap(AGE_GROUP_INFECTION.RECIPIENT~LABEL_RECIPIENT, scale = 'free', ncol = 3) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(0.9)),
+            legend.position = 'bottom') +
+      guides(size = guide_legend(order = 1))
+    ggsave(p, file = paste0(outdir, '-output-PPC_observed_point_recipient_', communities[i], '.pdf'), w = 6, h = 5.2)
+    
   }
   
 }
@@ -290,6 +318,7 @@ plot_PPC_incidence_rate_round <- function(predict_incidence_rate_round, incidenc
     
     tmp <- predict_z[ COMM == communities[i]]
     
+    # plot 1
     p <- ggplot(tmp, aes( x = AGE_INFECTION.RECIPIENT)) + 
       geom_line(aes(y = M*100, linetype = 'Fit')) +
       geom_ribbon(aes(ymin = CL*100, ymax = CU*100, linetype = 'Fit'), alpha = 0.5) +
@@ -307,12 +336,38 @@ plot_PPC_incidence_rate_round <- function(predict_incidence_rate_round, incidenc
     if(communities[i] == 'inland'){
       # inland has more round than fishing
       ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_recipient_byround_', communities[i], '.png'), w = 7, h = 14)
-      ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_recipient_byround_', communities[i], '.pdf'), w = 7, h = 14)
-      
+
     }else{
       ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_recipient_byround_', communities[i], '.png'), w = 6, h = 10)
-      ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_recipient_byround_', communities[i], '.pdf'), w = 6, h = 10)
     }
+    
+    # plot 2
+    df <- merge(tmp, unique(df_age_aggregated[, .(AGE_INFECTION.RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT)]), by = c('AGE_INFECTION.RECIPIENT'))
+    df[, AGE_GROUP_INFECTION.RECIPIENT := paste0('Age: ', AGE_GROUP_INFECTION.RECIPIENT)]
+    
+    set.seed(12)
+    df[, jitter := runif(length(INCIDENCE), 0, 0.005), by= c('AGE_GROUP_INFECTION.RECIPIENT', 'LABEL_RECIPIENT', 'ROUND', 'INCIDENCE')]
+    df[, INCIDENCE_jitter := (INCIDENCE + jitter)*100]
+    df[, CL_jitter := (CL + jitter)*100]
+    df[, CU_jitter := (CU + jitter)*100]
+    df[, M_jitter := (M + jitter)*100]
+    
+    p <- ggplot(df) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+      geom_errorbar(aes(x=INCIDENCE_jitter, ymin=CL_jitter, ymax=CU_jitter),  color = 'grey70', width = 0, size = 0.2)+
+      geom_point(aes(y=M_jitter, x=INCIDENCE_jitter, 
+                     color=LABEL_ROUND), size = 1) + 
+      theme_bw() + 
+      labs(x = 'Prior mean incidence rate per 100 person-years',
+           y = 'Estimated incidence rate per 100 person-years', 
+           col ='', fill = '') +
+      scale_color_manual(values = palette_round_inland) + 
+      facet_wrap(LABEL_RECIPIENT~AGE_GROUP_INFECTION.RECIPIENT, scale = 'free', ncol = 3) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(0.9)),
+            legend.position = 'bottom') +
+      guides(color = guide_legend(byrow = T, nrow = 3))
+    ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_point_recipient_byround_', communities[i], '.pdf'), w = 6, h = 5.7)
     
   }
   
@@ -1138,42 +1193,54 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
   # select rounds to be plotted
   mas <- mas[(COMM == 'inland' & ROUND %in% paste0('R0', c(15, 18)))|(COMM == 'fishing' & ROUND %in% paste0('R0', c(15, 18)))]
   
-  # find midpoint age group recipient to use a numeric x-axis instead of a discrete one
-  mas[, mean_age_group := mean(c(as.numeric(gsub('(.+)-.*', '\\1', AGE_GROUP_INFECTION.RECIPIENT)), 
-                                 as.numeric(gsub('.*-(.+)', '\\1', AGE_GROUP_INFECTION.RECIPIENT)))), by = 'AGE_GROUP_INFECTION.RECIPIENT']
-  mag <- dcast.data.table(mas, LABEL_ROUND + mean_age_group + COMM + AGE_GROUP_INFECTION.RECIPIENT + LABEL_RECIPIENT ~ quantile, value.var = 'M')
+  # dcast
+  mag <- dcast.data.table(mas, LABEL_ROUND + COMM + AGE_GROUP_INFECTION.RECIPIENT + LABEL_RECIPIENT ~ quantile, value.var = 'M')
   
   # find expected transmission flows towards each age group of the recipient for the width of the boxplot
   eca <- expected_contribution_age_group_source2[, .(LABEL_ROUND, COMM, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT, M)]
-  eca[, mean_age_group := mean(c(as.numeric(gsub('(.+)-.*', '\\1', AGE_GROUP_INFECTION.RECIPIENT)), 
-                                 as.numeric(gsub('.*-(.+)', '\\1', AGE_GROUP_INFECTION.RECIPIENT)))), by = 'AGE_GROUP_INFECTION.RECIPIENT']
   setnames(eca, 'M', "M_CONTRIBUTION")
   
   # merge
-  mac <- merge(mag, eca, by =  c('LABEL_ROUND', 'mean_age_group', 'COMM', 'AGE_GROUP_INFECTION.RECIPIENT', 'LABEL_RECIPIENT'))
+  mac <- merge(mag, eca, by =  c('LABEL_ROUND', 'COMM', 'AGE_GROUP_INFECTION.RECIPIENT', 'LABEL_RECIPIENT'))
 
+  # find boxplot quantiles for reported contact
+  rec <- copy(reported_contact)
+  rec <- rec[, list(C10= quantile(part.age, 0.1), 
+                    C25 = quantile(part.age, 0.25), 
+                    C50 = quantile(part.age, 0.5), 
+                    C75 = quantile(part.age, 0.75), 
+                    C90 = quantile(part.age, 0.9), 
+                    CONTRIBUTION = .N), by = c('COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_GROUP')]
+  rec[, M_CONTRIBUTION := CONTRIBUTION / sum(CONTRIBUTION), by = c('COMM', 'ROUND')]
+  set(rec, NULL, 'CONTRIBUTION', NULL)
+  setnames(rec, 'AGE_GROUP', 'AGE_GROUP_INFECTION.RECIPIENT')
+  
+  # make labels
+  mac[, LABEL := paste0('Estimated transmission\nsources, ', LABEL_ROUND)]
+  rec[, LABEL := paste0('Estimated sexual contacts\nin last year, ', mac[grepl('Round 15', LABEL_ROUND), as.character(unique(LABEL_ROUND))])]
+  dt <- rbind(mac, rec, fill=TRUE)
+  
   # plot
   communities <- mac[, unique(COMM)]
   cols <- palette_round_inland[c(4, 7)] # color are the same for inland and fishing ( because same round selected)
   
   for(i in seq_along(communities)){
     
-    mac.s <- mac[COMM == communities[i]]
-    rec.s <- reported_contact[COMM == communities[i]] # reported sexual contact
-
-    # width of the boxplot need to be proportional to a max which is set to be 4 (just for the figure to look pretty)
-    widths <- mac.s[order(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT), M_CONTRIBUTION]
-    widths <- widths * 4 / max(widths)
+    tmp <- dt[COMM == communities[i]]
+    tmp <- tmp[order(LABEL, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT)]
     
-    p <- ggplot(mac.s) + 
-      facet_grid(.~LABEL_RECIPIENT) + 
-      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+    # width of the boxplot need to be proportional to a max (just for the figure to look pretty)
+    widths <- tmp[order(LABEL, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT), M_CONTRIBUTION]
+    widths <- widths * 1.2 / max(widths)
+    
+    p <- ggplot(tmp) + 
       geom_boxplot(stat = "identity",
-                   aes(x = AGE_GROUP_INFECTION.RECIPIENT , col = LABEL_ROUND,
-                       lower  = C25,upper = C75, middle = C50, ymin = C10, ymax = C90, group= interaction(LABEL_ROUND, AGE_GROUP_INFECTION.RECIPIENT)),
-                   width = widths, varwidth = T) +
-      geom_boxplot(data = rec.s, aes(x = AGE_GROUP, y = part.age, fill = 'Reported sexual\npartners in\nRound 15'),
-                   varwidth  = TRUE, position = position_dodge2(preserve = "single"), alpha = 0.2, outlier.shape = NA) +
+                   aes(x = AGE_GROUP_INFECTION.RECIPIENT, fill = LABEL,
+                       lower  = C25,upper = C75, middle = C50, ymin = C10, ymax = C90, 
+                       group= interaction(LABEL, AGE_GROUP_INFECTION.RECIPIENT)),
+                   width = widths, varwidth = T, col = 'black', outlier.shape = NA, 
+                   size = 0.2, position = position_dodge2(width = widths)) +
+      facet_grid(.~LABEL_RECIPIENT) + 
       theme_bw() +
       labs(x = 'Age recipient', y = 'Age source') +
       theme(strip.background = element_rect(colour="white", fill="white"),
@@ -1183,18 +1250,13 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
             panel.grid.minor.x = element_blank(), 
             legend.spacing.x = unit(0.1, 'cm'),
             legend.title = element_blank()) +
-      scale_color_manual(values = cols)  +
-      scale_fill_manual(values = 'white')  +
-      scale_y_continuous(expand = c(0,0), 
+      # scale_color_manual(values = cols)  +
+      scale_fill_manual(values = c('grey50', cols))  +
+      scale_y_continuous(expand = c(0,0), limits = range_age_non_extended,
                          breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
                            max(range_age_non_extended))) + 
-      # coord_cartesian(ylim = range_age_non_extended, xlim= range_age_non_extended) +
-      # scale_x_continuous(breaks = mas[order(mas), unique(mean_age_group)], 
-      #                    labels = mas[order(mas), unique(AGE_GROUP_INFECTION.RECIPIENT)], 
-      #                    expand = c(0,0)) + 
       guides(color = guide_legend(order = 1))
-
-    ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 5.1, h = 3.7)
+    ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 5.5, h = 3.7)
     
   }
 }
