@@ -88,23 +88,7 @@ df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1, SUPPRESSION_RATE_NONPA
 
 ####################################
 
-# FIND PROPORTION OF DIAGNOSED
-
-####################################
-
-# all participants are diagnosed
-df[, PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE := 1]
-
-# assume that proportion diagnosed in non -participants = proportion on art
-df[, PROP_DIAGNOSED_NONPARTICIPANT_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE]
-
-# find proportion diagnosed in the population
-df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE * PARTICIPATION + PROP_DIAGNOSED_NONPARTICIPANT_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
-
-
-####################################
-
-# FIND PROPORTION OF ART USE GIVEN DIAGNOSED
+# FIND PROPORTION OF ART USE GIVEN INFECTED
 
 ####################################
 
@@ -127,15 +111,26 @@ stopifnot(nrow(df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
 # find art coverage in population
 df[, PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
-# find art coverage given diagnosed in population
-df[, PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := min(1, PROP_ART_COVERAGE_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
 
-stopifnot(nrow(df[PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE>1]) == 0)
+####################################
+
+# FIND PROPORTION OF DIAGNOSED
+
+####################################
+
+# all participants are diagnosed
+df[, PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE := 1]
+
+# assume that proportion diagnosed in non -participants = proportion on art
+df[, PROP_DIAGNOSED_NONPARTICIPANT_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE]
+
+# find proportion diagnosed in the population
+df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE * PARTICIPATION + PROP_DIAGNOSED_NONPARTICIPANT_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
 
 ####################################
 
-# FIND SUPPRESSION RATE FOR ALL ROUND
+# FIND PROPORTIN OF SUPPRESSION GIVEN INFECTED
 
 ####################################
 
@@ -155,20 +150,28 @@ set(df, NULL, 'SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE_R016', NULL)
 stopifnot(nrow(df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
 stopifnot(nrow(df[SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
 
-
-####################################
-
-# FIND PROPORTION OF SUPPRESSION RATE 
-
-####################################
-
 # find suppression in the population
 df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE * PARTICIPATION + PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
+
+##########################################################
+
+# FIND PROPORTION OF ON ART AND SUPPRESSED GIVEN DIAGNOSED
+
+##########################################################
+
+# find art coverage given diagnosed in population
+df[, PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := min(1, PROP_ART_COVERAGE_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
+
+stopifnot(nrow(df[PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE>1]) == 0)
+
 # find suppression given art use in the population (i.e., suppression rate)
 df[, PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_POSTERIOR_SAMPLE ]
-
 stopifnot(nrow(df[PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE > 1]) == 0)
+
+# find suppression given diagnosed use in the population 
+df[, PROP_SUPPRESSION_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE ]
+stopifnot(nrow(df[PROP_SUPPRESSION_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE > 1]) == 0)
 
 
 ####################################
@@ -177,8 +180,13 @@ stopifnot(nrow(df[PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE > 1]) == 0)
 
 ####################################
 
-tmp <- df[, .(ROUND, SEX, COMM, AGEYRS, iterations, PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE, 
-             PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE, PROP_DIAGNOSED_POSTERIOR_SAMPLE)]
+tmp <- df[, .(ROUND, SEX, COMM, AGEYRS, iterations, 
+              PROP_SUPPRESSION_GIVEN_ART_POSTERIOR_SAMPLE, 
+              PROP_SUPPRESSION_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE,
+              PROP_SUPPRESSED_POSTERIOR_SAMPLE,
+              PROP_ART_COVERAGE_POSTERIOR_SAMPLE,
+             PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE, 
+              PROP_DIAGNOSED_POSTERIOR_SAMPLE)]
 tmp <- melt.data.table(tmp, id.vars= c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations'))
 tmp[, variable := gsub('(.+)_POSTERIOR_SAMPLE', '\\1', variable)]
 ns = tmp[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'variable')]
@@ -189,67 +197,6 @@ stopifnot(nrow(ns[COMM == 'inland']) == ns[, length(unique(AGEYRS))] * ns[, leng
 stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, length(unique(SEX))] * ns[, length(unique(variable))] * ns[COMM == 'fishing', length(unique(ROUND))])
 stopifnot(nrow(df[COMM == 'inland']) == df[, length(unique(AGEYRS))] * df[, length(unique(SEX))] * df[, length(unique(iterations))] * df[COMM == 'inland', length(unique(ROUND))])
 stopifnot(nrow(df[COMM == 'fishing']) == df[, length(unique(AGEYRS))] * df[, length(unique(SEX))] * df[, length(unique(iterations))] * df[COMM == 'fishing', length(unique(ROUND))])
-
-
-####################################
-
-# PLOT
-
-####################################
-
-# label
-diagnosed.label = 'estimated proportion of diagnosed'
-on.art.label = "proportion of infected who report ART use"
-suppressed.label = "proportion of infected reporting ART use who had a viral load < 1,000 cps / mL blood"
-
-# add label
-tab <- copy(ns)
-tab[, VARIABLE_LEVEL := diagnosed.label]
-tab[variable == 'PROP_ART_COVERAGE_GIVEN_DIAGNOSED', VARIABLE_LEVEL := on.art.label]
-tab[variable == 'PROP_SUPPRESSION_GIVEN_ART', VARIABLE_LEVEL := suppressed.label]
-tab[, VARIABLE_LEVEL := factor(VARIABLE_LEVEL, 
-                               levels = c(diagnosed.label, on.art.label, suppressed.label))]
-tab[,SEX_LABEL := 'Men']
-tab[SEX == 'F',SEX_LABEL := 'Women']
-tab[,COMM_LABEL := 'Inland communities']
-tab[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
-
-tmp <- tab[ROUND == 'R018' & COMM == 'inland']
-ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_hline(aes(yintercept = 0.9), linetype='dashed', alpha = 0.5) +
-  geom_hline(aes(yintercept = 0.95), linetype='dashed', alpha = 0.5) +
-  geom_ribbon(aes(ymin = CL, ymax = CU, fill = VARIABLE_LEVEL), alpha = 0.25) + 
-  geom_line(aes(y = M, col = VARIABLE_LEVEL)) + 
-  facet_grid(~SEX_LABEL) + 
-  theme_bw() + 
-  labs(x = 'Age', y = '', col = '', fill = '') +
-  theme(legend.position = 'bottom', 
-        strip.background = element_rect(colour="white", fill="white")) +
-  ggsci::scale_color_jama()+
-  ggsci::scale_fill_jama()+
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) +
-  scale_x_continuous(expand = c(0,0)) + 
-  guides(color = guide_legend(byrow = T, nrow = 3),
-         fill = guide_legend(byrow = T, nrow = 3))
-ggsave(file = file.path(outdir, 'treatment_cascade_inland_population_221108.pdf'), w = 6.5, h = 4.5)  
-
-tmp <- tab[COMM == 'inland']
-ggplot(tmp, aes(x = AGEYRS)) + 
-  geom_hline(aes(yintercept = 0.9), linetype='dashed', alpha = 0.5) +
-  geom_hline(aes(yintercept = 0.95), linetype='dashed', alpha = 0.5) +
-  geom_ribbon(aes(ymin = CL, ymax = CU, fill = VARIABLE_LEVEL), alpha = 0.25) + 
-  geom_line(aes(y = M, col = VARIABLE_LEVEL)) + 
-  facet_grid(ROUND~SEX_LABEL) + 
-  theme_bw() + 
-  labs(x = 'Age', y = '', col = '', fill = '') +
-  theme(legend.position = 'bottom', 
-        strip.background = element_rect(colour="white", fill="white")) +
-  ggsci::scale_color_jama()+
-  ggsci::scale_fill_jama()+
-  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) +
-  scale_x_continuous(expand = c(0,0)) + 
-  guides(color = guide_legend(byrow = T, nrow = 3),
-         fill = guide_legend(byrow = T, nrow = 3))
 
 
 ####################################

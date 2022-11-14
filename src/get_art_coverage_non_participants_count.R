@@ -146,8 +146,10 @@ rprev <- rprev[!(ROUND %in% c('R016', 'R017', 'R018') & is.na(VLNS))]
 #################################
 
 # get proportion of participants seen for the first time 
-newpart <- rprev[HIV == 'P' & COMM == 'inland', round(sum(INDEX_ROUND == 1) / sum(INDEX_ROUND != 1) * 100, 2), by = 'ROUND']
-print(newpart)
+newpart <- rprev[HIV == 'P' & COMM == 'inland', round(sum(INDEX_ROUND == 1) / length(INDEX_ROUND) * 100, 2), by = 'ROUND']
+newpart <- newpart[!ROUND %in% c('R006', 'R007', 'R008', 'R009')]
+print(newpart[V1 == min(V1)])
+print(newpart[V1 == max(V1)])
 
 #KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
 rprev <- rprev[INDEX_ROUND == 1]
