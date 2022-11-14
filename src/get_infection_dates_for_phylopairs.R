@@ -86,14 +86,14 @@ option_list <- list(
         dest = 'include.only.rccs'
     ), optparse::make_option( "--RH-infectiousness",
         type = "numeric",
-        default = 1,
+        default = 5,
         help = "Relative Hazard of transmission during the acute versus chronic infection phase [Defaults to 5]", 
         dest = 'RH.infectiousness'
     ),
     optparse::make_option(
         "--RH-duration",
         type = "numeric",
-        default = 1,
+        default = 1/6,
         help = "Duration of acute phase, in years [Defaults to 2 months]", 
         dest = 'RH.duration'
     )
@@ -160,18 +160,6 @@ plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table
 
 # Load anon. keys
 aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
-
-if(0)
-{
-    filename <- paste0('network_attributed_doi',
-                       '_chains', .assign.code.meta(file.path.meta),
-                       '_meta',  .assign.code.chain(file.path.chains.data),
-                       '_onlyhetero', as.integer(include.only.heterosexual.pairs),
-                       '.rds')
-    filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', filename)
-}
-
-# get sample collection dates.
 
 # load chains 
 load(file.path.chains.data)
@@ -944,4 +932,47 @@ if(0)
     dpairs[idx, ..cols0]
 
     dpairs[ , range(MIN.RECIPIENT - MAX.SOURCE)/365.25]
+}
+
+
+# sensitivity analysis
+generation.interval.sensitiviy.analysis <- function()
+{
+
+    files <- list.files(file.path(indir.deepsequencedata, 'RCCS_R15_R18'), 
+                        pattern='pairsdata.*rds$', full.names = TRUE)
+    lresults <- lapply(files, readRDS)
+    lapply(lresults, function(DT)
+           {    # Subset Results to source-recipient pairs in the analysis
+               DT <- DT[SEX.SOURCE!=SEX.RECIPIENT]
+               DT <- DT[ COMM.SOURCE != 'neuro' & COMM.RECIPIENT != 'neuro'] 
+               DT <- DT[COMM.RECIPIENT == 'inland', ]
+               DT <- DT[! is.na(ROUND.M) ]
+               cat(DT[, .N], 'source-recipient pairs selected\n')
+               DT
+           }) -> lresults
+
+    # get cols of interest
+    cols <- c('SOURCE', 'RECIPIENT', 'CL', 'IL', 'M', 'IU', 'CU', 'ROUND.M')
+    lresults <- lapply(lresults, subset, select=cols)
+    names(lresults) <- fifelse(basename(files) %like% 'w11', 'uniform', 'non-uniform')
+
+    dsens <- merge(lresults[[1]], lresults[[2]], by=c('SOURCE', "RECIPIENT"))
+    names(dsens) <- gsub('\\.x$', '.uniform', names(dsens))
+    names(dsens) <- gsub('\\.y$', '.bellan', names(dsens))
+    names(dsens)
+#  [1] "SOURCE"     "RECIPIENT"  "CL.uniform" "IL.uniform" "M.uniform" 
+#  [6] "IU.uniform" "CU.uniform" "CL.bellan"  "IL.bellan"  "M.bellan"  
+# [11] "IU.bellan"  "CU.bellan" 
+    .gs <- function(x) gsub('R0', 'R ', x)
+    table(dsens[, .(ROUND.M.uniform, ROUND.M.bellan)]) |> 
+        xtable( label='t:sens_analysis_bellan_genints') 
+
+
+    ggplot(dsens) +
+        geom_errorbar(aes(xmin=CL.uniform, xmax=IU.uniform, y=M.bellan)) + 
+        geom_errorbar(aes(ymin=CL.bellan, ymax=IU.bellan, x=M.uniform)) + 
+        geom_abline
+        theme_bw() +
+        labs()
 }
