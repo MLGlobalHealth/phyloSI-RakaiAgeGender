@@ -74,7 +74,7 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-trace_plots.png'), w  = 8, h = 8
 
 # baseline parameters
 p <- bayesplot::mcmc_intervals(fit, pars = c('log_beta_baseline', 'log_beta_baseline_contrast_direction')) + theme_bw()
-ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots-baseline.png'), w  = 4, h = 4)
+ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots-baseline.png'), w  = 8, h = 4)
 
 # hyperparameters
 p <- bayesplot::mcmc_intervals(fit, regex_pars = c('rho_gp', 'alpha_gp')) + theme_bw()
