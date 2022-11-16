@@ -62,6 +62,11 @@ dcount <- dcount[AGEYRS > 14 & AGEYRS < 50]
 # set round to 15 if inland 15S
 dcount[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
 
+# find characteristics sequenced id
+dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
+                     labels=c('15-24','25-34','35-49'))]
+saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds'))
+
 # if multiple PANGEA_ID per round, keep the one the closest to visit data
 dcount[, IS_MIN := DIFF_DATE == min(DIFF_DATE), by = c('PT_ID', 'ROUND')]
 dcount <- dcount[IS_MIN == T]
