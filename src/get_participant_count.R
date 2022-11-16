@@ -47,7 +47,7 @@ rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 rinc[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
 
 # GET PARTICIPANT
-rinc <- rinc[, list(PARTICIPANT  = .N), by = c('AGEYRS', 'ROUND', 'SEX', 'COMM')]
+rinc <- rinc[, list(PARTICIPANT  = length(unique(STUDY_ID))), by = c('AGEYRS', 'ROUND', 'SEX', 'COMM')]
 
 # GET PARTICIPANT SMOOTH with loess smooth
 rinc <- rinc[order(COMM, ROUND, SEX, AGEYRS)]
