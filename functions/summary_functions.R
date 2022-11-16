@@ -46,30 +46,31 @@ make.time.since.infection <- function(DT)
         tmp
 }
 
-make.df.period <- function(start_observational_period_inland, stop_observational_period_inland, 
-                           cutoff_date)
+make.df.period <- function(start_first_period_inland, stop_first_period_inland, 
+                           start_second_period_inland, stop_second_period_inland, df_round)
 {
   ## make map for the two time periods 
   
-  tmp_inland <- data.table(PERIOD = c(paste0(format(start_observational_period_inland, '%b %Y'), '-', format(cutoff_date-31, '%b %Y')), 
-                                      paste0(format(cutoff_date, '%b %Y'), '-', format(stop_observational_period_inland, '%b %Y'))), 
+  tmp_inland <- data.table(PERIOD = c(paste0(format(start_first_period_inland, '%d %b %Y'), '-', format(stop_first_period_inland, '%d %b %Y')), 
+                                      paste0(format(start_second_period_inland, '%d %b %Y'), '-', format(stop_second_period_inland, '%d %b %Y'))), 
                            BEFORE_CUTOFF = c(T, F), 
                            INDEX_TIME = 1:2, 
-                           PERIOD_SPAN = c(.year.diff(cutoff_date, start_observational_period_inland), 
-                                           .year.diff(stop_observational_period_inland, cutoff_date)), 
                            COMM = 'inland', 
-                           MIN_PERIOD_DATE = c(start_observational_period_inland, cutoff_date),
-                           MAX_PERIOD_DATE = c(cutoff_date, stop_observational_period_inland))
-  stopifnot(tmp_inland[, sum(PERIOD_SPAN)] == .year.diff(stop_observational_period_inland, start_observational_period_inland))
-  
+                           MIN_PERIOD_DATE = c(start_first_period_inland, start_second_period_inland),
+                           MAX_PERIOD_DATE = c(stop_first_period_inland, stop_second_period_inland))
 
+  # find period span
+  df_round[, ROUND_SPANYRS := .year.diff(MAX_SAMPLE_DATE, MIN_SAMPLE_DATE)]
+  tmp <- df_round[, list(PERIOD_SPAN = sum(ROUND_SPANYRS)), by = c('COMM', 'INDEX_TIME')]
+  tmp_inland <- merge(tmp, tmp_inland, by = c('COMM', 'INDEX_TIME'))
+  
   # make period a factor
   tmp_inland[, PERIOD := factor(PERIOD, levels = PERIOD)]
   
   return(tmp_inland)
 }
 
-make.df.round <- function(df_round_inland, df_period)
+make.df.round <- function(df_round_inland)
 {
   
   ## map for rounds 
@@ -79,32 +80,12 @@ make.df.round <- function(df_round_inland, df_period)
   df_round_inland[round%in%paste0('R0', 10:15), INDEX_TIME := 1] 
   df_round_inland[round %in% paste0('R0',16:18), INDEX_TIME := 2]
   
-  # keep original min and max sample date
-  df_round_inland[, max_sample_date_original := max_sample_date]
-  df_round_inland[, min_sample_date_original := min_sample_date]
-  
-  # fill missing months by setting the max date of the round to the min of the next one
-  df_round_inland[round == 'R010', max_sample_date := df_round_inland[round == 'R011', min_sample_date]]
-  df_round_inland[round == 'R011', max_sample_date := df_round_inland[round == 'R012', min_sample_date]]
-  df_round_inland[round == 'R012', max_sample_date := df_round_inland[round == 'R013', min_sample_date]]
-  df_round_inland[round == 'R013', max_sample_date := df_round_inland[round == 'R014', min_sample_date]]
-  df_round_inland[round == 'R014', max_sample_date := df_round_inland[round == 'R015', min_sample_date]]
-  df_round_inland[round == 'R015', max_sample_date := df_round_inland[round == 'R016', min_sample_date]]
-  df_round_inland[round == 'R016', max_sample_date := df_round_inland[round == 'R017', min_sample_date]]
-  df_round_inland[round == 'R017', max_sample_date := df_round_inland[round == 'R018', min_sample_date]]
-  
   # keep only rounds that correspond to time periods
   df_round <- df_round_inland[INDEX_TIME != '0']
   df_round <- df_round[order(COMM, round)]
   
   # add index of rounds
   df_round[, INDEX_ROUND := 1:length(round), by = 'COMM']
-  
-  # find length in years of each round and check that it their sum matches that of the period
-  df_round[, ROUND_SPANYRS := .year.diff(max_sample_date, min_sample_date)]
-  tmp <- df_round[, list(ROUND_SPANYRS = sum(ROUND_SPANYRS)), by = c('COMM', 'INDEX_TIME')]
-  tmp <- merge(tmp, df_period, by = c('COMM', 'INDEX_TIME'))
-  stopifnot(tmp[, all(ROUND_SPANYRS == PERIOD_SPAN)])
   
   # round in capital
   colnames(df_round) <- toupper(colnames(df_round))
@@ -113,8 +94,8 @@ make.df.round <- function(df_round_inland, df_period)
   df_round[, round := as.numeric(round)]
   
   # label
-  df_round[, MIN_SAMPLE_DATE_LABEL := format(MIN_SAMPLE_DATE_ORIGINAL, '%b %Y')]
-  df_round[, MAX_SAMPLE_DATE_LABEL := format(MAX_SAMPLE_DATE_ORIGINAL - 31, '%b %Y')]
+  df_round[, MIN_SAMPLE_DATE_LABEL := format(MIN_SAMPLE_DATE, '%b %Y')]
+  df_round[, MAX_SAMPLE_DATE_LABEL := format(MAX_SAMPLE_DATE - 31, '%b %Y')]
   df_round[, LABEL_ROUND := paste0('Round ', gsub('R0', '', ROUND), '\n', MIN_SAMPLE_DATE_LABEL, '-', MAX_SAMPLE_DATE_LABEL)]
   df_round[, LABEL_ROUND := factor(LABEL_ROUND, levels = df_round[order(round), LABEL_ROUND])]
   
@@ -259,7 +240,7 @@ get_incidence_cases_round <- function(incidence.inland, eligible_count_round)
   
 }
 
-summarise_incidence_cases_period <- function(incidence_cases_round, cutoff_date, df_period)
+summarise_incidence_cases_period <- function(incidence_cases_round, df_period)
 {
   
   # sum across time periods
@@ -1260,10 +1241,17 @@ load_incidence_rates_samples <- function(file.incidence.samples.inland){
   incidence_rates_round.samples <- as.data.table(read.csv(file.incidence.samples.inland))
   incidence_rates_round.samples[,COMM := 'inland']
   incidence_rates_round.samples[, SEX := substr(Sex,1,1)]
-  incidence_rates_round.samples[, ROUND := gsub('Round: (.+)', '\\1', ROUND)]
+  if('ROUND' %in% names(incidence_rates_round.samples)){
+    incidence_rates_round.samples[, ROUND := gsub('Round: (.+)', '\\1', ROUND)]
+  }else{
+    setnames(incidence_rates_round.samples, 'round_label', 'ROUND')
+  }
   incidence_rates_round.samples[, ROUND := paste0('R0', ROUND)]
   setnames(incidence_rates_round.samples, 'age', 'AGEYRS')
   setnames(incidence_rates_round.samples, 'inc', 'INCIDENCE.DRAW')
+  if(!'iterations_within' %in% names(incidence_rates_round.samples)){
+    incidence_rates_round.samples[, iterations_within := 1]
+  }
   
   # iterations: iterations over 50 data with imputed date of infection
   # iterations within: iterations within dataset of estimated incidence rate using MLE mean/sd and assuming normality
