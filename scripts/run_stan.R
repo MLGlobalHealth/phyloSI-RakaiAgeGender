@@ -59,7 +59,7 @@ nonparticipants.not.treated <- F
 remove.pairs.from.rounds <- NULL
 only.one.community <- 'inland'
 use_number_susceptible_offset <- F
-use_loess_inc_estimates <- T
+use_loess_inc_estimates <- F
 
 # obtained in EMODO_RAKAI repo
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
