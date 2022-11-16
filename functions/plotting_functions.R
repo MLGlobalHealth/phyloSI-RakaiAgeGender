@@ -81,7 +81,7 @@ find_palette_round <- function()
 }
 
 
-plot_age_infection_source_recipient <- function(data, title, plotlab, outdir = NULL)
+plot_age_infection_source_recipient <- function(data, title, plotlab, cutoff_date, outdir = NULL)
 {
   
   plots = list()
@@ -225,7 +225,7 @@ plot_hist_time_infection <- function(pairs, cutoff_date, outdir = NULL)
   return(p)
 }
 
-plot_CI_age_infection <- function(pairs, outdir = NULL)
+plot_CI_age_infection <- function(pairs, cutoff_date, outdir = NULL)
 {
   
   data <- copy(pairs)
@@ -309,7 +309,7 @@ plot_CI_age_infection <- function(pairs, outdir = NULL)
   
 }
 
-plot_CI_age_transmission <- function(pairs, outdir = NULL)
+plot_CI_age_transmission <- function(pairs, cutoff_date, outdir = NULL)
 {
   
   data <- copy(pairs)
@@ -812,7 +812,7 @@ plot_transmission_events_over_time <- function(pairs, outdir){
   
   # timeline
   df_timeline <- copy(df_round)
-  df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE_ORIGINAL, MAX_SAMPLE_DATE_ORIGINAL))), by = c('ROUND', 'COMM')]
+  df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE))), by = c('ROUND', 'COMM')]
   df_timeline <- df_timeline[, .(ROUND, MIDPOINT, COMM, INDEX_ROUND, ROUND_SPANYRS)]
   
   # age groups
@@ -992,6 +992,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 6)
   
   tmp[, WEIGHTED_INCIDENCE := INCIDENCE / sum(INCIDENCE), by = c('COMM', 'ROUND', 'SEX')]
+  max_y_limits <- ifelse(tmp[, max(INCIDENCE)] > 0.021, 2.7, 2.1)
   # median_age <- tmp[, list(MEDIAN_AGEYRS =matrixStats::weightedMedian(AGEYRS, WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND', 'round')]
   median_age <- tmp[, list(MEDIAN_AGEYRS =sum(AGEYRS* WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND', 'round')]
   ggplot(tmp[COMM == 'inland' & round %in% c(10, 12, 14, 16, 18)], aes(x = AGEYRS)) +
@@ -1006,11 +1007,13 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
     theme(legend.position = 'none', 
           strip.background = element_rect(colour="white", fill="white"), 
-          legend.title = element_blank()) + 
+          legend.title = element_blank(), 
+          strip.text = element_text(size = 9.3), 
+          axis.title = element_text(size = 12)) + 
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
-    coord_cartesian(ylim= c(0, 2.1))
-  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 9, h = 3.5)
+    coord_cartesian(ylim= c(0, max_y_limits))
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 7, h = 3.2)
   
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
@@ -1153,7 +1156,7 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   
   # timeline
   df_timeline <- copy(df_round)
-  df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE_ORIGINAL, MAX_SAMPLE_DATE_ORIGINAL))), by = c('ROUND', 'COMM')]
+  df_timeline[, MIDPOINT := as.Date(mean(c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE))), by = c('ROUND', 'COMM')]
   df_timeline <- df_timeline[, .(ROUND, MIDPOINT, COMM, INDEX_ROUND, ROUND_SPANYRS)]
   
   # age groups
