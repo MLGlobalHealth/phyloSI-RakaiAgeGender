@@ -181,7 +181,7 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
   
   # sum count of observed transmission events across recipient 
   # to find observed transmission events by age of the source
-  data <- count_data[, list(count = sum(count)), by = c('LABEL_SOURCE', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN')]
+  data <- count_data[, list(count = sum(count)), by = c('LABEL_SOURCE', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN', 'LABEL_DIRECTION')]
   
   communities <- predict_y[, unique(COMM)]
   for(i in seq_along(communities)){
@@ -189,6 +189,7 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
     tmp <- predict_y[ COMM == communities[i]]
     tmp1 <- data[ LABEL_COMMUNITY == tmp[, unique(LABEL_COMMUNITY)]]
     
+    # plot1
     p <- ggplot(tmp, aes( x = AGE_TRANSMISSION.SOURCE)) + 
       geom_line(aes(y = M, linetype = 'Fit')) + 
       geom_ribbon(aes(ymin = CL, ymax = CU, linetype = 'Fit'), alpha = 0.5) + 
@@ -205,6 +206,33 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
     
     ggsave(p, file = paste0(outdir, '-output-PPC_observed_source_', communities[i], '.png'), w = 7, h = 5)
     ggsave(p, file = paste0(outdir, '-output-PPC_observed_source_', communities[i], '.pdf'), w = 7, h = 5)
+    
+    # plot2
+    df <- merge(tmp, tmp1, by = c('LABEL_DIRECTION', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN'))
+    df <- merge(df, unique(df_age_aggregated[, .(AGE_TRANSMISSION.SOURCE, AGE_GROUP_TRANSMISSION.SOURCE)]), by = c('AGE_TRANSMISSION.SOURCE'))
+    df[, AGE_GROUP_TRANSMISSION.SOURCE := paste0('Age: ', AGE_GROUP_TRANSMISSION.SOURCE)]
+    set.seed(12)
+    df[, jitter := runif(length(count), 0, 0.5), by= c('AGE_TRANSMISSION.SOURCE', 'LABEL_DIRECTION', 'PERIOD', 'count')]
+    df[, count_jitter := count + jitter]
+    df[, CL_jitter := CL + jitter]
+    df[, CU_jitter := CU + jitter]
+    df[, M_jitter := M + jitter]
+    df[, COLOR_LABEL := paste0(LABEL_DIRECTION, ', ', PERIOD)]
+    
+    p <- ggplot(df) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
+      geom_errorbar(aes(x=count_jitter, ymin=CL_jitter, ymax=CU_jitter),  color = 'grey50', width = 0, size = 0.5)+
+      geom_point(aes(y=M_jitter, x=count_jitter, color=COLOR_LABEL), size = 1) + 
+      theme_bw() + 
+      labs(x = 'Observed transmission events\nin RCCS participants',
+           y = 'Predicted transmission events\nin RCCS participants', 
+           col ='', fill = '') +
+      scale_color_viridis_d(option = 'A', end = 0.9, begin = 0.1) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(0.9)),
+            legend.position = 'bottom') +
+      guides(color = guide_legend(byrow = T, nrow = 4))
+    ggsave(p, file = paste0(outdir, '-output-PPC_observed_point_source_', communities[i], '.pdf'), w = 4, h = 5)
     
   }
   
@@ -351,6 +379,8 @@ plot_PPC_incidence_rate_round <- function(predict_incidence_rate_round, incidenc
     df[, CL_jitter := (CL + jitter)*100]
     df[, CU_jitter := (CU + jitter)*100]
     df[, M_jitter := (M + jitter)*100]
+    df[, SEX_LABEL := gsub('(.+) recipients', '\\1', LABEL_RECIPIENT)]
+    df[, SEX_LABEL := ifelse(SEX_LABEL=='Male', 'Men', 'Women')]
     
     p <- ggplot(df) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
@@ -358,16 +388,16 @@ plot_PPC_incidence_rate_round <- function(predict_incidence_rate_round, incidenc
       geom_point(aes(y=M_jitter, x=INCIDENCE_jitter, 
                      color=LABEL_ROUND), size = 1) + 
       theme_bw() + 
-      labs(x = 'Prior mean incidence rate per 100 person-years',
-           y = 'Estimated incidence rate per 100 person-years', 
+      labs(x = 'Prior mean incidence rates\nper 100 person-years',
+           y = 'Estimated incidence rates\nper 100 person-years', 
            col ='', fill = '') +
       scale_color_manual(values = palette_round_inland) + 
-      facet_wrap(LABEL_RECIPIENT~AGE_GROUP_INFECTION.RECIPIENT, scale = 'free', ncol = 3) + 
+      facet_grid(.~SEX_LABEL) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(0.9)),
             legend.position = 'bottom') +
       guides(color = guide_legend(byrow = T, nrow = 3))
-    ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_point_recipient_byround_', communities[i], '.pdf'), w = 6, h = 5.7)
+    ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_point_recipient_byround_', communities[i], '.pdf'), w = 5.5, h =4.5)
     
   }
   
