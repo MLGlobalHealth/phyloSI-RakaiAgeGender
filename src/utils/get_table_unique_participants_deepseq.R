@@ -17,6 +17,7 @@ file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_U
 file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv')
 path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 file.seq.count <- file.path(outdir, 'characteristics_sequenced_R14_18.rds')
+file.seq.count.ind <- file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_220909.csv')
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'Quest_R6_R18_220909.csv')
@@ -84,14 +85,22 @@ hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
 hivs <- merge(hivs, df_round, by = c('COMM', 'ROUND'))
 hivs <- subset(hivs,HIV=='P')
 
+# set round to 15 if inland 15S
+hivs[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
+
+# group into analysis age groups
+hivs[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
+                   labels=c('15-24','25-34','35-49'))]
+
+# save individual-level data
+hivi <- copy(hivs)
+
 # keep first round only so age is unique per participant
 hivs[, r:= as.numeric(gsub('R','',gsub('S','.1',ROUND)))]
 setkey(hivs,STUDY_ID,r)
 hivs <- hivs[,.SD[1],by = STUDY_ID]
 
 # count unique participants with positive test during rounds
-hivs[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
-                     labels=c('15-24','25-34','35-49'))]
 hivp <- hivs[,list(HIV = length(unique(STUDY_ID))), by = c('COMM','SEX','AGEGP')]
 
 tot1 <- hivs[,list(SEX = 'Total', AGEGP = 'Total', HIV = length(unique(STUDY_ID))), by = c('COMM')]
@@ -103,7 +112,60 @@ hivp[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Mal
 hivp[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))]
 hivp <- hivp[order(COMM,SEX,AGEGP),]
 
+######################################################
 
+# GET HIV-POSITIVE AND USING ART AMONG PARTICIPANTS #
+
+######################################################
+
+# keep variable of interest
+sart <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed)]
+
+# find hiv status
+sart <- merge(sart, hiv, by = c('round', 'study_id'))
+
+# find  community
+sart <- merge(sart, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
+
+# to upper
+colnames(sart) <- toupper(colnames(sart))
+
+# restric age
+sart <- sart[AGEYRS > 14 & AGEYRS < 50]
+
+# keep HIV positive
+sart <- sart[HIV == 'P']
+
+# get ART status
+sart[, ART := ARVMED ==1]
+sart[is.na(ARVMED), ART := F]
+
+sart[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
+                   labels=c('15-24','25-34','35-49'))]
+
+# keep round of interest
+sart <- merge(sart, df_round, by = c('COMM', 'ROUND'))
+
+# set round to 15 if inland 15S
+sart[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
+
+# save individual-level record
+arti <- copy(sart)
+
+# keep first visit only
+sart[, r:= as.numeric(gsub('R','',gsub('S','.1',ROUND)))]
+setkey(sart,STUDY_ID,r)
+sart <- sart[,.SD[1],by = STUDY_ID]
+
+art <- sart[,list(NO_ART = length(unique(STUDY_ID[ART==F]))), by = c('COMM','SEX','AGEGP')]
+
+tot1 <- sart[,list(SEX = 'Total', AGEGP = 'Total', NO_ART = length(unique(STUDY_ID[ART==F]))), by = c('COMM')]
+tot2 <- sart[,list(AGEGP = 'Total', NO_ART = length(unique(STUDY_ID[ART==F]))), by = c('COMM','SEX')]
+art <- rbind(art,tot1,tot2)
+
+art[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
+art[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Male'))]
+art[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))]
 
 ########################################################################
 
@@ -112,14 +174,37 @@ hivp <- hivp[order(COMM,SEX,AGEGP),]
 ########################################################################
 
 # load seq count
-sequ <- as.data.table(readRDS(file.seq.count))
+sequ <- as.data.table(readRDS(file.seq.count.ind))
+sequ[, STUDY_ID:= gsub('RK-','',PT_ID)]
 
-# merge datasets
-do <- merge(hivp,sequ)
+# merge three datasets
+do <- merge(hivi,arti,by=c('STUDY_ID','ROUND','COMM','COMM_NUM','COMM_NUM_A','SEX','AGEYRS','AGEGP','HIV'),all=T)
+do <- merge(do,sequ,by=c('STUDY_ID','ROUND','COMM','SEX','AGEYRS','AGEGP'),all=T)
 
-# order rows
-do <- do[order(COMM,SEX,AGEGP),]
-do[, c("COMM", "SEX", "AGEGP") := lapply(list(COMM, SEX, AGEGP), as.character)]
+# keep round of interest
+do <- merge(do, df_round, by = c('COMM', 'ROUND'))
+
+# count unique participants with positive test during rounds
+tab <- do[,list(HIV = length(unique(STUDY_ID)),
+               NO_ART = length(unique(STUDY_ID[ART==F])),
+               SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP')]
+
+tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
+                 HIV = length(unique(STUDY_ID)),
+                 NO_ART = length(unique(STUDY_ID[ART==F])),
+                 SEQUENCE = length(unique(PT_ID))), by = c('COMM')]
+tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID)),
+                 NO_ART = length(unique(STUDY_ID[ART==F])),
+                 SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX')]
+tab <- rbind(tab,tot1,tot2)
+
+tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
+tab[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Male'))]
+tab[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))]
+tab <- tab[order(COMM,SEX,AGEGP),]
+tab[, c("COMM", "SEX", "AGEGP") := lapply(list(COMM, SEX, AGEGP), as.character)]
+
+tab[, pct:= round(SEQUENCE/NO_ART*100,0)]
 
 # save
-saveRDS(do, file.path(outdir, 'RCCS_transmission_cohort_characteristics_R14_18.rds'))
+saveRDS(tab, file.path(outdir, 'RCCS_transmission_cohort_characteristics_R14_18.rds'))

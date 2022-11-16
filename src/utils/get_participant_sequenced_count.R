@@ -88,6 +88,9 @@ sequ <- dcount[SEX == 'F', list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Femal
 sequ <- rbind(sequ, dcount[SEX == 'M', list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male'), by = c('COMM')])
 saveRDS(sequ, file.path(outdir, 'characteristics_sequenced_brief.rds'))
 
+dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
+                     labels=c('15-24','25-34','35-49'))]
+saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds'))
 
 ############################################
 
