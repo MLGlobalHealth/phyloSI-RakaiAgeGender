@@ -10,8 +10,8 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'firstrun'
-stan_model <- 'gp_221011a'
+jobname <- 'newtrtcascade'
+stan_model <- 'gp_221101a'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -58,12 +58,17 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
+# temporary
+if(!exists("use_number_susceptible_offset")){
+  use_number_susceptible_offset <- F
+}
+
 
 #
 # offset
 #
 
-log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round)
+log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, use_number_susceptible_offset)
 
 
 #
@@ -98,13 +103,17 @@ plot_intensity_PP_by_round(intensity_PP, outfile.figures)
 # predicted observed transmission
 predict_y_source <- find_summary_output(samples, 'y_predict', c('INDEX_DIRECTION', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'))
 predict_y_recipient <- find_summary_output(samples, 'y_predict', c('INDEX_DIRECTION', 'INDEX_TIME', 'AGE_INFECTION.RECIPIENT'))
+predict_y_source_recipient <- find_summary_output(samples, 'y_predict', c('INDEX_DIRECTION', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'))
 plot_PPC_observed_source(predict_y_source, count_data, outfile.figures)
 plot_PPC_observed_recipient(predict_y_recipient, count_data, outfile.figures)
+save_statistics_PPC(predict_y_source_recipient, count_data, outdir.table)
 
 # predicted transmission
 predict_z_source <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'))
 predict_z_recipient_round <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'))
 plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_recipient_round, outfile.figures)
+
+# predicted incidence rate
 predict_incidence_rate_round <- find_summary_output_by_round(samples, 'ir_predict', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                              names = c('INDEX_AGE_INFECTION.RECIPIENT', 'INDEX_DIRECTION', 'INDEX_ROUND'))
 plot_PPC_incidence_rate_round(predict_incidence_rate_round, incidence_cases_recipient_round,outfile.figures)
