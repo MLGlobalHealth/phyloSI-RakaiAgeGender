@@ -1,4 +1,4 @@
-find_log_offset_by_round <- function(stan_data, eligible_count_round)
+find_log_offset_by_round <- function(stan_data, eligible_count_round, use_number_susceptible_offset)
 {
   # find log offset including the proportion of susceptible, number of unsuppressed and time period of each round
   # come handy when we want to specify different offset formula 
@@ -27,9 +27,9 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round)
         log_offset[, INDEX_COMMUNITY := df_community[j, INDEX_COMMUNITY]]
         log_offset[, ROUND := .ROUND]
         
-        # add proportion of susceptible in recipient
+        # add # susceptible and proportion of susceptible in recipient
         tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & COMM == .COMM & ROUND == .ROUND]
-        log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
+        log_offset <- merge(log_offset, tmp[, .(AGEYRS, SUSCEPTIBLE, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
         
         # add number of infected unsuppressed in source
         tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & ROUND == .ROUND]
@@ -40,8 +40,12 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round)
         log_offset[, PERIOD_SPAN := tmp[, ROUND_SPANYRS]]
         
         # make log offset
-        log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
-        
+        if(use_number_susceptible_offset){
+          log_offset[, LOG_OFFSET := log(SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
+        }else{
+          log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
+        }
+
         # check the order of ages is correct
         log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
         stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_offset[, AGE_INFECTION.RECIPIENT])
@@ -209,4 +213,16 @@ clean_reported_contact <- function(df_reported_contact){
   reported_contact <- merge(reported_contact , df_round, by = c('COMM', 'ROUND'))
   
   return(reported_contact)
+}
+
+save_statistics_PPC <- function(predict_y_source_recipient, count_data, outdir){
+  
+  data <- count_data[, list(count = sum(count)), by = c('LABEL_SOURCE', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN', 'AGE_INFECTION.RECIPIENT')]
+  
+  tmp <- merge(predict_y_source_recipient, data, by = c('LABEL_SOURCE', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN', 'AGE_INFECTION.RECIPIENT'))
+  tmp[, within.CI := count >= CL & count <= CU]
+  
+  tmp <- tmp[, round(mean(within.CI) *100, 2)]
+  
+  saveRDS(tmp, file = paste0(outdir, '-statistics_prediction.RDS'))
 }
