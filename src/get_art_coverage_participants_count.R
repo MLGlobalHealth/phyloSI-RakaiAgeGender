@@ -147,6 +147,15 @@ rprev <- rprev[!(ROUND %in% c('R016', 'R017', 'R018') & is.na(VLNS))]
 
 #################################
 
+# SET ROUND 15S IN INLAND AS 15
+
+#################################
+
+rprev[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
+
+
+#################################
+
 # AGGREGATE BY ROUND, SEX, COMM AND AGE  #
 
 #################################

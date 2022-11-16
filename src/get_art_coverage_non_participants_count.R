@@ -157,12 +157,22 @@ rprev <- rprev[INDEX_ROUND == 1]
 
 #################################
 
+# SET ROUND 15S IN INLAND AS 15
+
+#################################
+
+rprev[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
+
+
+#################################
+
 # AGGREGATE BY ROUND, SEX, COMM AND AGE  #
 
 #################################
 
 # find self reported under art for participant
 rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
+
 
 #################################
 
