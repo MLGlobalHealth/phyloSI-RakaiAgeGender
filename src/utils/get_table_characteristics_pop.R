@@ -14,9 +14,9 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_c
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
-file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv')
+file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
-file.seq.count <- file.path(outdir, 'characteristics_sequenced.rds')
+file.seq.count <- file.path(outdir, 'characteristics_ever_sequenced.rds')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
@@ -75,16 +75,20 @@ colnames(rinc) <- toupper(colnames(rinc))
 # restric age
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 
+# SET ROUND 15S IN INLAND AS 15
+rincp <- copy(rinc)
+rincp[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
+
 # find participant
-part <- rinc[, list(PARTICIPANT = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')]
-part <- rbind(part, rinc[SEX == 'F', list(PARTICIPANT = .N,  TYPE = 'Female'), by = c('COMM', 'ROUND')])
-part <- rbind(part, rinc[SEX == 'M', list(PARTICIPANT = .N,  TYPE = 'Male'), by = c('COMM', 'ROUND')])
-part <- rbind(part, rinc[SEX == 'F' & AGEYRS < 25, list(PARTICIPANT = .N,  TYPE = 'Female, 15-24'), by = c('COMM', 'ROUND')])
-part <- rbind(part, rinc[SEX == 'F' & AGEYRS > 24 & AGEYRS < 35, list(PARTICIPANT = .N,  TYPE = 'Female, 25-34'), by = c('COMM', 'ROUND')])
-part <- rbind(part, rinc[SEX == 'F' & AGEYRS > 34, list(PARTICIPANT = .N,  TYPE = 'Female, 35-49'), by = c('COMM', 'ROUND')])
-part <- rbind(part, rinc[SEX == 'M' & AGEYRS < 25, list(PARTICIPANT = .N,  TYPE = 'Male, 15-24'), by = c('COMM', 'ROUND')])
-part <- rbind(part, rinc[SEX == 'M' & AGEYRS > 24 & AGEYRS < 35, list(PARTICIPANT = .N,  TYPE = 'Male, 25-34'), by = c('COMM', 'ROUND')])
-part <- rbind(part, rinc[SEX == 'M' & AGEYRS > 34, list(PARTICIPANT = .N,  TYPE = 'Male, 35-49'), by = c('COMM', 'ROUND')])
+part <- rincp[, list(PARTICIPANT = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')]
+part <- rbind(part, rincp[SEX == 'F', list(PARTICIPANT = .N,  TYPE = 'Female'), by = c('COMM', 'ROUND')])
+part <- rbind(part, rincp[SEX == 'M', list(PARTICIPANT = .N,  TYPE = 'Male'), by = c('COMM', 'ROUND')])
+part <- rbind(part, rincp[SEX == 'F' & AGEYRS < 25, list(PARTICIPANT = .N,  TYPE = 'Female, 15-24'), by = c('COMM', 'ROUND')])
+part <- rbind(part, rincp[SEX == 'F' & AGEYRS > 24 & AGEYRS < 35, list(PARTICIPANT = .N,  TYPE = 'Female, 25-34'), by = c('COMM', 'ROUND')])
+part <- rbind(part, rincp[SEX == 'F' & AGEYRS > 34, list(PARTICIPANT = .N,  TYPE = 'Female, 35-49'), by = c('COMM', 'ROUND')])
+part <- rbind(part, rincp[SEX == 'M' & AGEYRS < 25, list(PARTICIPANT = .N,  TYPE = 'Male, 15-24'), by = c('COMM', 'ROUND')])
+part <- rbind(part, rincp[SEX == 'M' & AGEYRS > 24 & AGEYRS < 35, list(PARTICIPANT = .N,  TYPE = 'Male, 25-34'), by = c('COMM', 'ROUND')])
+part <- rbind(part, rincp[SEX == 'M' & AGEYRS > 34, list(PARTICIPANT = .N,  TYPE = 'Male, 35-49'), by = c('COMM', 'ROUND')])
 
 # keep round of interest
 part <- merge(part, df_round, by = c('COMM', 'ROUND'))
@@ -105,6 +109,9 @@ rhiv <- hiv[, .(study_id, round, hiv)]
 rhiv[, round := gsub(" ", '', round, fixed = T)]
 colnames(rhiv) <- toupper(colnames(rhiv))
 hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
+
+# SET ROUND 15S IN INLAND AS 15
+hivs[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
 
 # find HIV prevalence rate for participant
 rprev <- hivs[, list(COUNT = sum(HIV == 'P')), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
@@ -133,11 +140,14 @@ hivp <- merge(hivp, df_round, by = c('COMM', 'ROUND'))
 # keep variable of interest
 sart <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed)]
 
+# find  community
+sart <- merge(sart, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
+
 # find hiv status
 sart <- merge(sart, hiv, by = c('round', 'study_id'))
 
-# find  community
-sart <- merge(sart, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
+# SET ROUND 15S IN INLAND AS 15
+sart[round == 'R015S' & comm == 'inland', round := 'R015']
 
 # to upper
 colnames(sart) <- toupper(colnames(sart))
@@ -181,6 +191,8 @@ VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 dall <- fread(path.tests)
 dall <- dall[ROUND %in% c(15:18)]
 # dall <- dall[ROUND == round]
+
+dall[COMM == 'inland', unique(ROUND)]
 
 # rename variables according to Oli's old script + remove 1 unknown sex
 setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
@@ -261,6 +273,13 @@ uns[, ROUND := paste0('R0', ROUND)]
 
 # load seq count
 sequ <- as.data.table(readRDS(file.seq.count))
+sequ[, COMM := tolower(COMM)]
+sequ[, TYPE := paste0(SEX, ', ', AGEGP)]
+sequ[TYPE == 'Female, Total', TYPE := 'Female']
+sequ[TYPE == 'Male, Total', TYPE := 'Male']
+sequ[TYPE == 'Total, Total', TYPE := 'Total']
+set(sequ, NULL, 'SEX', NULL)
+set(sequ, NULL, 'AGEGP', NULL)
 
 
 ########################
@@ -287,7 +306,7 @@ tab <- tab[order(COMM, ROUND, TYPE)]
 stopifnot(nrow(tab[ELIGIBLE  < PARTICIPANT ]) == 0)
 stopifnot(nrow(tab[PARTICIPANT  < HIV ]) == 0)
 stopifnot(nrow(tab[HIV  < SELF_REPORTED_ART ]) == 0)
-stopifnot(nrow(tab[HIV  < SEQUENCE ]) == 0)
+stopifnot(nrow(tab[SELF_REPORTED_ART  < SEQUENCE & COMM == 'inland']) == 0)
 stopifnot(nrow(tab[HIV  < INFECTED_TESTED ]) == 0)
 
 # add comma thousands separator
@@ -303,4 +322,5 @@ tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 # save
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
 saveRDS(tab, file.path(outdir, 'characteristics_study_population.rds'))
+
 

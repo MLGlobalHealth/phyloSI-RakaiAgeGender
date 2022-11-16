@@ -14,8 +14,6 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_c
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
-file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv')
-path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 file.seq.count <- file.path(outdir, 'characteristics_sequenced_R14_18.rds')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_220909.csv')
