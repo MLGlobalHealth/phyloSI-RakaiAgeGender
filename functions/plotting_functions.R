@@ -977,8 +977,8 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   tmp <- merge(tmp, df_community, by = 'COMM')
   tmp <- merge(tmp, df_round, by = c('COMM', 'ROUND'))
   tmp[, LABEL_ROUND2 := gsub('(.+)\n.*', '\\1', LABEL_ROUND)]
-  tmp[, SEX_LABEL := 'Female']
-  tmp[SEX== 'M', SEX_LABEL := 'Male']
+  tmp[, SEX_LABEL := 'Women']
+  tmp[SEX== 'M', SEX_LABEL := 'Men']
   ggplot(tmp, aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = LABEL_ROUND2)) +
     geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = LABEL_ROUND2),  alpha = 0.1) +
@@ -998,13 +998,13 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   ggplot(tmp[COMM == 'inland' & round %in% c(10, 12, 14, 16, 18)], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
     geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
-    geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Male' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
-    geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Female' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
-    labs(y = 'Incidence rate per 100 person-years\nin inland communities', x = 'Age') +
+    geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Men' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
+    geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Women' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
+    labs(y = 'Incidence rates\nper 100 person-years', x = 'Age') +
     facet_grid(.~LABEL_ROUND, scale = 'free_y') +
     theme_bw() +
-    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    scale_color_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
+    scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
     theme(legend.position = 'none', 
           strip.background = element_rect(colour="white", fill="white"), 
           legend.title = element_blank(), 
@@ -1013,7 +1013,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     coord_cartesian(ylim= c(0, max_y_limits))
-  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 7, h = 3.2)
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 8, h = 3)
   
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
@@ -1142,12 +1142,26 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   ggsave(paste0(outdir, '-data-incidence_rate_ratio_relative_round_sex.png'), w = 3.5,h = 3.15)
   ggsave(paste0(outdir, '-data-incidence_rate_ratio_relative_round_sex.pdf'), w = 3.5,h = 3.15)
   
+  #
+  # incidence rate relative to first round female to male ratio total
+  
+  # incidence rate ration male to female
+  icrrt <- merge(icr, eligible_count_round, by = c('COMM', 'ROUND', 'AGEYRS', 'SEX'))
+  icrrt[, INCIDENT_CASES := SUSCEPTIBLE * INCIDENCE.DRAW]
+  icrrt <- icrrt[, list(INCIDENT_RATE_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'REF.ROUND', 'iterations')] 
+  icrrt[, INCIDENCE_REL := INCIDENT_RATE_SUSCEPTIBLE / INCIDENT_RATE_SUSCEPTIBLE[ROUND == REF.ROUND], by = c('COMM', 'SEX', 'iterations')]
+  icrrt <- dcast.data.table(icrrt, COMM + ROUND  + iterations ~ SEX, value.var = 'INCIDENCE_REL')
+  icrrt[, INCIDENCE_REL_RATIO := `F` / `M`]
+  icrrt = icrrt[, list(q= quantile(INCIDENCE_REL_RATIO, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND')]	
+  icrrt = dcast(icrrt, ... ~ q_label, value.var = "q")
+  icrrt <- merge(icrrt, df_community, by = 'COMM')
+  icrrt <- merge(icrrt, df_round, by = c('COMM', 'ROUND'))
   
 
   #
   # save statistics
   
-  save_statistics_incidence_rate_trends(icrr, icr, median_age, icrrs)
+  save_statistics_incidence_rate_trends(icrr, icr, median_age, icrrs, icrrt)
     
 }
 
