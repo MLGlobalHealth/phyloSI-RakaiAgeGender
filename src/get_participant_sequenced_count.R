@@ -46,7 +46,7 @@ colnames(dm) <- toupper(colnames(dm))
 # remove neuro data
 dm <- dm[ ROUND != 'neuro']
 
-# keep meta info closer to sample date
+# keep meta info closer to sample date 
 dm[, VISIT_DT := as.Date(VISIT_DT)]
 dm[, DIFF_DATE := abs(VISIT_DT - SAMPLE_DATE), by = 'PANGEA_ID']
 dm[, IS_MIN := DIFF_DATE == min(DIFF_DATE), by = 'PANGEA_ID']
@@ -62,38 +62,10 @@ dcount <- dcount[AGEYRS > 14 & AGEYRS < 50]
 # set round to 15 if inland 15S
 dcount[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
 
-
-############################################
-
-# FIND NUMBER OF PARTICIPANTS SEQUENCED
-
-############################################
-
-sequ <- dcount[, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Total'), by = c('COMM', 'ROUND')]
-sequ <- rbind(sequ, dcount[SEX == 'F', list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Female'), by = c('COMM', 'ROUND')])
-sequ <- rbind(sequ, dcount[SEX == 'M', list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male'), by = c('COMM', 'ROUND')])
-sequ <- rbind(sequ, dcount[SEX == 'F' & AGEYRS < 25, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Female, 15-24'), by = c('COMM', 'ROUND')])
-sequ <- rbind(sequ, dcount[SEX == 'F' & AGEYRS > 24 & AGEYRS < 35, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Female, 25-34'), by = c('COMM', 'ROUND')])
-sequ <- rbind(sequ, dcount[SEX == 'F' & AGEYRS > 34, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Female, 35-49'), by = c('COMM', 'ROUND')])
-sequ <- rbind(sequ, dcount[SEX == 'M' & AGEYRS < 25, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male, 15-24'), by = c('COMM', 'ROUND')])
-sequ <- rbind(sequ, dcount[SEX == 'M' & AGEYRS > 24 & AGEYRS < 35, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male, 25-34'), by = c('COMM', 'ROUND')])
-sequ <- rbind(sequ, dcount[SEX == 'M' & AGEYRS > 34, list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male, 35-49'), by = c('COMM', 'ROUND')])
-
-sequ[, TYPE := factor(TYPE, levels = c('Total', 'Female', 'Female, 15-24', "Female, 25-34", "Female, 35-49",
-                                      "Male",  "Male, 15-24", "Male, 25-34", "Male, 35-49"))]
-sequ <- sequ[order(COMM, ROUND, TYPE)]
-saveRDS(sequ, file.path(outdir, 'characteristics_sequenced.rds'))
-
-sequ <- dcount[SEX == 'F', list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Female'), by = c('COMM')]
-sequ <- rbind(sequ, dcount[SEX == 'M', list(SEQUENCE = length(unique(PT_ID)),  TYPE = 'Male'), by = c('COMM')])
-saveRDS(sequ, file.path(outdir, 'characteristics_sequenced_brief.rds'))
-
-
-############################################
-
-# FIND NUMBER OF PARTICIPANTS EVER SEQUENCED
-
-############################################
+# find characteristics sequenced id
+dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
+                     labels=c('15-24','25-34','35-49'))]
+saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds'))
 
 # if multiple PANGEA_ID per round, keep the one the closest to visit data
 dcount[, IS_MIN := DIFF_DATE == min(DIFF_DATE), by = c('PT_ID', 'ROUND')]
@@ -105,8 +77,17 @@ dcount[, min.r := min(r), by = 'PT_ID']
 dcount.ever <- unique(dcount[r == min.r, .(PT_ID, COMM, SEX, AGEYRS, ROUND)])
 stopifnot(nrow(dcount.ever) == dcount.ever[, length(unique(PT_ID))])
 
+# AGE GROUPS
 dcount.ever[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
-                     labels=c('15-24','25-34','35-49'))]
+                          labels=c('15-24','25-34','35-49'))]
+
+############################################
+
+# FIND NUMBER OF PARTICIPANTS EVER SEQUENCED
+
+############################################
+
+# unique participants by rounds  by comm, sex, agegp
 sequ <- dcount.ever[, list(SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP', 'ROUND')]
 tot1 <- dcount.ever[, list(SEX = 'Total', AGEGP = 'Total', SEQUENCE = length(unique(PT_ID))), by = c('COMM', 'ROUND')]
 tot2 <- dcount.ever[, list(AGEGP = 'Total', SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX', 'ROUND')]
@@ -118,12 +99,12 @@ sequ <- sequ[order(ROUND, COMM,SEX,AGEGP),]
 saveRDS(sequ, file.path(outdir, 'characteristics_ever_sequenced.rds'))
 
 # unique participants across rounds 14-18 by comm, sex, agegp
-sequ <- dcount.ever[ROUND %in% c('R014','R015','R015S','R016','R017','R018'),
-               list(SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP')]
-tot1 <- dcount.ever[ROUND %in% c('R014','R015','R015S','R016','R017','R018'),
-               list(SEX = 'Total', AGEGP = 'Total', SEQUENCE = length(unique(PT_ID))), by = c('COMM')]
-tot2 <- dcount.ever[ROUND %in% c('R014','R015','R015S','R016','R017','R018'),
-               list(AGEGP = 'Total', SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX')]
+sequ <- dcount.ever[ROUND %in% c('R014','R015','R016','R017','R018'),
+                    list(SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP')]
+tot1 <- dcount.ever[ROUND %in% c('R014','R015','R016','R017','R018'),
+                    list(SEX = 'Total', AGEGP = 'Total', SEQUENCE = length(unique(PT_ID))), by = c('COMM')]
+tot2 <- dcount.ever[ROUND %in% c('R014','R015','R016','R017','R018'),
+                    list(AGEGP = 'Total', SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX')]
 sequ <- rbind(sequ,tot1,tot2)
 sequ[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
 sequ[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Male'))]
@@ -131,4 +112,3 @@ sequ[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('
 sequ <- sequ[order(COMM,SEX,AGEGP),]
 
 saveRDS(sequ, file.path(outdir, 'characteristics_sequenced_R14_18.rds'))
-

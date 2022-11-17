@@ -196,7 +196,7 @@ add_incidence_rates_lognormal_parameters <- function(stan_data, incidence_cases_
   
 }
 
-add_offset <- function(stan_data, eligible_count){
+add_offset <- function(stan_data, eligible_count, use_number_susceptible_offset){
   
   # add offset including the probability of susceptible and the number of infected unsuppressed
   
@@ -214,16 +214,20 @@ add_offset <- function(stan_data, eligible_count){
       .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
       .ROUND <- df_round[INDEX_ROUND == k, ROUND]
       
-      # add proportion of susceptible in recipient
+      # add # susceptible and proportion of susceptible in recipient
       tmp <- eligible_count_wide[SEX == .SEX.RECIPIENT & ROUND == .ROUND]
-      log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
+      log_offset <- merge(log_offset, tmp[, .(AGEYRS, PROP_SUSCEPTIBLE, SUSCEPTIBLE)], by.x = 'AGE_INFECTION.RECIPIENT', by.y = 'AGEYRS')
       
       # add number of infected unsuppressed in source
       tmp <- eligible_count_wide[SEX == .SEX.SOURCE & ROUND == .ROUND]
       log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
       
       # make log offset
-      log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED)]
+      if(use_number_susceptible_offset){
+        log_offset[, LOG_OFFSET := log(SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED)]
+      }else{
+        log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED)]
+      }
       
       # check the order of ages is correct
       log_offset <- log_offset[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
@@ -475,7 +479,8 @@ add_init <- function(stan_data){
   # for fit inland and fishing together
   stan_init[['log_beta_baseline']] = 0
   stan_init[['log_beta_baseline_contrast_direction']] =  0
-  stan_init[['log_beta_baseline_contrast_round']] = array(0, dim = c(stan_data[['N_ROUND']] - 1, stan_data[['N_DIRECTION']]))
+  stan_init[['log_beta_baseline_contrast_round']] = rep(0, stan_data[['N_ROUND']]-1)
+  stan_init[['log_beta_baseline_contrast_period']] = 0
   stan_init[['rho_gp1']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
   stan_init[['rho_gp2']] = array(2, dim = c(stan_data[['N_DIRECTION']]))
   stan_init[['alpha_gp']] = array(1, dim = c(stan_data[['N_DIRECTION']]))

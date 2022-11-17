@@ -78,6 +78,9 @@ flow[ageyrs<15 | ageyrs > 49, reason_ineligible := "Not_within_eligible_age_rang
 
 flow[is.na(reason_ineligible), reason_ineligible := 'none']
 
+# SET ROUND 15S IN INLAND AS 15
+flow[round == 'R015S' & comm == 'inland', round := 'R015']
+
 # find count eligible
 re <- flow[, list(count = .N), by = c('reason_ineligible', 'round', 'comm', 'ageyrs', 'sex')]
 re <- dcast.data.table(re, round + comm + ageyrs + sex ~ reason_ineligible, value.var = 'count')
@@ -93,7 +96,7 @@ re[, ROUND := substring(ROUND, 3)]
 re <- re[order(ROUND, SEX, COMM, AGEYRS)]
 re[, SEX_INDEX := ifelse(SEX == 'M', 1, 0)]
 re[, COMM_INDEX := ifelse(COMM == 'fishing', 1, 0)]
-  
+
 # find smooth count with loess smooth
 rounds <- unique(re$ROUND)
 AGEYRSPREDICT <- re[, sort(unique(AGEYRS))]
@@ -165,5 +168,5 @@ ncen[, ELIGIBLE := ELIGIBLE_SMOOTH]
 ncen <- select(ncen, -'ELIGIBLE_SMOOTH')
 
 # save
-write.csv(ncen, file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv'), row.names = F)
+write.csv(ncen, file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv'), row.names = F)
 

@@ -25,12 +25,6 @@ hiv <- as.data.table(read.csv(file.path.hiv))
 
 #################################
 
-#################################
-
-# HIV TESTS USING HIV DATA SET #
-
-#################################
-
 if(0){ # check percentage with hiv tests
   
   for(Round in hiv[, sort(unique(round))]){
@@ -63,6 +57,9 @@ rhiv <- hiv[, .(study_id, round, hiv)]
 rhiv[, round := gsub(" ", '', round, fixed = T)]
 colnames(rhiv) <- toupper(colnames(rhiv))
 hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
+
+# SET ROUND 15S IN INLAND AS 15
+hivs[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
 
 # find HIV prevalence rate for participant
 rprev <- hivs[, list(COUNT = sum(HIV == 'P'),
