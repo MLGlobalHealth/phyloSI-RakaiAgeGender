@@ -10,6 +10,7 @@ infile.ind.mrc <- file.path(indir.deepsequencedata,'PANGEA2_MRC/200319_pangea_db
 infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct.rda')
 
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
+file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
@@ -49,7 +50,8 @@ dm <- merge(dinfo, meta_data, by.x = c('pt_id'), by.y = c('study_id'))
 colnames(dm) <- toupper(colnames(dm))
 
 # remove neuro data
-dm <- dm[ ROUND != 'neuro']
+neuro.metadata <- as.data.table(read.csv(file.path.neuro.metadata))
+dm <- dm[!PT_ID %in% neuro.metadata[, paste0('RK-', studyid)]]
 
 # keep sequences which meet minimum criteria
 load(infile.seq.criteria)
