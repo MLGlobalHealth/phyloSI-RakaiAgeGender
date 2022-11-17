@@ -752,7 +752,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
 plot_contribution_age_source <- function(contribution_age_source, outdir, lab = NULL){
   
   # selected rounds for main
-  Rounds.all <- list('inland' = paste0('R0', c(12, 14, 15, 16,18)), 'fishing' = paste0('R0', c(15,18)))
+  Rounds.all <- list('inland' = paste0('R0', c(10, 12, 14, 16,18)), 'fishing' = paste0('R0', c(15,18)))
   
   # contribution
   cont <- copy(contribution_age_source)
@@ -768,22 +768,22 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
     ggplot(cont.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
       geom_line(aes(y = M, col = LABEL_SOURCE)) + 
       geom_point(data = median_age.p, aes(x = AGE_MEDIAN_CONTRIBUTION, y = level_y, col = LABEL_SOURCE, fill = LABEL_SOURCE), size = 3, shape = 25) + 
-      scale_fill_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) +
+      scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) +
       new_scale_fill() + 
       geom_ribbon(aes(ymin = CL, ymax = CU, fill = LABEL_SOURCE), alpha = 0.5) +
-      scale_color_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) +
+      scale_color_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) +
       scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
-      labs(x = 'Age of the source', y = 'Contribution to HIV incidence') + 
+      labs(x = 'Age', y = '\nContribution to HIV incidence') + 
       theme_bw() +
       facet_grid(LABEL_ROUND~.) +
       theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
             legend.title = element_blank(), 
-            panel.grid.minor = element_blank()) + 
+            panel.grid.minor = element_blank(), 
+            strip.text = element_text(size = 9.3), 
+            axis.title = element_text(size = 12)) + 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
       scale_x_continuous(expand = c(0,0), 
-                         breaks = c(seq(min(cont.p[, unique(AGE_TRANSMISSION.SOURCE)]), max(cont.p[, unique(AGE_TRANSMISSION.SOURCE)]), 5), 
-                                    max(cont.p[, unique(AGE_TRANSMISSION.SOURCE)]))) 
+                         breaks = c(seq(min(cont.p[, unique(AGE_TRANSMISSION.SOURCE)]), max(cont.p[, unique(AGE_TRANSMISSION.SOURCE)]), 5))) 
   }
   
   
@@ -803,12 +803,19 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
     # selected rounds
     pp <- plot.p(cont.p[ROUND %in% Rounds], median_age.p[ROUND %in% Rounds], 0.0035)+ 
       theme(legend.position =  c(0.78,0.95))
+    
+    # selected rounds horizontal
+    pp.hori <-  plot.p(cont.p[ROUND %in% Rounds], median_age.p[ROUND %in% Rounds], 0.003) + 
+      facet_grid(.~LABEL_ROUND) +
+      theme(legend.position =  'none', 
+            strip.text = element_blank())
 
     if(is.null(lab)) lab =  'Contribution_sex'
     
     if(communities[i] == 'inland'){
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.pdf'), w = 7, h = 14.5)
       ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 4.5, h = 7.8)
+      ggsave(pp.hori, file = paste0(outdir, '-output-', lab, '_age_horizontal_', communities[i], '.pdf'), w = 8, h = 2.6)
     }else{
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.pdf'), w = 7, h = 9)
       
