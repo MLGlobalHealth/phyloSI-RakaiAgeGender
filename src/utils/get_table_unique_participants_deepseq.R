@@ -186,15 +186,15 @@ do <- merge(do,sequ,by=c('STUDY_ID','ROUND','COMM','SEX','AGEYRS','AGEGP'),all=T
 do <- merge(do, df_round, by = c('COMM', 'ROUND'))
 
 # count unique participants with positive test during rounds
-tab <- do[,list(HIV = length(unique(STUDY_ID)),
+tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                NO_ART = length(unique(STUDY_ID[ART==F])),
                SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP')]
 
 tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
-                 HIV = length(unique(STUDY_ID)),
+                 HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[ART==F])),
                  SEQUENCE = length(unique(PT_ID))), by = c('COMM')]
-tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID)),
+tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[ART==F])),
                  SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX')]
 tab <- rbind(tab,tot1,tot2)
