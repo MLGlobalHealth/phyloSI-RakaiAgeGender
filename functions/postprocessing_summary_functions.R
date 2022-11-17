@@ -598,7 +598,7 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
     eligible_count_round.counterfactual[[i]] <- eligible_count_round.counterfactual.list[[i]]
     
     # find offset under counterfactual
-    log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]))
+    log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]), use_number_susceptible_offset)
     
     # find incidence counterfactual by age of the recipient
     incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
@@ -1061,7 +1061,7 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   budget <- selected_males[, list(TREATED = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM')]
 
   # find offset under counterfactual
-  log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual))
+  log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual), use_number_susceptible_offset)
   
   # find incidence counterfactual by age of the recipient
   incidence_counterfactual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
@@ -1227,44 +1227,6 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
     }
   }
   
-  
-  #
-  # find art coverage for population
-  #
-  
-  # baseline
-  if(nonparticipants.treated.like.participants){# baseline assumption
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
-  }else if(nonparticipants.not.treated){
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + 0 * (1-PARTICIPATION)]
-  }else{
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
-  }
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_M]
-  
-  # spreaders
-  if(only_participant){# counterfactual
-    if(nonparticipants.treated.like.participants){# baseline assumption
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
-    }else if(nonparticipants.not.treated){
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + 0 * (1-PARTICIPATION)]
-    }else{
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
-    }
-  }else{
-    treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL * (1-PARTICIPATION)]
-  }
-  
-  
-  #
-  # find percentage of reduction ART coverage in population 
-  #
-  
-  # baseline
-  treatment_cascade.counterfactual[, INCREASE_ART_COVERAGE := 0]
-  
-  # spreadrrs
-  treatment_cascade.counterfactual[spreader == T, INCREASE_ART_COVERAGE := PROP_ART_COVERAGE_M.COUNTERFACTUAL - PROP_ART_COVERAGE_M ]
   
   
   #
