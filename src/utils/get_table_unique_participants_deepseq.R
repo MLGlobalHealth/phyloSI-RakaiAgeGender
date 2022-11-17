@@ -60,6 +60,9 @@ part <- rbind(part, rinc[SEX == 'M' & AGEYRS < 25, list(PARTICIPANT = .N,  TYPE 
 part <- rbind(part, rinc[SEX == 'M' & AGEYRS > 24 & AGEYRS < 35, list(PARTICIPANT = .N,  TYPE = 'Male, 25-34'), by = c('COMM', 'ROUND')])
 part <- rbind(part, rinc[SEX == 'M' & AGEYRS > 34, list(PARTICIPANT = .N,  TYPE = 'Male, 35-49'), by = c('COMM', 'ROUND')])
 
+# set round to 15 if inland 15S
+part[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
+
 # keep round of interest
 part <- merge(part, df_round, by = c('COMM', 'ROUND'))
 
@@ -79,12 +82,12 @@ rhiv[, round := gsub(" ", '', round, fixed = T)]
 colnames(rhiv) <- toupper(colnames(rhiv))
 hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
 
+# set round to 15 if inland 15S
+hivs[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
+
 # keep rounds of interest and only positives
 hivs <- merge(hivs, df_round, by = c('COMM', 'ROUND'))
 hivs <- subset(hivs,HIV=='P')
-
-# set round to 15 if inland 15S
-hivs[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
 
 # group into analysis age groups
 hivs[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
@@ -141,11 +144,11 @@ sart[is.na(ARVMED), ART := F]
 sart[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
                    labels=c('15-24','25-34','35-49'))]
 
-# keep round of interest
-sart <- merge(sart, df_round, by = c('COMM', 'ROUND'))
-
 # set round to 15 if inland 15S
 sart[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
+
+# keep round of interest
+sart <- merge(sart, df_round, by = c('COMM', 'ROUND'))
 
 # save individual-level record
 arti <- copy(sart)
@@ -202,7 +205,7 @@ tab[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('T
 tab <- tab[order(COMM,SEX,AGEGP),]
 tab[, c("COMM", "SEX", "AGEGP") := lapply(list(COMM, SEX, AGEGP), as.character)]
 
-tab[, pct:= round(SEQUENCE/NO_ART*100,0)]
+tab[, pct:= round(SEQUENCE/HIV*100,0)]
 
 # save
 saveRDS(tab, file.path(outdir, 'RCCS_transmission_cohort_characteristics_R14_18.rds'))

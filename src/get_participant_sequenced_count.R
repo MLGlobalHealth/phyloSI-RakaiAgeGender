@@ -7,10 +7,15 @@ indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live
 infile.sequence <- file.path(indir.deepsequencedata,"200422_PANGEA2_RCCSMRC_alignment.fasta")
 infile.ind.rccs <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
 infile.ind.mrc <- file.path(indir.deepsequencedata,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct.rda')
 
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+
+# rounds of interest
+df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
+                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, '15S', 16:18))))
 
 # load meta data
 load(file.path.meta)
@@ -46,7 +51,13 @@ colnames(dm) <- toupper(colnames(dm))
 # remove neuro data
 dm <- dm[ ROUND != 'neuro']
 
-# keep meta info closer to sample date 
+# keep sequences which meet minimum criteria
+load(infile.seq.criteria)
+dct[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
+dm <- merge(dm,dct,by='PANGEA_ID',all.x=T)
+dm <- subset(dm,V1=='TRUE')
+
+# keep meta info closer to sample date
 dm[, VISIT_DT := as.Date(VISIT_DT)]
 dm[, DIFF_DATE := abs(VISIT_DT - SAMPLE_DATE), by = 'PANGEA_ID']
 dm[, IS_MIN := DIFF_DATE == min(DIFF_DATE), by = 'PANGEA_ID']
@@ -61,6 +72,9 @@ dcount <- dcount[AGEYRS > 14 & AGEYRS < 50]
 
 # set round to 15 if inland 15S
 dcount[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
+
+# keep round of interest
+dcount <- merge(dcount, df_round, by = c('COMM', 'ROUND'))
 
 # find characteristics sequenced id
 dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
