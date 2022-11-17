@@ -72,7 +72,12 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-trace_plots.png'), w  = 8, h = 8
 # Interval plot
 #
 
-# baseline parameters and hyperparameters
+# baseline parameters
+p <- bayesplot::mcmc_intervals(fit, pars = c('log_beta_baseline', 'log_beta_baseline_contrast_direction', 
+                                             'log_beta_baseline_contrast_round', 'log_beta_baseline_contrast_period')) + theme_bw()
+ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots-baseline.png'), w  = 8, h = 8)
+
+# hyperparameters
 p <- bayesplot::mcmc_intervals(fit, regex_pars = c('rho_gp', 'alpha_gp')) + theme_bw()
 ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots.png'), w  = 8, h = 8)
 
@@ -81,9 +86,14 @@ ggsave(p, file = paste0(outfile.figures, '-mcmc-intervals_plots.png'), w  = 8, h
 # Pairs plot
 #
 
+# baseline parameters
+p <- bayesplot::mcmc_pairs(fit, pars = c('log_beta_baseline', 'log_beta_baseline_contrast_direction', 
+                                         'log_beta_baseline_contrast_round', 'log_beta_baseline_contrast_period')) + theme_bw()
+ggsave(p, file = paste0(outfile.figures, '-mcmc-pairs_plots-baseline.png'), w  = 8, h = 8)
+
+# hyperparameters
 p <- bayesplot::mcmc_pairs(fit, regex_pars = c('rho_gp', 'alpha_gp')) + theme_bw()
 ggsave(p, file = paste0(outfile.figures, '-mcmc-pairs_plots.png'), w  = 8, h = 8)
-
 
 
 #

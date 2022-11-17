@@ -14,8 +14,8 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   indir <- '~/git/phyloflows'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
-  jobname <- 'new_period'
-  stan_model <- 'gp_221101a'
+  jobname <- 'new_offset'
+  stan_model <- 'gp_221115a'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -52,24 +52,18 @@ if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
 if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 
 # indicators
-include.pairs.uncleardirection.disparateviralloads.complextopology <- F
-threshold.likely.connected.pairs <- 0.5
-remove.young.individuals <- T
-remove.missing.community.recipient <- T
-remove.neuro.individuals <- T
 only.transmission.after.start.observational.period <- T
 only.transmission.before.stop.observational.period <- T
-use.diagonal.prior <- F
-use.informative.prior <- F
-only.transmission.same.community <- F
 nonparticipants.treated.like.participants <- F
 nonparticipants.not.treated <- F
 remove.pairs.from.rounds <- NULL
 only.one.community <- 'inland'
+use_number_susceptible_offset <- F
+use_loess_inc_estimates <- F
 
 # obtained in EMODO_RAKAI repo
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
-file.incidence.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
+file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")
 
 # obtained in src/ for analysis
 file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData')
@@ -87,6 +81,10 @@ file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_sha
 file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
 file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_220830.csv'))
 file.reported.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
+
+# obtained in EMODO_RAKAI repo for plots
+file.incidence.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
+file.incidence.loess.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_samples_inland_221116.csv")
 
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
@@ -117,8 +115,13 @@ proportion_prevalence <- fread(file.prevalence.prop)
 treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
                                                              file.treatment.cascade.prop.nonparticipants)
 
-# load incidence estimates from Adam
-incidence.inland <- fread(file.incidence.inland)
+# load incidence estimates 
+if(use_loess_inc_estimates){
+  incidence.inland <- fread(file.incidence.loess.inland)
+  file.incidence.samples.inland	<- file.incidence.loess.samples.inland	
+}else{
+  incidence.inland <- fread(file.incidence.inland)
+}
 
 #for plots
 unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio) # sex ratio of unsuppression rate
@@ -131,14 +134,20 @@ infected_share <- fread(file.prevalence.share) # share of infected count by sex
 # Define start time, end time and cutoff
 #
 
-start_observational_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
-stop_observational_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
-cutoff_date <- df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
+start_first_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
+stop_first_period_inland <- df_round_inland[round == 'R015', max_sample_date] # "2013-07-05"
+start_second_period_inland <-df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
+stop_second_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
 
-stopifnot(start_observational_period_inland <= cutoff_date & stop_observational_period_inland >= cutoff_date)
+stopifnot(start_first_period_inland < stop_first_period_inland)
+stopifnot(stop_first_period_inland < start_second_period_inland)
+stopifnot(start_second_period_inland < stop_second_period_inland)
 
-df_period <- make.df.period(start_observational_period_inland, stop_observational_period_inland, cutoff_date)
-df_round <- make.df.round(df_round_inland, df_period)
+df_round <- make.df.round(df_round_inland)
+
+df_period <- make.df.period(start_first_period_inland, stop_first_period_inland, 
+                            start_second_period_inland, stop_second_period_inland, 
+                            df_round)
 
 
 #
@@ -163,7 +172,7 @@ incidence_cases_round <- get_incidence_cases_round(incidence.inland, eligible_co
 incidence_cases_round[, table(ROUND, COMM)]
 
 # summarise by time period
-incidence_cases <- summarise_incidence_cases_period(incidence_cases_round, cutoff_date, df_period)
+incidence_cases <- summarise_incidence_cases_period(incidence_cases_round, df_period)
 incidence_cases[, table(PERIOD, COMM)]
 
 
@@ -183,13 +192,6 @@ if(1)
   pairs <- pairs[COMM.SOURCE != 'neuro' & COMM.RECIPIENT != "neuro"]
   cat('resulting in a total of ', nrow(pairs),' pairs\n\n')
 }
-if(remove.young.individuals){
-  # exclude young indivis
-  cat('\nExcluding sources and recipients younger than 15\n')
-  cat('Removing ', nrow(pairs[AGE_TRANSMISSION.SOURCE < 15 | AGE_INFECTION.RECIPIENT < 15]), ' pairs\n')
-  pairs <- pairs[AGE_TRANSMISSION.SOURCE >= 15 & AGE_INFECTION.RECIPIENT >= 15]
-  cat('resulting in a total of ', nrow(pairs),' pairs\n\n')
-}
 if(!is.null(only.one.community)){
   cat('\nExcluding sources and recipients in ',   pairs[COMM.RECIPIENT != only.one.community, unique(COMM.RECIPIENT)] ,'\n')
   cat('Removing ', nrow(pairs[COMM.RECIPIENT != only.one.community]), ' pairs\n')
@@ -197,29 +199,17 @@ if(!is.null(only.one.community)){
   cat('resulting in a total of ', nrow(pairs),' pairs\n\n')
 }
 if(only.transmission.after.start.observational.period){
-  cat('\nFor inland excluding recipients infected before ', as.character(start_observational_period_inland), '\n')
-  cat('Removing ', nrow(pairs[DATE_INFECTION.RECIPIENT < start_observational_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
-  pairs <- pairs[!(DATE_INFECTION.RECIPIENT < start_observational_period_inland & COMM.RECIPIENT == 'inland')]
+  cat('\nFor inland excluding recipients infected before ', as.character(start_first_period_inland), '\n')
+  cat('Removing ', nrow(pairs[DATE_INFECTION.RECIPIENT < start_first_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
+  pairs <- pairs[!(DATE_INFECTION.RECIPIENT < start_first_period_inland & COMM.RECIPIENT == 'inland')]
 
   cat('resulting in a total of ', nrow(pairs),' pairs\n\n')
 }
 if(only.transmission.before.stop.observational.period){
-  cat('\nFor inland excluding recipients infected after ', as.character(stop_observational_period_inland), '\n')
-  cat('Removing ', nrow(pairs[DATE_INFECTION.RECIPIENT > stop_observational_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
-  pairs <- pairs[!(DATE_INFECTION.RECIPIENT > stop_observational_period_inland & COMM.RECIPIENT == 'inland')]
+  cat('\nFor inland excluding recipients infected after ', as.character(stop_second_period_inland), '\n')
+  cat('Removing ', nrow(pairs[DATE_INFECTION.RECIPIENT > stop_second_period_inland & COMM.RECIPIENT == 'inland']), ' pairs\n')
+  pairs <- pairs[!(DATE_INFECTION.RECIPIENT > stop_second_period_inland & COMM.RECIPIENT == 'inland')]
   
-  cat('resulting in a total of ', nrow(pairs),' pairs\n\n')
-}
-if(remove.missing.community.recipient){
-  cat('\nExcluding recipients without community \n')
-  cat('Removing ', nrow(pairs[is.na(COMM.RECIPIENT)]), ' pairs\n')
-  pairs <- pairs[!is.na(COMM.RECIPIENT)]
-  cat('resulting in a total of ', nrow(pairs),' pairs\n\n')
-} 
-if(only.transmission.same.community ){
-  cat('\nExcluding transmission events between communities (I->F or F->I) \n')
-  cat('Removing ', nrow(pairs[COMM.SOURCE != COMM.RECIPIENT]), ' pairs\n')
-  pairs <- pairs[COMM.SOURCE == COMM.RECIPIENT]
   cat('resulting in a total of ', nrow(pairs),' pairs\n\n')
 }
 if(!is.null(remove.pairs.from.rounds)){
@@ -241,7 +231,7 @@ print.statements.about.pairs(copy(pairs))
 
 # keep only pairs with source-recipient with a time of infection
 pairs <- pairs[!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPIENT)]
-pairs[, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT := DATE_INFECTION.RECIPIENT < cutoff_date]
+pairs[, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT := DATE_INFECTION.RECIPIENT < start_second_period_inland]
 tab <- pairs[, list(count = .N), by = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT', 'SEX.RECIPIENT')]
 print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SEX.RECIPIENT)])
 
@@ -275,7 +265,7 @@ stan_data <- add_phylo_data(stan_data, pairs)
 stan_data <- add_incidence_cases(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates_lognormal_parameters(stan_data, incidence_cases_round)
-stan_data <- add_offset(stan_data, eligible_count_round)
+stan_data <- add_offset(stan_data, eligible_count_round, use_number_susceptible_offset)
 stan_data <- add_offset_time(stan_data, eligible_count_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
@@ -311,11 +301,11 @@ if(1){
   
   # plot pair from chains
   plot_hist_age_infection(copy(pairs), outfile.figures)
-  plot_hist_time_infection(copy(pairs), cutoff_date, outfile.figures)
-  plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F'], 'Male -> Female', 'MF', outfile.figures)
-  plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M'], 'Female -> Male', 'FM', outfile.figures)
-  plot_CI_age_infection(pairs, outfile.figures)
-  plot_CI_age_transmission(pairs, outfile.figures)
+  plot_hist_time_infection(copy(pairs), start_second_period_inland, outfile.figures)
+  plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F'], 'Male -> Female', 'MF', start_second_period_inland, outfile.figures)
+  plot_age_infection_source_recipient(pairs[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M'], 'Female -> Male', 'FM', start_second_period_inland, outfile.figures)
+  plot_CI_age_infection(pairs, start_second_period_inland, outfile.figures)
+  plot_CI_age_transmission(pairs, start_second_period_inland, outfile.figures)
   plot_pairs(pairs, outfile.figures)
   plot_pairs_all(pairs.all, outfile.figures)
   plot_transmission_events_over_time(pairs, outfile.figures)
