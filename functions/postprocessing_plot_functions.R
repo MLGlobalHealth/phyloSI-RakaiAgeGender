@@ -1826,7 +1826,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
             legend.position = 'none') +
       scale_color_manual(values = cols) +
       scale_fill_manual(values = cols) +
-      scale_y_continuous(labels = scales::percent, limits = c(0,0.75), expand = c(0,0)) + 
+      scale_y_continuous(labels = scales::percent, limits = c(0,0.8), expand = c(0,0)) + 
       scale_x_continuous(expand = c(0,0)) 
 
     # reduction infection cases regardless of age
