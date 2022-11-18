@@ -1513,7 +1513,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   ric.all <- copy(relative_incidence_counterfactual_all)
   
   communities <- ric[, unique(COMM)]
-  cols <- c('#F1A661', '#749F82','#C55300', '#425F57')
+  cols <- c('#F1A661', '#C55300', '#425F57')
   
   for(i in seq_along(communities)){
     
@@ -1523,6 +1523,13 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     icf.c <- icf[COMM == communities[i]]
     ecf.c <- ecf[COMM == communities[i]]
     ric.all.c <- ric.all[COMM == communities[i]]
+    
+    # remove 90-90-90
+    bc.c <- bc.c[label != label.909090]
+    ic.c <- ic.c[label != label.909090]
+    ric.c <- ric.c[label != label.909090]
+    ecf.c <- ecf.c[label != label.909090]
+    ric.all.c <- ric.all.c[label != label.909090]
     
     # budget by age group
     p <- ggplot(ecf.c, aes(x = AGEYRS)) +
@@ -1534,7 +1541,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
             legend.position = 'non',
             strip.background = element_rect(colour="white", fill="white"), 
             strip.text = element_blank()) + 
-      scale_fill_manual(values = c('grey50', cols[c(3,1,4,2)], 'grey80')) + 
+      scale_fill_manual(values = c('grey50', cols[c(2,1,3)], 'grey80')) + 
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 6))
@@ -1684,6 +1691,8 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     
   }
 }
+
+
 
 plot_NNT <- function(NNT, outdir){
   
