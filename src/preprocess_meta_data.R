@@ -8,7 +8,7 @@ make.hiv.history.plots <- 0
 if(dir.exists('/Users/melodiemonod'))
 {
   indir.repository <- '~/git/phyloflows'
-  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI/'
+  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
   indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 }
 
@@ -107,6 +107,7 @@ meta_data_2 <- process.meta.data(raw_metadata, aik, community.keys)
 
 # process Neuro's meta data
 meta_data_neuro <- process.neuro.meta.data(copy(raw_neuro_metadata), aik)
+
 
 #
 # MAKE META DATA
