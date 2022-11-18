@@ -7,9 +7,9 @@ library(dplyr)
 indir.repository <- '~/git/phyloflows'
 
 # files
-file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.rds'))
-file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_220818.rds'))
-file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv')
+file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221116.rds'))
+file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
+file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 
 # load census eligible ount
 eligible_count <- as.data.table(read.csv(file.eligible.count))
@@ -127,7 +127,7 @@ ggplot(sing, aes(x = ROUND)) +
 #########################################
 
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM'))
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221116.csv'))
 write.csv(tmp, file = file.name, row.names = F)
 
 

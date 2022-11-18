@@ -59,7 +59,9 @@ colnames(rhiv) <- toupper(colnames(rhiv))
 hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
 
 # SET ROUND 15S IN INLAND AS 15
-hivs[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
+hivs[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'STUDY_ID']
+hivs[ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, ROUND := 'R015']
+hivs <- hivs[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
 
 # find HIV prevalence rate for participant
 rprev <- hivs[, list(COUNT = sum(HIV == 'P'),

@@ -12,7 +12,7 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'artcoverage_by_gender_loc_age')
 
 # files
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221116.csv'))
 file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
 
 # load files
@@ -64,8 +64,8 @@ for(i in seq_along(communities)){
     scale_y_continuous( expand = expansion(mult = c(0.02, 0.1))) + 
     labs(y = 'Male-female ratio of the rate of infected\nindividuals that remain unsuppressed', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221107.png')), w = 3.5,h = 3.15)
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221107.pdf')), w = 3.5,h = 3.2)
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221116.png')), w = 3.8,h = 3.15)
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221116.pdf')), w = 3.8,h = 3.2)
     
 
 }
