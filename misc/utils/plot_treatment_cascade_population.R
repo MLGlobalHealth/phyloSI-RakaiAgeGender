@@ -15,7 +15,7 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 
 # files
-file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221101.csv'))
+file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221116.csv'))
 
 # treatment cascade population
 ns  <- as.data.table( read.csv(file.cascade.population) )
@@ -87,6 +87,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
          fill = guide_legend(byrow = T, nrow = 3))
 
 
+
 ####################################
 
 # PLOT SUPPRESSION RATE
@@ -138,6 +139,6 @@ p2 <- ggplot(tmp, aes(x = AGEYRS)) +
 p2 <- ggarrange(p2, labels = c('b'))
 
 p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6, 0.4), widths = c(0.45, 0.55))
-ggsave(p, file = file.path(outdir, 'population_suppression_rate_221110.pdf'), w = 8, h = 8)
+ggsave(p, file = file.path(outdir, 'population_suppression_rate_221118.pdf'), w = 8, h = 8)
 
 
