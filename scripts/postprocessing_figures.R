@@ -110,7 +110,6 @@ predict_y_recipient <- find_summary_output(samples, 'y_predict', c('INDEX_DIRECT
 predict_y_source_recipient <- find_summary_output(samples, 'y_predict', c('INDEX_DIRECTION', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'))
 plot_PPC_observed_source(predict_y_source, count_data, outfile.figures)
 plot_PPC_observed_recipient(predict_y_recipient, count_data, outfile.figures)
-save_statistics_PPC(predict_y_source_recipient, count_data, outdir.table)
 
 # predicted transmission
 predict_z_source <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'))
@@ -121,6 +120,7 @@ plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_re
 predict_incidence_rate_round <- find_summary_output_by_round(samples, 'ir_predict', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                              names = c('INDEX_AGE_INFECTION.RECIPIENT', 'INDEX_DIRECTION', 'INDEX_ROUND'))
 plot_PPC_incidence_rate_round(predict_incidence_rate_round, incidence_cases_recipient_round,outfile.figures)
+save_statistics_PPC(predict_y_source_recipient, count_data, predict_incidence_rate_round, incidence_cases_recipient_round, outdir.table)
 
 # predicted observed transmission vs all transmission
 plot_observed_to_augmented(predict_y_source, predict_z_source, outfile.figures)
