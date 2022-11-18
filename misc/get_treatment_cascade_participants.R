@@ -12,7 +12,7 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_casc
 
 # posterior samples
 file.unsuppressedviralload <- file.path(indir.repository, 'fit',  paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221101.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -136,8 +136,5 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221101.rds'))
-saveRDS(df, file = file.name)
-
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221116.csv'))
 write.csv(ns, file = file.name, row.names = F)
