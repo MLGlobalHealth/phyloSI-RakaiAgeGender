@@ -1022,8 +1022,8 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     labs(y = 'Incidence rate per 100 person-years\nin inland communities', x = 'Age') +
     facet_wrap(.~LABEL_ROUND, nrow = 2) +
     theme_bw() +
-    scale_color_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
-    scale_fill_manual(values = c('Male'='lightblue3','Female'='lightpink1')) + 
+    scale_color_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
+    scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
     theme(legend.position = 'bottom', 
           strip.background = element_rect(colour="white", fill="white"), 
           legend.title = element_blank()) + 
@@ -1071,7 +1071,6 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     coord_cartesian(ylim= c(0, 2.1))
-  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex.png'), w = 6.5, h = 3.2)
   ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex.pdf'), w = 7.5, h = 4)
   
   ggplot(tmp1[COMM == 'inland' & round %in% c(14,16,18)], aes(x = AGEYRS)) +
@@ -1139,8 +1138,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_y_continuous( limits = c(NA,  3), expand = expansion(mult = c(0.02, 0.02))) + 
     labs(y = 'Female-male ratio of the incidence\nrate relative to round 10', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
-  ggsave(paste0(outdir, '-data-incidence_rate_ratio_relative_round_sex.png'), w = 3.5,h = 3.15)
-  ggsave(paste0(outdir, '-data-incidence_rate_ratio_relative_round_sex.pdf'), w = 3.5,h = 3.15)
+  ggsave(paste0(outdir, '-data-incidence_rate_ratio_relative_round_sex.pdf'), w = 3.8,h = 3.2)
   
   #
   # incidence rate relative to first round female to male ratio total
