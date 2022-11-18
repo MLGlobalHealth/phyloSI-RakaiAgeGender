@@ -85,7 +85,7 @@ rart[, PROP_ART_COVERAGE_EMPIRICAL := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC'
 
 # find smooth proportion
 for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 'R017', 'R018')){
-  # round <- 'R017'
+  # round <- 'R018'
   
   DT <- copy(rart[ROUND == round] )
   DT <- DT[order(SEX, LOC, AGE_LABEL)]
@@ -132,7 +132,7 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_221101.rds')
+  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_221116.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
 }
@@ -160,7 +160,11 @@ for(i in seq_along(rounds)){
   x_predict <- seq(rart[, min(AGE_LABEL)], rart[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0('art_gp_stanfit_round',round,'_221101.rds')
+  if(round == '15'){ # change after add of 15s
+    filename <- paste0('art_gp_stanfit_round',round,'_221116.rds')
+  }else{
+    filename <- paste0('art_gp_stanfit_round',round,'_221101.rds')
+  }
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -287,11 +291,9 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_estimates_221101.csv'))
-write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221101.rds'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
 saveRDS(nsinf.samples, file = file.name)
 
-file.name <- file.path(outdir, paste0('RCCS_art_model_fit_221101.RDS'))
+file.name <- file.path(outdir, paste0('RCCS_art_model_fit_221116.RDS'))
 saveRDS(stats, file = file.name)

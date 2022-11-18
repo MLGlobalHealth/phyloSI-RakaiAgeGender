@@ -151,7 +151,10 @@ rprev <- rprev[!(ROUND %in% c('R016', 'R017', 'R018') & is.na(VLNS))]
 
 #################################
 
-rprev[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
+# find participants of round 15s and not round 15
+rprev[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'STUDY_ID']
+rprev[ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, ROUND := 'R015']
+rprev <- rprev[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
 
 
 #################################
