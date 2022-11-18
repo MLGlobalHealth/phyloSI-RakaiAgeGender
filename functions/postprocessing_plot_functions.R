@@ -212,18 +212,20 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
     df <- merge(df, unique(df_age_aggregated[, .(AGE_TRANSMISSION.SOURCE, AGE_GROUP_TRANSMISSION.SOURCE)]), by = c('AGE_TRANSMISSION.SOURCE'))
     df[, AGE_GROUP_TRANSMISSION.SOURCE := paste0('Age: ', AGE_GROUP_TRANSMISSION.SOURCE)]
     set.seed(12)
-    df[, jitter := runif(length(count), 0, 0.5), by= c('AGE_TRANSMISSION.SOURCE', 'LABEL_DIRECTION', 'PERIOD', 'count')]
+    df[, jitter := runif(length(count), 0, 1), by= c('AGE_TRANSMISSION.SOURCE', 'LABEL_DIRECTION', 'PERIOD', 'count')]
     df[, count_jitter := count + jitter]
     df[, CL_jitter := CL + jitter]
     df[, CU_jitter := CU + jitter]
     df[, M_jitter := M + jitter]
-    df[, COLOR_LABEL := paste0(LABEL_DIRECTION, ', ', PERIOD)]
+    df[, LABEL_DIRECTION2 := 'Men -> Women']
+    df[LABEL_DIRECTION == 'Female -> Male', LABEL_DIRECTION2 := 'Women -> Men']
     
     p <- ggplot(df) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
       geom_errorbar(aes(x=count_jitter, ymin=CL_jitter, ymax=CU_jitter),  color = 'grey50', width = 0, size = 0.5)+
-      geom_point(aes(y=M_jitter, x=count_jitter, color=COLOR_LABEL), size = 1) + 
+      geom_point(aes(y=M_jitter, x=count_jitter, color=PERIOD), size = 1) + 
       theme_bw() + 
+      facet_grid(.~LABEL_DIRECTION2) +
       labs(x = 'Observed transmission events\nin RCCS participants',
            y = 'Predicted transmission events\nin RCCS participants', 
            col ='', fill = '') +
@@ -232,7 +234,7 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
             strip.text = element_text(size = rel(0.9)),
             legend.position = 'bottom') +
       guides(color = guide_legend(byrow = T, nrow = 4))
-    ggsave(p, file = paste0(outdir, '-output-PPC_observed_point_source_', communities[i], '.pdf'), w = 4, h = 5)
+    ggsave(p, file = paste0(outdir, '-output-PPC_observed_point_source_', communities[i], '.pdf'), w = 6, h = 4.8)
     
   }
   
@@ -395,7 +397,7 @@ plot_PPC_incidence_rate_round <- function(predict_incidence_rate_round, incidenc
       facet_grid(.~SEX_LABEL) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(0.9)),
-            legend.position = 'bottom') +
+            legend.position = 'bottom')  +
       guides(color = guide_legend(byrow = T, nrow = 3))
     ggsave(p, file = paste0(outdir, '-output-PPC_incidencerate_perPY_point_recipient_byround_', communities[i], '.pdf'), w = 5.5, h =4.5)
     
