@@ -51,16 +51,18 @@ outdir.table <- file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
 if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
 if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 
-# indicators
+# indicators -- fixed
 only.transmission.after.start.observational.period <- T
 only.transmission.before.stop.observational.period <- T
+use_number_susceptible_offset <- T
+only.one.community <- 'inland'
+
+# indicators -- sensitivity analyses
 nonparticipants.treated.like.participants <- F
 nonparticipants.not.treated <- F
 nonparticipants.male.relative.infection <- 1
 nonparticipants.female.relative.infection <- 1
 remove.pairs.from.rounds <- NULL
-only.one.community <- 'inland'
-use_number_susceptible_offset <- F
 use_loess_inc_estimates <- F
 pairs_replicates.seed <- NULL
 
