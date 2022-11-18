@@ -308,6 +308,12 @@ expected_contribution_age_group_source2 <- find_summary_output_by_round(samples,
                                                                         standardised.vars = c('INDEX_ROUND'))
 plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
 
+# total
+median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
+                                                  c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                  transform = 'exp',
+                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
+                                                  quantile_age_source = T)
 
 #
 # Counterfactual: comparison of targets
