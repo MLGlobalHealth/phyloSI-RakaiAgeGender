@@ -163,7 +163,7 @@ add_infected_unsuppressed <- function(eligible_count_round, treatment_cascade, p
     # assuming that only participants are treated and non-participants are all unsuppressed
     df[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_M + INFECTED * (1-PARTICIPATION) * 1]
     df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_CL + INFECTED * (1-PARTICIPATION) * 1]
-    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PARTICIPATION * PROP_SUPPRESSED_PARTICIPANTS_CU + INFECTED * (1-PARTICIPATION) * 1]
+    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_CU + INFECTED * (1-PARTICIPATION) * 1]
   }else if(nonparticipants.treated.like.participants){
     # assuming that participant and non-participant are diagnosed and treated at the same proportion
     df[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_PARTICIPANTS_M]
