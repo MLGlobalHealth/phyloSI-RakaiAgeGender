@@ -315,11 +315,13 @@ plot_median_age_source_group(median_age_source_group, expected_contribution_age_
 
 cat("\nPlot relative incidence infection if different groups of male are targeted\n")
 
+
 # find incidence under the factual scenario by sex and age
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
                                                   log_offset_round = log_offset_round,
                                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+
 
 # find age groups that contribute the most
 expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
@@ -333,18 +335,18 @@ spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
 # we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
 # in all scenario, the number of participants treated in the counterfactual are = number of participant sources that contribute to 1/3 incidence
 counterfactuals_p_a <- make_counterfactual_target(samples, spreaders, log_offset_round, stan_data,
-                                           eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade, proportion_prevalence, participation,
-                                           only_participant = T, art_up_to_female = F, outdir.table)
+                                                  eligible_count_smooth, eligible_count_round, 
+                                                  treatment_cascade, proportion_prevalence, participation,
+                                                  only_participant = T, art_up_to_female = F, outdir.table)
 plot_counterfactual_one(counterfactuals_p_a, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
 # generate counterfactual when participants and non-participant are treated
 # we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
 # the number of male treated in the counterfactual are = number of male sources that contribute to 1/3 incidence
 counterfactuals_a_a <- make_counterfactual_target(samples, spreaders, log_offset_round, stan_data,
-                                           eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade, proportion_prevalence,participation,
-                                           only_participant = F, art_up_to_female = F, outdir.table)
+                                                  eligible_count_smooth, eligible_count_round, 
+                                                  treatment_cascade, proportion_prevalence,participation,
+                                                  only_participant = F, art_up_to_female = F, outdir.table)
 plot_counterfactual_one(counterfactuals_a_a, incidence_factual, "Unsuppressed", outfile.figures)
 
 
