@@ -268,9 +268,6 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_estimates_vl_1000_newlyregistered_221101.csv'))
-write.csv(nsinf, file = file.name, row.names = F)
-
 file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
 saveRDS(nsinf.samples, file = file.name)
 
