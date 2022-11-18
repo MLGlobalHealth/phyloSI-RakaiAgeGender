@@ -56,10 +56,13 @@ only.transmission.after.start.observational.period <- T
 only.transmission.before.stop.observational.period <- T
 nonparticipants.treated.like.participants <- F
 nonparticipants.not.treated <- F
+nonparticipants.male.relative.infection <- 1
+nonparticipants.female.relative.infection <- 1
 remove.pairs.from.rounds <- NULL
 only.one.community <- 'inland'
 use_number_susceptible_offset <- F
 use_loess_inc_estimates <- F
+pairs_replicates.seed <- NULL
 
 # obtained in EMODO_RAKAI repo
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
@@ -67,19 +70,19 @@ file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_lo
 
 # obtained in src/ for analysis
 file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData')
-file.eligible.count <- file.path(indir, 'data', 'RCCS_census_eligible_individuals_220830.csv')
-file.participation <- file.path(indir, 'data', 'RCCS_participation_220915.csv')
-file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_220811.csv')
+file.eligible.count <- file.path(indir, 'data', 'RCCS_census_eligible_individuals_221116.csv')
+file.participation <- file.path(indir, 'data', 'RCCS_participation_221116.csv')
+file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_221116.csv')
 
 # obtained in misc/ for analysis
 file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11.rds')
-file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221101.csv")
-file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221101.csv")
+file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221116.csv")
+file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221116.csv")
 
 # obtained in misc/ for plots
-file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221101.csv'))
-file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
-file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_220830.csv'))
+file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221116.csv'))
+file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221116.csv'))
+file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_221116.csv'))
 file.reported.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
 
 # obtained in EMODO_RAKAI repo for plots
@@ -156,7 +159,9 @@ df_period <- make.df.period(start_first_period_inland, stop_first_period_inland,
 
 
 # by round
-eligible_count_round <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
+eligible_count_round <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence, participation, 
+                                                 nonparticipants.male.relative.infection, 
+                                                 nonparticipants.female.relative.infection)
 eligible_count_round <- add_infected_unsuppressed(eligible_count_round, treatment_cascade, participation, 
                                                   nonparticipants.treated.like.participants, 
                                                   nonparticipants.not.treated)
@@ -235,6 +240,14 @@ pairs[, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT := DATE_INFECTION.RECIPIENT < sta
 tab <- pairs[, list(count = .N), by = c('DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT', 'COMM.RECIPIENT', 'SEX.RECIPIENT')]
 print_table(tab[order(DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT, COMM.RECIPIENT, SEX.RECIPIENT)])
 
+# replace pairs with a bootstrap sample 
+if(!is.null(pairs_replicates.seed)){
+  cat('\nSeed for replicate ', pairs_replicates.seed)
+  set.seed(pairs_replicates.seed)
+  stopifnot(all(duplicated(pairs) == F))
+  pairs <- pairs[sample(nrow(pairs), replace = T)]
+  stopifnot(any(duplicated(pairs) == T))
+}
 
 #
 # Find probability of observing a transmissing event

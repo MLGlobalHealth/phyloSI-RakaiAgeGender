@@ -102,7 +102,9 @@ make.df.round <- function(df_round_inland)
   return(df_round)
 }
 
-add_susceptible_infected <- function(eligible_count, proportion_prevalence)
+add_susceptible_infected <- function(eligible_count_smooth, proportion_prevalence, participation, 
+                                     nonparticipants.male.relative.infection, 
+                                     nonparticipants.female.relative.infection)
 {
   
   # prevalence 
@@ -110,10 +112,16 @@ add_susceptible_infected <- function(eligible_count, proportion_prevalence)
   df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
   
   # merge prevalence to count of eligible population
-  df <- merge(eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
+  df <- merge(eligible_count_smooth[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
+  
+  # add participation
+  df <- merge(df, participation, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
   
   # find infected count
-  df[, INFECTED := ELIGIBLE * PREVALENCE_M]
+  df[SEX == 'M', INFECTED := ELIGIBLE * PARTICIPATION * PREVALENCE_M + 
+       ELIGIBLE * (1-PARTICIPATION) * PREVALENCE_M * nonparticipants.male.relative.infection]
+  df[SEX == 'F', INFECTED := ELIGIBLE * PARTICIPATION * PREVALENCE_M + 
+       ELIGIBLE * (1-PARTICIPATION) * PREVALENCE_M * nonparticipants.female.relative.infection]
   
   # find susceptible count
   df[, SUSCEPTIBLE := ELIGIBLE - INFECTED]
