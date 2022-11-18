@@ -999,7 +999,10 @@ find_counterfactual_unsuppressed_count_target <- function(selected.spreaders, el
   }
   
   # recall the number of infected 
-  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
+  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence, 
+                                                                  participation, 
+                                                                  nonparticipants.male.relative.infection, 
+                                                                  nonparticipants.female.relative.infection)
   eligible_count_round.counterfactual[, ROUND := paste0('R0', ROUND)]
   df <- merge(eligible_count_round.counterfactual, treatment_cascade.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
@@ -1222,7 +1225,10 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
   }
   
   # recall the number of infected 
-  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
+  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence,
+                                                                  participation, 
+                                                                  nonparticipants.male.relative.infection, 
+                                                                  nonparticipants.female.relative.infection)
   eligible_count_round.counterfactual[, ROUND := paste0('R0', ROUND)]
   df <- merge(eligible_count_round.counterfactual, treatment_cascade.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
