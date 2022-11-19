@@ -1896,7 +1896,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
       geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, linetype = fit_data_label), alpha = 0.2) + 
       geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = fit_data_label), col = 'black') +
       geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
-      labs(x = 'Age', y = 'Incidence cases\nin women') + 
+      labs(x = 'Age', y = 'Incidence cases') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_blank(), 
@@ -1929,7 +1929,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
             legend.position = 'none') +
       scale_color_manual(values = cols) +
       scale_fill_manual(values = cols) +
-      scale_y_continuous(labels = scales::percent, limits = c(0,0.80), expand = c(0,0)) + 
+      scale_y_continuous(labels = scales::percent, limits = c(0,0.25), expand = c(0,0)) + 
       scale_x_continuous(expand = c(0,0)) 
     
     # ireduction infection regardless of age
