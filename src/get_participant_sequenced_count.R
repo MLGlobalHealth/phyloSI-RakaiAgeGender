@@ -73,15 +73,28 @@ stopifnot(nrow(dcount[is.na(AGEYRS)]) == 0)
 dcount <- dcount[AGEYRS > 14 & AGEYRS < 50]
 
 # set round to 15 if inland 15S
-dcount[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
+dcount[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'pt_id']
+dcount[ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, ROUND := 'R015']
+dcount <- dcount[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
+set(dcount, NULL, 'PARTICIPATED_TO_ROUND_RO15', NULL)
 
 # keep round of interest
 dcount <- merge(dcount, df_round, by = c('COMM', 'ROUND'))
 
-# find characteristics sequenced id
+# create age groups
 dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
                      labels=c('15-24','25-34','35-49'))]
+
+# save sequenced id
 saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds'))
+
+
+############################################
+
+# FIND UNIQUE NUMBER OF PARTICIPANTS SEQUENCED
+
+############################################
+
 
 # if multiple PANGEA_ID per round, keep the one the closest to visit data
 dcount[, IS_MIN := DIFF_DATE == min(DIFF_DATE), by = c('PT_ID', 'ROUND')]
@@ -96,12 +109,6 @@ stopifnot(nrow(dcount.ever) == dcount.ever[, length(unique(PT_ID))])
 # AGE GROUPS
 dcount.ever[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
                           labels=c('15-24','25-34','35-49'))]
-
-############################################
-
-# FIND NUMBER OF PARTICIPANTS EVER SEQUENCED
-
-############################################
 
 # unique participants by rounds  by comm, sex, agegp
 sequ <- dcount.ever[, list(SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP', 'ROUND')]
