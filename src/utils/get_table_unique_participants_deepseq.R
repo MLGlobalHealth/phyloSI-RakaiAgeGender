@@ -69,6 +69,9 @@ meta_data[, round := paste0('R0', round)]
 colnames(meta_data) <- toupper(colnames(meta_data))
 meta_data <- meta_data[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, HIV, ART)]
 
+# set 15.1 to be 15S
+meta_data[ROUND == 'R015.1', ROUND := 'R015S']
+
 
 #
 # Quest
