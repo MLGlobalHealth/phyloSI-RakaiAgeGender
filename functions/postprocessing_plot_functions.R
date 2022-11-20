@@ -1929,7 +1929,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
             legend.position = 'none') +
       scale_color_manual(values = cols) +
       scale_fill_manual(values = cols) +
-      scale_y_continuous(labels = scales::percent, limits = c(0,0.25), expand = c(0,0)) + 
+      scale_y_continuous(labels = scales::percent, limits = c(0,0.60), expand = c(0,0)) + 
       scale_x_continuous(expand = c(0,0)) 
     
     # ireduction infection regardless of age
@@ -1950,7 +1950,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
             legend.position = 'none') +
       scale_color_manual(values = cols) +
       scale_fill_manual(values = cols) +
-      scale_y_continuous(labels = scales::percent, limits = c(0,0.65), expand = c(0,0)) 
+      scale_y_continuous(labels = scales::percent, limits = c(0,0.6), expand = c(0,0)) 
     
     # arrange
     p3 <- ggarrange(p3, legend.grob = get_legend(p2), legend = 'bottom')
