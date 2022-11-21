@@ -222,7 +222,7 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
     
     p <- ggplot(df) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
-      geom_errorbar(aes(x=count_jitter, ymin=CL_jitter, ymax=CU_jitter),  color = 'grey50', width = 0, size = 0.5)+
+      geom_errorbar(aes(x=count_jitter, ymin=CL_jitter, ymax=CU_jitter),  color = 'grey70', width = 0, size = 0.25)+
       geom_point(aes(y=M_jitter, x=count_jitter, color=PERIOD), size = 1) + 
       theme_bw() + 
       facet_grid(.~LABEL_DIRECTION2) +
@@ -234,7 +234,7 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
             strip.text = element_text(size = rel(0.9)),
             legend.position = 'bottom') +
       guides(color = guide_legend(byrow = T, nrow = 4))
-    ggsave(p, file = paste0(outdir, '-output-PPC_observed_point_source_', communities[i], '.pdf'), w = 6, h = 4.8)
+    ggsave(p, file = paste0(outdir, '-output-PPC_observed_point_source_', communities[i], '.pdf'), w = 6, h = 5.1)
     
   }
   
@@ -730,11 +730,9 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
              linetype = 'none')
 
     # add legends
-    pp.all <- ggarrange(p.all, legend.grob = get_legend(p_legend), legend = 'bottom') + 
-      theme(panel.background = element_rect(fill='white'))
+    pp.all <- ggarrange(p.all, legend.grob = get_legend(p_legend), legend = 'bottom')
     
-    pp <- ggarrange(p, legend.grob = get_legend(p_legend), legend = 'bottom') + 
-      theme(panel.background = element_rect(fill='white'))
+    pp <- ggarrange(p, legend.grob = get_legend(p_legend), legend = 'bottom') 
     
     # save
     if(is.null(lab)) lab =  'Contribution'
@@ -746,7 +744,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       
     }
     
-    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.5, h = 4.2)
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 6.2, h = 4.7)
     
   }
 }
@@ -754,7 +752,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
 plot_contribution_age_source <- function(contribution_age_source, outdir, lab = NULL){
   
   # selected rounds for main
-  Rounds.all <- list('inland' = paste0('R0', c(10, 12, 14, 16,18)), 'fishing' = paste0('R0', c(15,18)))
+  Rounds.all <- list('inland' = paste0('R0', c(10, 12, 14, 15,18)), 'fishing' = paste0('R0', c(15,18)))
   
   # contribution
   cont <- copy(contribution_age_source)
@@ -768,12 +766,12 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
   # prepare plotting function
   plot.p <- function(cont.p, median_age.p, level_y){
     ggplot(cont.p, aes(x = AGE_TRANSMISSION.SOURCE)) +
-      geom_line(aes(y = M, col = LABEL_SOURCE)) + 
       geom_point(data = median_age.p, aes(x = AGE_MEDIAN_CONTRIBUTION, y = level_y, col = LABEL_SOURCE, fill = LABEL_SOURCE), size = 3, shape = 25) + 
-      scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) +
+      scale_fill_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) +
       new_scale_fill() + 
+      geom_line(aes(y = M, col = LABEL_SOURCE)) + 
       geom_ribbon(aes(ymin = CL, ymax = CU, fill = LABEL_SOURCE), alpha = 0.5) +
-      scale_color_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) +
+      scale_color_manual(values = c('Male sources'='royalblue3','Female sources'='deeppink')) + 
       scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
       labs(x = 'Age', y = '\nContribution to HIV incidence') + 
       theme_bw() +
@@ -804,7 +802,7 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
     
     # selected rounds
     pp <- plot.p(cont.p[ROUND %in% Rounds], median_age.p[ROUND %in% Rounds], 0.0035)+ 
-      theme(legend.position =  c(0.78,0.95))
+      theme(legend.position =  'none')
     
     # selected rounds horizontal
     pp.hori <-  plot.p(cont.p[ROUND %in% Rounds], median_age.p[ROUND %in% Rounds], 0.003) + 
@@ -816,8 +814,8 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
     
     if(communities[i] == 'inland'){
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.pdf'), w = 7, h = 14.5)
-      ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 4.5, h = 7.8)
-      ggsave(pp.hori, file = paste0(outdir, '-output-', lab, '_age_horizontal_', communities[i], '.pdf'), w = 8, h = 2.6)
+      ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 4.5, h = 7)
+      ggsave(pp.hori, file = paste0(outdir, '-output-', lab, '_age_horizontal_', communities[i], '.pdf'), w = 7.7, h = 2.7)
     }else{
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.pdf'), w = 7, h = 9)
       
