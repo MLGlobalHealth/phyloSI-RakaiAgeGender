@@ -262,7 +262,7 @@ proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.f
 #
 
 # prepare age map
-df_age <- get.age.map(pairs, age_bands_reduced = 4)
+df_age <- get.age.map(age_bands_reduced = 4)
 df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
 
 # prepare direciton and commuity

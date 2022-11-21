@@ -1134,16 +1134,14 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir)
   df
 }
 
-get.age.map <- function(pairs, age_bands_reduced = 4)
+get.age.map <- function(age_bands_reduced = 4)
 {
   
   extended_age_length <- 0
   
-  ages_source <- pairs[, {
-    min_age = floor(min(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) - extended_age_length
-    max_age = ceiling(max(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) + extended_age_length
-    list(age = min_age:max_age)}]
-  
+  ages_source <- data.table(min_age = 15 - extended_age_length, max_age = 49 + extended_age_length)
+  ages_source <- ages_source[, list(age = min_age:max_age)]
+
   ages_recipient <- ages_source
   
   age_map <- data.table(expand.grid(AGE_TRANSMISSION.SOURCE = ages_source$age, 
