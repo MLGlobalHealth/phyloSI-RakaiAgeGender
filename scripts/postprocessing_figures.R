@@ -58,15 +58,6 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-if(!exists("use_number_susceptible_offset")){
-  use_number_susceptible_offset <- F
-}
-source(file.path(indir, 'functions', 'summary_functions.R'))
-treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
-                                            file.treatment.cascade.prop.nonparticipants)
-
-
 
 #
 # offset
