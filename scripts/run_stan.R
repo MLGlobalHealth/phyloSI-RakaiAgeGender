@@ -64,6 +64,7 @@ nonparticipants.female.relative.infection <- 1
 remove.pairs.from.rounds <- NULL
 use_loess_inc_estimates <- F
 pairs_replicates.seed <- NULL
+viremic_viral_load_200ml <- F
 
 # obtained in EMODO_RAKAI repo
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
@@ -79,6 +80,8 @@ file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_22111
 file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11.rds')
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221116.csv")
 file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221116.csv")
+file.treatment.cascade.prop.participants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_vl200_221121.csv")
+file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221121.csv")
 
 # obtained in misc/ for plots
 file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221116.csv'))
@@ -116,8 +119,13 @@ participation <- fread(file.participation)
 proportion_prevalence <- fread(file.prevalence.prop)
 
 # load non-suppressed proportion 
-treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
-                                                             file.treatment.cascade.prop.nonparticipants)
+if(viremic_viral_load_200ml){
+  treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants.vl200, 
+                                              file.treatment.cascade.prop.nonparticipants.vl200)
+}else{
+  treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
+                                              file.treatment.cascade.prop.nonparticipants)
+}
 
 # load incidence estimates 
 if(use_loess_inc_estimates){
