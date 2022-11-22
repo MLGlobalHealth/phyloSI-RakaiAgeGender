@@ -10,8 +10,8 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'newtrtcascade'
-stan_model <- 'gp_221101a'
+jobname <- 'central'
+stan_model <- 'gp_221115a'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -101,7 +101,7 @@ plot_intensity_PP(intensity_PP_sampled, count_data, outfile.figures)
 intensity_PP <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'INDEX_AGE'),
                                              transform = 'exp',
                                              log_offset_round = log_offset_round,
-                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+                                             log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 plot_intensity_PP_by_round(intensity_PP, outfile.figures)
 
 # predicted observed transmission
@@ -242,7 +242,7 @@ cat("\nPlot transmission risk\n")
 transmission_risk_sex_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND'),
                                                              transform = 'exp',
                                                              log_offset_round = log_offset_round,
-                                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                             log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                              per_unsuppressed = T)
 plot_transmission_risk_sex_source(transmission_risk_sex_source, outfile.figures)
 
@@ -250,7 +250,7 @@ plot_transmission_risk_sex_source(transmission_risk_sex_source, outfile.figures)
 transmission_risk_age_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                             transform = 'exp',
                                                             log_offset_round = log_offset_round,
-                                                            log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                            log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                             per_unsuppressed = T)
 plot_transmission_risk_sex_age_source(transmission_risk_age_source, outfile.figures)
 
@@ -268,7 +268,7 @@ df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
 incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'),
                                                       transform = 'exp',
                                                       log_offset_round = log_offset_round,
-                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                      log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                       relative_baseline = T,
                                                       per_susceptible = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
@@ -277,7 +277,7 @@ plot_incidence_transmission(incidence_tranmission, outfile.figures)
 incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                     transform = 'exp',
                                                     log_offset_round = log_offset_round,
-                                                    log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                    log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                     relative_baseline = T,
                                                     per_susceptible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
@@ -326,7 +326,7 @@ cat("\nPlot relative incidence infection if different groups of male are targete
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
                                                   log_offset_round = log_offset_round,
-                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+                                                  log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 
 
 # find age groups that contribute the most
@@ -408,6 +408,24 @@ counterfactuals_a_909090 <- make_counterfactual(samples, log_offset_round, stan_
                                                 eligible_count_smooth, eligible_count_round, 
                                                 treatment_cascade, proportion_prevalence, participation,
                                                   only_participant = F, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
+# checks
+if(0){
+  tmp <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'F' & COMM == 'inland', .(ROUND, COMM, AGEYRS, PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M)]
+  tmp1 <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, INFECTED,  PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL)]
+  tmp <- merge(tmp, tmp1, by = c('ROUND', 'COMM', 'AGEYRS'))
+  tmp[PROP_UNSUPPRESSED_PARTICIPANTS_M != PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL]
+  tmp[PROP_UNSUPPRESSED_NONPARTICIPANTS_M != PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
+  
+  tmp <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, TREATED)]
+  tmp[, TREATED_HALF := TREATED / 2]
+  tmp1 <- counterfactuals_a_f05$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, TREATED)]
+  tmp <- merge(select(tmp, -'TREATED'), tmp1, by = c('ROUND', 'COMM', 'AGEYRS'))
+  stopifnot(nrow(tmp[abs(TREATED - TREATED_HALF) > 1e-13]) == 0)
+
+  tmp1 <- counterfactuals_a_959595$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, INFECTED,  INFECTED_NON_SUPPRESSED)]
+  tmp1[, RATIO := INFECTED_NON_SUPPRESSED / INFECTED]
+  stopifnot(nrow(tmp1[abs(RATIO - (1-0.95*0.95*0.95)) > 1e-16]) == 0)
+}
 
 # plot
 plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_a_959595, counterfactuals_a_909090, 
@@ -424,7 +442,7 @@ cat("\nPlot NNT\n")
 NNT <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'),
                                    transform = 'exp',
                                    log_offset_round = log_offset_round,
-                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE',
+                                   log_offset_formula = 'log_SUSCEPTIBLE',
                                    invert = T)
 plot_NNT(NNT, outfile.figures)
 
@@ -433,7 +451,7 @@ df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39'
 NNT_grouped <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'),
                                            transform = 'exp',
                                            log_offset_round = log_offset_round,
-                                           log_offset_formula = 'log_PROP_SUSCEPTIBLE',
+                                           log_offset_formula = 'log_SUSCEPTIBLE',
                                            invert = T)
 plot_NNT_group(NNT_grouped, outfile.figures)
 

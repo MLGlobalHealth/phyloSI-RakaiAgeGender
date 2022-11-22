@@ -26,3 +26,30 @@ save_statistics_expected_contribution <- function(expected_contribution_sex_sour
   saveRDS(stats, paste0(outdir, '-output-contribution.rds'))
   
 }
+
+save_statistics_PPC <- function(predict_y_source_recipient, count_data, predict_incidence_rate_round, incidence_cases_recipient_round, outdir){
+  
+  stats <- list()
+  
+  # pairs
+  data <- count_data[, list(count = sum(count)), by = c('LABEL_SOURCE', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN', 'AGE_INFECTION.RECIPIENT')]
+  
+  tmp <- merge(predict_y_source_recipient, data, by = c('LABEL_SOURCE', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN', 'AGE_INFECTION.RECIPIENT'))
+  tmp[, within.CI := count >= CL & count <= CU]
+  tmp[, MAE := abs(count - M)]
+  
+  stats[['pairs_WCI']] <- tmp[, round(mean(within.CI) *100, 2)]
+  stats[['pairs_MAE']] <- tmp[, round(mean(MAE) , 2)]
+  
+  # incidence rate
+  tmp <- merge(predict_incidence_rate_round, incidence_cases_recipient_round[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, 
+                                                                                 AGE_INFECTION.RECIPIENT, INCIDENCE, LB, UB)], 
+               by = c('INDEX_DIRECTION', 'INDEX_COMMUNITY', 'ROUND', 'AGE_INFECTION.RECIPIENT'))
+  tmp[, within.CI := INCIDENCE >= CL & INCIDENCE <= CU]
+  tmp[, MAE := abs(INCIDENCE - M)]
+  
+  stats[['incidence_WCI']] <- tmp[, round(mean(within.CI) *100, 2)]
+  stats[['incidence_MAE']] <- tmp[, round(mean(MAE) , 2)]
+  
+  saveRDS(stats, file = paste0(outdir, '-statistics_prediction.RDS'))
+}
