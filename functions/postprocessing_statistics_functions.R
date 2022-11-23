@@ -39,7 +39,7 @@ save_statistics_PPC <- function(predict_y_source_recipient, count_data, predict_
   tmp[, MAE := abs(count - M)]
   
   stats[['pairs_WCI']] <- tmp[, round(mean(within.CI) *100, 2)]
-  stats[['pairs_MAE']] <- tmp[, round(mean(MAE) , 2)]
+  stats[['pairs_MAE']] <- tmp[, mean(MAE) ]
   
   # incidence rate
   tmp <- merge(predict_incidence_rate_round, incidence_cases_recipient_round[, .(INDEX_DIRECTION, INDEX_COMMUNITY, ROUND, 
@@ -49,7 +49,7 @@ save_statistics_PPC <- function(predict_y_source_recipient, count_data, predict_
   tmp[, MAE := abs(INCIDENCE - M)]
   
   stats[['incidence_WCI']] <- tmp[, round(mean(within.CI) *100, 2)]
-  stats[['incidence_MAE']] <- tmp[, round(mean(MAE) , 2)]
+  stats[['incidence_MAE']] <- tmp[, mean(MAE) ]
   
   saveRDS(stats, file = paste0(outdir, '-statistics_prediction.RDS'))
 }
