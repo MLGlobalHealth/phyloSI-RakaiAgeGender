@@ -345,7 +345,8 @@ counterfactuals_a_a <- make_counterfactual_target(samples, spreaders, log_offset
                                                   treatment_cascade, proportion_prevalence,participation,
                                                   only_participant = F, art_up_to_female = F, outdir.table)
 plot_counterfactual_one(counterfactuals_a_a, incidence_factual, "Unsuppressed", outfile.figures)
-
+plot_counterfactual_strategy(counterfactuals_a_a, incidence_factual, 'Unsuppressed', outfile.figures)
+  
 
 #
 # Counterfactual: comparison of strategies
