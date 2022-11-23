@@ -8,6 +8,39 @@
     diff(a) > diff(b)
 }
 
+get.extra.pairs.from.serohistory <- function(DCHAIN, META)
+{   
+    tmp <- DCHAIN[SCORE_LINKED <= threshold.likely.connected.pairs, .(H1, H2) ]
+    tmp <- merge(tmp,
+                 META[, .(H1=aid,
+                          SEX=sex,
+                          DFP=date_first_positive,
+                          DLN=date_last_negative)],
+                 by='H1')
+    tmp <- merge(tmp,
+                 META[, .(H2=aid,
+                          SEX=sex,
+                          DFP=date_first_positive,
+                          DLN=date_last_negative)],
+                 by='H2')
+    names(tmp) <- gsub('.x','.H1', names(tmp))
+    names(tmp) <- gsub('.y','.H2', names(tmp))
+    tmp <- tmp[DLN.H2 >= DFP.H1 | DLN.H1 >= DFP.H2]
+    tmp[DLN.H2 >= DFP.H1, `:=` (EST_DIR='12', SOURCE=H1, RECIPIENT=H2)]
+    tmp[DLN.H1 >= DFP.H2, `:=` (EST_DIR='21', SOURCE=H2, RECIPIENT=H1)]
+    cat('There are', tmp[, .N], 'pairs with only one possible direction implied by serohistory\n')
+    tmp1 <- tmp[SEX.H1 != SEX.H2]
+    cat(tmp1[, .N], 'of those are among heterosexuals\n')
+
+    idx <- tmp[, .(H1, H2, EST_DIR, SOURCE, RECIPIENT)]
+    additional_pairs_from_serohistory <- merge(DCHAIN, idx, by=c('H1', 'H2'))
+    additional_pairs_from_serohistory[, `:=` (H1=NULL, H2=NULL)]
+    additional_pairs_from_serohistory <<- additional_pairs_from_serohistory
+
+    chain <- rbind(chain, additional_pairs_from_serohistory)
+    unique(chain)
+}
+
 update.ranges.with.tsi.estimates <- function()
 {
     cols <- c('RENAME_ID', 'pred_doi_min', 'pred_doi_mid', 'pred_doi_max', 'visit_dt')
@@ -121,32 +154,10 @@ get.infection.range.from.tsi <- function(chain_subset=TRUE)
     drange_tsi
 }
 
-get.sample.collection.dates <- function(select_aid=NULL, get_first_visit=FALSE)
-{
-    # get collection dates 
-    path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS','200316_pangea_db_sharing_extract_rakai.csv')
-    path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
-
-    files <- c(path.sdates.rccs, path.sdates.mrc)
-    cols <- c('pt_id', 'pangea_id', 'visit_dt')
-    ddates <- rbindlist(lapply(files, fread, select=cols))
-    ddates <- unique(ddates)
-    ddates <- merge(ddates, aik, by.x='pt_id', by.y='PT_ID')
-    ddates[, pt_id := NULL]
-    stopifnot(ddates[, uniqueN(pangea_id)==.N])
-    setnames(ddates, 'AID', 'aid')
-
-    if(!is.null(select_aid))
-        ddates <- ddates[aid %in% select_aid]
-
-    if(get_first_visit)
-        ddates <- ddates[, .(date_collection=min(visit_dt)),by='aid']
-    ddates
-}
-
 check.inconsistent.testing <- function(DRANGE, switch=TRUE)
 {
     chain_tmp <- double.merge(chain, DRANGE)
+    cat(names(chain_tmp), '\n')
 
     tmp <- chain_tmp[ MAX.RECIPIENT <= MIN.SOURCE ]
     cat("There are", nrow(tmp), "instances in which the maximum infection date of the recipient is smaller than the minimum infection date of the source\n")
@@ -192,7 +203,7 @@ check.inconsistent.testing <- function(DRANGE, switch=TRUE)
                 if(length(idx) == l)
                     break
             }
-
+            cat('\t', DRANGE[ AID %in% idx, .N], 'individuals in total')
             DRANGE <- DRANGE[! AID %in% idx]
         }
         return(DRANGE)
@@ -299,6 +310,7 @@ shrink.intervals <- function(DT)
     }
     DT[, as.numeric(mean(MAX - MIN)/365.25)]
 }
+
 classify.transmission.round.given.centroid <- function(idx)
 {
     # Requires definition of drounds in code
@@ -1082,7 +1094,8 @@ get.volume.genints.multid <- function(DT, N_IDS=NULL,
                                       get_volume=FALSE, 
                                       df_round=data.frame() )
 {
-    # DT <- dcohords[ GROUP == 1, IDS[[1]]]
+    # DT <- dcohords[ GROUP == 1, IDS[[1]]]; df_round = df_round_gi; N_IDS=3; importance_weights=dinfectiousness
+
 
     if( nrow(df_round) )
     {
@@ -1091,7 +1104,6 @@ get.volume.genints.multid <- function(DT, N_IDS=NULL,
         round_dates[, (cols) := lapply(.SD,as.integer) , .SDcols=cols]
     }
     
-    tmp <- copy(DT)
     if( ! is.null(provide_samples) )
         n_samples <- nrow(provide_samples)
 
@@ -1106,16 +1118,19 @@ get.volume.genints.multid <- function(DT, N_IDS=NULL,
         .s('importance_weights should have columns: START, END, VALUE')
 
     # rank by how many times they appear in source? 
+    tmp <- copy(DT)
     codes <- LETTERS[(27-N_IDS):26]
     ids <- unique(unlist(tmp))
     tbl <- table(factor(tmp[[1]], levels=ids))
     ids <- names(sort(tbl, decreasing = TRUE))
-    codes <- data.table(ID=ids, CODE=codes)
 
+    codes <- data.table(ID=ids, CODE=codes)
     setkey(codes, ID)
-    tmp <- tmp[codes[, .(ID=ID, C1=CODE)] ,on=.(V1=ID)]
-    tmp <- tmp[codes[, .(ID=ID, C2=CODE)] ,on=.(V2=ID)]
-    dineq <- tmp[!is.na(V1) & !is.na(V1), .(INEQ=paste(C1, C2, sep='<'), C1, C2)]
+    setkey(tmp, SOURCE)
+    tmp <- tmp[codes[, .(ID=ID, C1=CODE)] ,on=.(SOURCE=ID)]
+    setkey(tmp, RECIPIENT)
+    tmp <- tmp[codes[, .(ID=ID, C2=CODE)] ,on=.(RECIPIENT=ID)]
+    dineq <- tmp[!is.na(SOURCE) & !is.na(RECIPIENT), .(INEQ=paste(C1, C2, sep='<'), C1, C2)]
 
     # To do MCMC integration, we need to recover the ranges...
     setkey(dpairs, SOURCE,RECIPIENT)
@@ -1191,6 +1206,7 @@ get.volume.genints.multid <- function(DT, N_IDS=NULL,
         if(verbose)
             cat('Acceptance rate:', round(100*prop, 2), '%\n')
     }
+    impsamples <- impsamples[IN == TRUE]
 
     # get quantiles
     if(verbose)
@@ -1259,6 +1275,7 @@ get.volume.genints.multid <- function(DT, N_IDS=NULL,
         setkey(codes, CODE)
         dineq <- dineq[, list(SOURCE=codes[C1, ID], RECIPIENT=codes[C2, ID], INEQ) ]
         genints <- merge(dineq, tmp1)[, -'INEQ']
+
 
     }else if(! is.null(range_gi) )
     {
@@ -1395,8 +1412,8 @@ prepare.pairs.input.for.bayesian.model <- function(DT)
     setnames(dresults, c('AGE_INFECTION', 'SEX'), c('AGE_INFECTION.RECIPIENT', 'SEX.RECIPIENT') )
 
     # get round
-    for (r in df_round[, ROUND] )
-        dresults[M %between% df_round[ROUND == r, c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE)], ROUND.M := r]
+    for (r in df_round_gi[, ROUND] )
+        dresults[M %between% df_round_gi[ROUND == r, c(MIN_SAMPLE_DATE, MAX_SAMPLE_DATE)], ROUND.M := r]
 
     dresults[, GROUP := NULL]
     cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'CL', 'IL', 'M', 'IU', 'CU', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'ROUND.M')
@@ -1415,9 +1432,10 @@ prepare.pairs.input.for.bayesian.model <- function(DT)
 
 get.community.type.at.infection.date <- function(DT)
 {
+    # DT <- copy(dresults)
     meta_env <- new.env()
     load(file.path.meta, envir=meta_env)
-    meta_env$meta_data
+    
     cols <- c('aid', 'comm', 'round', 'sample_date')
     dcomms <- subset(meta_env$meta_data, select=cols)
     # dcomms <- dcomms[aid %in% dresults[, c(SOURCE,RECIPIENT)]]
@@ -1427,7 +1445,6 @@ get.community.type.at.infection.date <- function(DT)
     # For participants with date of infection, set 
     # community as the comm with visit date closest to estimated infection time
     .f <- function(x) which.min(abs(fcoalesce(x, Inf)))
-
     DT[, {
         idx <- c(SOURCE, RECIPIENT)
         tmp <- dcomms[AID %in% idx, ]
@@ -1438,7 +1455,69 @@ get.community.type.at.infection.date <- function(DT)
     }, by='RECIPIENT'] -> tmp
 
     DT <- merge(DT, tmp, by=c('SOURCE', 'RECIPIENT'), all.x=TRUE) 
-    DT[ is.na(COMM.RECIPIENT) & is.na(COMM.SOURCE)]
+    # DT[ is.na(COMM.RECIPIENT) & is.na(COMM.SOURCE)]
     
     return(DT)
+}
+
+count.number.intersecting.ranges.tsi.sero.wrt.chain <- function(CHAIN, DCOMPARE)
+{
+    # CHAIN <- copy(chain);     DCOMPARE <- copy(compare_ranges)
+    # individuals in the source-recipient pairs
+    idx <- CHAIN[, unique(c(SOURCE, RECIPIENT))]
+    
+    # individuals with null TSI plausible region &
+    # individuals where TSI and serohistory ranges do not intersect
+    idx.tsi.null <- DCOMPARE[, idx[! idx %in%  AID] ] 
+    idx.no.marg.intersect <- DCOMPARE[RNG.INTERSECT == FALSE, AID]
+    idx2 <- c(idx.tsi.null, idx.no.marg.intersect)
+
+    .g <- function(x) CHAIN[SOURCE %in% x | RECIPIENT %in% x, ]
+    .g(idx.no.marg.intersect)
+    .f <- function(x) CHAIN[SOURCE %in% x | RECIPIENT %in% x, .N]
+    length(idx.tsi.null)
+    length(idx.no.marg.intersect)
+    cat('There are', length(idx2), 'individuals with null marginal intersections (', .f(idx2), '):\n\t-',
+        length(idx.tsi.null), '(', .f(idx.tsi.null), ')had null TSI plausible region\n\t-',
+        length(idx.no.marg.intersect), '(', .f(idx.no.marg.intersect) ,')additional inds had null marginal interesections.\n')
+    cat('\tAccounting for', CHAIN[SOURCE %in% idx2 | RECIPIENT %in% idx2, .N], 'S-R pairs\n')
+
+    return(NULL)
+}
+
+get.round.dates <- function(file=file.path.round.timeline)
+{
+    tmp_env <- new.env()
+    load(file, envir = tmp_env)
+    df_round_inland <- tmp_env$df_round_inland
+    df_round_fishing <- tmp_env$df_round_fishing
+
+    start_first_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
+    stop_first_period_inland <- df_round_inland[round == 'R015', max_sample_date] # "2013-07-05"
+    start_second_period_inland <-df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
+    stop_second_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
+
+    stopifnot(start_first_period_inland < stop_first_period_inland)
+    stopifnot(stop_first_period_inland < start_second_period_inland)
+    stopifnot(start_second_period_inland < stop_second_period_inland)
+
+    cols <- c("ROUND", "MIN_SAMPLE_DATE", "MAX_SAMPLE_DATE", "INDEX_TIME", "INDEX_ROUND", "round")
+    df_round_i <- make.df.round(df_round_inland) |> subset(select=cols)
+    df_round_f <- make.df.round(df_round_fishing) |> subset(select=cols)
+
+    cols2 <- cols[! cols %like% 'SAMPLE_DATE|INDEX']
+    df_round_gi <- merge(df_round_i, df_round_f, by=cols2, all.x=TRUE)
+    df_round_gi[, `:=` (
+                        MIN_SAMPLE_DATE=pmin(MIN_SAMPLE_DATE.x, MIN_SAMPLE_DATE.y, na.rm=TRUE),
+                        MAX_SAMPLE_DATE=pmax(MAX_SAMPLE_DATE.x, MAX_SAMPLE_DATE.y, na.rm=TRUE),
+                        INDEX_TIME=INDEX_TIME.x,
+                        INDEX_ROUND=INDEX_ROUND.x
+                        )]
+    df_round_gi <- subset(df_round_gi, select= ! names(df_round_gi) %like% '.x$|.y$' )
+    df_round_gi <- subset(df_round_gi, select= cols)
+
+    df_round_gi[, MAX_SAMPLE_DATE := pmax(MAX_SAMPLE_DATE, shift(MIN_SAMPLE_DATE, -1), na.rm=TRUE)]
+    rm(tmp_env, df_round_inland, df_round_fishing, df_round_i, df_round_f)
+
+    df_round_gi
 }
