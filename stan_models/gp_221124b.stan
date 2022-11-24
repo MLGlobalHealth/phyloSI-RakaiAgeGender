@@ -69,7 +69,7 @@ data {
   int map_round_period[N_ROUND];
   int N_ROUND_PER_PERIOD[N_PERIOD];
   int N_OBS;
-  
+    
 	//splines
 	int number_rows; // = N_AGE
 	int number_columns;  // = N_AGE
@@ -101,13 +101,10 @@ parameters {
   real log_beta_baseline_contrast_round[N_ROUND - 1];
   real log_beta_baseline_contrast_period;
   
-  real<lower=0> rho_gp_round_inland[N_DIRECTION];
-  real<lower=0> alpha_gp_round_inland[N_DIRECTION];
-  vector[num_basis_rows] z_round_inland[N_ROUND - 1, N_DIRECTION];
-  
-  real<lower=0> rho_gp_period[N_DIRECTION];
-  real<lower=0> alpha_gp_period[N_DIRECTION];
-  vector[num_basis_rows] z_period[N_DIRECTION];
+  real<lower=0> rho_gp1_round_inland[N_ROUND - 1, N_DIRECTION];
+  real<lower=0> rho_gp2_round_inland[N_ROUND - 1,N_DIRECTION];
+  real<lower=0> alpha_gp_round_inland[N_ROUND - 1,N_DIRECTION];
+  matrix[num_basis_rows,num_basis_columns] z_round_inland[N_ROUND - 1, N_DIRECTION];
   
   real<lower=0> rho_gp1[N_DIRECTION];
   real<lower=0> rho_gp2[N_DIRECTION];
@@ -130,6 +127,7 @@ transformed parameters {
   vector[N_PER_GROUP] log_beta_period_contrast[N_DIRECTION];
   matrix[N_ROUND - 1, N_PER_GROUP] log_beta_round_contrast[N_DIRECTION];
   matrix[num_basis_rows,num_basis_columns] low_rank_gp_direction[N_DIRECTION]; 
+  matrix[num_basis_rows,num_basis_columns] low_rank_gp_round[N_ROUND - 1, N_DIRECTION]; 
   vector[N_PER_GROUP] log_beta_baseline_contrast_round_inland[N_ROUND - 1, N_DIRECTION] = rep_array(rep_vector(0.0, N_PER_GROUP), N_ROUND - 1, N_DIRECTION);
 
   
@@ -147,8 +145,7 @@ transformed parameters {
   }
     
   // find period contrast
-  log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_recipient];
-  log_beta_period_contrast[i] += log_beta_baseline_contrast_period;
+  log_beta_period_contrast[i] = rep_vector(log_beta_baseline_contrast_period, N_PER_GROUP);
   
   // add period contrast to round contrast
   log_beta_round_contrast[i] = append_row(rep_matrix(rep_row_vector(0.0, N_PER_GROUP), N_ROUND_PER_PERIOD[1] - 1 ), 
@@ -158,7 +155,9 @@ transformed parameters {
       
       // find round contrast
       if(k > 1 && k <= N_ROUND){
-        log_beta_baseline_contrast_round_inland[k-1,i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_round_inland[i], rho_gp_round_inland[i], z_round_inland[k-1,i]))[map_age_recipient];
+        low_rank_gp_round[k-1,i] =  gp(num_basis_rows, num_basis_columns, IDX_BASIS_ROWS, IDX_BASIS_COLUMNS, delta0,
+            alpha_gp_round_inland[k-1,i], rho_gp1_round_inland[k-1,i], rho_gp2_round_inland[k-1,i], z_round_inland[k-1,i]);
+        log_beta_baseline_contrast_round_inland[k-1,i] = to_vector(((BASIS_ROWS') * low_rank_gp_round[k-1,i] * BASIS_COLUMNS)');
         log_beta_round_contrast[i][k-1,:] += to_row_vector(log_beta_baseline_contrast_round_inland[k-1,i]) ;
         log_beta_round_contrast[i][k-1,:] += log_beta_baseline_contrast_round[k-1];
       }
@@ -211,31 +210,29 @@ model {
   rho_gp1 ~ inv_gamma(2, 2);
   rho_gp2 ~ inv_gamma(2, 2);
   
-  // baseline surface on the age of the source and recipient, standardised
+  
   for(i in 1:num_basis_rows){
     for(j in 1:num_basis_columns){
+      // baseline surface on the age of the source and recipient, standardised
       z1[:,i,j] ~ normal(0,1);
+      
+      // round contrast on the age of the recipient, standardised
+      for(k in 1:N_ROUND){
+        if(k > 1){
+          z_round_inland[k-1, :, i,j] ~ normal(0,1);
+        }
+       }
     }
   }
 
   for (i in 1:N_DIRECTION){
-    
-    // hyperparameters period contrast over the age of the source 
-    alpha_gp_period[i] ~ cauchy(0,1);
-    rho_gp_period[i] ~ inv_gamma(2, 2);
-    
-    //period contrast over the age of the source 
-    z_period[i] ~ normal(0,1);
      
     // hyperparameters round contrast over the age of the recipient
-    rho_gp_round_inland[i] ~ inv_gamma(2, 2);
-    alpha_gp_round_inland[i] ~ cauchy(0,1);
-         
-    // round contrast on the age of the recipient, standardised
-    for (k in 1:N_ROUND){
-      
+    for(k in 1:N_ROUND){
       if(k > 1){
-        z_round_inland[k-1, i] ~ normal(0,1);
+        rho_gp1_round_inland[k-1,i] ~ inv_gamma(2, 2);
+        rho_gp2_round_inland[k-1,i] ~ inv_gamma(2, 2);
+        alpha_gp_round_inland[k-1,i] ~ cauchy(0,1);
       }
     }
   }
