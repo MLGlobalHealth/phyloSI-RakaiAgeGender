@@ -69,7 +69,7 @@ data {
   int map_round_period[N_ROUND];
   int N_ROUND_PER_PERIOD[N_PERIOD];
   int N_OBS;
-  
+    
 	//splines
 	int number_rows; // = N_AGE
 	int number_columns;  // = N_AGE
@@ -101,8 +101,8 @@ parameters {
   real log_beta_baseline_contrast_round[N_ROUND - 1];
   real log_beta_baseline_contrast_period;
   
-  real<lower=0> rho_gp_round_inland[N_DIRECTION];
-  real<lower=0> alpha_gp_round_inland[N_DIRECTION];
+  real<lower=0> rho_gp_round_inland[N_ROUND - 1, N_DIRECTION];
+  real<lower=0> alpha_gp_round_inland[N_ROUND - 1, N_DIRECTION];
   vector[num_basis_rows] z_round_inland[N_ROUND - 1, N_DIRECTION];
   
   real<lower=0> rho_gp_period[N_DIRECTION];
@@ -147,7 +147,7 @@ transformed parameters {
   }
     
   // find period contrast
-  log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_recipient];
+  log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_source];
   log_beta_period_contrast[i] += log_beta_baseline_contrast_period;
   
   // add period contrast to round contrast
@@ -158,7 +158,7 @@ transformed parameters {
       
       // find round contrast
       if(k > 1 && k <= N_ROUND){
-        log_beta_baseline_contrast_round_inland[k-1,i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_round_inland[i], rho_gp_round_inland[i], z_round_inland[k-1,i]))[map_age_recipient];
+        log_beta_baseline_contrast_round_inland[k-1,i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_round_inland[k-1,i], rho_gp_round_inland[k-1,i], z_round_inland[k-1,i]))[map_age_recipient];
         log_beta_round_contrast[i][k-1,:] += to_row_vector(log_beta_baseline_contrast_round_inland[k-1,i]) ;
         log_beta_round_contrast[i][k-1,:] += log_beta_baseline_contrast_round[k-1];
       }
@@ -226,15 +226,15 @@ model {
     
     //period contrast over the age of the source 
     z_period[i] ~ normal(0,1);
-     
-    // hyperparameters round contrast over the age of the recipient
-    rho_gp_round_inland[i] ~ inv_gamma(2, 2);
-    alpha_gp_round_inland[i] ~ cauchy(0,1);
          
-    // round contrast on the age of the recipient, standardised
+    
     for (k in 1:N_ROUND){
-      
       if(k > 1){
+        // hyperparameters round contrast over the age of the recipient
+        rho_gp_round_inland[k-1,i] ~ inv_gamma(2, 2);
+        alpha_gp_round_inland[k-1,i] ~ cauchy(0,1);
+        
+        // round contrast on the age of the recipient, standardised
         z_round_inland[k-1, i] ~ normal(0,1);
       }
     }

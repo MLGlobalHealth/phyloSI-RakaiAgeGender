@@ -68,6 +68,7 @@ data {
   int map_age_recipient[N_PER_GROUP];
   int map_round_period[N_ROUND];
   int N_ROUND_PER_PERIOD[N_PERIOD];
+  int N_OBS;
   
 	//splines
 	int number_rows; // = N_AGE
@@ -86,7 +87,6 @@ data {
 transformed data
 {   
   real delta0 = 1e-9;  
-  int N_OBS = N_PER_GROUP * N_DIRECTION * N_ROUND;
   real log_ir[N_AGE, N_DIRECTION, N_ROUND] = log(ir); 
   matrix[N_AGE, N_PER_GROUP] matrix_map_age_recipient = rep_matrix(0.0, N_AGE, N_PER_GROUP);
   for(i in 1:N_PER_GROUP){
@@ -192,6 +192,7 @@ transformed parameters {
   log_lambda = log(lambda);
 }
 
+
 model {
   
   //
@@ -287,21 +288,19 @@ generated quantities{
           // predict total transmissions
           z_predict[n,i,k] = poisson_log_rng(log_lambda_latent[i,k][n]);
           
-          // save log likelihood values on the incidence rate
-          log_lik[index] = lognormal_lpdf(lambda_latent_peryear_recipient[i,k]|ir_lognorm_mean[:,i,k], ir_lognorm_sd[:,i,k]) / N_AGE;
-          
-          // save log likelihood values on the phylo pairs
-          if(sampling_index_y[n,i,map_round_period[k]] != -1){
-            log_lik[index] += poisson_log_lpmf( y[n,i,map_round_period[k]] | log_lambda[i,map_round_period[k]][n] ) / N_ROUND_PER_PERIOD[map_round_period[k]];
-          }
-          
-          index = index + 1;
-            
         }
         
-        // predict detected transmissions
         for(p in 1:N_PERIOD){
+          
+          // save log likelihood values on the phylo pairs
+          if(sampling_index_y[n,i,p] != -1){
+            log_lik[index] = poisson_log_lpmf( y[n,i,p] | log_lambda[i,p][n] ) ;
+            index = index + 1;
+          }
+          
+          // predict detected transmissions
           y_predict[n,i,p] = poisson_log_rng(log_lambda[i,p][n]);
+                    
         }
         
       }
