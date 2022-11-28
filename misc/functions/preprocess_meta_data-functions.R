@@ -270,6 +270,20 @@ compare.hiv.allhiv.firstpositivedates <- function(hiv, allhiv)
   tmp[is.na(date_first_positive), date_first_positive := date_first_positive.x]
   set(tmp, NULL, c('date_first_positive.x', 'date_first_positive.y'), NULL)
   tmp <- merge(tmp, dlastneg, all.x=TRUE, by='study_id')
+
+  # add updated first positive from Joseph
+  # add round to new 
+  firstpos_update <- merge(firstpos_update,
+                           quest[, .(study_id,
+                                     visit_first_positive=round,
+                                     date_first_positive=intdate)])
+  cols <- c("date_first_positive", "date_last_negative")
+  firstpos_update[, (cols) := lapply(.SD,as.Date) , .SDcols=cols]
+  setcolorder(firstpos_update, names(tmp))
+
+  idx <- firstpos_update[ ! study_id %in% tmp$study_id, study_id]
+  cat('Adding', length(idx), "serohistories based on Joseph's update from 2022-11-28..\n")
+  tmp <- rbind(firstpos_update, tmp)
   
   return(tmp)
 }

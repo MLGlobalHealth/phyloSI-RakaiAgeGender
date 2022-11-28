@@ -14,11 +14,11 @@ if(dir.exists('/Users/melodiemonod'))
 
 if(dir.exists('/home/andrea'))
 {
-  indir.repository <-'~/git/phyloflows'
-  make.hiv.history.plots <- 1
-  indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '~/Documents/Box/ratmann_pangea_deepsequencedata/'
-  outdir <- '/home/andrea/Documents/Box/2021/phyloflows/testing_history/'
+  base.hpc <- '/home/andrea/HPC'
+  indir.deepsequence_analyses   <- file.path(base.hpc, 'project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI')
+  indir.deepsequencedata <- file.path(base.hpc, 'project/ratmann_pangea_deepsequencedata/live')
+  indir.repository <- '/home/andrea/git/phyloflows'
+
 }
 
 if(dir.exists('/rds/general/user/'))
@@ -43,6 +43,8 @@ file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_P
 # Latest data from Rakai's CCS (Kate's data from 2022-03-08)
 file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
 
+# Latest update from Joseph concerning dates of infection
+file.path.update.first.positive <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', '221128_requested_updated_serohistory.csv')
 
 #
 # LOAD FUNCTIONS
@@ -72,6 +74,9 @@ raw_metadata <- .read(file.path.metadata)
 raw_neuro_metadata <- .read(file.path.neuro.metadata)
 setnames(raw_neuro_metadata,  'studyid', 'study_id')
 
+# update with joseph's first positive frp, 2022-11-28
+firstpos_update <- fread(file.path.update.first.positive )
+setnames(firstpos_update, c('firstposdat', 'lastnegdat'), c('date_first_positive', 'date_last_negative'))
 
 #
 # PROCESS RAW DATA
@@ -86,11 +91,13 @@ invisible(lapply(list(hiv, allhiv, quest, raw_metadata, raw_neuro_metadata),
 # process quest and make date.birth
 quest <- process.quest(quest)
 
+
 # make date of first positive and last negative test with allhiv
 date.first.positive <- make.date.first.positive(allhiv)
 
 # process hiv and find date first and last visit 
 hiv <- process.hiv(hiv)
+
 
 date.first.last.visit <- make.date.first.last.visit(hiv)
 
@@ -133,8 +140,7 @@ meta_data <- rbind(meta_data, meta_data_neuro[!study_id %in% meta_data[, study_i
 # stillmissing[study_id_in_neuro ==F] # only Discarded study_id
 # stillmissing[study_id_in_neuro ==T]
 
-
 #
 # SAVE META DATA
 #
-save(meta_data, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData'), row.names = F)
+save(meta_data, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20221128.RData'), row.names = F)
