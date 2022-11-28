@@ -752,7 +752,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
 plot_contribution_age_source <- function(contribution_age_source, outdir, lab = NULL){
   
   # selected rounds for main
-  Rounds.all <- list('inland' = paste0('R0', c(12, 14, 15,16,18)), 'fishing' = paste0('R0', c(15,18)))
+  Rounds.all <- list('inland' = paste0('R0', c(10, 12, 14,16,18)), 'fishing' = paste0('R0', c(15,18)))
   
   # contribution
   cont <- copy(contribution_age_source)
