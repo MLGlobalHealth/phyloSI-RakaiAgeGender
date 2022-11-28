@@ -11,18 +11,18 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 
 # posterior samples
-file.unsuppressedviralload <- file.path(indir.repository, 'fit',  paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
+file.unsuppressedviralload <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_221121.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_vl200_221121.rds'))
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
 
 
-############################
+###########################
 
 # COMBINE POSTERIOR SAMPLE
 
-############################
+###########################
 
 # load proportion unsuppressed viral load
 uns <- as.data.table(readRDS(file.unsuppressedviralload))
@@ -41,10 +41,10 @@ df <- rbind(tmp, df[ROUND != 'R010'])
 # restrict age 
 df <- df[AGEYRS > 14 & AGEYRS < 50]
 
-# find proportion suppressed among HIV positive participants
+# find proportion suppressed among new registed HIV-positive 
 df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
-# find suppression rate among HIV positive participants
+# find suppression rate  among new registed HIV-positive 
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 df[, SUPPRESSION_RATE_EMPIRICAL := (1-PROP_UNSUPPRESSED_EMPIRICAL) / PROP_ART_COVERAGE_EMPIRICAL ]
 
@@ -52,21 +52,11 @@ df[, SUPPRESSION_RATE_EMPIRICAL := (1-PROP_UNSUPPRESSED_EMPIRICAL) / PROP_ART_CO
 df[SUPPRESSION_RATE_POSTERIOR_SAMPLE > 1, SUPPRESSION_RATE_POSTERIOR_SAMPLE := 1]
 
 
-##################################################################
+##############################################################################
 
-# FIND PROPORTION OF DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS
+# FIND ART COVERERAGE AMONG NEWLY REGISTERED HIV-POSITIVE 
 
-##################################################################
-
-# all participants are diagnosed
-df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := 1]
-
-
-######################################################################################
-
-# FIND ART COVERERAGE GIVEN DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS FOR ALL ROUND
-
-######################################################################################
+##############################################################################
 
 # for round 15 find % on art by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
@@ -76,7 +66,7 @@ df[ROUND %in% c('R015'), SUPPRESSION_RATE_POSTERIOR_SAMPLE := SUPPRESSION_RATE_P
 df[ROUND %in% c('R015'), SUPPRESSION_RATE_EMPIRICAL := SUPPRESSION_RATE_EMPIRICAL_R016, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
 
 # find art coverage with the same suppression rate as round 16
-df[ROUND %in% c('R015'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE := min(1, PROP_SUPPRESSED_POSTERIOR_SAMPLE / SUPPRESSION_RATE_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
+df[ROUND %in% c('R015'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE := min(1, PROP_SUPPRESSED_POSTERIOR_SAMPLE / SUPPRESSION_RATE_POSTERIOR_SAMPLE), by = c('AGEYRS', 'ROUND', 'SEX', 'COMM', 'iterations')]
 set(df, NULL, 'SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016', NULL)
 set(df, NULL, 'SUPPRESSION_RATE_EMPIRICAL_R016', NULL)
 
@@ -84,12 +74,21 @@ set(df, NULL, 'SUPPRESSION_RATE_EMPIRICAL_R016', NULL)
 df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE < PROP_SUPPRESSED_POSTERIOR_SAMPLE, PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE]
 stopifnot(nrow(df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE > 1]) == 0)
 
+####################################
 
-##########################################################################
+# FIND DIAGNOSED PROPORTION AMONG NEWLY REGISTERED HIV-POSITIVE 
 
-# FIND SUPPRESSION RATE AMONG HIV POSITIVE PARTICIPANTS FOR ALL ROUND
+####################################
 
-##########################################################################
+# assume that proportion diagnosed in non -participants = proportion on art
+df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
+
+
+####################################
+
+# FIND SUPPRESSION RATE AMONG NEWLY REGISTERED HIV-POSITIVE FOR ALL ROUND
+
+####################################
 
 # for round <15 find % suppressed by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
@@ -136,5 +135,5 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221116.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_vl200_221121.csv'))
 write.csv(ns, file = file.name, row.names = F)

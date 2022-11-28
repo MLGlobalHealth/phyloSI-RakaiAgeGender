@@ -7,9 +7,9 @@ library(dplyr)
 indir.repository <- '~/git/phyloflows'
 
 # files
-file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.rds'))
-file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_220818.rds'))
-file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv')
+file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221116.rds'))
+file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
+file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 
 # load census eligible ount
 eligible_count <- as.data.table(read.csv(file.eligible.count))
@@ -44,7 +44,7 @@ df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
 #####################################################
 
-# ART UPTAKE BY 3 AGE GROUP
+# UNSUPPRESSED BY 3 AGE GROUP
 
 #####################################################
 
@@ -57,15 +57,20 @@ df.agg <- df[, list(INFECTED = sum(INFECTED),
                 UNSUPPRESSED = sum(UNSUPPRESSED), 
                 ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'COMM', 'AGE_GROUP', 'SEX', 'iterations')]
 
-# find ART uptake
+# find unsuppressed rate
 df.agg[, SUPPRESSED := INFECTED - UNSUPPRESSED]
 df.agg[, SUPPRESSION_RATE := SUPPRESSED / INFECTED]
 df.agg[, UNSUPPRESSION_RATE := UNSUPPRESSED / INFECTED]
 
+# find unsuppressed rate relative to round 10
+df.agg[COMM == 'inland', UNSUPPRESSION_RATE.REF := UNSUPPRESSION_RATE[ROUND == '10'], by = c('COMM', 'AGE_GROUP', 'SEX', 'iterations')]
+df.agg[COMM == 'fishing', UNSUPPRESSION_RATE.REF := UNSUPPRESSION_RATE[ROUND == '15'], by = c('COMM', 'AGE_GROUP', 'SEX', 'iterations')]
+df.agg[, UNSUPPRESSION_RATE_REL := UNSUPPRESSION_RATE / UNSUPPRESSION_RATE.REF]
+
 # find ratio of art uptake male to female
-df.agg <- dcast(df.agg, ROUND + COMM + AGE_GROUP + iterations ~ SEX, value.var = 'UNSUPPRESSION_RATE')
-setnames(df.agg, c('M', 'F'), c('UNSUPPRESSION_RATE_M', 'UNSUPPRESSION_RATE_F'))
-df.agg[, UNSUPPRESSION_RATE_RATIO := UNSUPPRESSION_RATE_M / UNSUPPRESSION_RATE_F ]
+df.agg <- dcast(df.agg, ROUND + COMM + AGE_GROUP + iterations ~ SEX, value.var = 'UNSUPPRESSION_RATE_REL')
+setnames(df.agg, c('M', 'F'), c('UNSUPPRESSION_RATE_REL_M', 'UNSUPPRESSION_RATE_REL_F'))
+df.agg[, UNSUPPRESSION_RATE_RATIO := UNSUPPRESSION_RATE_REL_M / UNSUPPRESSION_RATE_REL_F ]
 
 # summarise
 ps <- c(0.025,0.5,0.975)
@@ -94,15 +99,20 @@ df.agg <- df[, list(INFECTED = sum(INFECTED),
                     UNSUPPRESSED = sum(UNSUPPRESSED), 
                     ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'COMM', 'SEX', 'iterations')]
 
-# find ART uptake
+# find unsuppressed rate
 df.agg[, SUPPRESSED := INFECTED - UNSUPPRESSED]
 df.agg[, SUPPRESSION_RATE := SUPPRESSED / INFECTED]
 df.agg[, UNSUPPRESSION_RATE := UNSUPPRESSED / INFECTED]
 
+# find unsuppressed rate relative to round 10
+df.agg[COMM == 'inland', UNSUPPRESSION_RATE.REF := UNSUPPRESSION_RATE[ROUND == '10'], by = c('COMM', 'SEX', 'iterations')]
+df.agg[COMM == 'fishing', UNSUPPRESSION_RATE.REF := UNSUPPRESSION_RATE[ROUND == '15'], by = c('COMM', 'SEX', 'iterations')]
+df.agg[, UNSUPPRESSION_RATE_REL := UNSUPPRESSION_RATE / UNSUPPRESSION_RATE.REF]
+
 # find ratio of art uptake male to female
-df.agg <- dcast(df.agg, ROUND + COMM + iterations ~ SEX, value.var = 'UNSUPPRESSION_RATE')
-setnames(df.agg, c('M', 'F'), c('UNSUPPRESSION_RATE_M', 'UNSUPPRESSION_RATE_F'))
-df.agg[, UNSUPPRESSION_RATE_RATIO := UNSUPPRESSION_RATE_M / UNSUPPRESSION_RATE_F ]
+df.agg <- dcast(df.agg, ROUND + COMM + iterations ~ SEX, value.var = 'UNSUPPRESSION_RATE_REL')
+setnames(df.agg, c('M', 'F'), c('UNSUPPRESSION_RATE_REL_M', 'UNSUPPRESSION_RATE_REL_F'))
+df.agg[, UNSUPPRESSION_RATE_RATIO := UNSUPPRESSION_RATE_REL_M / UNSUPPRESSION_RATE_REL_F ]
 
 # summarise
 ps <- c(0.025,0.5,0.975)
@@ -127,7 +137,7 @@ ggplot(sing, aes(x = ROUND)) +
 #########################################
 
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM'))
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221124.csv'))
 write.csv(tmp, file = file.name, row.names = F)
 
 

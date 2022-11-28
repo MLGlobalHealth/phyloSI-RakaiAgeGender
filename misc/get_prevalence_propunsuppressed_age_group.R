@@ -7,9 +7,9 @@ library(dplyr)
 indir.repository <- '~/git/phyloflows'
 
 # files
-file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.rds'))
-file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_220818.rds'))
-file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_220830.csv')
+file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221116.rds'))
+file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
+file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 
 # load census eligible ount
 eligible_count <- as.data.table(read.csv(file.eligible.count))
@@ -96,9 +96,9 @@ ggplot(sinf.age, aes(x = AGE_GROUP, group = SEX)) +
 
 #########################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221116.csv'))
 write.csv(sing.age, file = file.name, row.names = F)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_age_group_220830.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_age_group_221116.csv'))
 write.csv(sinf.age, file = file.name, row.names = F)
 

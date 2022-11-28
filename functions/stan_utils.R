@@ -378,6 +378,7 @@ add_probability_sampling <- function(stan_data, proportion_sampling){
   stan_data[['log_prop_sampling']] = log_prop_sampling_array
   stan_data[['n_sampling_index_y']] = n_sampling_index
   stan_data[['sampling_index_y']] = sampling_index
+  stan_data[['N_OBS']] = sum(n_sampling_index)
   
   return(stan_data)
 }

@@ -11,8 +11,8 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 
 # posterior samples
-file.unsuppressedviralload <- file.path(indir.repository, 'fit',  paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
+file.unsuppressedviralload <- file.path(indir.repository, 'fit',  paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_vl200_221121.rds'))
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -136,5 +136,5 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221116.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_vl200_221121.csv'))
 write.csv(ns, file = file.name, row.names = F)

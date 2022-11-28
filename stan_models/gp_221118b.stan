@@ -68,7 +68,6 @@ data {
   int map_age_recipient[N_PER_GROUP];
   int map_round_period[N_ROUND];
   int N_ROUND_PER_PERIOD[N_PERIOD];
-  int N_OBS;
   
 	//splines
 	int number_rows; // = N_AGE
@@ -87,6 +86,7 @@ data {
 transformed data
 {   
   real delta0 = 1e-9;  
+  int N_OBS = N_PER_GROUP * N_DIRECTION * N_ROUND;
   real log_ir[N_AGE, N_DIRECTION, N_ROUND] = log(ir); 
   matrix[N_AGE, N_PER_GROUP] matrix_map_age_recipient = rep_matrix(0.0, N_AGE, N_PER_GROUP);
   for(i in 1:N_PER_GROUP){
@@ -100,10 +100,6 @@ parameters {
   real log_beta_baseline_contrast_direction;
   real log_beta_baseline_contrast_round[N_ROUND - 1];
   real log_beta_baseline_contrast_period;
-  
-  real<lower=0> rho_gp_round_inland[N_DIRECTION];
-  real<lower=0> alpha_gp_round_inland[N_DIRECTION];
-  vector[num_basis_rows] z_round_inland[N_ROUND - 1, N_DIRECTION];
   
   real<lower=0> rho_gp_period[N_DIRECTION];
   real<lower=0> alpha_gp_period[N_DIRECTION];
@@ -130,7 +126,6 @@ transformed parameters {
   vector[N_PER_GROUP] log_beta_period_contrast[N_DIRECTION];
   matrix[N_ROUND - 1, N_PER_GROUP] log_beta_round_contrast[N_DIRECTION];
   matrix[num_basis_rows,num_basis_columns] low_rank_gp_direction[N_DIRECTION]; 
-  vector[N_PER_GROUP] log_beta_baseline_contrast_round_inland[N_ROUND - 1, N_DIRECTION] = rep_array(rep_vector(0.0, N_PER_GROUP), N_ROUND - 1, N_DIRECTION);
 
   
   // start with baseline
@@ -147,7 +142,7 @@ transformed parameters {
   }
     
   // find period contrast
-  log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_source];
+  log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_recipient];
   log_beta_period_contrast[i] += log_beta_baseline_contrast_period;
   
   // add period contrast to round contrast
@@ -158,8 +153,6 @@ transformed parameters {
       
       // find round contrast
       if(k > 1 && k <= N_ROUND){
-        log_beta_baseline_contrast_round_inland[k-1,i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_round_inland[i], rho_gp_round_inland[i], z_round_inland[k-1,i]))[map_age_recipient];
-        log_beta_round_contrast[i][k-1,:] += to_row_vector(log_beta_baseline_contrast_round_inland[k-1,i]) ;
         log_beta_round_contrast[i][k-1,:] += log_beta_baseline_contrast_round[k-1];
       }
 
@@ -191,7 +184,6 @@ transformed parameters {
   
   log_lambda = log(lambda);
 }
-
 
 model {
   
@@ -228,17 +220,6 @@ model {
     //period contrast over the age of the source 
     z_period[i] ~ normal(0,1);
      
-    // hyperparameters round contrast over the age of the recipient
-    rho_gp_round_inland[i] ~ inv_gamma(2, 2);
-    alpha_gp_round_inland[i] ~ cauchy(0,1);
-         
-    // round contrast on the age of the recipient, standardised
-    for (k in 1:N_ROUND){
-      
-      if(k > 1){
-        z_round_inland[k-1, i] ~ normal(0,1);
-      }
-    }
   }
         
   
@@ -288,19 +269,21 @@ generated quantities{
           // predict total transmissions
           z_predict[n,i,k] = poisson_log_rng(log_lambda_latent[i,k][n]);
           
-        }
-        
-        for(p in 1:N_PERIOD){
+          // save log likelihood values on the incidence rate
+          log_lik[index] = lognormal_lpdf(lambda_latent_peryear_recipient[i,k]|ir_lognorm_mean[:,i,k], ir_lognorm_sd[:,i,k]) / N_AGE;
           
           // save log likelihood values on the phylo pairs
-          if(sampling_index_y[n,i,p] != -1){
-            log_lik[index] = poisson_log_lpmf( y[n,i,p] | log_lambda[i,p][n] ) ;
-            index = index + 1;
+          if(sampling_index_y[n,i,map_round_period[k]] != -1){
+            log_lik[index] += poisson_log_lpmf( y[n,i,map_round_period[k]] | log_lambda[i,map_round_period[k]][n] ) / N_ROUND_PER_PERIOD[map_round_period[k]];
           }
           
-          // predict detected transmissions
+          index = index + 1;
+            
+        }
+        
+        // predict detected transmissions
+        for(p in 1:N_PERIOD){
           y_predict[n,i,p] = poisson_log_rng(log_lambda[i,p][n]);
-                    
         }
         
       }
@@ -308,6 +291,7 @@ generated quantities{
     }
   }
 }
+
 
 
 

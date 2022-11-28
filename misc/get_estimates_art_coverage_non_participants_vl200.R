@@ -14,11 +14,11 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 
 # files
+data.path <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage_vl200.csv')
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
-data.path <- file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv')
 
-# find count of participants who reported art use
-rart <- as.data.table(read.csv(data.path))
+# find count of newly registered participants who reported art use
+rart <- as.data.table( read.csv(data.path) )
 
 
 #################################
@@ -45,9 +45,9 @@ if(1){
   tmp <- tmp[AGEYRS > 14 & AGEYRS < 50]
   
   # plot
-  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", "10") & COMM == 'inland'], aes(x = AGEYRS, y = value)) +
+  p <- ggplot(tmp[!ROUND %in% c("06", "07", "08", "09", '10') & COMM == 'inland'], aes(x = AGEYRS, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
-    labs(x = 'Age', y = 'Count HIV-positive participants', fill = '') +
+    labs(x = 'Age', y = 'Count newly registered HIV-positive participants', fill = '') +
     facet_grid(ROUND_LABEL~SEX_LABEL) +
     theme_bw() +
     theme(legend.position = 'bottom', 
@@ -57,9 +57,10 @@ if(1){
     scale_x_continuous(expand = c(0,0))+ 
     scale_fill_manual(values = c('#90B77D', '#425F57'), 
                       labels = c('Reported ART use', 'Did not report ART use')) 
-  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_221101.pdf')), w=7, h=9)
+  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_newlyregistered_vl200_221121.pdf')), w=7, h=9)
   
 }
+
 
 ########################
 
@@ -84,7 +85,7 @@ rart[, PROP_ART_COVERAGE_EMPIRICAL := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC'
 ########################
 
 # find smooth proportion
-for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 'R017', 'R018')){
+for(round in c( "R015", 'R016', 'R017', 'R018')){
   # round <- 'R018'
   
   DT <- copy(rart[ROUND == round] )
@@ -132,7 +133,7 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_221116.rds')
+  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_newlyregistered_vl200_221121.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
 }
@@ -160,11 +161,12 @@ for(i in seq_along(rounds)){
   x_predict <- seq(rart[, min(AGE_LABEL)], rart[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  if(round == '15'){ # change after add of 15s
-    filename <- paste0('art_gp_stanfit_round',round,'_221116.rds')
+  if(as.numeric(round) >= 15){ # change after round 15
+    filename <- paste0('art_gp_stanfit_round',round,'_newlyregistered_vl200_221121.rds')
   }else{
-    filename <- paste0('art_gp_stanfit_round',round,'_221101.rds')
+    filename <- paste0('art_gp_stanfit_round',round,'_newlyregistered_221101.rds')
   }
+  
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -216,6 +218,13 @@ for(i in seq_along(rounds)){
   nspred.by.age = tmp[, list(q= quantile(ART_USE_PREDICT, prob=ps, na.rm = T), q_label=qlab), by=c('SEX', 'LOC', 'AGE_LABEL')]
   nspred.by.age = as.data.table(reshape2::dcast(nspred.by.age, ... ~ q_label, value.var = "q"))
   
+  # sub-sample the last 9500 iterations
+  it <- data.table(iterations = tmp[, sort(unique(iterations))])
+  it[, iterations_rev := max(iterations):1]
+  tmp <- merge(it, tmp, by = 'iterations')
+  tmp <- tmp[iterations_rev %in% 1:9500]
+  tmp[, iterations := iterations - min(iterations)+ 1]
+  set(tmp, NULL, 'iterations_rev', NULL)
   
   #
   # POSTPROCESING
@@ -276,7 +285,7 @@ stopifnot(nrow(nsinf[COMM == 'fishing']) == nsinf[, length(unique(AGEYRS))] * ns
 
 # get proportion of predicted art use inside credible interval
 stats <- list()
-tmp <- nspred[COMM == 'inland' & !is.na(PROP_ART_COVERAGE_EMPIRICAL)]
+tmp <- nspred[ !is.na(PROP_ART_COVERAGE_EMPIRICAL)]
 tmp[, within.CI := PROP_ART_COVERAGE_EMPIRICAL >= PROP_ART_COVERAGE_CL & PROP_ART_COVERAGE_EMPIRICAL <= PROP_ART_COVERAGE_CU]
 stats[['within.CI']] <- tmp[, paste0(round(mean(within.CI)*100, 2))]
 
@@ -291,9 +300,8 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_vl200_221121.rds'))
 saveRDS(nsinf.samples, file = file.name)
 
-file.name <- file.path(outdir, paste0('RCCS_art_model_fit_221116.RDS'))
+file.name <- file.path(outdir, paste0('RCCS_art_model_fit_newlyregistered_vl200_221121.RDS'))
 saveRDS(stats, file = file.name)

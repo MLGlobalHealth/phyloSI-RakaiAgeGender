@@ -16,7 +16,7 @@ file.community.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_
 file.path.flow.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'verif_1.dta')
 
 # round 15 to 18
-file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv')
+file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_221118.csv')
 
 
 # load files
@@ -30,11 +30,13 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 # 
 
 # up until round 14
-flow.14 <- select(flow.14, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', 'sex', 'round'))
+flow.14 <- select(flow.14, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', 'sex', 'round', 'curr_id'))
 flow.14 <- flow.14[!round %in% paste0('R0', 15:18)]
+flow.14[, curr_id := format(curr_id, scientific=F)]
 
 # round 15 to 18
-flow <- select(flow, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', 'sex', 'round'))
+flow <- select(flow, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', 'sex', 'round', 'curr_id'))
+flow[, curr_id := format(curr_id, scientific=F)]
 
 # merge
 flow <- rbind(flow, flow.14)
@@ -79,7 +81,9 @@ flow[ageyrs<15 | ageyrs > 49, reason_ineligible := "Not_within_eligible_age_rang
 flow[is.na(reason_ineligible), reason_ineligible := 'none']
 
 # SET ROUND 15S IN INLAND AS 15
-flow[round == 'R015S' & comm == 'inland', round := 'R015']
+flow[, PARTICIPATED_TO_ROUND_RO15 := any(round == 'R015'), by= 'curr_id']
+flow[round == 'R015S' & comm == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, round := 'R015']
+flow <- flow[!(round == 'R015S' & comm == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
 
 # find count eligible
 re <- flow[, list(count = .N), by = c('reason_ineligible', 'round', 'comm', 'ageyrs', 'sex')]

@@ -102,7 +102,9 @@ make.df.round <- function(df_round_inland)
   return(df_round)
 }
 
-add_susceptible_infected <- function(eligible_count, proportion_prevalence)
+add_susceptible_infected <- function(eligible_count_smooth, proportion_prevalence, participation, 
+                                     nonparticipants.male.relative.infection, 
+                                     nonparticipants.female.relative.infection)
 {
   
   # prevalence 
@@ -110,10 +112,16 @@ add_susceptible_infected <- function(eligible_count, proportion_prevalence)
   df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
   
   # merge prevalence to count of eligible population
-  df <- merge(eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
+  df <- merge(eligible_count_smooth[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
+  
+  # add participation
+  df <- merge(df, participation, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
   
   # find infected count
-  df[, INFECTED := ELIGIBLE * PREVALENCE_M]
+  df[SEX == 'M', INFECTED := ELIGIBLE * PARTICIPATION * PREVALENCE_M + 
+       ELIGIBLE * (1-PARTICIPATION) * PREVALENCE_M * nonparticipants.male.relative.infection]
+  df[SEX == 'F', INFECTED := ELIGIBLE * PARTICIPATION * PREVALENCE_M + 
+       ELIGIBLE * (1-PARTICIPATION) * PREVALENCE_M * nonparticipants.female.relative.infection]
   
   # find susceptible count
   df[, SUSCEPTIBLE := ELIGIBLE - INFECTED]
@@ -155,7 +163,7 @@ add_infected_unsuppressed <- function(eligible_count_round, treatment_cascade, p
     # assuming that only participants are treated and non-participants are all unsuppressed
     df[, INFECTED_NON_SUPPRESSED := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_M + INFECTED * (1-PARTICIPATION) * 1]
     df[, INFECTED_NON_SUPPRESSED_CL := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_CL + INFECTED * (1-PARTICIPATION) * 1]
-    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PARTICIPATION * PROP_SUPPRESSED_PARTICIPANTS_CU + INFECTED * (1-PARTICIPATION) * 1]
+    df[, INFECTED_NON_SUPPRESSED_CU := INFECTED * PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_CU + INFECTED * (1-PARTICIPATION) * 1]
   }else if(nonparticipants.treated.like.participants){
     # assuming that participant and non-participant are diagnosed and treated at the same proportion
     df[, INFECTED_NON_SUPPRESSED := INFECTED * PROP_UNSUPPRESSED_PARTICIPANTS_M]
@@ -1126,16 +1134,14 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir)
   df
 }
 
-get.age.map <- function(pairs, age_bands_reduced = 4)
+get.age.map <- function(age_bands_reduced = 4)
 {
   
   extended_age_length <- 0
   
-  ages_source <- pairs[, {
-    min_age = floor(min(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) - extended_age_length
-    max_age = ceiling(max(c(AGE_TRANSMISSION.SOURCE,AGE_INFECTION.RECIPIENT))) + extended_age_length
-    list(age = min_age:max_age)}]
-  
+  ages_source <- data.table(min_age = 15 - extended_age_length, max_age = 49 + extended_age_length)
+  ages_source <- ages_source[, list(age = min_age:max_age)]
+
   ages_recipient <- ages_source
   
   age_map <- data.table(expand.grid(AGE_TRANSMISSION.SOURCE = ages_source$age, 
@@ -1273,7 +1279,7 @@ read_treatment_cascade <- function(file.treatment.cascade.prop.participants,
   
   # PROP_SUPPRESSED_M: Proportion of suppressed among infected
   # PROP_DIAGNOSED_M: Proportion of diagnosed given infected
-  # PROP_ART_COVERAGE_M: Proportion of art used given infected
+  # PROP_ART_COVERAGE_M: Proportion of art used given diagnosed
   # SUPPRESSION_RATE_M: Prportion of suppressed given art use
   
   # participants
@@ -1295,16 +1301,15 @@ read_treatment_cascade <- function(file.treatment.cascade.prop.participants,
   treatment_cascade_participants <- select(treatment_cascade_participants, -c('PROP_SUPPRESSED_PARTICIPANTS_M', 
                                                                               'PROP_SUPPRESSED_PARTICIPANTS_CU', 
                                                                               'PROP_SUPPRESSED_PARTICIPANTS_CL'))
+  stopifnot(treatment_cascade_participants[, all(PROP_DIAGNOSED_PARTICIPANTS_M) == 1]) # all participants are diagnosed
   
   # non-participants
   treatment_cascade_nonparticipants <- fread(file.treatment.cascade.prop.nonparticipants)
   treatment_cascade_nonparticipants <- treatment_cascade_nonparticipants[, .(AGEYRS, SEX, COMM, ROUND, 
                                                                              PROP_DIAGNOSED_M, 
-                                                                             PROP_ART_COVERAGE_M,
                                                                              PROP_SUPPRESSED_M, PROP_SUPPRESSED_CL, PROP_SUPPRESSED_CU,
                                                                              SUPPRESSION_RATE_M)]
   setnames(treatment_cascade_nonparticipants, 'PROP_DIAGNOSED_M', 'PROP_DIAGNOSED_NONPARTICIPANTS_M')
-  setnames(treatment_cascade_nonparticipants, 'PROP_ART_COVERAGE_M', 'PROP_ART_COVERAGE_NONPARTICIPANTS_M')
   setnames(treatment_cascade_nonparticipants, 'SUPPRESSION_RATE_M', 'SUPPRESSION_RATE_NONPARTICIPANTS_M')
   setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_M', 'PROP_SUPPRESSED_NONPARTICIPANTS_M')
   setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_CL', 'PROP_SUPPRESSED_NONPARTICIPANTS_CL')
@@ -1312,7 +1317,8 @@ read_treatment_cascade <- function(file.treatment.cascade.prop.participants,
   treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_M := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M]
   treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_CL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_CU]
   treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_CU := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_CL]
-  
+  treatment_cascade_nonparticipants[, PROP_ART_COVERAGE_NONPARTICIPANTS_M := 1] # we assume that the proportion of art user given diagnosed = 1
+
   treatment_cascade_nonparticipants <- select(treatment_cascade_nonparticipants, -c('PROP_SUPPRESSED_NONPARTICIPANTS_M', 
                                                                                     'PROP_SUPPRESSED_NONPARTICIPANTS_CU',
                                                                                     'PROP_SUPPRESSED_NONPARTICIPANTS_CL'))

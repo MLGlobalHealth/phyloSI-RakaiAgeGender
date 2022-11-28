@@ -66,8 +66,8 @@ rprev[, table(ROUND)]
 # for round with suppressed set art to true if indiv is suppressed
 
 # tuning
-VL_DETECTABLE = 400
-VIREMIC_VIRAL_LOAD = 1000 # WHO standards
+VL_DETECTABLE = 0
+VIREMIC_VIRAL_LOAD = 200 # WHO standards
 
 # Load data: exclude round 20 as incomplete
 dall <- fread(path.tests)
@@ -125,7 +125,7 @@ set(rprev, NULL, 'AGEYRS2', NULL)
 
 # find percentage of participant who did not report art but had not viremic viral load
 tmp <- rprev[COMM == 'inland' & ART == F & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
-                                        N = length(STUDY_ID)), by = 'ROUND']
+                                                              N = length(STUDY_ID)), by = 'ROUND']
 tmp[, PROP := round(X / N * 100, 2)]
 tmp
 
@@ -172,5 +172,5 @@ rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('
 
 #################################
 
-write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv'), row.names = F)
+write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage_vl200.csv'), row.names = F)
 

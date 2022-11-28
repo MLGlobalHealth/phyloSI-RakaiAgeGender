@@ -39,6 +39,10 @@ rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
 # to upper
 colnames(rinc) <- toupper(colnames(rinc))
 
+# find index of round
+rinc <- rinc[order(STUDY_ID, ROUND)]
+rinc[, INDEX_ROUND := 1:length(ROUND), by = 'STUDY_ID']
+
 # restric age
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 
@@ -66,8 +70,8 @@ rprev[, table(ROUND)]
 # for round with suppressed set art to true if indiv is suppressed
 
 # tuning
-VL_DETECTABLE = 400
-VIREMIC_VIRAL_LOAD = 1000 # WHO standards
+VL_DETECTABLE = 0
+VIREMIC_VIRAL_LOAD = 200 # WHO standards
 
 # Load data: exclude round 20 as incomplete
 dall <- fread(path.tests)
@@ -104,7 +108,7 @@ set(DT, DT[, which(HIV_AND_VL==1 & VLU==1)], 'VLC', 0)
 setkey(DT, ROUND, FC, SEX, AGEYRS)
 
 # keep within census eligible age
-DT <- subset(DT, AGEYRS > 14 & AGEYRS < 50)
+DT <- subset(DT, AGEYRS <= 50)
 
 # keep infected
 DT <- DT[HIV_STATUS ==1]
@@ -123,18 +127,6 @@ rprev <- merge(rprev, tmp, by.x = c('STUDY_ID', 'ROUND', 'SEX', 'COMM'), by.y = 
 rprev[!is.na(AGEYRS2), AGEYRS := AGEYRS2]
 set(rprev, NULL, 'AGEYRS2', NULL)
 
-# find percentage of participant who did not report art but had not viremic viral load
-tmp <- rprev[COMM == 'inland' & ART == F & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
-                                        N = length(STUDY_ID)), by = 'ROUND']
-tmp[, PROP := round(X / N * 100, 2)]
-tmp
-
-# find percentage of participant who report art and had not viremic viral load
-tmp <- rprev[COMM == 'inland' & ART == T & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
-                                                              N = length(STUDY_ID)), by = 'ROUND']
-tmp[, PROP := round(X / N * 100, 2)]
-tmp
-
 # set art to true if viremic viral load
 rprev[VLNS == 0, ART := T]
 rprev <- rprev[!is.na(ART)]
@@ -145,16 +137,31 @@ nrow(rprev[ROUND == 'R017' & is.na(VLNS)]) / nrow(rprev[ROUND == 'R017' & !is.na
 nrow(rprev[ROUND == 'R018' & is.na(VLNS)]) / nrow(rprev[ROUND == 'R018' & !is.na(VLNS)])
 rprev <- rprev[!(ROUND %in% c('R016', 'R017', 'R018') & is.na(VLNS))]
 
+
+#################################
+
+# KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
+# THAT ARE THE CLOSEST TO NON-PARTICIPANTS
+
+#################################
+
+# get proportion of participants seen for the first time 
+newpart <- rprev[HIV == 'P' & COMM == 'inland', round(sum(INDEX_ROUND == 1) / length(INDEX_ROUND) * 100, 2), by = 'ROUND']
+newpart <- newpart[!ROUND %in% c('R006', 'R007', 'R008', 'R009')]
+print(newpart[V1 == min(V1)])
+print(newpart[V1 == max(V1)])
+
+#KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
+rprev <- rprev[INDEX_ROUND == 1]
+
+
 #################################
 
 # SET ROUND 15S IN INLAND AS 15
 
 #################################
 
-# find participants of round 15s and not round 15
-rprev[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'STUDY_ID']
-rprev[ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, ROUND := 'R015']
-rprev <- rprev[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
+rprev[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
 
 
 #################################
@@ -166,11 +173,11 @@ rprev <- rprev[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO1
 # find self reported under art for participant
 rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
 
+
 #################################
 
 # SAVE DE-IDENTIFIED DATA  #
 
 #################################
 
-write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv'), row.names = F)
-
+write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage_vl200.csv'), row.names = F)

@@ -62,6 +62,7 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round, use_number
   
   res[, log_INFECTED_NON_SUPPRESSED := log(INFECTED_NON_SUPPRESSED)]
   res[, log_PROP_SUSCEPTIBLE := log(PROP_SUSCEPTIBLE)]
+  res[, log_SUSCEPTIBLE := log(SUSCEPTIBLE)]
   res[, log_PERIOD_SPAN:= log(PERIOD_SPAN)]
   
   return(res)
@@ -215,14 +216,3 @@ clean_reported_contact <- function(df_reported_contact){
   return(reported_contact)
 }
 
-save_statistics_PPC <- function(predict_y_source_recipient, count_data, outdir){
-  
-  data <- count_data[, list(count = sum(count)), by = c('LABEL_SOURCE', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN', 'AGE_INFECTION.RECIPIENT')]
-  
-  tmp <- merge(predict_y_source_recipient, data, by = c('LABEL_SOURCE', 'LABEL_COMMUNITY', 'PERIOD', 'AGE_TRANSMISSION.SOURCE', 'PERIOD_SPAN', 'AGE_INFECTION.RECIPIENT'))
-  tmp[, within.CI := count >= CL & count <= CU]
-  
-  tmp <- tmp[, round(mean(within.CI) *100, 2)]
-  
-  saveRDS(tmp, file = paste0(outdir, '-statistics_prediction.RDS'))
-}
