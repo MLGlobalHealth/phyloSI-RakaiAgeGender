@@ -12,7 +12,7 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'artcoverage_by_gender_loc_age')
 
 # files
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221116.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221124.csv'))
 file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
 
 # load files
@@ -45,8 +45,8 @@ for(i in seq_along(communities)){
   
   p<-ggplot(tmp1, aes(x = MIDPOINT_DATE, group = AGE_GROUP)) + 
     geom_hline(yintercept = 1, linetype = 'dashed', alpha= 0.5) + 
-    geom_line(aes(y = UNSUPPRESSION_RATE_RATIO_BY_AGE_M),position=position_dodge(width = 300), alpha = 0.5) + 
-    geom_errorbar(aes(ymin = UNSUPPRESSION_RATE_RATIO_BY_AGE_CL, ymax = UNSUPPRESSION_RATE_RATIO_BY_AGE_CU), alpha = 0.35, width = 300, position=position_dodge(width = 300)) + 
+    geom_line(aes(y = UNSUPPRESSION_RATE_RATIO_BY_AGE_M),position=position_dodge(width = 300),col = 'grey50') + 
+    geom_errorbar(aes(ymin = UNSUPPRESSION_RATE_RATIO_BY_AGE_CL, ymax = UNSUPPRESSION_RATE_RATIO_BY_AGE_CU), col = 'grey30', width = 300, position=position_dodge(width = 300)) + 
     geom_point(aes(y = UNSUPPRESSION_RATE_RATIO_BY_AGE_M, col = AGE_GROUP, shape = AGE_GROUP),  size = 2, position=position_dodge(width = 300)) + 
     scale_color_viridis_d(option = 'D') + 
     theme_bw() + 
@@ -62,12 +62,11 @@ for(i in seq_along(communities)){
           # legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
     scale_y_continuous( expand = expansion(mult = c(0.02, 0.1))) + 
-    labs(y = 'Male-female ratio of the rate of infected\nindividuals that remain unsuppressed', col= 'Age', shape= 'Age', 
+    labs(y = 'Male-female ratio of the rate of infected\nindividuals with unsuppressed virus\nrelative to round 10', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221116.png')), w = 3.8,h = 3.15)
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221116.pdf')), w = 3.8,h = 3.2)
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221124.png')), w = 3.8,h = 3.15)
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221124.pdf')), w = 4.1,h = 3.2)
     
-
 }
 
 
