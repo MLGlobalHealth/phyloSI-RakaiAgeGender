@@ -315,7 +315,9 @@ get.meta.data <- function(quest, date.first.positive, date.first.last.visit, aik
   colnames(community.keys) <- tolower(colnames(community.keys))
   community.keys[, comm := ifelse(strsplit(as.character(comm_num_a), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'comm_num_a']
   meta <- merge(meta, community.keys[, .(comm_num_raw, comm)], by.x = 'comm_num', by.y = 'comm_num_raw', all.x = T)
-  meta[, `:=` (is_latest=NULL, comm_num=NULL)]
+  meta[, `:=` (is_latest=NULL)]
+  # meta[, `:=` (comm_num=NULL)]
+  setnames(meta, 'comm_num', 'community_number')
   setnames(meta, 'intdate', 'sample_date')
   meta <- unique(meta)
   
@@ -372,7 +374,7 @@ process.meta.data <- function(raw_metadata, aik, community.keys){
   # find community
   raw_metadata[, comm := 'inland']
   raw_metadata[LakeVictoria_FishingCommunity == T, comm := 'fishing']
-  raw_metadata[, `:=` (community_number=NULL)]
+  # raw_metadata[, `:=` (community_number=NULL)]
   
   # input birthdate
   raw_metadata[, date_birth := as.Date(paste0(birthyr, '-', birthmo, '-', '01'), format = '%Y-%m-%d')]
@@ -397,7 +399,7 @@ process.meta.data <- function(raw_metadata, aik, community.keys){
   raw_metadata[round == 'R015.1', round := 'R015S']
   
   # keep variable of interest
-  raw_metadata[, .(study_id, aid, sex, comm, date_birth, round, age_first_positive, is_migrant, 
+  raw_metadata[, .(study_id, aid, sex, comm, community_number, date_birth, round, age_first_positive, is_migrant, 
                    date_first_visit, date_last_visit, date_last_negative, date_first_positive, age_first_visit, 
                    sample_date)]
   

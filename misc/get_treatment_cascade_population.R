@@ -12,14 +12,14 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_casc
 
 # posterior samples participants
 file.unsuppressedviralload <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221101.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
 
 # posterior samples non-participants
 file.unsuppressedviralload.np <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
-file.selfreportedart.np <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221101.rds'))
+file.selfreportedart.np <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221116.rds'))
 
 # participation rate
-file.participation <- file.path(indir.repository, 'data', 'RCCS_participation_220915.csv')
+file.participation <- file.path(indir.repository, 'data', 'RCCS_participation_221116.csv')
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -205,9 +205,9 @@ stopifnot(nrow(df[COMM == 'fishing']) == df[, length(unique(AGEYRS))] * df[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221101.rds'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221116.rds'))
 saveRDS(df, file = file.name)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221101.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221116.csv'))
 write.csv(ns, file = file.name, row.names = F)
 

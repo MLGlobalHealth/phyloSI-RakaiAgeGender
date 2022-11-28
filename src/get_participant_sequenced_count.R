@@ -7,10 +7,16 @@ indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live
 infile.sequence <- file.path(indir.deepsequencedata,"200422_PANGEA2_RCCSMRC_alignment.fasta")
 infile.ind.rccs <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
 infile.ind.mrc <- file.path(indir.deepsequencedata,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
+infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct.rda')
 
 file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
+file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+
+# rounds of interest
+df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
+                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, '15S', 16:18))))
 
 # load meta data
 load(file.path.meta)
@@ -44,9 +50,16 @@ dm <- merge(dinfo, meta_data, by.x = c('pt_id'), by.y = c('study_id'))
 colnames(dm) <- toupper(colnames(dm))
 
 # remove neuro data
-dm <- dm[ ROUND != 'neuro']
+neuro.metadata <- as.data.table(read.csv(file.path.neuro.metadata))
+dm <- dm[!PT_ID %in% neuro.metadata[, paste0('RK-', studyid)]]
 
-# keep meta info closer to sample date 
+# keep sequences which meet minimum criteria
+load(infile.seq.criteria)
+dct[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
+dm <- merge(dm,dct,by='PANGEA_ID',all.x=T)
+dm <- subset(dm,V1=='TRUE')
+
+# keep meta info closer to sample date
 dm[, VISIT_DT := as.Date(VISIT_DT)]
 dm[, DIFF_DATE := abs(VISIT_DT - SAMPLE_DATE), by = 'PANGEA_ID']
 dm[, IS_MIN := DIFF_DATE == min(DIFF_DATE), by = 'PANGEA_ID']
@@ -60,12 +73,28 @@ stopifnot(nrow(dcount[is.na(AGEYRS)]) == 0)
 dcount <- dcount[AGEYRS > 14 & AGEYRS < 50]
 
 # set round to 15 if inland 15S
-dcount[COMM == 'inland' & ROUND == 'R015S', ROUND := 'R015']
+dcount[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'pt_id']
+dcount[ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, ROUND := 'R015']
+dcount <- dcount[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
+set(dcount, NULL, 'PARTICIPATED_TO_ROUND_RO15', NULL)
 
-# find characteristics sequenced id
+# keep round of interest
+dcount <- merge(dcount, df_round, by = c('COMM', 'ROUND'))
+
+# create age groups
 dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
                      labels=c('15-24','25-34','35-49'))]
+
+# save sequenced id
 saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds'))
+
+
+############################################
+
+# FIND UNIQUE NUMBER OF PARTICIPANTS SEQUENCED
+
+############################################
+
 
 # if multiple PANGEA_ID per round, keep the one the closest to visit data
 dcount[, IS_MIN := DIFF_DATE == min(DIFF_DATE), by = c('PT_ID', 'ROUND')]
@@ -80,12 +109,6 @@ stopifnot(nrow(dcount.ever) == dcount.ever[, length(unique(PT_ID))])
 # AGE GROUPS
 dcount.ever[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
                           labels=c('15-24','25-34','35-49'))]
-
-############################################
-
-# FIND NUMBER OF PARTICIPANTS EVER SEQUENCED
-
-############################################
 
 # unique participants by rounds  by comm, sex, agegp
 sequ <- dcount.ever[, list(SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP', 'ROUND')]

@@ -398,15 +398,97 @@ find_summary_output_by_round <- function(samples, output, vars,
   return(tmp1)
 }
 
+find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
+                                         transform = NULL, log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  # incidence rate under original scenario
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
+  
+  # incidence rate under countefactual scenario
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
+  setnames(tmp, 'value', 'value_counterfactual')
+  
+  # find relative incidence
+  tmp1 <- merge(tmp, tmp1, by = c(vars, 'iterations'))
+  tmp1[, value := (value - value_counterfactual) / value]
+  
+  #summarise
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
+  tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
+  
+  
+  if('INDEX_DIRECTION' %in% vars)
+    tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
+  if('INDEX_ROUND' %in% vars){
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
+    tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  }
+  if('INDEX_AGE' %in% vars)
+    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  if('INDEX_TIME' %in% vars)
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
+  
+  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')), '_counterfactual')
+
+  file = paste0(file, '.rds')
+  saveRDS(tmp1, file)
+  
+  return(tmp1)
+}
+
+find_difference_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
+                                                   transform = NULL, log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
+  
+  ps <- c(0.5, 0.025, 0.975)
+  p_labs <- c('M','CL','CU')
+  
+  # incidence rate under original scenario
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
+  
+  # incidence rate under countefactual scenario
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
+  setnames(tmp, 'value', 'value_counterfactual')
+  
+  # find difference incidence
+  tmp1 <- merge(tmp, tmp1, by = c(vars, 'iterations'))
+  tmp1[, value := (value - value_counterfactual) ]
+  
+  #summarise
+  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
+  tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
+  
+  
+  if('INDEX_DIRECTION' %in% vars)
+    tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
+  if('INDEX_ROUND' %in% vars){
+    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
+    tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  }
+  if('INDEX_AGE' %in% vars)
+    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
+  if('INDEX_TIME' %in% vars)
+    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
+  
+  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')), '_diff_counterfactual')
+  
+  file = paste0(file, '.rds')
+  saveRDS(tmp1, file)
+  
+  return(tmp1)
+}
+
 
 find_spreaders <- function(expected_contribution_age_source, outdir){
   
-
+  
   find.index.mass <- function(x, p){
     # iterate over the index of x until the sum of x at the indices sum to p
     # start with the index with the greatest x value and enlarge on the left or on the right
     # by the following indices with the greatest x value
-
+    
     stopifnot(p <= sum(x))
     
     n <- length(x)
@@ -503,6 +585,141 @@ find_spreaders <- function(expected_contribution_age_source, outdir){
   return(df_spreaders)
 }
 
+find_male_with_greatest_art_diff <- function(treatment_cascade, eligible_count_round.all, participation, 
+                                             only_participant, only.participant.treated, budget){
+  
+  # find art covergae in population
+  ppu <- copy(treatment_cascade[, .(ROUND, SEX, COMM, AGEYRS, PROP_ART_COVERAGE_PARTICIPANTS_M, PROP_ART_COVERAGE_NONPARTICIPANTS_M)])
+  pa <- copy(participation)
+  pa[, ROUND := paste0('R0', ROUND)]
+  ppu <- merge(ppu, pa, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  if(nonparticipants.treated.like.participants){# baseline assumption
+    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
+  }else if(nonparticipants.not.treated){
+    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + 0 * (1-PARTICIPATION)]
+  }else{
+    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
+  }
+  
+  # find difference in art uptake between male and female
+  ppu[, PROP_ART_COVERAGE_M.FEMALE := PROP_ART_COVERAGE_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  ppu[, INCREASE_ART_COVERAGE := PROP_ART_COVERAGE_M.FEMALE - PROP_ART_COVERAGE_M]
+  ppu <- ppu[SEX == 'M']
+  
+  # get the budget of treating male
+  eli <- copy(eligible_count_round.all[, .(SEX,COMM,AGEYRS,ROUND,TREATED, INFECTED, 
+                                           PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL, 
+                                           PROP_UNSUPPRESSED_NONPARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL,
+                                           INFECTED_NON_SUPPRESSED.FACTUAL)])
+  
+  # find age groups to consider by ordering the male by the different in art uptake compared to female
+  ppc <- merge(ppu, eli, by = c('SEX','COMM','AGEYRS','ROUND'))
+  ppc <- merge(ppc, budget, by = c('SEX','COMM','ROUND'), allow.cartesian=TRUE)
+  ppc <- ppc[order(COMM,ROUND,1-INCREASE_ART_COVERAGE)]
+  ppc[, CUMSUM_TREATED := cumsum(TREATED), by = c('SEX', 'COMM', 'ROUND')]
+  ppc[, proportion := CUMSUM_TREATED / TREATED.SPREADERS]
+  ppc[, to_consider := proportion < 1 | proportion == min(proportion[proportion >= 1]), by = c('SEX', 'COMM', 'ROUND')]
+  
+  # we keep all the age groups for which their sum < budget and the first one that goes above the budget
+  ppc[SEX == 'M', to_consider := proportion < 1 | proportion == min(proportion[proportion >= 1]), by = c('SEX', 'COMM', 'ROUND')]
+  ppc[SEX == 'F', to_consider := 0]
+  ppc <- ppc[ to_consider == 1]
+  
+  # find proportion to consider
+  # for the  age groups for which their sum < budget, we consider 100% of them
+  # for the first age group that goes above the budget, we consider a proportion such that their additional contribution matchs the budget
+  ppc[proportion > 1, UNSUPPRESSED.COUNTERFACTUAL := INFECTED_NON_SUPPRESSED.FACTUAL - (TREATED.SPREADERS - (CUMSUM_TREATED - TREATED))  ]
+  if(only_participant){
+    # counterfactual assuming onlu participants are targeted
+    if(nonparticipants.treated.like.participants){# baseline assumption
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *PROP_UNSUPPRESSED_PARTICIPANTS_M ) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }else if(nonparticipants.not.treated){
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*1)) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }else{
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*PROP_UNSUPPRESSED_NONPARTICIPANTS_M)) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }
+  }else{
+    # counterfactual assuming all population are targeted
+    if(nonparticipants.treated.like.participants){# baseline assumption
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *PROP_UNSUPPRESSED_PARTICIPANTS_M ) / (INFECTED *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }else if(nonparticipants.not.treated){
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*1)) / (INFECTED*( PARTICIPATION * (PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) + 
+                                                                                                                                                                                                  (1-PARTICIPATION)*(PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL -1) ) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }else{
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*PROP_UNSUPPRESSED_NONPARTICIPANTS_M)) / (INFECTED*( PARTICIPATION * (PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) + 
+                                                                                                                                                                                                                                    (1-PARTICIPATION)*(PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_NONPARTICIPANTS_M) ) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }  
+  }
+  
+  # keep variable of interest
+  ppc <- ppc[, .(SEX, COMM, ROUND, AGEYRS, TREATED, PROPORTION_TO_CONSIDER)]
+  
+  # add tupe
+  ppc[, type := 'non compliers']
+  
+  return(ppc)
+}
+
+find_random_male <- function(eligible_count_round.all,only_participant, only.participant.treated, budget){
+  
+  # find random ordering of males
+  ppu <- copy(eligible_count_round.all[, .(ROUND, SEX, COMM, AGEYRS)])
+  ppu[, ORDER := sample(1:length(AGEYRS)), by = c('SEX', 'COMM', 'ROUND')]
+  
+  # get the budget of treating male
+  eli <- copy(eligible_count_round.all[, .(SEX,COMM,AGEYRS,ROUND,TREATED, INFECTED, 
+                                           PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL, 
+                                           PROP_UNSUPPRESSED_NONPARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL,
+                                           INFECTED_NON_SUPPRESSED.FACTUAL, PARTICIPATION)])
+  
+  # find age groups to consider
+  ppc <- merge(ppu, eli, by = c('SEX','COMM','AGEYRS','ROUND'))
+  ppc <- merge(ppc, budget, by = c('SEX','COMM','ROUND'), allow.cartesian=TRUE)
+  ppc <- ppc[order(COMM,ROUND,ORDER)]
+  ppc[, CUMSUM_TREATED := cumsum(TREATED), by = c('SEX', 'COMM', 'ROUND')]
+  ppc[, proportion :=  CUMSUM_TREATED / TREATED.SPREADERS]
+  
+  # we keep all the age groups for which their sum < budget and the first one that goes above the budget
+  ppc[SEX == 'M', to_consider := proportion < 1 | proportion == min(proportion[proportion >= 1]), by = c('SEX', 'COMM', 'ROUND')]
+  ppc[SEX == 'F', to_consider := 0]
+  ppc <- ppc[ to_consider == 1]
+  
+  # find proportion to consider
+  # for the  age groups for which their sum < budget, we consider 100% of them
+  # for the first age group that goes above the budget, we consider a proportion such that their additional contribution matchs the budget
+  ppc[proportion > 1, UNSUPPRESSED.COUNTERFACTUAL := INFECTED_NON_SUPPRESSED.FACTUAL - (TREATED.SPREADERS - (CUMSUM_TREATED - TREATED))  ]
+  if(only_participant){
+    # counterfactual assuming onlu participants are targeted
+    if(nonparticipants.treated.like.participants){# baseline assumption
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *PROP_UNSUPPRESSED_PARTICIPANTS_M ) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }else if(nonparticipants.not.treated){
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*1)) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }else{
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*PROP_UNSUPPRESSED_NONPARTICIPANTS_M)) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }
+  }else{
+    # counterfactual assuming all population are targeted
+    if(nonparticipants.treated.like.participants){# baseline assumption
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *PROP_UNSUPPRESSED_PARTICIPANTS_M ) / (INFECTED *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }else if(nonparticipants.not.treated){
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*1)) / (INFECTED*( PARTICIPATION * (PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) + 
+                                                                                                                                                                                                  (1-PARTICIPATION)*(PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL -1) ) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }else{
+      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*PROP_UNSUPPRESSED_NONPARTICIPANTS_M)) / (INFECTED*( PARTICIPATION * (PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) + 
+                                                                                                                                                                                                                                    (1-PARTICIPATION)*(PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_NONPARTICIPANTS_M) ) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
+    }  
+  }
+  
+  # keep variable of interest
+  ppc <- ppc[, .(SEX, COMM, ROUND, AGEYRS, TREATED, PROPORTION_TO_CONSIDER)]
+  
+  # add tupe
+  ppc[, type := 'random']
+  
+  return(ppc)
+}
+
+
 make_counterfactual_target <- function(samples, spreaders, log_offset_round, stan_data, 
                                        eligible_count_smooth, eligible_count_round, treatment_cascade, 
                                        proportion_prevalence, participation,
@@ -518,7 +735,6 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
   eligible_count_round.all <- find_counterfactual_unsuppressed_count_target(all.males, copy(eligible_count_smooth), copy(eligible_count_round),
                                                                             copy(treatment_cascade), copy(proportion_prevalence), copy(participation),
                                                                             only_participant, art_up_to_female)
-  
   #
   # 1st scenario: main spreaders are treated
   # 
@@ -598,13 +814,13 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
     eligible_count_round.counterfactual[[i]] <- eligible_count_round.counterfactual.list[[i]]
     
     # find offset under counterfactual
-    log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]))
+    log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]), use_number_susceptible_offset)
     
     # find incidence counterfactual by age of the recipient
     incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                   transform = 'exp', 
                                                                   log_offset_round = log_offset_round.counterfactual, 
-                                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
+                                                                  log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
                                                                   save_output = F)
     # find relative difference incidence  by age of the recipient
     relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
@@ -663,87 +879,53 @@ find_counterfactual_unsuppressed_count_target <- function(selected.spreaders, el
   par[, ROUND := paste0('R0', ROUND)]
   treatment_cascade.counterfactual <- merge(treatment_cascade.counterfactual, par, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
-  # find age group for which the art coverage should change
+  # find age group for which the proportion of suppressed should change
   selected.spreaders[, spreader := T]
   treatment_cascade.counterfactual <- merge(treatment_cascade.counterfactual, selected.spreaders, all.x = T, by = c('AGEYRS', 'COMM', 'ROUND', 'SEX'))
   treatment_cascade.counterfactual[is.na(spreader), spreader := F]
   treatment_cascade.counterfactual[is.na(PROPORTION_TO_CONSIDER), PROPORTION_TO_CONSIDER := 0]
   
-  # find art coverage in female 
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_PARTICIPANTS_M.FEMALE := PROP_ART_COVERAGE_PARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_NONPARTICIPANTS_M.FEMALE := PROP_ART_COVERAGE_NONPARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
-
-
+  # find proportion of suppressed
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_PARTICIPANTS_M := 1-PROP_UNSUPPRESSED_PARTICIPANTS_M]
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_NONPARTICIPANTS_M := 1-PROP_UNSUPPRESSED_NONPARTICIPANTS_M]
+  
+  # find suppressed proprotion in female 
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_PARTICIPANTS_M.FEMALE := PROP_SUPPRESSED_PARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_NONPARTICIPANTS_M.FEMALE := PROP_SUPPRESSED_NONPARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  
+  
   #
-  # find art coverage counterfactual for participants and non-participants
+  # find proportion suppressed under the counterfactual 
   #
   
   # baseline 
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M]
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_NONPARTICIPANTS_M]
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_PARTICIPANTS_M]
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_NONPARTICIPANTS_M]
   
   # spreaders
   if(art_up_to_female){
-    # in the case where art coverage in male is set to be the same as in female
+    # in the case where proportion suppressed in male is set to be the same as in female
     
     # for participants
-    treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.FEMALE]
-
+    treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_PARTICIPANTS_M.FEMALE]
+    
     # for non-participants
     if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_NONPARTICIPANTS_M.FEMALE]
+      treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_NONPARTICIPANTS_M.FEMALE]
     }
     
   }else{
-    # in the case where art coverage in male is set to 100%
+    # in the case where proportion suppressed in male is set to 100%
     
     # for participants
-    treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL := 1]
+    treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := 1]
     
     # for non-participants
     if(!only_participant){# counterfactual
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL := 1]
+      treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := 1]
     }
   }
   
-  
-  #
-  # find art coverage for population
-  #
-  
-  # baseline
-  if(nonparticipants.treated.like.participants){# baseline assumption
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
-  }else if(nonparticipants.not.treated){
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + 0 * (1-PARTICIPATION)]
-  }else{
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
-  }
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_M]
-  
-  # spreaders
-  if(only_participant){# counterfactual
-    if(nonparticipants.treated.like.participants){# baseline assumption
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
-    }else if(nonparticipants.not.treated){
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + 0 * (1-PARTICIPATION)]
-    }else{
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
-    }
-  }else{
-    treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL * (1-PARTICIPATION)]
-  }
-
-  
-  #
-  # find percentage of reduction ART coverage in population 
-  #
-  
-  # baseline
-  treatment_cascade.counterfactual[, INCREASE_ART_COVERAGE := 0]
-  
-  # spreadrrs
-  treatment_cascade.counterfactual[spreader == T, INCREASE_ART_COVERAGE := PROP_ART_COVERAGE_M.COUNTERFACTUAL - PROP_ART_COVERAGE_M ]
   
   
   #
@@ -752,9 +934,8 @@ find_counterfactual_unsuppressed_count_target <- function(selected.spreaders, el
   
   # baseline
   treatment_cascade.counterfactual[, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_PARTICIPANTS_M]
-             
+  
   # spreaders                      
-  treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_PARTICIPANTS_M * PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * SUPPRESSION_RATE_PARTICIPANTS_M]
   treatment_cascade.counterfactual[spreader == T, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := 1 - PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL]
   
   
@@ -775,16 +956,19 @@ find_counterfactual_unsuppressed_count_target <- function(selected.spreaders, el
   if(!only_participant){# counterfactual
     if(nonparticipants.treated.like.participants){# baseline assumption
       treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL]
+      treatment_cascade.counterfactual[spreader == T, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
     }else{
-      treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_NONPARTICIPANTS_M * PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL * SUPPRESSION_RATE_NONPARTICIPANTS_M]
+      treatment_cascade.counterfactual[spreader == T, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
     }
-    treatment_cascade.counterfactual[spreader == T, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
   }
-
+  
   # recall the number of infected 
-  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
+  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence, 
+                                                                  participation, 
+                                                                  nonparticipants.male.relative.infection, 
+                                                                  nonparticipants.female.relative.infection)
   eligible_count_round.counterfactual[, ROUND := paste0('R0', ROUND)]
-  df <- merge(eligible_count_round.counterfactual, treatment_cascade.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  df <- merge(select(eligible_count_round.counterfactual, -'PARTICIPATION'), treatment_cascade.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
   # find unsuppressed factual 
   tmp <- eligible_count_round[, .(ROUND, SEX, COMM, AGEYRS, INFECTED_NON_SUPPRESSED)]
@@ -811,7 +995,7 @@ find_counterfactual_unsuppressed_count_target <- function(selected.spreaders, el
          INFECTED * PARTICIPATION * (1-PROPORTION_TO_CONSIDER) * PROP_UNSUPPRESSED_PARTICIPANTS_M + 
          INFECTED * (1-PARTICIPATION) * (1-PROPORTION_TO_CONSIDER) * PROP_UNSUPPRESSED_NONPARTICIPANTS_M]
   }
-
+  
   
   #
   # find unsuppressed counterfactual for non-spreaders
@@ -824,222 +1008,6 @@ find_counterfactual_unsuppressed_count_target <- function(selected.spreaders, el
   return(df)
 }
 
-find_male_with_greatest_art_diff <- function(treatment_cascade, eligible_count_round.all, participation, 
-                                             only_participant, only.participant.treated, budget){
-  
-  # find art covergae in population
-  ppu <- copy(treatment_cascade[, .(ROUND, SEX, COMM, AGEYRS, PROP_ART_COVERAGE_PARTICIPANTS_M, PROP_ART_COVERAGE_NONPARTICIPANTS_M)])
-  pa <- copy(participation)
-  pa[, ROUND := paste0('R0', ROUND)]
-  ppu <- merge(ppu, pa, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
-  if(nonparticipants.treated.like.participants){# baseline assumption
-    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
-  }else if(nonparticipants.not.treated){
-    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + 0 * (1-PARTICIPATION)]
-  }else{
-    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
-  }
-  
-  # find difference in art uptake between male and female
-  ppu[, PROP_ART_COVERAGE_M.FEMALE := PROP_ART_COVERAGE_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
-  ppu[, INCREASE_ART_COVERAGE := PROP_ART_COVERAGE_M.FEMALE - PROP_ART_COVERAGE_M]
-  ppu <- ppu[SEX == 'M']
-  
-  # get the budget of treating male
-  eli <- copy(eligible_count_round.all[, .(SEX,COMM,AGEYRS,ROUND,TREATED, INFECTED, 
-                                           PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL, 
-                                           PROP_UNSUPPRESSED_NONPARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL,
-                                           INFECTED_NON_SUPPRESSED.FACTUAL)])
-  
-  # find age groups to consider by ordering the male by the different in art uptake compared to female
-  ppc <- merge(ppu, eli, by = c('SEX','COMM','AGEYRS','ROUND'))
-  ppc <- merge(ppc, budget, by = c('SEX','COMM','ROUND'), allow.cartesian=TRUE)
-  ppc <- ppc[order(COMM,ROUND,1-INCREASE_ART_COVERAGE)]
-  ppc[, CUMSUM_TREATED := cumsum(TREATED), by = c('SEX', 'COMM', 'ROUND')]
-  ppc[, proportion := CUMSUM_TREATED / TREATED.SPREADERS]
-  ppc[, to_consider := proportion < 1 | proportion == min(proportion[proportion >= 1]), by = c('SEX', 'COMM', 'ROUND')]
-  
-  # we keep all the age groups for which their sum < budget and the first one that goes above the budget
-  ppc[SEX == 'M', to_consider := proportion < 1 | proportion == min(proportion[proportion >= 1]), by = c('SEX', 'COMM', 'ROUND')]
-  ppc[SEX == 'F', to_consider := 0]
-  ppc <- ppc[ to_consider == 1]
-  
-  # find proportion to consider
-  # for the  age groups for which their sum < budget, we consider 100% of them
-  # for the first age group that goes above the budget, we consider a proportion such that their additional contribution matchs the budget
-  ppc[proportion > 1, UNSUPPRESSED.COUNTERFACTUAL := INFECTED_NON_SUPPRESSED.FACTUAL - (TREATED.SPREADERS - (CUMSUM_TREATED - TREATED))  ]
-  if(only_participant){
-    # counterfactual assuming onlu participants are targeted
-    if(nonparticipants.treated.like.participants){# baseline assumption
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *PROP_UNSUPPRESSED_PARTICIPANTS_M ) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }else if(nonparticipants.not.treated){
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*1)) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }else{
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*PROP_UNSUPPRESSED_NONPARTICIPANTS_M)) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }
-  }else{
-    # counterfactual assuming all population are targeted
-    if(nonparticipants.treated.like.participants){# baseline assumption
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *PROP_UNSUPPRESSED_PARTICIPANTS_M ) / (INFECTED *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }else if(nonparticipants.not.treated){
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*1)) / (INFECTED*( PARTICIPATION * (PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) + 
-                                                                                                                                                                                                                                    (1-PARTICIPATION)*(PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL -1) ) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }else{
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*PROP_UNSUPPRESSED_NONPARTICIPANTS_M)) / (INFECTED*( PARTICIPATION * (PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) + 
-                                                                                                                                                                                                                                    (1-PARTICIPATION)*(PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_NONPARTICIPANTS_M) ) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }  
-  }
-  
-  # keep variable of interest
-  ppc <- ppc[, .(SEX, COMM, ROUND, AGEYRS, TREATED, PROPORTION_TO_CONSIDER)]
-  
-  # add tupe
-  ppc[, type := 'non compliers']
-  
-  return(ppc)
-}
-
-find_random_male <- function(eligible_count_round.all,only_participant, only.participant.treated, budget){
-  
-  # find random ordering of males
-  ppu <- copy(eligible_count_round.all[, .(ROUND, SEX, COMM, AGEYRS)])
-  ppu[, ORDER := sample(1:length(AGEYRS)), by = c('SEX', 'COMM', 'ROUND')]
-  
-  # get the budget of treating male
-  eli <- copy(eligible_count_round.all[, .(SEX,COMM,AGEYRS,ROUND,TREATED, INFECTED, 
-                                           PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL, 
-                                           PROP_UNSUPPRESSED_NONPARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL,
-                                           INFECTED_NON_SUPPRESSED.FACTUAL, PARTICIPATION)])
-
-  # find age groups to consider
-  ppc <- merge(ppu, eli, by = c('SEX','COMM','AGEYRS','ROUND'))
-  ppc <- merge(ppc, budget, by = c('SEX','COMM','ROUND'), allow.cartesian=TRUE)
-  ppc <- ppc[order(COMM,ROUND,ORDER)]
-  ppc[, CUMSUM_TREATED := cumsum(TREATED), by = c('SEX', 'COMM', 'ROUND')]
-  ppc[, proportion :=  CUMSUM_TREATED / TREATED.SPREADERS]
-  
-  # we keep all the age groups for which their sum < budget and the first one that goes above the budget
-  ppc[SEX == 'M', to_consider := proportion < 1 | proportion == min(proportion[proportion >= 1]), by = c('SEX', 'COMM', 'ROUND')]
-  ppc[SEX == 'F', to_consider := 0]
-  ppc <- ppc[ to_consider == 1]
-  
-  # find proportion to consider
-  # for the  age groups for which their sum < budget, we consider 100% of them
-  # for the first age group that goes above the budget, we consider a proportion such that their additional contribution matchs the budget
-  ppc[proportion > 1, UNSUPPRESSED.COUNTERFACTUAL := INFECTED_NON_SUPPRESSED.FACTUAL - (TREATED.SPREADERS - (CUMSUM_TREATED - TREATED))  ]
-  if(only_participant){
-    # counterfactual assuming onlu participants are targeted
-    if(nonparticipants.treated.like.participants){# baseline assumption
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *PROP_UNSUPPRESSED_PARTICIPANTS_M ) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }else if(nonparticipants.not.treated){
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*1)) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }else{
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*PROP_UNSUPPRESSED_NONPARTICIPANTS_M)) / (INFECTED*PARTICIPATION *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }
-  }else{
-    # counterfactual assuming all population are targeted
-    if(nonparticipants.treated.like.participants){# baseline assumption
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *PROP_UNSUPPRESSED_PARTICIPANTS_M ) / (INFECTED *(PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }else if(nonparticipants.not.treated){
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*1)) / (INFECTED*( PARTICIPATION * (PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) + 
-                                                                                                                                                                                                  (1-PARTICIPATION)*(PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL -1) ) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }else{
-      ppc[, PROPORTION_TO_CONSIDER := ifelse(proportion <= 1, 1, ( UNSUPPRESSED.COUNTERFACTUAL- INFECTED *(PARTICIPATION*PROP_UNSUPPRESSED_PARTICIPANTS_M + (1-PARTICIPATION)*PROP_UNSUPPRESSED_NONPARTICIPANTS_M)) / (INFECTED*( PARTICIPATION * (PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_PARTICIPANTS_M) + 
-                                                                                                                                                                                                                                    (1-PARTICIPATION)*(PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL -PROP_UNSUPPRESSED_NONPARTICIPANTS_M) ) )), by = c('SEX', 'COMM', 'ROUND', 'AGEYRS')]
-    }  
-  }
-  
-  # keep variable of interest
-  ppc <- ppc[, .(SEX, COMM, ROUND, AGEYRS, TREATED, PROPORTION_TO_CONSIDER)]
-  
-  # add tupe
-  ppc[, type := 'random']
-  
-  return(ppc)
-}
-
-
-find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
-                                         transform = NULL, log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
-  
-  ps <- c(0.5, 0.025, 0.975)
-  p_labs <- c('M','CL','CU')
-  
-  # incidence rate under original scenario
-  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
-  
-  # incidence rate under countefactual scenario
-  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
-  setnames(tmp, 'value', 'value_counterfactual')
-  
-  # find relative incidence
-  tmp1 <- merge(tmp, tmp1, by = c(vars, 'iterations'))
-  tmp1[, value := (value - value_counterfactual) / value]
-  
-  #summarise
-  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
-  tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
-  
-  
-  if('INDEX_DIRECTION' %in% vars)
-    tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
-  if('INDEX_ROUND' %in% vars){
-    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
-    tmp1 <- merge(tmp1, df_community, by = 'COMM')
-  }
-  if('INDEX_AGE' %in% vars)
-    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
-  if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
-  
-  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')), '_counterfactual')
-
-  file = paste0(file, '.rds')
-  saveRDS(tmp1, file)
-  
-  return(tmp1)
-}
-
-find_difference_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
-                                                   transform = NULL, log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
-  
-  ps <- c(0.5, 0.025, 0.975)
-  p_labs <- c('M','CL','CU')
-  
-  # incidence rate under original scenario
-  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
-  
-  # incidence rate under countefactual scenario
-  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
-  setnames(tmp, 'value', 'value_counterfactual')
-  
-  # find difference incidence
-  tmp1 <- merge(tmp, tmp1, by = c(vars, 'iterations'))
-  tmp1[, value := (value - value_counterfactual) ]
-  
-  #summarise
-  tmp1 = tmp1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=vars]	
-  tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
-  
-  
-  if('INDEX_DIRECTION' %in% vars)
-    tmp1 <- merge(tmp1, df_direction, by = 'INDEX_DIRECTION')
-  if('INDEX_ROUND' %in% vars){
-    tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
-    tmp1 <- merge(tmp1, df_community, by = 'COMM')
-  }
-  if('INDEX_AGE' %in% vars)
-    tmp1 <- merge(tmp1, df_age, by = 'INDEX_AGE')
-  if('INDEX_TIME' %in% vars)
-    tmp1 <- merge(tmp1, df_period, by = c('INDEX_TIME', 'COMM'))
-  
-  file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')), '_diff_counterfactual')
-  
-  file = paste0(file, '.rds')
-  saveRDS(tmp1, file)
-  
-  return(tmp1)
-}
 
 make_counterfactual <- function(samples, log_offset_round, stan_data, 
                                 eligible_count_smooth, eligible_count_round, 
@@ -1061,13 +1029,13 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   budget <- selected_males[, list(TREATED = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM')]
 
   # find offset under counterfactual
-  log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual))
+  log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual), use_number_susceptible_offset)
   
   # find incidence counterfactual by age of the recipient
   incidence_counterfactual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                 transform = 'exp', 
                                                                 log_offset_round = log_offset_round.counterfactual, 
-                                                                log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
+                                                                log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
                                                                 save_output = F)
   # find relative difference incidence  by age of the recipient
   relative_incidence_counterfactual <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
@@ -1125,191 +1093,62 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
   treatment_cascade.counterfactual <- merge(treatment_cascade.counterfactual, selected_males, all.x = T, by = c('AGEYRS', 'COMM', 'ROUND', 'SEX'))
   treatment_cascade.counterfactual[is.na(spreader), spreader := F]
 
-  # find diagnosed proprotion in female 
-  treatment_cascade.counterfactual[, PROP_DIAGNOSED_PARTICIPANTS_M.FEMALE := PROP_DIAGNOSED_PARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
-  treatment_cascade.counterfactual[, PROP_DIAGNOSED_NONPARTICIPANTS_M.FEMALE := PROP_DIAGNOSED_NONPARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  # find suppressed proportion  
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_PARTICIPANTS_M := 1-PROP_UNSUPPRESSED_PARTICIPANTS_M]
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_NONPARTICIPANTS_M := 1-PROP_UNSUPPRESSED_NONPARTICIPANTS_M]
   
-  # find art coverage proporton given diagnosed in female 
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_PARTICIPANTS_M.FEMALE := PROP_ART_COVERAGE_PARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_NONPARTICIPANTS_M.FEMALE := PROP_ART_COVERAGE_NONPARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  # find suppressed proprotion in female 
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_PARTICIPANTS_M.FEMALE := PROP_SUPPRESSED_PARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_NONPARTICIPANTS_M.FEMALE := PROP_SUPPRESSED_NONPARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
   
-  # find suppression rate in female (proportion suppressed given art coverage)
-  treatment_cascade.counterfactual[, SUPPRESSION_RATE_PARTICIPANTS_M.FEMALE := SUPPRESSION_RATE_PARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
-  treatment_cascade.counterfactual[, SUPPRESSION_RATE_NONPARTICIPANTS_M.FEMALE := SUPPRESSION_RATE_NONPARTICIPANTS_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
-  
-  
-  #
-  # find diagnosed proportion counterfactual for participants and non-participants
-  #
-  
-  # baseline 
-  treatment_cascade.counterfactual[, PROP_DIAGNOSED_PARTICIPANTS_M.COUNTERFACTUAL := as.numeric(PROP_DIAGNOSED_PARTICIPANTS_M)]
-  treatment_cascade.counterfactual[, PROP_DIAGNOSED_NONPARTICIPANTS_M.COUNTERFACTUAL := as.numeric(PROP_DIAGNOSED_NONPARTICIPANTS_M)]
-  
-  # spreaders
-  if(!is.null(art_up_to_female)){
-    # in the case where diganosed in male is set to be the same as in female
 
-    # for participants
-    treatment_cascade.counterfactual[spreader == T, PROP_DIAGNOSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_PARTICIPANTS_M + (PROP_DIAGNOSED_PARTICIPANTS_M.FEMALE-PROP_DIAGNOSED_PARTICIPANTS_M)*art_up_to_female]
-    
-    # for non-participants
-    if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, PROP_DIAGNOSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_NONPARTICIPANTS_M + (PROP_DIAGNOSED_NONPARTICIPANTS_M.FEMALE-PROP_DIAGNOSED_NONPARTICIPANTS_M)*art_up_to_female]
-    }
-    
-    
-  }else if(!is.null(s959595)){
-    # in the case where diganosed rate in male is set to be 95%
 
-    # for participants
-    treatment_cascade.counterfactual[spreader == T, PROP_DIAGNOSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_PARTICIPANTS_M + (0.95-PROP_DIAGNOSED_PARTICIPANTS_M)*s959595]
-    
-    # for non-participants
-    if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, PROP_DIAGNOSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_NONPARTICIPANTS_M + (0.95-PROP_DIAGNOSED_NONPARTICIPANTS_M)*s959595]
-    }
-    
-  }else{
-    # in the case where diganosed in male is set to be 90%
-    
-    # for participants
-    treatment_cascade.counterfactual[spreader == T, PROP_DIAGNOSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_PARTICIPANTS_M + (0.9-PROP_DIAGNOSED_PARTICIPANTS_M)*s909090]
-    
-    # for non-participants
-    if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, PROP_DIAGNOSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_NONPARTICIPANTS_M + (0.9-PROP_DIAGNOSED_NONPARTICIPANTS_M)*s909090]
-    }
-    
-  }
-  
-  
   #
-  # find art coverage counterfactual for participants and non-participants
-  #
-  
-  # baseline 
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M]
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_NONPARTICIPANTS_M]
-  
-  # spreaders
-  if(!is.null(art_up_to_female)){
-    # in the case where art coverage in male is set to be the same as in female
-    
-    # for participants
-    treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M + (PROP_ART_COVERAGE_PARTICIPANTS_M.FEMALE-PROP_ART_COVERAGE_PARTICIPANTS_M)*art_up_to_female]
-    
-    # for non-participants
-    if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_NONPARTICIPANTS_M + (PROP_ART_COVERAGE_NONPARTICIPANTS_M.FEMALE-PROP_ART_COVERAGE_NONPARTICIPANTS_M)*art_up_to_female]
-    }
-    
-  }else if(!is.null(s959595)){
-    # in the case where art coverage in male is set to be 95%
-    
-    # for participants
-    treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M + (0.95-PROP_ART_COVERAGE_PARTICIPANTS_M)*s959595]
-    
-    # for non-participants
-    if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_NONPARTICIPANTS_M + (0.95-PROP_ART_COVERAGE_NONPARTICIPANTS_M)*s959595]
-    }
-    
-  }else{
-    # in the case where art coverage in male is set to be 90%
-    
-    # for participants
-    treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M + (0.9-PROP_ART_COVERAGE_PARTICIPANTS_M)*s909090]
-    
-    # for non-participants
-    if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_ART_COVERAGE_NONPARTICIPANTS_M + (0.9-PROP_ART_COVERAGE_NONPARTICIPANTS_M)*s909090]
-    }
-  }
-  
-  
-  #
-  # find art coverage for population
+  # find proportion suppressed under the counterfactual 
   #
   
   # baseline
-  if(nonparticipants.treated.like.participants){# baseline assumption
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
-  }else if(nonparticipants.not.treated){
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + 0 * (1-PARTICIPATION)]
-  }else{
-    treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
-  }
-  treatment_cascade.counterfactual[, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_M]
-  
-  # spreaders
-  if(only_participant){# counterfactual
-    if(nonparticipants.treated.like.participants){# baseline assumption
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
-    }else if(nonparticipants.not.treated){
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + 0 * (1-PARTICIPATION)]
-    }else{
-      treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
-    }
-  }else{
-    treatment_cascade.counterfactual[spreader == T, PROP_ART_COVERAGE_M.COUNTERFACTUAL := PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL * (1-PARTICIPATION)]
-  }
-  
-  
-  #
-  # find percentage of reduction ART coverage in population 
-  #
-  
-  # baseline
-  treatment_cascade.counterfactual[, INCREASE_ART_COVERAGE := 0]
-  
-  # spreadrrs
-  treatment_cascade.counterfactual[spreader == T, INCREASE_ART_COVERAGE := PROP_ART_COVERAGE_M.COUNTERFACTUAL - PROP_ART_COVERAGE_M ]
-  
-  
-  #
-  # find suppression rate counterfactual for participants and non-participants
-  #
-  
-  # baseline 
-  treatment_cascade.counterfactual[, SUPPRESSION_RATE_PARTICIPANTS_M.COUNTERFACTUAL := SUPPRESSION_RATE_PARTICIPANTS_M]
-  treatment_cascade.counterfactual[, SUPPRESSION_RATE_NONPARTICIPANTS_M.COUNTERFACTUAL := SUPPRESSION_RATE_NONPARTICIPANTS_M]
-  
-  # spreaders
-  if(!is.null(art_up_to_female)){
-    # in the case where suppression rate in male is set to be the same as in female
 
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_PARTICIPANTS_M]
+  treatment_cascade.counterfactual[, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_NONPARTICIPANTS_M]
+  
+  # spreaders     
+  if(!is.null(art_up_to_female)){
+    # in the case where suppression prop in male is set to be the same as in female
+    
     # for participants
-    treatment_cascade.counterfactual[spreader == T, SUPPRESSION_RATE_PARTICIPANTS_M.COUNTERFACTUAL := SUPPRESSION_RATE_PARTICIPANTS_M + (SUPPRESSION_RATE_PARTICIPANTS_M.FEMALE-SUPPRESSION_RATE_PARTICIPANTS_M)*art_up_to_female]
+    treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_PARTICIPANTS_M + (PROP_SUPPRESSED_PARTICIPANTS_M.FEMALE-PROP_SUPPRESSED_PARTICIPANTS_M)*art_up_to_female]
     
     # for non-participants
     if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, SUPPRESSION_RATE_NONPARTICIPANTS_M.COUNTERFACTUAL := SUPPRESSION_RATE_NONPARTICIPANTS_M + (SUPPRESSION_RATE_NONPARTICIPANTS_M.FEMALE-SUPPRESSION_RATE_NONPARTICIPANTS_M)*art_up_to_female]
+      treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_NONPARTICIPANTS_M + (PROP_SUPPRESSED_NONPARTICIPANTS_M.FEMALE-PROP_SUPPRESSED_NONPARTICIPANTS_M)*art_up_to_female]
     }
+    
     
   }else if(!is.null(s959595)){
-    # in the case where suppression rate in male is set to be 95%
+    # in the case where suppression prop in male is set to be 95*0.95*0.95%
     
     # for participants
-    treatment_cascade.counterfactual[spreader == T, SUPPRESSION_RATE_PARTICIPANTS_M.COUNTERFACTUAL := SUPPRESSION_RATE_PARTICIPANTS_M + (0.95-SUPPRESSION_RATE_PARTICIPANTS_M)*s959595]
+    treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_PARTICIPANTS_M + (0.95*0.95*0.95-PROP_SUPPRESSED_PARTICIPANTS_M)*s959595]
     
     # for non-participants
     if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, SUPPRESSION_RATE_NONPARTICIPANTS_M.COUNTERFACTUAL := SUPPRESSION_RATE_NONPARTICIPANTS_M + (0.95-SUPPRESSION_RATE_NONPARTICIPANTS_M)*s959595]
+      treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_NONPARTICIPANTS_M + (0.95*0.95*0.95-PROP_SUPPRESSED_NONPARTICIPANTS_M)*s959595]
     }
     
   }else{
-    # in the case where suppression rate in male is set to be 90%
+    # in the case where diganosed in male is set to be 90*90*90%
     
     # for participants
-    treatment_cascade.counterfactual[spreader == T, SUPPRESSION_RATE_PARTICIPANTS_M.COUNTERFACTUAL := SUPPRESSION_RATE_PARTICIPANTS_M + (0.9-SUPPRESSION_RATE_PARTICIPANTS_M)*s909090]
+    treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_PARTICIPANTS_M + (0.9*0.9*0.9-PROP_SUPPRESSED_PARTICIPANTS_M)*s909090]
     
     # for non-participants
     if(!only_participant){# counterfactual where only participants are treated
-      treatment_cascade.counterfactual[spreader == T, SUPPRESSION_RATE_NONPARTICIPANTS_M.COUNTERFACTUAL := SUPPRESSION_RATE_NONPARTICIPANTS_M + (0.9-SUPPRESSION_RATE_NONPARTICIPANTS_M)*s909090]
+      treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_NONPARTICIPANTS_M + (0.9*0.9*0.9-PROP_SUPPRESSED_NONPARTICIPANTS_M)*s909090]
     }
     
   }
+  
   
   
   #
@@ -1319,8 +1158,7 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
   # baseline
   treatment_cascade.counterfactual[, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_UNSUPPRESSED_PARTICIPANTS_M]
   
-  # spreaders                      
-  treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_PARTICIPANTS_M.COUNTERFACTUAL * PROP_ART_COVERAGE_PARTICIPANTS_M.COUNTERFACTUAL * SUPPRESSION_RATE_PARTICIPANTS_M.COUNTERFACTUAL]
+  # spreadrs
   treatment_cascade.counterfactual[spreader == T, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL := 1 - PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL]
   
   
@@ -1341,16 +1179,21 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
   if(!only_participant){# counterfactual
     if(nonparticipants.treated.like.participants){# baseline assumption
       treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_SUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL]
+      treatment_cascade.counterfactual[spreader == T, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
+      
     }else{
-      treatment_cascade.counterfactual[spreader == T, PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := PROP_DIAGNOSED_NONPARTICIPANTS_M.COUNTERFACTUAL * PROP_ART_COVERAGE_NONPARTICIPANTS_M.COUNTERFACTUAL * SUPPRESSION_RATE_NONPARTICIPANTS_M.COUNTERFACTUAL]
+      treatment_cascade.counterfactual[spreader == T, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
+      
     }
-    treatment_cascade.counterfactual[spreader == T, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
   }
   
   # recall the number of infected 
-  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence)
+  eligible_count_round.counterfactual <- add_susceptible_infected(eligible_count_smooth, proportion_prevalence,
+                                                                  participation, 
+                                                                  nonparticipants.male.relative.infection, 
+                                                                  nonparticipants.female.relative.infection)
   eligible_count_round.counterfactual[, ROUND := paste0('R0', ROUND)]
-  df <- merge(eligible_count_round.counterfactual, treatment_cascade.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
+  df <- merge(select(eligible_count_round.counterfactual, -'PARTICIPATION'),treatment_cascade.counterfactual, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   
   # find unsuppressed factual 
   tmp <- eligible_count_round[, .(ROUND, SEX, COMM, AGEYRS, INFECTED_NON_SUPPRESSED)]
@@ -1377,7 +1220,6 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
   df[TREATED < 0, INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL]
   df[TREATED < 0, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL :=  PROP_UNSUPPRESSED_PARTICIPANTS_M]
   df[TREATED < 0, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL :=  PROP_UNSUPPRESSED_NONPARTICIPANTS_M]
-  df[TREATED < 0, INCREASE_ART_COVERAGE := 0 ]
   df[TREATED < 0, TREATED := INFECTED_NON_SUPPRESSED.FACTUAL - INFECTED_NON_SUPPRESSED]
   
   return(df)

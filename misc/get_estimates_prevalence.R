@@ -82,8 +82,8 @@ rprev[, EMPIRICAL_PREVALENCE := COUNT / TOTAL_COUNT, by = c('ROUND', 'LOC', 'SEX
 ########################
 
 # find smooth proportion
-for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R016", "R017", "R018", "R015S")){
-  # round <- 'R010'
+for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R016", "R017", "R018")){
+  # round <- 'R015'
   
   DT <- copy(rprev[ROUND == round] )
   
@@ -129,7 +129,7 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R016", "R017", "
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0('hivprevalence_gp_stanfit_round',gsub('R0', '', round),'_220909.rds')
+  filename <- paste0('hivprevalence_gp_stanfit_round',gsub('R0', '', round),'_221116.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
   
@@ -150,7 +150,11 @@ for(i in seq_along(rounds)){
   x_predict <- seq(rprev[, min(AGE_LABEL)], rprev[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220909.rds')
+  if(round == '15'){
+    filename <- paste0('hivprevalence_gp_stanfit_round',round,'_221116.rds')
+  }else{
+    filename <- paste0('hivprevalence_gp_stanfit_round',round,'_220909.rds')
+  }
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -290,7 +294,7 @@ ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
   scale_x_continuous( expand = c(0,0)) +
   guides(shape = guide_legend(order=1), linetype = guide_legend(order=2), 
          color = guide_legend(order=3), fill = guide_legend(order=3))
-ggsave(file=file.path(outdir, paste0('smooth_predicted_prevalence_221101.png')),  w = 5, h = 10)
+ggsave(file=file.path(outdir, paste0('smooth_predicted_prevalence_221116.png')),  w = 5, h = 10)
 
 
 # ESTIMATED PREVALENCE
@@ -321,7 +325,7 @@ ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
   scale_x_continuous( expand = c(0,0))+ 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file=file.path(outdir, paste0('smooth_estimated_prevalence_221101.pdf')),  w = 7, h = 7)
+ggsave(file=file.path(outdir, paste0('smooth_estimated_prevalence_221116.pdf')),  w = 7, h = 7)
 
 
 ###########################
@@ -348,11 +352,11 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 #########
 
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_estimates_220811.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_estimates_221116.csv'))
 write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_220818.rds'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
 saveRDS(nsinf.samples, file = file.name)
 
-file.name <- file.path(outdir, paste0('RCCS_prevalence_model_fit_convergence_221101.RDS'))
+file.name <- file.path(outdir, paste0('RCCS_prevalence_model_fit_convergence_221116.RDS'))
 saveRDS(stats, file = file.name)

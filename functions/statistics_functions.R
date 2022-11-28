@@ -41,7 +41,7 @@ save_statistics_incidence_rate_ratio_trends <- function(ic, outdir.table){
   saveRDS(stats, paste0(outdir.table, '-data-incidence_rate_ratio_trends.rds'))
 }
 
-save_statistics_incidence_rate_trends <- function(icrr, icr, median_age, icrrs){
+save_statistics_incidence_rate_trends <- function(icrr, icr, median_age, icrrs, icrrt){
   
   ps <- c(0.5, 0.2, 0.8)
   p_labs <- c('M','CL','CU')
@@ -73,6 +73,10 @@ save_statistics_incidence_rate_trends <- function(icrr, icr, median_age, icrrs){
   # relative incidence ratio by age
   inc_rel_ratio_age <- icrrs[,.(M= round((M), 2), CL = round((CL), 2), CU = round((CU), 2)), by=c('COMM', 'ROUND', 'age_group')]
   inc_rel_ratio_age <- inc_rel_ratio_age[order(COMM, ROUND, age_group)]
+  
+  # relative incidence ratio total
+  inc_rel_ratio <- icrrt[,.(M= round((M), 2), CL = round((CL), 2), CU = round((CU), 2)), by=c('COMM', 'ROUND')]
+  inc_rel_ratio <- inc_rel_ratio[order(COMM, ROUND)]
   
   # median age at infection
   median_age[, MEDIAN_AGEYRS := round(MEDIAN_AGEYRS, 2)]

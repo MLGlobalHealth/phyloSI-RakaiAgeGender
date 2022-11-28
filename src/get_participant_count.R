@@ -44,7 +44,9 @@ colnames(rinc) <- toupper(colnames(rinc))
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 
 # SET ROUND 15S IN INLAND AS 15
-rinc[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
+rinc[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'STUDY_ID']
+rinc[ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, ROUND := 'R015']
+rinc <- rinc[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
 
 # GET PARTICIPANT
 rinc <- rinc[, list(PARTICIPANT  = .N), by = c('AGEYRS', 'ROUND', 'SEX', 'COMM')]

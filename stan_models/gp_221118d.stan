@@ -147,7 +147,7 @@ transformed parameters {
   }
     
   // find period contrast
-  log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_source];
+  log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_recipient];
   log_beta_period_contrast[i] += log_beta_baseline_contrast_period;
   
   // add period contrast to round contrast
@@ -191,7 +191,6 @@ transformed parameters {
   
   log_lambda = log(lambda);
 }
-
 
 model {
   
@@ -308,6 +307,8 @@ generated quantities{
     }
   }
 }
+
+
 
 
 

@@ -10,8 +10,8 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'newtrtcascade'
-stan_model <- 'gp_221101a'
+jobname <- 'central'
+stan_model <- 'gp_221115a'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -58,11 +58,6 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-if(!exists("use_number_susceptible_offset")){
-  use_number_susceptible_offset <- F
-}
-
 
 #
 # offset
@@ -97,7 +92,7 @@ plot_intensity_PP(intensity_PP_sampled, count_data, outfile.figures)
 intensity_PP <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'INDEX_AGE'),
                                              transform = 'exp',
                                              log_offset_round = log_offset_round,
-                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+                                             log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
 plot_intensity_PP_by_round(intensity_PP, outfile.figures)
 
 # predicted observed transmission
@@ -106,7 +101,6 @@ predict_y_recipient <- find_summary_output(samples, 'y_predict', c('INDEX_DIRECT
 predict_y_source_recipient <- find_summary_output(samples, 'y_predict', c('INDEX_DIRECTION', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'))
 plot_PPC_observed_source(predict_y_source, count_data, outfile.figures)
 plot_PPC_observed_recipient(predict_y_recipient, count_data, outfile.figures)
-save_statistics_PPC(predict_y_source_recipient, count_data, outdir.table)
 
 # predicted transmission
 predict_z_source <- find_summary_output_by_round(samples, 'z_predict', c('INDEX_DIRECTION', 'INDEX_TIME', 'AGE_TRANSMISSION.SOURCE'))
@@ -117,6 +111,7 @@ plot_PPC_augmented_recipient_round(predict_z_recipient_round, incidence_cases_re
 predict_incidence_rate_round <- find_summary_output_by_round(samples, 'ir_predict', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                              names = c('INDEX_AGE_INFECTION.RECIPIENT', 'INDEX_DIRECTION', 'INDEX_ROUND'))
 plot_PPC_incidence_rate_round(predict_incidence_rate_round, incidence_cases_recipient_round,outfile.figures)
+save_statistics_PPC(predict_y_source_recipient, count_data, predict_incidence_rate_round, incidence_cases_recipient_round, outdir.table)
 
 # predicted observed transmission vs all transmission
 plot_observed_to_augmented(predict_y_source, predict_z_source, outfile.figures)
@@ -238,7 +233,7 @@ cat("\nPlot transmission risk\n")
 transmission_risk_sex_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND'),
                                                              transform = 'exp',
                                                              log_offset_round = log_offset_round,
-                                                             log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                             log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                              per_unsuppressed = T)
 plot_transmission_risk_sex_source(transmission_risk_sex_source, outfile.figures)
 
@@ -246,7 +241,7 @@ plot_transmission_risk_sex_source(transmission_risk_sex_source, outfile.figures)
 transmission_risk_age_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                             transform = 'exp',
                                                             log_offset_round = log_offset_round,
-                                                            log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                            log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                             per_unsuppressed = T)
 plot_transmission_risk_sex_age_source(transmission_risk_age_source, outfile.figures)
 
@@ -264,7 +259,7 @@ df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
 incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'),
                                                       transform = 'exp',
                                                       log_offset_round = log_offset_round,
-                                                      log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                      log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                       relative_baseline = T,
                                                       per_susceptible = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
@@ -273,7 +268,7 @@ plot_incidence_transmission(incidence_tranmission, outfile.figures)
 incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                     transform = 'exp',
                                                     log_offset_round = log_offset_round,
-                                                    log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                    log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
                                                     relative_baseline = T,
                                                     per_susceptible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
@@ -304,6 +299,12 @@ expected_contribution_age_group_source2 <- find_summary_output_by_round(samples,
                                                                         standardised.vars = c('INDEX_ROUND'))
 plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
 
+# total
+median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
+                                                  c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                  transform = 'exp',
+                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
+                                                  quantile_age_source = T)
 
 #
 # Counterfactual: comparison of targets
@@ -311,11 +312,13 @@ plot_median_age_source_group(median_age_source_group, expected_contribution_age_
 
 cat("\nPlot relative incidence infection if different groups of male are targeted\n")
 
+
 # find incidence under the factual scenario by sex and age
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
                                                   log_offset_round = log_offset_round,
-                                                  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+                                                  log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+
 
 # find age groups that contribute the most
 expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
@@ -329,20 +332,21 @@ spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
 # we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
 # in all scenario, the number of participants treated in the counterfactual are = number of participant sources that contribute to 1/3 incidence
 counterfactuals_p_a <- make_counterfactual_target(samples, spreaders, log_offset_round, stan_data,
-                                           eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade, proportion_prevalence, participation,
-                                           only_participant = T, art_up_to_female = F, outdir.table)
+                                                  eligible_count_smooth, eligible_count_round, 
+                                                  treatment_cascade, proportion_prevalence, participation,
+                                                  only_participant = T, art_up_to_female = F, outdir.table)
 plot_counterfactual_one(counterfactuals_p_a, incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
 # generate counterfactual when participants and non-participant are treated
 # we compare treating main spreaders, male with the greatest diff in art coverage compared to female and random male
 # the number of male treated in the counterfactual are = number of male sources that contribute to 1/3 incidence
 counterfactuals_a_a <- make_counterfactual_target(samples, spreaders, log_offset_round, stan_data,
-                                           eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade, proportion_prevalence,participation,
-                                           only_participant = F, art_up_to_female = F, outdir.table)
+                                                  eligible_count_smooth, eligible_count_round, 
+                                                  treatment_cascade, proportion_prevalence,participation,
+                                                  only_participant = F, art_up_to_female = F, outdir.table)
 plot_counterfactual_one(counterfactuals_a_a, incidence_factual, "Unsuppressed", outfile.figures)
-
+plot_counterfactual_strategy(counterfactuals_a_a, incidence_factual, 'Unsuppressed', outfile.figures)
+  
 
 #
 # Counterfactual: comparison of strategies
@@ -396,6 +400,24 @@ counterfactuals_a_909090 <- make_counterfactual(samples, log_offset_round, stan_
                                                 eligible_count_smooth, eligible_count_round, 
                                                 treatment_cascade, proportion_prevalence, participation,
                                                   only_participant = F, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
+# checks
+if(0){
+  tmp <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'F' & COMM == 'inland', .(ROUND, COMM, AGEYRS, PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M)]
+  tmp1 <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, INFECTED,  PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL)]
+  tmp <- merge(tmp, tmp1, by = c('ROUND', 'COMM', 'AGEYRS'))
+  tmp[PROP_UNSUPPRESSED_PARTICIPANTS_M != PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL]
+  tmp[PROP_UNSUPPRESSED_NONPARTICIPANTS_M != PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
+  
+  tmp <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, TREATED)]
+  tmp[, TREATED_HALF := TREATED / 2]
+  tmp1 <- counterfactuals_a_f05$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, TREATED)]
+  tmp <- merge(select(tmp, -'TREATED'), tmp1, by = c('ROUND', 'COMM', 'AGEYRS'))
+  stopifnot(nrow(tmp[abs(TREATED - TREATED_HALF) > 1e-13]) == 0)
+
+  tmp1 <- counterfactuals_a_959595$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, INFECTED,  INFECTED_NON_SUPPRESSED)]
+  tmp1[, RATIO := INFECTED_NON_SUPPRESSED / INFECTED]
+  stopifnot(nrow(tmp1[abs(RATIO - (1-0.95*0.95*0.95)) > 1e-16]) == 0)
+}
 
 # plot
 plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_a_959595, counterfactuals_a_909090, 
@@ -412,7 +434,7 @@ cat("\nPlot NNT\n")
 NNT <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'),
                                    transform = 'exp',
                                    log_offset_round = log_offset_round,
-                                   log_offset_formula = 'log_PROP_SUSCEPTIBLE',
+                                   log_offset_formula = 'log_SUSCEPTIBLE',
                                    invert = T)
 plot_NNT(NNT, outfile.figures)
 
@@ -421,7 +443,7 @@ df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39'
 NNT_grouped <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'),
                                            transform = 'exp',
                                            log_offset_round = log_offset_round,
-                                           log_offset_formula = 'log_PROP_SUSCEPTIBLE',
+                                           log_offset_formula = 'log_SUSCEPTIBLE',
                                            invert = T)
 plot_NNT_group(NNT_grouped, outfile.figures)
 

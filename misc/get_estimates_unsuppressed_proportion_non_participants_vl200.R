@@ -12,7 +12,7 @@ outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfec
 
 # files
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
-path.data <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_unsuppressed.csv')
+path.data <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_unsuppressed_vl200.csv')
 
 # Load count of newly registered participants with unsuppressed viral loads
 vla <- as.data.table( read.csv(path.data) )
@@ -54,10 +54,10 @@ if(1){
           strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1))) + 
     scale_fill_manual(values = c('#9F73AB', '#432C7A'), 
-                      labels = c('Viral load <= 1,000 copies/mL', 'Viral load > 1,000 copies/mL')) + 
+                      labels = c('Viral load <= 200 copies/mL', 'Viral load > 200 copies/mL')) + 
     scale_y_continuous(expand = expansion(mult = c(0, 0.05))) + 
     scale_x_continuous(expand = c(0,0))
-  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age_newlyregistered_221101.pdf')), w=7, h=5.2)
+  ggsave(p, file=file.path(outdir, paste0('count_unsuppressed_by_gender_loc_age_newlyregistered_vl200_221121.pdf')), w=7, h=5.2)
   
 }
 
@@ -111,7 +111,7 @@ for(round in 15:18){
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_1000_newlyregistered.rds')
+  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_200_newlyregistered.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
   
@@ -138,7 +138,7 @@ for(i in seq_along(rounds)){
   x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_1000_newlyregistered.rds')
+  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_200_newlyregistered.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -268,8 +268,8 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_221121.rds'))
 saveRDS(nsinf.samples, file = file.name)
 
-file.name <- file.path(outdir, paste0('RCCS_nonsuppressed_proportion_model_fit_newlyregistered_221101.RDS'))
+file.name <- file.path(outdir, paste0('RCCS_nonsuppressed_proportion_model_fit_newlyregistered_vl200_221121.RDS'))
 saveRDS(stats, file = file.name)

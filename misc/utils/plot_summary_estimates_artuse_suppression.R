@@ -17,9 +17,9 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_casc
 # files
 artuse.path.np <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage.csv')
 artuse.path.p <- file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv')
-file.cascade.participants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221101.csv'))
-file.cascade.nonparticipants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221101.csv'))
-file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221101.csv'))
+file.cascade.participants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221116.csv'))
+file.cascade.nonparticipants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221116.csv'))
+file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221116.csv'))
 
 # find count of newly registered participants who reported art use
 rart.nonpart <- as.data.table( read.csv(artuse.path.np) )

@@ -69,7 +69,7 @@ data {
   int map_round_period[N_ROUND];
   int N_ROUND_PER_PERIOD[N_PERIOD];
   int N_OBS;
-  
+    
 	//splines
 	int number_rows; // = N_AGE
 	int number_columns;  // = N_AGE
@@ -104,10 +104,6 @@ parameters {
   real<lower=0> rho_gp_round_inland[N_DIRECTION];
   real<lower=0> alpha_gp_round_inland[N_DIRECTION];
   vector[num_basis_rows] z_round_inland[N_ROUND - 1, N_DIRECTION];
-  
-  real<lower=0> rho_gp_period[N_DIRECTION];
-  real<lower=0> alpha_gp_period[N_DIRECTION];
-  vector[num_basis_rows] z_period[N_DIRECTION];
   
   real<lower=0> rho_gp1[N_DIRECTION];
   real<lower=0> rho_gp2[N_DIRECTION];
@@ -147,8 +143,7 @@ transformed parameters {
   }
     
   // find period contrast
-  log_beta_period_contrast[i] = (BASIS_ROWS' * gp_1D(num_basis_rows, IDX_BASIS_ROWS, delta0, alpha_gp_period[i], rho_gp_period[i], z_period[i]))[map_age_source];
-  log_beta_period_contrast[i] += log_beta_baseline_contrast_period;
+  log_beta_period_contrast[i] = rep_vector(log_beta_baseline_contrast_period, N_PER_GROUP);
   
   // add period contrast to round contrast
   log_beta_round_contrast[i] = append_row(rep_matrix(rep_row_vector(0.0, N_PER_GROUP), N_ROUND_PER_PERIOD[1] - 1 ), 
@@ -192,7 +187,6 @@ transformed parameters {
   log_lambda = log(lambda);
 }
 
-
 model {
   
   //
@@ -220,13 +214,6 @@ model {
   }
 
   for (i in 1:N_DIRECTION){
-    
-    // hyperparameters period contrast over the age of the source 
-    alpha_gp_period[i] ~ cauchy(0,1);
-    rho_gp_period[i] ~ inv_gamma(2, 2);
-    
-    //period contrast over the age of the source 
-    z_period[i] ~ normal(0,1);
      
     // hyperparameters round contrast over the age of the recipient
     rho_gp_round_inland[i] ~ inv_gamma(2, 2);
@@ -308,6 +295,8 @@ generated quantities{
     }
   }
 }
+
+
 
 
 
