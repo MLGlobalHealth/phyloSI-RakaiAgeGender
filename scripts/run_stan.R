@@ -65,9 +65,12 @@ remove.pairs.from.rounds <- NULL
 use_loess_inc_estimates <- F
 pairs_replicates.seed <- NULL
 viremic_viral_load_200ml <- F
+use_30com_inc_estimates <- F
+use_30com_pairs <- F
 
-# obtained in EMODO_RAKAI repo
+# obtained in script/ 
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
+file.incidence.30com.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221119.csv")
 file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")
 
 # obtained in src/ for analysis
@@ -77,7 +80,7 @@ file.participation <- file.path(indir, 'data', 'RCCS_participation_221116.csv')
 file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_221116.csv')
 
 # obtained in misc/ for analysis
-file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11.rds')
+file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221116.csv")
 file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221116.csv")
 file.treatment.cascade.prop.participants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_vl200_221121.csv")
@@ -89,10 +92,12 @@ file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppresse
 file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_221116.csv'))
 file.reported.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
 
-# obtained in EMODO_RAKAI repo for plots
+# obtained in script/ for plots
 file.incidence.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
+file.incidence.30com.samples.inland <- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221119.csv")
 file.incidence.loess.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_samples_inland_221116.csv")
 
+# stan model
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
 # load functions
@@ -131,7 +136,10 @@ if(viremic_viral_load_200ml){
 if(use_loess_inc_estimates){
   incidence.inland <- fread(file.incidence.loess.inland)
   file.incidence.samples.inland	<- file.incidence.loess.samples.inland	
-}else{
+}else if(use_30com_inc_estimates){
+  incidence.inland <- fread(file.incidence.30com.inland)
+  file.incidence.samples.inland	<- file.incidence.30com.samples.inland 	
+} else{
   incidence.inland <- fread(file.incidence.inland)
 }
 
@@ -208,9 +216,16 @@ if(1)
 }
 if(!is.null(only.one.community)){
   cat('\nExcluding sources and recipients in ',   pairs[COMM.RECIPIENT != only.one.community, unique(COMM.RECIPIENT)] ,'\n')
-  cat('Removing ', nrow(pairs[COMM.RECIPIENT != only.one.community]), ' pairs\n')
-  pairs <- pairs[COMM.RECIPIENT == only.one.community]
+  cat('Removing ', nrow(pairs[!(COMM.SOURCE == only.one.community & COMM.RECIPIENT == only.one.community)]), ' pairs\n')
+  pairs <- pairs[COMM.SOURCE == only.one.community & COMM.RECIPIENT == only.one.community]
   cat('resulting in a total of ', nrow(pairs),' pairs\n\n')
+}
+if(use_30com_pairs){
+  cat('\nExcluding sources and recipients outside of the 30 continuously surveyed communities\n')
+  comm_continuously_surveyed <- c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 
+                                  89, 94, 106, 107, 108, 120, 391, 602, 754)
+  cat('Removing ', nrow(pairs[!(COMM_NUM.SOURCE %in% comm_continuously_surveyed & COMM_NUM.RECIPIENT %in% comm_continuously_surveyed)]), ' pairs\n')
+  pairs <- pairs[(COMM_NUM.SOURCE %in% comm_continuously_surveyed & COMM_NUM.RECIPIENT %in% comm_continuously_surveyed)]
 }
 if(only.transmission.after.start.observational.period){
   cat('\nFor inland excluding recipients infected before ', as.character(start_first_period_inland), '\n')
@@ -230,14 +245,9 @@ if(!is.null(remove.pairs.from.rounds)){
   cat('\nExcluding pairs in inland community from round', remove.pairs.from.rounds, '\n')
   tmp <- df_round_inland[round %in% remove.pairs.from.rounds, list(min_exclusion = min(min_sample_date), 
                                                             max_exclusion = max(max_sample_date))]
-  cat('Removing ', nrow(pairs[COMM.RECIPIENT == 'inland' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ]]), ' pairs\n')
-  pairs <- pairs[!(COMM.RECIPIENT == 'inland' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ])]
-  
-  cat('\nExcluding pairs in fishing community from round', remove.pairs.from.rounds, '\n')
-  tmp <- df_round_fishing[round %in% remove.pairs.from.rounds, list(min_exclusion = min(min_sample_date), 
-                                                                   max_exclusion = max(max_sample_date))]
-  cat('Removing ', nrow(pairs[COMM.RECIPIENT == 'fishing' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ]]), ' pairs\n')
-  pairs <- pairs[!(COMM.RECIPIENT == 'fishing' & DATE_INFECTION.RECIPIENT <= tmp[, max_exclusion] & DATE_INFECTION.RECIPIENT >= tmp[,min_exclusion ])]
+  pairs[, DATE.COLLECTION.PAIR := max(c(DATE.COLLECTION.SOURCE, DATE.COLLECTION.RECIPIENT)), by = c('RECIPIENT', 'SOURCE')]
+  cat('Removing ', nrow(pairs[COMM.RECIPIENT == 'inland' & DATE.COLLECTION.PAIR <= tmp[, max_exclusion] & DATE.COLLECTION.PAIR >= tmp[,min_exclusion ]]), ' pairs\n')
+  pairs <- pairs[!(COMM.RECIPIENT == 'inland' & DATE.COLLECTION.PAIR <= tmp[, max_exclusion] & DATE.COLLECTION.PAIR >= tmp[,min_exclusion ])]
 }
 
 print.which.NA(pairs)
