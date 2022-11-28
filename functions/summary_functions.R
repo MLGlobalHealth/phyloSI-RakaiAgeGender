@@ -1331,3 +1331,26 @@ read_pairs <- function(file.pairs){
   return(pairs.all)
 }
 
+get.sample.collection.dates <- function(select_aid=NULL, get_first_visit=FALSE)
+{
+    # get collection dates 
+    path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS','200316_pangea_db_sharing_extract_rakai.csv')
+    path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
+
+    files <- c(path.sdates.rccs, path.sdates.mrc)
+    cols <- c('pt_id', 'pangea_id', 'visit_dt')
+    ddates <- rbindlist(lapply(files, fread, select=cols))
+    ddates <- unique(ddates)
+    ddates <- merge(ddates, aik, by.x='pt_id', by.y='PT_ID')
+    ddates[, pt_id := NULL]
+    stopifnot(ddates[, uniqueN(pangea_id)==.N])
+    setnames(ddates, 'AID', 'aid')
+
+    if(!is.null(select_aid))
+        ddates <- ddates[aid %in% select_aid]
+
+    if(get_first_visit)
+        ddates <- ddates[, .(date_collection=min(visit_dt)),by='aid']
+    ddates
+}
+
