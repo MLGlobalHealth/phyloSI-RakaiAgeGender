@@ -991,10 +991,37 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
           strip.background = element_rect(colour="white", fill="white"))
   ggsave(paste0(outdir, '-data-incidence_rate_round.png'), w = 7, h = 6)
   
-  tmp[, WEIGHTED_INCIDENCE := INCIDENCE / sum(INCIDENCE), by = c('COMM', 'ROUND', 'SEX')]
+  tmp[, WEIGHTED_INCIDENCE := INCIDENT_CASES / sum(INCIDENT_CASES), by = c('COMM', 'ROUND', 'SEX')]
   max_y_limits <- ifelse(tmp[, max(INCIDENCE)] > 0.021, 2.7, 2.1)
-  # median_age <- tmp[, list(MEDIAN_AGEYRS =matrixStats::weightedMedian(AGEYRS, WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND', 'round')]
-  median_age <- tmp[, list(MEDIAN_AGEYRS =sum(AGEYRS* WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND', 'round')]
+  median_age <- tmp[, list(MEDIAN_AGEYRS =matrixStats::weightedMedian(AGEYRS, WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND', 'round')]
+  set.seed(12)
+  median_age[ROUND == 'R018' & SEX_LABEL == 'Women', MEDIAN_AGEYRS := MEDIAN_AGEYRS + runif(length(MEDIAN_AGEYRS), 0, 1)]
+  median_age[ROUND == 'R018' & SEX_LABEL == 'Men', MEDIAN_AGEYRS := MEDIAN_AGEYRS + runif(length(MEDIAN_AGEYRS), -1, 0)]
+  # median_age <- tmp[, list(MEDIAN_AGEYRS =sum(AGEYRS* WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND', 'round')]
+  ggplot(tmp[COMM == 'inland' & round %in% c(10, 12, 14, 16, 18)], aes(x = AGEYRS)) +
+    geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
+    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
+    geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Men' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL,  col = SEX_LABEL), shape = 25, size =3,  alpha = 0.5) +
+    geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Women' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS,  fill = SEX_LABEL,col = SEX_LABEL), shape = 25, size =3,  alpha = 0.5) +
+    geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Men' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 6, size =3) +
+    geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Women' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS,  col = SEX_LABEL), shape = 6, size =3) +
+    labs(y = 'Incidence rates\nper 100 person-years', x = 'Age') +
+    facet_grid(.~LABEL_ROUND, scale = 'free_y') +
+    theme_bw() +
+    scale_color_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
+    scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
+    theme(legend.position = 'none', 
+          strip.background = element_rect(colour="white", fill="white"), 
+          legend.title = element_blank(), 
+          strip.text = element_text(size = 9.3), 
+          axis.title = element_text(size = 12)) + 
+    scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
+    scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
+    coord_cartesian(ylim= c(0, max_y_limits))
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 8, h = 3.5)
+  
+  tmp[, WEIGHTED_INCIDENCE := INCIDENCE / sum(INCIDENCE), by = c('COMM', 'ROUND', 'SEX')]
+  median_age <- tmp[, list(MEDIAN_AGEYRS =matrixStats::weightedMedian(AGEYRS, WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND', 'round')]
   ggplot(tmp[COMM == 'inland' & round %in% c(10, 12, 14, 16, 18)], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
     geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
@@ -1013,7 +1040,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     coord_cartesian(ylim= c(0, max_y_limits))
-  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 8, h = 3.5)
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short2.pdf'), w = 8, h = 3.5)
   
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
