@@ -1,8 +1,7 @@
 # AIMS:
 # compute generation intervals for pairs in a network.
 
-# TODO: atm, the specification of the min-max infection ranges is done somewhere else...
-# TODO: MIN shouldn't be more than 15 year before first positive
+# TODO: check direction specified correctly.,,,
 
 ################
 # DEPENDENCIES #
@@ -19,12 +18,12 @@ library(xtable)
 usr <- Sys.info()[['user']]
 if(usr == 'andrea')
 {
-
-    out.dir <- '/home/andrea/Documents/Box/2022/genintervals/'
-    indir.deepsequence_xiaoyue   <- '/home/andrea/Documents/Box/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
-    indir.deepsequencedata <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata'
-    indir.deepsequence_analyses   <- '~/Documents/Box/ratmann_deepseq_analyses/live'
-    
+    base.hpc <- '/home/andrea/HPC'
+    # out.dir <- '/home/andrea/HPC/Documents/Box/2022/genintervals/'
+    out.dir <- '/home/andrea/HPC/ab1820/home/projects/2022/genintervals'
+    indir.deepsequence_xiaoyue   <- file.path(base.hpc, 'project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI')
+    indir.deepsequencedata <- file.path(base.hpc, 'project/ratmann_pangea_deepsequencedata/live')
+    indir.deepsequence_analyses   <- file.path(base.hpc, 'project/ratmann_deepseq_analyses/live')
     indir <- '/home/andrea/git/phyloflows'
 
 }else{
@@ -45,11 +44,18 @@ if(usr == 'andrea')
 }
 
 file.path.meta <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20220329.RData')
-file.path.chains.data <- .fp('X','211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
+file.path.chains.data.old <- .fp('X','211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
+file.path.chains.data <- '~/Downloads/Rakai_phscnetworks_ruleo.rda'
 file.path.round.timeline <- .fp('D', 'RCCS_data_estimate_incidence_inland_R6_R18/220903/RCCS_round_timeline_220905.RData')
-file.path.chains.data <- .fp('X','211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
 file.anonymisation.keys <- .fp('X','important_anonymisation_keys_210119.csv')
-file.path.tsiestimates <- .fp('A', '/PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_00/aggregated_TSI_with_estimated_dates.csv') 
+file.path.tsiestimates <- .fp('A', 'PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T/aggregated_TSI_with_estimated_dates.csv')
+
+file.exists(file.path.meta,
+            file.path.chains.data.old,
+            file.path.chains.data,
+            file.path.round.timeline,
+            file.anonymisation.keys,
+            file.path.tsiestimates) |> all() |> stopifnot()
 
 ################
 #   OPTIONS    #
@@ -86,18 +92,25 @@ option_list <- list(
         dest = 'include.only.rccs'
     ), optparse::make_option( "--RH-infectiousness",
         type = "numeric",
-        default = 5,
+        default = 1,
         help = "Relative Hazard of transmission during the acute versus chronic infection phase [Defaults to 5]", 
         dest = 'RH.infectiousness'
     ),
     optparse::make_option(
         "--RH-duration",
         type = "numeric",
-        default = 1/6,
+        default = 1,
         help = "Duration of acute phase, in years [Defaults to 2 months]", 
         dest = 'RH.duration'
+    ),
+    optparse::make_option( "--sensitivity-no-refinement",
+        type = "logical",
+        default = FALSE,
+        help = "Relative Hazard of transmission during the acute versus chronic infection phase [Defaults to 5]", 
+        dest = 'sensitivity.no.refinement'
     )
 )
+
 args <-  optparse::parse_args(optparse::OptionParser(option_list = option_list))
 print(args)
 
@@ -106,14 +119,13 @@ print(args)
 ################
 
 source(file.path(indir, 'functions', 'utils.R'))
-source(file.path(indir, 'functions', 'gi_analysis_functions.R'))
+source(file.path(indir, 'src/utils', 'gi_analysis_functions.R'))
 source(file.path(indir, 'functions', 'plotting_functions.R'))
 source(file.path(indir, 'functions', 'summary_functions.R'))
 # source(file.path(indir, 'functions', 'statistics_functions.R'))
 # source(file.path(indir, 'functions', 'stan_utils.R'))
 # source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 find_palette_round()
-
 
 plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table())
 {
@@ -126,7 +138,7 @@ plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table
         fcase(x=='', 'blue', x=='TSI', 'red', x=='INTERSECT','orange')
     .s <- 'SOURCE'; .r <- 'RECIPIENT'
 
-    plot_dt <- double.merge(chain, DT, by=c('SOURCE', 'RECIPIENT'))
+    plot_dt <- double.merge(chain, DT)
     setkey(plot_dt, SOURCE,RECIPIENT)
     setkey(idx, SOURCE,RECIPIENT)
     values[.p(values, 'MIN', .s) %in% names(DT)]
@@ -154,20 +166,18 @@ plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table
         labs(x='DOI source', y='DOI recipient')
     g
 }
+
 ################
 #     MAIN     #
 ################
 
+# get.extra.pairs.from.serohistory <- 1
+threshold.likely.connected.pairs <- 0.5
+get.sero.extra.pairs <- FALSE
+build.network.from.pairs <- TRUE
+
 # Load anon. keys
 aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
-
-# load chains 
-load(file.path.chains.data)
-threshold.likely.connected.pairs <- 0.5
-dchain <- as.data.table(dchain)
-chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
-chain <- subset(chain, select=c('SOURCE', 'RECIPIENT', 'IDCLU'))
-setkey(chain, IDCLU, SOURCE)
 
 # load meta data
 meta_env <- new.env()
@@ -175,11 +185,141 @@ load(file.path.meta, envir=meta_env)
 meta <- subset(meta_env$meta_data,
                select=c('aid', 'sex', 'date_birth', 'date_first_positive', 'date_last_negative'))
 meta <- unique(meta[!is.na(aid)])
-# idx <- meta[, uniqueN(comm) == 2, by=aid][V1==TRUE, aid]
 stopifnot(meta[, uniqueN(aid) == .N])
 
+# load chains 
+chains_env <- new.env()
+load(file.path.chains.data, envir=chains_env)
+dchain <- as.data.table(chains_env$dchain)
+chain <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
+if(get.sero.extra.pairs)
+    chain <- get.extra.pairs.from.serohistory(dchain, meta)
+chain <- subset(chain, select=c('SOURCE', 'RECIPIENT', 'IDCLU'))
+setkey(chain, IDCLU, SOURCE)
+
+if(build.network.from.pairs)
+{   # study dc instead..
+    dpl <- setDT(chains_env$dpl)
+    dc <- setDT(chains_env$dc)
+    stopifnot(dpl[, .N, by=c('H1', 'H2')][, all(N==1)])
+    stopifnot(dpl[,all(H1 < H2)])
+
+    idx <- dpl[SCORE > threshold.likely.connected.pairs, .(H1, H2, SCORE)]
+    tmp <- dc[ CATEGORISATION %like% 'close.and.adjacent.and.directed' , .(H1, H2, TYPE, SCORE)]
+    tmp <- tmp[, {z <- which(SCORE>.5); list(TYPE=TYPE[z], SCORE_DIR=SCORE[z])}, by=c('H1', 'H2')]
+    dlinkdir <- merge(idx, tmp, by=c('H1', 'H2'), all.x=TRUE)
+    stopifnot(tmp[,.N,by=c('H1', 'H2')][, all(N==1)])
+    stopifnot(dlinkdir[,.N,by=c('H1', 'H2')][, all(N==1)])
+
+    # get range of dates
+    drange <- get.infection.range.from.testing()
+    # if add unsupperted but with strong SCORE_DIR
+    if(get.sero.extra.pairs)
+    {
+        tmp <- dpl[SCORE <= threshold.likely.connected.pairs, .(H1, H2, SCORE)]
+        tmp <- merge(tmp, drange[,.(H1=AID, MIN.1=MIN, MAX.1=MAX)], by='H1')
+        tmp <- merge(tmp, drange[,.(H2=AID, MIN.2=MIN, MAX.2=MAX)], by='H2')
+        tmp <- rbind(
+            tmp[MAX.1 < MIN.2, `:=` (SCORE_DIR=1, TYPE='12')],
+            tmp[MAX.2 < MIN.1, `:=` (SCORE_DIR=1, TYPE='21')]
+        )[!is.na(TYPE), .(H1, H2, SCORE, SCORE_DIR, TYPE), ] 
+        dlinkdir <- rbind(dlinkdir, tmp)
+    }
+
+    # assign SCORE_DIR and check...
+    dlinkdir <- merge(dlinkdir, drange[,.(H1=AID, MIN.1=MIN, MAX.1=MAX)], by='H1')
+    dlinkdir <- merge(dlinkdir, drange[,.(H2=AID, MIN.2=MIN, MAX.2=MAX)], by='H2')
+    dlinkdir[MAX.1 < MIN.2 & is.na(TYPE), `:=` (TYPE='12', SCORE_DIR=1) ]
+    dlinkdir[MAX.2 < MIN.1 & is.na(TYPE), `:=` (TYPE='21', SCORE_DIR=1) ]
+    dlinkdir[MAX.1 < MIN.2, stopifnot(all(TYPE=='12'))]
+    dlinkdir[MAX.2 < MIN.1, stopifnot(all(TYPE=='21'))]
+    dlinkdir[, `:=` (MAX.1=NULL, MAX.2=NULL, MIN.1=NULL, MIN.2=NULL)]
+
+    # Assign direction of transmission
+    dnewpairs <- rbind(
+        dlinkdir[TYPE == '12', .(SOURCE=H1, RECIPIENT=H2, SCORE, SCORE_DIR)],
+        dlinkdir[TYPE == '21', .(SOURCE=H2, RECIPIENT=H1, SCORE, SCORE_DIR)]
+    ) |> unique() 
+    stopifnot(dnewpairs[,.N,by=c('SOURCE', 'RECIPIENT')][, all(N==1)])
+
+    filename <- file.path(out.dir, paste0('221124_study_networks_all.png'))
+    png(filename, width = 600, height = 600)
+    lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, ' recipients')]
+    p1 <- plot.chains(dnewpairs, size.threshold = 3, ttl='Before Subsetting', sbttl=lab)
+    dev.off()
+
+    # Remove non-RCCS participants
+    tmp <- nrow(dnewpairs)
+    rccs_ids <- meta[, unique(aid)]
+    dnewpairs <- dnewpairs[ SOURCE %in% rccs_ids & RECIPIENT %in% rccs_ids ]
+    cat('Excluding', tmp - nrow(dnewpairs), 'of', tmp, 'pairs outside of RCCS\n')
+    cat(nrow(dnewpairs), 'pairs remaining\n')
+    # plot
+    filename <- file.path(out.dir, paste0('221124_study_networks_norccs.png'))
+    png(filename, width = 600, height = 600)
+    lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, 'recipients')]
+    p2 <- plot.chains(dnewpairs, size.threshold = 3, ttl='After removing non-RCCS', sbttl=lab)
+    dev.off()
+
+    # Remove homosexual pairs
+    dsex <- meta[, .(aid, sex)] |> unique()
+    idx <- merge(dnewpairs, dsex[, .(SOURCE=aid, SEX.SOURCE=sex)], all.x=T, by='SOURCE')
+    idx <- merge(idx, dsex[, .(RECIPIENT=aid, SEX.RECIPIENT=sex)], all.x=T, by='RECIPIENT')
+    # idx[, table(SEX.SOURCE,SEX.RECIPIENT, useNA = 'ifany'),]
+    dhomosexualpairs <- idx[ (SEX.SOURCE==SEX.RECIPIENT) , ]
+    dhomosexualpairs[, IDCLU:=NULL]
+    idx <- idx[!(SEX.SOURCE==SEX.RECIPIENT), .(SOURCE, RECIPIENT)]
+
+    tmp <- nrow(dnewpairs) - nrow(idx)
+    cat('Excluding', tmp, 'of', nrow(dnewpairs), 'pairs of homosexual or unknown sex\n')
+    setkey(dnewpairs, SOURCE,RECIPIENT)
+    setkey(idx,SOURCE,RECIPIENT)
+    dnewpairs <- dnewpairs[idx]
+    cat(nrow(dnewpairs), 'pairs remaining\n')
+
+    filename <- file.path(out.dir, paste0('221124_study_networks_norccs_nohomosex.png'))
+    png(filename, width = 600, height = 600)
+    lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, 'recipients')]
+    p3 <- plot.chains(dnewpairs, size.threshold = 3, ttl='After removing non-RCCS + homosexuals', sbttl=lab)
+    dev.off()
+
+    # get an idea of how many can be inland
+    meta_env <- new.env()
+    load(file.path.meta, envir=meta_env)
+    cols <- c('aid', 'comm', 'round', 'sample_date')
+    dcomms <- subset(meta_env$meta_data, select=cols)
+    names(dcomms) <- toupper( names(dcomms) )
+    idx <- dcomms[!is.na(AID), .(COMM=paste0(unique(COMM), collapse='-'), uniqueN(COMM)), by='AID']
+    dnewpairs <- double.merge(dnewpairs, idx[, .(AID, COMM)])
+    dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', {
+        cat(.N);
+        print(table(COMM.SOURCE, COMM.RECIPIENT));
+        NULL
+    }]
+    dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', table(COMM.RECIPIENT)]
+
+    # Solve multiple sources by assigning recipient with strongest linkage support
+    dnewpairs <- dnewpairs[, {
+        z <- which.max(SCORE);
+        list(SOURCE=SOURCE[z], SCORE=SCORE[z], SCORE_DIR=SCORE_DIR[z])
+    }, by='RECIPIENT']
+    
+    filename <- file.path(out.dir, paste0('221124_study_networks_norccs_nohomosex_sourceattr.png'))
+    png(filename, width = 600, height = 600)
+    lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, ' recipients')]
+    p3a <- plot.chains(dnewpairs, size.threshold = 3, ttl='After removing non-RCCS + homosexuals + src attribution', sbttl=lab)
+    dev.off()
+
+    setcolorder(dnewpairs, c('SOURCE','RECIPIENT'))
+    idclus <- dnewpairs |> graph_from_data_frame() |> components()
+    idclus <- data.table(RECIPIENT=names(idclus$membership), IDCLU=unname(idclus$membership))
+    dnewpairs <- merge(dnewpairs, idclus,by='RECIPIENT')
+    setcolorder(dnewpairs, c('SOURCE','RECIPIENT'))
+
+}
+
 # exclude non-RCCS
-if( args$include.only.rccs )
+if( args$include.only.rccs & ! build.network.from.pairs )
 {
     tmp <- nrow(chain)
     rccs_ids <- meta[, unique(aid)]
@@ -190,7 +330,7 @@ if( args$include.only.rccs )
 }
 
 # exclude homosexuals
-if(args$include.only.heterosexual.pairs)
+if(args$include.only.heterosexual.pairs & ! build.network.from.pairs)
 {
     dsex <- meta[, .(aid, sex)] |> unique()
     idx <- merge(chain, dsex[, .(SOURCE=aid, SEX.SOURCE=sex)], all.x=T, by='SOURCE')
@@ -208,20 +348,33 @@ if(args$include.only.heterosexual.pairs)
     cat(nrow(chain), 'pairs remaining\n')
 }
 
+if(build.network.from.pairs)
+{
+    chain <- copy(dnewpairs)
+    drange <- get.infection.range.from.testing()
+    check <- merge(dnewpairs, drange[, .(SOURCE=AID, MIN.SOURCE=MIN, MAX.SOURCE=MAX)], by='SOURCE')
+    check <- merge(check, drange[, .(RECIPIENT=AID, MIN.RECIPIENT=MIN, MAX.RECIPIENT=MAX)], by='RECIPIENT')
+    check[ MAX.RECIPIENT < MIN.SOURCE, stopifnot(.N==0)]
+}
+
+dancestors <- get.ancestors.from.chain(chain)
+
 # get plausible infection ranges.
 drange <- get.infection.range.from.testing()
-chain <- check.inconsistent.testing(drange, switch = TRUE)
-tmp0 <- drange[, as.numeric(mean(MAX - MIN)/365.25)]
-shrink.intervals(drange); tmp0
+chain <- check.inconsistent.testing(drange, switch_if_no_other_src = TRUE)
+drange <- shrink.intervals(drange)
 
 # update using TSI estimates
-drange_tsi <- get.infection.range.from.tsi()
-drange_tsi <- check.inconsistent.testing(drange_tsi, switch = FALSE)
-tmp0 <- drange_tsi[, as.numeric(mean(MAX - MIN)/365.25)]
-shrink.intervals(drange_tsi); tmp0
+drange_tsi <- get.infection.range.from.tsi(file.path.tsiestimates)
+drange_tsi <- check.inconsistent.testing(drange_tsi, switch_if_no_other_src = FALSE)
+drange_tsi <- shrink.intervals(drange_tsi)
 setnames(drange_tsi, c('MIN', 'MAX'), c('TSI.MIN', 'TSI.MAX'))
 
-# intersect the 2
+# check no contradictions after shrinkning
+idx <- double.merge(chain, drange_tsi, by_col = "AID")[TSI.MAX.RECIPIENT - TSI.MIN.SOURCE < 0, unique(IDCLU)]
+stopifnot(nrow(idx) == 0)
+
+# intersect the serohistory and tsi ranges at the individal-level. If intersection is empty, priorities tsi.
 tmp <- merge(drange, drange_tsi)
 tmp[,{
     rng_intersect <- (MAX>TSI.MIN & TSI.MAX>MIN)
@@ -236,7 +389,6 @@ tmp[,{
     ) -> r_max
     list(AID, INTERSECT.MIN=r_min, INTERSECT.MAX=r_max)
     }] -> tmp1
-
 
 if(0)
 {   # VISUALISE
@@ -269,12 +421,11 @@ dinfectiousness[, END := c(START[-1], Inf)]
 setcolorder(dinfectiousness, c('START', 'END', 'VALUE'))
 
 
-
 # Load tranmsission pairs and run MC
 # __________________________________
 
 dpairs <- double.merge(chain, drange, by_col = "AID")
-# dpairs[, sort(MAX.RECIPIENT - MIN.SOURCE)]
+dpairs[MAX.RECIPIENT - MIN.SOURCE < 0, stopifnot(.N == 0)]
 # dpairs[, sort(MAX.SOURCE-MIN.SOURCE)]
 # dpairs[, sort(MAX.RECIPIENT-MIN.RECIPIENT)]
 
@@ -283,7 +434,8 @@ dclus <- get.transmission.cluster.ids(dpairs, check=FALSE)
 
 # initialise data.table summarising geometric properties
 dclus[, { g <- GROUP;
-         out <- dclus[GROUP==g, unique(.(SOURCE=SOURCE, RECIPIENT=RECIPIENT))]
+         out <- dclus[GROUP==g, .(SOURCE=SOURCE, RECIPIENT=RECIPIENT)]
+         out <- unique(out)
          N_out <- out[, uniqueN(c(SOURCE,RECIPIENT))]
          out <- list(out)
          out <- list(IDS=out, N_IDS=N_out)
@@ -297,31 +449,54 @@ dclus[, { g <- GROUP;
 range_gi <- c(.5, 1:10)
 tmp <- dinfectiousness[!is.infinite(END), paste(round(END, 2), sep='')]
 tmp <- gsub('\\.', '', tmp)
+
 filename_net <- 'networks_GICentroids'
 suffix <- ''
 if( ! is.null(dinfectiousness))
     suffix <- paste0('_d', tmp, '_w', paste0( dinfectiousness$VALUE, collapse=''))
+if( build.network.from.pairs  )
+    suffix <- paste0(suffix, '_netfrompairs')
+if( get.sero.extra.pairs )
+    suffix <- paste0(suffix, '_seropairs')
 filename_net <- file.path(out.dir, paste0(filename_net, suffix, '.rds'))
 
 if(args$get.round.probabilities)
 {
+    
     tmp_env <- new.env()
     load(file.path.round.timeline, envir = tmp_env)
-
     df_round_inland <- tmp_env$df_round_inland
-    df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
-    start_observational_period_inland <- df_round_inland[round == 'R010', min_sample_date] 
-    stop_observational_period_inland <- df_round_inland[round == 'R018', max_sample_date] 
-    cutoff_date <- df_round_inland[round == 'R016', min_sample_date] 
+    df_round_fishing <- tmp_env$df_round_fishing
 
-    stopifnot(start_observational_period_inland <= cutoff_date & stop_observational_period_inland >= cutoff_date)
+    start_first_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
+    stop_first_period_inland <- df_round_inland[round == 'R015', max_sample_date] # "2013-07-05"
+    start_second_period_inland <-df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
+    stop_second_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
 
-    df_period <- make.df.period(start_observational_period_inland, stop_observational_period_inland, 
-                                cutoff_date)
+    stopifnot(start_first_period_inland < stop_first_period_inland)
+    stopifnot(stop_first_period_inland < start_second_period_inland)
+    stopifnot(start_second_period_inland < stop_second_period_inland)
 
-    df_round <- make.df.round(df_round_inland, df_period)
-    df_round <- subset(df_round, select= ! names(df_round) %like% 'LABEL|ORIGINAL')
-    rm(tmp_env)
+    cols <- c("ROUND", "MIN_SAMPLE_DATE", "MAX_SAMPLE_DATE", "INDEX_TIME", "INDEX_ROUND", "round")
+    df_round_i <- make.df.round(df_round_inland) |> subset(select=cols)
+    df_round_f <- make.df.round(df_round_fishing) |> subset(select=cols)
+
+    cols2 <- cols[! cols %like% 'SAMPLE_DATE|INDEX']
+    df_round_gi <- merge(df_round_i, df_round_f, by=cols2, all.x=TRUE)
+    df_round_gi[, `:=` (
+                        MIN_SAMPLE_DATE=pmin(MIN_SAMPLE_DATE.x, MIN_SAMPLE_DATE.y, na.rm=TRUE),
+                        MAX_SAMPLE_DATE=pmax(MAX_SAMPLE_DATE.x, MAX_SAMPLE_DATE.y, na.rm=TRUE),
+                        INDEX_TIME=INDEX_TIME.x,
+                        INDEX_ROUND=INDEX_ROUND.x
+                        )]
+    df_round_gi <- subset(df_round_gi, select= ! names(df_round_gi) %like% '.x$|.y$' )
+    df_round_gi <- subset(df_round_gi, select= cols)
+
+    df_round_gi[, MAX_SAMPLE_DATE := pmax(MAX_SAMPLE_DATE, shift(MIN_SAMPLE_DATE, -1), na.rm=TRUE)]
+    df_round_gi
+
+
+    rm(tmp_env, df_round_inland, df_round_fishing, df_round_i, df_round_f)
 }
 
 if(file.exists(filename_net) & ! args$rerun )
@@ -343,7 +518,7 @@ if(file.exists(filename_net) & ! args$rerun )
                                          importance_weights=dinfectiousness,
                                          get_volume=T,
                                          provide_samples=provide_samples,
-                                         df_round=df_round)
+                                         df_round=df_round_gi)
         list(out, NAME=c('CENTROID', 'VOLUME', 'GI', 'RPROBS'))
     } , by=GROUP] -> tmp
 
@@ -371,11 +546,11 @@ if(1)
     stopifnot( tmp[, all(IU <= MAX)] )
 }
 
-if(nrow(df_round))
+if(nrow(df_round_gi))
 {   # compute probability of assigning source to different period
     dprobs_roundallocation <- dcohords[ , RPROBS[[1]], by='GROUP']
     dprobs_roundallocation <- merge(
-                                    df_round[, .(ROUND, INDEX_TIME)],
+                                    df_round_gi[, .(ROUND, INDEX_TIME)],
                                     dprobs_roundallocation,
                                     by='ROUND', all.y=TRUE)
     dprobs_roundallocation <- dprobs_roundallocation[, 
@@ -400,8 +575,11 @@ if(nrow(df_round))
 # prepare input for Bayesian model
 centroids <- dcohords[, CENTROIDS[[1]], by='GROUP']
 dresults <- prepare.pairs.input.for.bayesian.model(centroids)
+# fsetdiff(dresults[, .(SOURCE, RECIPIENT)], chain[, .(SOURCE, RECIPIENT)])
+# dresults[, table(DIRECTION)]
 dhomosexualpairs[, DIRECTION := 'phyloscanner']
 dhomosexualpairs <- dhomosexualpairs[! RECIPIENT %in% dresults$RECIPIENT]
+dhomosexualpairs[, `:=` (SCORE=NULL, SCORE_DIR=NULL)]
 rbind(
     dresults,
     dhomosexualpairs,
@@ -409,10 +587,85 @@ rbind(
 ) -> dresults
 dresults <- get.community.type.at.infection.date(dresults)
 
-filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
-saveRDS(dresults, filename)    
-dresults <- readRDS(filename)
+if(get.sero.extra.pairs)
+{
+    if(nrow(additional_pairs_from_serohistory))
+    {
+        setkey(dresults, SOURCE, RECIPIENT)
+        idx <- additional_pairs_from_serohistory[, .(SOURCE, RECIPIENT)]
+        dresults[idx, DIRECTION := 'serohistory']
 
+        # 
+        idx2 <- idx[! RECIPIENT %in% dresults$RECIPIENT]
+        dadditional <- meta[, .(SOURCE=aid, SEX.SOURCE=sex, DIRECTION='serohistory')]
+        dadditional <- merge(idx2, dadditional)
+        tmp1 <- meta[, .(RECIPIENT=aid, SEX.RECIPIENT=sex)]
+        dadditional <- merge(dadditional, tmp1, by='RECIPIENT')
+        setcolorder(dadditional, c('SOURCE','RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'DIRECTION'))
+        rbind(
+            dresults,
+            dadditional,
+            fill=TRUE
+        ) -> dresults
+    }
+}
+
+# get sample collection dates
+tmp <- get.sample.collection.dates(get_first_visit=TRUE)
+names(tmp) <- toupper(gsub('_','.',names(tmp)))
+dresults <- double.merge(dresults, tmp)
+stopifnot(dresults[, all(CU < DATE.COLLECTION.RECIPIENT, na.rm=TRUE)])
+
+dresults[!is.na(M) &
+         SEX.SOURCE != SEX.RECIPIENT &
+         COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland', {
+             cat('There are', .N, 'pairs with median DOI estimate(', sum(is.na(ROUND.M)), ') outside of range.\n'); .SD
+         } ][is.na(ROUND.M), range(M)]
+
+
+# Save
+# filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
+filename <-file.path(out.dir, paste0('pairsdata_toshare', suffix, '.rds')) 
+saveRDS(dresults, filename)    
+
+if(0)
+{   # study all FF pairs to be sent to Griffin
+    idx <- unique(dchain[, .(H1, H2)])
+    idx <- merge(idx, meta[, .(H1=aid, SEX.H1=sex)], by='H1')
+    idx <- merge(idx, meta[, .(H2=aid, SEX.H2=sex)], by='H2')
+    idx <- tmp[SEX.H1 == SEX.H2 & SEX.H1 == 'F', .(H1, H2)]
+
+    cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'ROUND.M', 'DIRECTION', 'COMM.SOURCE', 'COMM.RECIPIENT')
+    tmp12 <- merge(dresults, idx, by.x=c('SOURCE', 'RECIPIENT'), by.y=c('H1', 'H2'))
+    tmp21 <- merge(dresults, idx, by.x=c('SOURCE', 'RECIPIENT'), by.y=c('H2', 'H1'))
+    
+    tmpUN <- merge( idx, tmp12, by.x=c('H1', 'H2'), by.y=c('SOURCE', 'RECIPIENT'), all.x=TRUE)[is.na(SEX.SOURCE), .(H1, H2) ]
+    tmpUN <- merge(tmpUN, tmp21, by.x=c('H1', 'H2'), by.y=c('RECIPIENT', 'SOURCE'), all.x=TRUE)[is.na(SEX.RECIPIENT), .(H1, H2) ]
+    
+    tmpUN[, `:=`(SOURCE=H1, RECIPIENT=H2, SEX.SOURCE='F', SEX.RECIPIENT='F', ROUND.M=NA_character_, DIRECTION='phyloscanner_unclear')]
+    tmpUN[, `:=`(H1=NULL, H2=NULL)]
+    stopifnot(nrow(tmpUN) + nrow(tmp12) + nrow(tmp21) == nrow(idx))
+
+    all_ff_pairs <- rbind(tmp12, 
+                          tmp21, 
+                          tmpUN,
+                          fill=TRUE)
+
+    load(file.path.meta, envir=meta_env)
+    dcomms <- subset(meta_env$meta_data, select=c('aid', 'comm', 'round'))
+    dcomms <- unique(dcomms[!is.na(aid),])
+
+    dcomms <- dcomms[ is.na(comm), comm :='neuro']
+    dcomms <- dcomms[, list(comm=fifelse(uniqueN(comm)==1, yes=comm[1], no=NA_character_ )), by='aid']
+
+    all_ff_pairs[is.na(COMM.SOURCE), COMM.SOURCE:=dcomms[aid == SOURCE, comm], by='SOURCE']
+    all_ff_pairs[is.na(COMM.RECIPIENT), COMM.RECIPIENT:=dcomms[aid == RECIPIENT, comm], by='RECIPIENT']
+
+    filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('221117_all_ff_pairs.csv'))
+    fwrite(all_ff_pairs, filename)
+}
+
+dresults[, table(DIRECTION) ]
 
 # make table
 cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'M', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'DIRECTION')
@@ -421,7 +674,6 @@ dtable[, table(SEX.SOURCE,SEX.RECIPIENT)]
 setnames(dtable, 'M', 'INFECTION_DATE')
 filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_table_toshare', suffix, '.csv'))
 fwrite(dtable, filename)
-
 
 ##############################
 #   EXTENDED DATA FIGURES   # 
@@ -441,7 +693,7 @@ naturemed_reqs()
 
 if(1)
 {
-    # plot final predcitions v1
+    # plot final predictions v1
     {
         tmp_aids <- dresults[!is.na(M), .(SOURCE,RECIPIENT, M)][, RECIPIENT[order(M)] ]
 
@@ -461,10 +713,10 @@ if(1)
         {
             p_predictions <- ggplot(dresults[!is.na(M)], aes(y=ordered(RECIPIENT, levels= tmp_aids) )) + 
                 geom_point(aes(x=M), color='red')  +
-                geom_vline(data=df_round, aes(xintercept=MIN_SAMPLE_DATE), linetype='dotted') +
-                geom_vline(data=df_round, aes(xintercept=MAX_SAMPLE_DATE), linetype='dotted') +
-                geom_vline(data=df_round[round==15], aes(xintercept=MAX_SAMPLE_DATE), color='red') +
-                geom_rect(data = df_round, aes(y=NULL, ymin = first(tmp_aids), ymax = last(tmp_aids), 
+                geom_vline(data=df_round_gi, aes(xintercept=MIN_SAMPLE_DATE), linetype='dotted') +
+                geom_vline(data=df_round_gi, aes(xintercept=MAX_SAMPLE_DATE), linetype='dotted') +
+                geom_vline(data=df_round_gi[round==15], aes(xintercept=MAX_SAMPLE_DATE), color='red') +
+                geom_rect(data = df_round_gi, aes(y=NULL, ymin = first(tmp_aids), ymax = last(tmp_aids), 
                                                 xmin = MIN_SAMPLE_DATE, xmax = MAX_SAMPLE_DATE,
                                                 fill = as.ordered(round)), alpha = 0.5) + 
                 geom_linerange(data=drange_tmp[AID %in% tmp_aids], aes(xmin=MIN, xmax=MAX, y=AID, color=TYPE)) +
@@ -494,18 +746,19 @@ if(1)
         cols_new <- setdiff(cols_new, 'RECIPIENT')
         drange_tsi2[, (cols_new) := lapply(.SD, as.Date) , .SDcols=cols_new]
         drange_tsi2 <- drange_tsi2[RECIPIENT %in% tmp$RECIPIENT]
+
         tmp <- merge(tmp, drange_tsi2, by='RECIPIENT', all.x=TRUE)
         tmp[, INTERSECT := pmax(CL, MIN) <= pmin(CU, MAX)]
         tmp <- tmp[!is.na(MIN)]
 
 
         p_predictions2 <- ggplot(tmp) + 
-            geom_rect(data=df_round, aes(xmin=MIN_SAMPLE_DATE, xmax=MAX_SAMPLE_DATE, 
+            geom_rect(data=df_round_gi, aes(xmin=MIN_SAMPLE_DATE, xmax=MAX_SAMPLE_DATE, 
                                          ymin=MIN_SAMPLE_DATE, ymax=MAX_SAMPLE_DATE, fill=as.ordered(round))) + 
-            geom_rect(data=df_round, aes(xmin=as.Date(-Inf), xmax=MAX_SAMPLE_DATE , 
+            geom_rect(data=df_round_gi, aes(xmin=as.Date(-Inf), xmax=MAX_SAMPLE_DATE , 
                                         ymin=MIN_SAMPLE_DATE, ymax=MAX_SAMPLE_DATE, 
                                          fill=as.ordered(round)), alpha=.1) + 
-            geom_rect(data=df_round, aes(ymin=as.Date(-Inf), ymax=MAX_SAMPLE_DATE , 
+            geom_rect(data=df_round_gi, aes(ymin=as.Date(-Inf), ymax=MAX_SAMPLE_DATE , 
                                         xmin=MIN_SAMPLE_DATE, xmax=MAX_SAMPLE_DATE, 
                                         fill=as.ordered(round)), alpha=.1) + 
             geom_abline(aes(slope=1, intercept=0), linetype='dashed', color='red' ) + 
@@ -553,20 +806,18 @@ if(1)
         plot_mae <- ggplot(tmp2, aes(color=.rm(METHOD), fill=.rm(METHOD))) + 
             geom_histogram(aes(AE, alpha=.rm(METHOD)), center=.25, binwidth=.5,
                            position='identity' ) + 
-            geom_point(data=means, aes(y=3.6, x=MEAN, color=.rm(METHOD)), pch=25, size=4)+ 
+            geom_point(data=means, aes(y=-150/60, x=MEAN, color=.rm(METHOD)), pch=2, size=2)+ 
             # geom_vline(data=means, aes(xintercept=MEAN, color=METHOD)) +
             theme_bw() +
             theme(legend.position='bottom') + 
             scale_x_continuous(expand = c(0.01, .1), breaks = 1:20) +
-            scale_y_continuous(limits=c(0, 150), expand = c(0, 0)) +
+            scale_y_continuous(limits=c(-150/30, 150), expand = c(0, 0)) +
             labs(fill='', color='', alpha='',
                  x='absolute difference between infection time estimates and\nthe midpoint of the seroconversion interval',
-                 y='source-recipient pairs in which recipient has a last negative test') 
+                 y='source-recipient pairs for whom recipient has a last negative test') 
 
         plot_mae <- change_histogram_colors(plot_mae)
         force(plot_mae)
-        tmp2[]
-
 
         # get ages and rounds if TSI criterion is used
         tsi_predictions <- copy(tmp)
@@ -619,11 +870,11 @@ if(1)
                 geom_histogram(aes(x=X),
                                center=.5, binwidth=1,
                                position='identity', alpha=.5) +
-                geom_point(data=medians2, aes(y=.6, x=MEDIAN, color=.rm(METHOD)), size=4, pch=25)+ 
+                geom_point(data=medians2, aes(y=-25/60, x=MEDIAN, color=.rm(METHOD)), size=2, pch=2)+ 
                 theme_bw() +
                 theme(legend.position='bottom') + 
                 scale_x_continuous(expand = c(0.01, .1), breaks=seq(0, 100, 5)) +
-                scale_y_continuous(limits=c(0, 25), expand = c(0, 0)) +
+                scale_y_continuous(limits=c(-25/30, 25), expand = c(0, 0)) +
                 labs(fill='', color='', alpha='',
                      y = "source-recipient pairs",
                      x = paste("estimated age of the phylogenetically likely\n",tolower(part),"at time of infection"))
@@ -685,7 +936,7 @@ if(1)
             theme(legend.position='bottom', axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
             labs(x='Date of infection', y='Seroconverters', fill='Round', pch='median doi', color='Infection range')
         p_tsisero
-    } 
+    }
 
     # Plot schema
     {
@@ -782,7 +1033,6 @@ if(1)
         ggsave(filename, p_schema, width=10, height=10, units = 'cm')
     }
 
-
     tmp <- ggarrange_nature(plot_mae + theme(legend.spacing.x=unit(.3, 'cm')),
                             plot_age_comparison_source, plot_age_comparison_recipient,
                             common.legend = TRUE, legend = 'bottom',
@@ -792,36 +1042,39 @@ if(1)
     ggsave_nature(filename, tmp, add_reqs=FALSE)
 
     
-    # vertical layout
-    p_tmp <- ggarrange(p_schema , p_tsisero, common.legend = TRUE, legend='bottom')
-    p1 <- ggarrange(p_predictions, p_tmp, ncol=1, heights=c(.6, .4))
-    # horizontal layour
-    p_tmp_h <- ggarrange(p_schema+coord_flip() + reqs , p_tsisero+reqs, ncol=1, 
-                         common.legend = TRUE, legend='bottom',
-                         heights=c(.4, .6),
-                         labels=c('b','c'), font.label=list(size=8))
-    p_hor <- ggarrange(p_predictions+reqs, p_tmp_h,
-                       ncol=2, widths=c(.6, .4),
-                       labels=c('a', ''), font.label=list(size=8))
+    if(0)
+    {
+        # vertical layout
+        p_tmp <- ggarrange(p_schema , p_tsisero, common.legend = TRUE, legend='bottom')
+        p1 <- ggarrange(p_predictions, p_tmp, ncol=1, heights=c(.6, .4))
+        # horizontal layour
+        p_tmp_h <- ggarrange(p_schema+coord_flip() + reqs , p_tsisero+reqs, ncol=1, 
+                             common.legend = TRUE, legend='bottom',
+                             heights=c(.4, .6),
+                             labels=c('b','c'), font.label=list(size=8))
+        p_hor <- ggarrange(p_predictions+reqs, p_tmp_h,
+                           ncol=2, widths=c(.6, .4),
+                           labels=c('a', ''), font.label=list(size=8))
 
-    filename <- file.path(out.dir, 'edf_tsis_v.pdf')
-    ggsave(filename, p_hor, width=17, height=18, units = 'cm')
+        filename <- file.path(out.dir, 'edf_tsis_v.pdf')
+        ggsave(filename, p_hor, width=17, height=18, units = 'cm')
 
 
-    p_tmp_h <- ggarrange(plot_mae + reqs, plot_age_comparison+reqs,
-                         common.legend = TRUE, legend='right',
-                         labels=c('b','c'), font.label=list(size=8))
+        p_tmp_h <- ggarrange(plot_mae + reqs, plot_age_comparison+reqs,
+                             common.legend = TRUE, legend='right',
+                             labels=c('b','c'), font.label=list(size=8))
 
-    .v_leg <- theme(legend.position='right', legend.direction='vertical', legend.box='vertical')
-    p_hor2 <- ggarrange(p_predictions2 + reqs +
-                        .v_leg + 
-                        guides(fill=guide_legend(ncol=1, byrow=TRUE, override.aes=list(size=1))),
-                    p_tmp_h, 
-                        ncol=1, heights=c(6.5,3.5), 
-                        labels=c('a', ''), font.label=list(size=8))
+        .v_leg <- theme(legend.position='right', legend.direction='vertical', legend.box='vertical')
+        p_hor2 <- ggarrange(p_predictions2 + reqs +
+                            .v_leg + 
+                            guides(fill=guide_legend(ncol=1, byrow=TRUE, override.aes=list(size=1))),
+                        p_tmp_h, 
+                            ncol=1, heights=c(6.5,3.5), 
+                            labels=c('a', ''), font.label=list(size=8))
 
-    filename <- file.path(out.dir, 'edf_tsis_v_v2.pdf')
-    ggsave(filename, p_hor2, width=17, height=18, units = 'cm')
+        filename <- file.path(out.dir, 'edf_tsis_v_v2.pdf')
+        ggsave(filename, p_hor2, width=17, height=18, units = 'cm')
+    }
 
 }
 
