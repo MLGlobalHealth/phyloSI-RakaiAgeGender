@@ -140,10 +140,10 @@ get.infection.range.from.testing <- function()
 
 }
 
-get.infection.range.from.tsi <- function(chain_subset=TRUE)
+get.infection.range.from.tsi <- function(path,chain_subset=TRUE)
 {
     cols <- c('RENAME_ID', 'pred_doi_min', 'pred_doi_max')
-    drange_tsi <- fread(file.path.tsiestimates, select = cols) 
+    drange_tsi <- fread(path, select = cols) 
     setnames(drange_tsi, cols, c('AID', 'MIN', 'MAX'))
     drange_tsi[, `:=` (AID=gsub('-fq[0-9]', '', AID)) ] 
     if(chain_subset)
@@ -154,21 +154,59 @@ get.infection.range.from.tsi <- function(chain_subset=TRUE)
     drange_tsi
 }
 
-check.inconsistent.testing <- function(DRANGE, switch=TRUE)
-{
-    chain_tmp <- double.merge(chain, DRANGE)
-    cat(names(chain_tmp), '\n')
+get.ancestors.from.chain <- function(CHAIN)
+{ 
+    # start off with only recipients as 
+    out <- as.list(CHAIN$SOURCE)
+    names(out) <- CHAIN$RECIPIENT
 
-    tmp <- chain_tmp[ MAX.RECIPIENT <= MIN.SOURCE ]
-    cat("There are", nrow(tmp), "instances in which the maximum infection date of the recipient is smaller than the minimum infection date of the source\n")
-
-    if(switch)
+    while(TRUE)
     {
-        cat("\tswithing direction of tranmsission...\n")
+        .u <- unlist
+        .add.one.level.ancestor <- function(x)
+            unique( c(.u(out[x]), .u(out[.u(out[x])]) ))
+            
+        tmp <- lapply(names(out), .add.one.level.ancestor)
+        names(tmp)  <- names(out)
+        tmp
+        check <- length(unlist(tmp)) == length(unlist(out))
+        out <- copy(tmp)
+        if(check) break
+    }
+    sapply(out, length) |> table()
+    out
+}
 
-        if( nrow(tmp) != 0)
+check.inconsistent.testing <- function(DRANGE, switch_if_no_other_src=FALSE, remove_others_in_network=FALSE)
+{
+    # DRANGE <- copy(drange_tsi); dancestors <- get.ancestors.from.chain(chain)
+    chain_tmp <- double.merge(chain, DRANGE)
+
+    # get the maximum earliest infection date across ancestors
+    tmp <- lapply(dancestors, function(vec) DRANGE[AID %in% vec, max(MIN, na.rm=TRUE)])  
+    tmp <- data.table(RECIPIENT=names(tmp), MIN.ANCESTOR=as.Date(unlist(tmp), origin='1970-01-01'))
+
+    chain_tmp <- merge(chain_tmp, tmp, by='RECIPIENT', all.x=TRUE)
+    problematic_pair <- chain_tmp[ MAX.RECIPIENT <= MIN.SOURCE ]
+    cat("There are", nrow(problematic_pair), "recipients whose maximum infection date preceeds the minium infection date of the source\n")
+    problematic_net <- setdiff(chain_tmp[ MAX.RECIPIENT <= MIN.ANCESTOR], problematic_pair)
+    cat("Additionaly, there are", nrow(problematic_net), "recipients whose maximum infection date preceeds the the minimum infection date of one of its 'indirect' ancestors.\n")
+
+    if(switch_if_no_other_src)
+    {
+        if(nrow(problematic_net))
         {
-            idx <- tmp[, .(SOURCE, RECIPIENT) ]
+            cat("\tremoving recipients inconsistent with 'deeper' ancestors...\n")
+            setkey(problematic_net, SOURCE,RECIPIENT)
+            setkey(chain, SOURCE,RECIPIENT)
+            idx <- problematic_net[, .(SOURCE,RECIPIENT)]
+            chain <- chain[!idx]
+        }
+
+        if( nrow(problematic_pair) != 0)
+        {
+            cat("\tswithing direction of tranmsission...\n")
+            idx <- problematic_pair[, .(SOURCE, RECIPIENT) ]
             setkey(chain, SOURCE,RECIPIENT)
             setkey(idx, SOURCE,RECIPIENT)
             # tmp <- chain[idx][, .(SOURCE=RECIPIENT,RECIPIENT=SOURCE, IDCLU)]
@@ -189,27 +227,30 @@ check.inconsistent.testing <- function(DRANGE, switch=TRUE)
             chain <- rbind( chain[! idx], chain_sub)
         }
         return(chain)
+    }
 
-    }else{
-
-        cat("Removing inconsistent ranges from DRANGE and individuals in those networks...\n")
+    if(! switch_if_no_other_src )
+    {
+        # reason beeing that there is no 
+        tmp <- rbind(problematic_pair, problematic_net)
         if( nrow(tmp) != 0)
         {
-            idx <- tmp[, unique(SOURCE,RECIPIENT)]
-            while(TRUE)
+            cat(paste0("Removing inconsistent ranges from DRANGE ", 
+                       ifelse(remove_others_in_network, 'and individuals in these networks', '')," ...\n"))
+            nrow(tmp)
+            idx <- tmp[, unique(c(SOURCE,RECIPIENT))]
+            while(TRUE & remove_others_in_network)
             {
                 l <- length(idx)
                 idx <- chain[ SOURCE %in% idx | RECIPIENT %in% idx, unique(c(SOURCE, RECIPIENT)) ] 
                 if(length(idx) == l)
                     break
             }
-            cat('\t', DRANGE[ AID %in% idx, .N], 'individuals in total')
+            cat('\t', DRANGE[ AID %in% idx, .N], 'individuals in total\n')
             DRANGE <- DRANGE[! AID %in% idx]
         }
         return(DRANGE)
-
     }
-
 }
 
 # swap.direction.if.inconsistent.testing <- function()
@@ -293,6 +334,8 @@ check.inconsistent.testing <- function(DRANGE, switch=TRUE)
 
 shrink.intervals <- function(DT)
 {
+    cat('Initial mean width:',DT[, round(as.numeric(mean(MAX - MIN)/365.25), 2)] ,'\n')
+
     # This function return the avg int. length, but it should change DT (drange/drange_tsi in the background)
     cond <- TRUE
     iter <- 1
@@ -308,7 +351,8 @@ shrink.intervals <- function(DT)
         cond <- cond0 | cond1
         iter <- iter + 1
     }
-    DT[, as.numeric(mean(MAX - MIN)/365.25)]
+    cat('Final mean width:',DT[, round(as.numeric(mean(MAX - MIN)/365.25), 2)] ,'\n')
+    DT
 }
 
 classify.transmission.round.given.centroid <- function(idx)
@@ -1425,12 +1469,12 @@ prepare.pairs.input.for.bayesian.model <- function(DT)
     idx <- merge(dresults[,..cols], chain_tmp[,..cols], by=cols)
     idx[, DIRECTION := 'phyloscanner']
     dresults <- merge(dresults, idx, all.x=TRUE, by=cols)
-    dresults[, DIRECTION:=fcoalesce(DIRECTION, 'testinghistory')]
+    dresults[, DIRECTION:=fcoalesce(DIRECTION, 'serohistory')]
 
     dresults
 }
 
-get.community.type.at.infection.date <- function(DT)
+get.community.type.at.infection.date <- function(DT, comm_number=TRUE)
 {
     # DT <- copy(dresults)
     meta_env <- new.env()
@@ -1438,20 +1482,53 @@ get.community.type.at.infection.date <- function(DT)
     
     cols <- c('aid', 'comm', 'round', 'sample_date')
     dcomms <- subset(meta_env$meta_data, select=cols)
-    # dcomms <- dcomms[aid %in% dresults[, c(SOURCE,RECIPIENT)]]
     names(dcomms) <- toupper( names(dcomms) )
     dcomms[ROUND == 'neuro', COMM:='neuro']
+    dcomms <- dcomms[ !is.na(AID)]
+
+    if(comm_number)
+    {
+        .fp <- function(x) file.path(indir.deepsequencedata, 'RCCS_R15_R18', x)
+        path.quest <- .fp('quest_R15_R18_VoIs_220129.csv')
+        path.metadata <- .fp('Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
+        paths <- c(path.quest, path.metadata)
+        cols <- c('study_id', 'round', 'comm_num', 'community_number')
+        dcomms2 <- lapply(paths, fread, select=cols)
+        dcomms2 <- lapply(dcomms2, function(DT)setnames(DT, names(DT), toupper(cols[1:3])) )
+        dcomms2 <- rbindlist(dcomms2)
+        dcomms2 <- dcomms2[! is.na(ROUND)]
+        dcomms2[, ROUND := fifelse(ROUND %like% 'R0', yes=ROUND, no=paste0('R0', ROUND))]
+        dcomms2[ROUND %like% '15.1', ROUND := 'R015S'] 
+        dcomms2 <- unique(dcomms2)
+        dcomms2[, uniqueN(COMM_NUM) , by=c('STUDY_ID', 'ROUND')][, stopifnot(all(V1==TRUE))]
+        dcomms2[, STUDY_ID := paste0('RK-', STUDY_ID)]
+        aids <- aik[, AID[ match(dcomms2$STUDY_ID, PT_ID) ]]
+        dcomms2[, AID := aids]
+        dcomms2 <- dcomms2[!is.na(AID), -'STUDY_ID']
+        dcomms <- merge(dcomms, dcomms2, by=c('AID', 'ROUND'), all.x=TRUE)
+    }
+    dcomms[is.na(COMM_NUM), stopifnot(all(ROUND == 'neuro'))]
+
+    # dcomms <- dcomms[aid %in% dresults[, c(SOURCE,RECIPIENT)]]
 
     # For participants with date of infection, set 
     # community as the comm with visit date closest to estimated infection time
     .f <- function(x) which.min(abs(fcoalesce(x, Inf)))
-    DT[, {
+    DT[!is.na(M), {
         idx <- c(SOURCE, RECIPIENT)
         tmp <- dcomms[AID %in% idx, ]
-        out <- tmp[, .(C=COMM[.f(as.numeric(SAMPLE_DATE - M)) ]), by='AID' ]
-        CS <- out[AID == SOURCE, C]
-        CR <- out[AID == RECIPIENT, C]
-        list(SOURCE=SOURCE, COMM.SOURCE=CS, COMM.RECIPIENT=CR)
+        out0 <- tmp[, .(C=COMM[.f(as.numeric(SAMPLE_DATE - M)) ]), by='AID' ]
+        CS <- out0[AID == SOURCE, C]
+        CR <- out0[AID == RECIPIENT, C]
+        out_list <- list(SOURCE=SOURCE, COMM.SOURCE=CS, COMM.RECIPIENT=CR)
+        if(comm_number)
+        {
+            out1 <- tmp[, .(CN=COMM_NUM[.f(as.numeric(SAMPLE_DATE - M)) ]), by='AID' ]
+            CNS <- out1[AID == SOURCE, CN]
+            CNR <- out1[AID == RECIPIENT, CN]
+            out_list <- c(out_list, list(COMM_NUM.SOURCE=CNS, COMM_NUM.RECIPIENT=CNR))
+        }
+        out_list
     }, by='RECIPIENT'] -> tmp
 
     DT <- merge(DT, tmp, by=c('SOURCE', 'RECIPIENT'), all.x=TRUE) 
@@ -1520,4 +1597,34 @@ get.round.dates <- function(file=file.path.round.timeline)
     rm(tmp_env, df_round_inland, df_round_fishing, df_round_i, df_round_f)
 
     df_round_gi
+}
+
+plot.chains <- function(DPAIRS, size.threshold = 1, ttl=NA, sbttl=NA)
+{
+    library(igraph)
+    tmp <- copy(DPAIRS)
+    
+    if(size.threshold > 1)
+    {
+        tmp1 <- graph_from_data_frame(tmp, directed=TRUE, vertices=NULL) |> 
+            components()
+        comps <- tmp1$membership
+        comps <- data.table(SOURCE=names(comps), COMP=unname(comps))
+        tmp <- merge(comps, tmp)
+        tmp[, SIZE := .N, by='COMP']
+        tmp <- tmp[SIZE >= size.threshold, .(SOURCE, RECIPIENT)]
+    }
+
+    .gs <- function(x) gsub('AID', '', x)
+    graph_from_data_frame(tmp[, .(SOURCE=.gs(SOURCE), RECIPIENT=.gs(RECIPIENT))], directed = TRUE, vertices = NULL) |> 
+        plot(
+             vertex.label=NA,
+             vertex.label.cex=.7,
+             vertex.label.distance=.5,
+             vertex.size=1, 
+             edge.arrow.size=.4, 
+             sub=sbttl,
+             main=ttl
+        ) -> p
+    return(p)
 }
