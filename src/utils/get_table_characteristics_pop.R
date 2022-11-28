@@ -209,7 +209,6 @@ hivp <- rbind(hivp, rprev[SEX == 'M' & AGEYRS > 34, list(HIV = sum(COUNT),  TYPE
 hivp <- merge(hivp, df_round, by = c('COMM', 'ROUND'))
 
 
-hivs[SEX == 'M' & AGEYRS < 25 & COMM == 'inland' & ROUND == 'R015' & HIV == 'P']
 ######################################################
 
 # GET HIV-POSITIVE AND ART NAIVE AMONG PARTICIPANTS #
@@ -368,7 +367,7 @@ tab <- merge(tab, hivp, by = c('TYPE', 'COMM', 'ROUND'))
 tab <- merge(tab, sartp, by = c('TYPE', 'COMM', 'ROUND'))
 tab <- merge(tab, uns, by = c('TYPE', 'COMM', 'ROUND'), all.x = T)
 tab <- merge(tab, seqs, by = c('TYPE', 'COMM', 'ROUND'), all.x = T)
-tab[is.na(tab)] = 0
+tab[is.na(tab)] = '--'
 
 # make factor for population categories
 tab[, unique(TYPE)]
@@ -380,8 +379,8 @@ tab <- tab[order(COMM, ROUND, TYPE)]
 stopifnot(nrow(tab[ELIGIBLE  < PARTICIPANT ]) == 0)
 stopifnot(nrow(tab[PARTICIPANT  < HIV ]) == 0)
 stopifnot(nrow(tab[HIV  < SELF_REPORTED_ART ]) == 0)
-stopifnot(nrow(tab[HIV  < SEQUENCE & COMM == 'inland']) == 0)
-stopifnot(nrow(tab[HIV  < INFECTED_TESTED ]) == 0)
+stopifnot(nrow(tab[HIV  < as.numeric(SEQUENCE) & COMM == 'inland']) == 0)
+stopifnot(nrow(tab[HIV  < as.numeric(INFECTED_TESTED) ]) == 0)
 
 # add comma thousands separator
 comma_thousands <- function(x) format(x, big.mark=",")
@@ -396,5 +395,4 @@ tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 # save
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
 saveRDS(tab, file.path(outdir, 'characteristics_study_population.rds'))
-
 
