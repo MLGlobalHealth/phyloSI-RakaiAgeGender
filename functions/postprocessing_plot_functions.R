@@ -639,7 +639,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   # find unsuppressed share by sex and age
   uns <- copy(unsuppressed_share_sex_age)
   setnames(uns, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
-  uns[, type := 'Share among HIV-positive\nunsuppressed individuals']
+  uns[, type := 'Share among infected\nindividuals with unsuppressed virus']
 
   # prepare plotting function
   plot.p <- function(cont.p, uns.p, cont_b.p, median_age.p, level_y){
@@ -677,7 +677,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       # scale_fill_manual(values = c('Male source'='#C6DCE4','Female source'='#F2D1D1')) + 
       scale_linetype_manual(values  = 'dashed') +
       theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = rel(1)),
+            strip.text = element_text(size = 9.3),
             legend.position = 'none', 
             legend.title = element_blank(), 
             panel.grid.minor = element_blank()) + 
@@ -744,7 +744,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       
     }
     
-    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 6.2, h = 4.7)
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 6, h = 5)
     
   }
 }
@@ -814,7 +814,7 @@ plot_contribution_age_source <- function(contribution_age_source, outdir, lab = 
     
     if(communities[i] == 'inland'){
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.pdf'), w = 7, h = 14.5)
-      ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 4.5, h = 7)
+      ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 3.5, h = 8)
       ggsave(pp.hori, file = paste0(outdir, '-output-', lab, '_age_horizontal_', communities[i], '.pdf'), w = 7.7, h = 2.7)
     }else{
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.pdf'), w = 7, h = 9)
@@ -1313,7 +1313,7 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
                          breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
                            max(range_age_non_extended))) + 
       guides(color = guide_legend(order = 1))
-    ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 5.5, h = 3.7)
+    ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 6, h = 4.2)
     
   }
 }
@@ -1533,7 +1533,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   ric.all <- copy(relative_incidence_counterfactual_all)
   
   communities <- ric[, unique(COMM)]
-  cols <- c('#F1A661', '#C55300', '#425F57')
+  cols <- c('#F1A661', '#C55300', '#749F82')
   
   for(i in seq_along(communities)){
     
@@ -1587,7 +1587,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     # budget regardless of age
     p1 <- ggplot(bc.c) + 
       geom_bar(aes(y = value, x = label, fill = label), stat = 'identity') +  
-      labs(x = '', y = paste0('Additional number\nof men suppressed'), fill = '') + 
+      labs(x = '', y = paste0('Additional number of\n men with suppressed virus'), fill = '') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
@@ -1613,7 +1613,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       # geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, linetype = SEX_LABEL), alpha = 0.2) +
       geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = SEX_LABEL), col = 'black') +
       geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = label)) + 
-      labs(x = 'Age', y = '\nIncidence cases', linetype = 'No intervention', fill = 'Intervention', color = 'Intervention') + 
+      labs(x = 'Age', y = '\nIncident cases', linetype = 'No intervention', fill = 'Intervention', color = 'Intervention') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_blank(), 
@@ -1683,10 +1683,10 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     ggsave(p, file = file, w = 5.5, h = 9.5)
     
     file = paste0(outdir, '-output-counterfactual_budget_incidence_panel_plot1_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
-    ggsave(p1, file = file, w = 4, h = 1.85)
+    ggsave(p1, file = file, w = 4, h = 1.89)
 
     file = paste0(outdir, '-output-counterfactual_budget_incidence_panel_plot2_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
-    ggsave(p4, file = file, w = 4, h = 1.85)
+    ggsave(p4, file = file, w = 4, h = 1.89)
     
     p2 <- p2 + theme(axis.title.x = element_text())
     file = paste0(outdir, '-output-counterfactual_budget_incidence_panel_plot3_', gsub(' ' , '', lab), '_', communities[i], '.pdf')

@@ -47,16 +47,19 @@ tmp1[, VARIABLE_LABEL := ifelse(variable == 'PARTICIPANT', 'Participant', 'Non-p
 tmp1[, COMM_LABEL := gsub('\n', '', COMM_LABEL)]
 
 df_round <- data.table(ROUND = tmp1[, unique(ROUND)])
-df_round[, ROUND_INDEX := 1:length(ROUND)]
-df_round_inland[, ROUND := gsub('R0(.+)', '\\1', round)]
-df_round_inland <- df_round_inland[ROUND %in% df_round$ROUND]
-df_round_fishing[, ROUND := gsub('R0(.+)', '\\1', round)]
-df_round_location <- rbind(df_round_inland[ROUND != '15'], df_round_fishing[ROUND %in% c('15', '15S')])
-df_round_location[, midpoint_sample_date := min_sample_date + (max_sample_date - min_sample_date)/2]
-set(df_round_location, NULL, 'COMM', NULL)
-df_round <- merge(df_round, df_round_location, by = 'ROUND')
 
-tmp1 <- merge(tmp1, df_round, by = 'ROUND')
+df_round_inland[, ROUND := gsub('R0(.+)', '\\1', round)]
+df_round_inland[, ROUND_INDEX := 1:length(ROUND)]
+df_round_inland <- df_round_inland[ROUND %in% df_round$ROUND]
+df_round_inland[, midpoint_sample_date := min_sample_date + (max_sample_date - min_sample_date)/2]
+set(df_round_inland, NULL, 'COMM', NULL)
+
+# df_round_fishing[, ROUND := gsub('R0(.+)', '\\1', round)]
+# df_round_location <- rbind(df_round_inland[ROUND != '15'], df_round_fishing[ROUND %in% c('15', '15S')])
+
+# df_round <- merge(df_round, df_round_location, by = 'ROUND')
+
+tmp1 <- merge(tmp1, df_round_inland, by = 'ROUND')
 tmp1 <- tmp1[order(COMM_LABEL, SEX_LABEL, variable)]
 df_round_inland[, ROUND_LABEL := paste0('Round ', ROUND)]
 

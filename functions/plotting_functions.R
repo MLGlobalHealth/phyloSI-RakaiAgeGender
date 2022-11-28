@@ -248,7 +248,7 @@ plot_CI_age_infection <- function(pairs, cutoff_date, outdir = NULL)
   tmp1 <- subset(tmp, SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M') 
   p1 <- ggplot(tmp1, aes(x = AGE_INFECTION_REDUCED.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2, col = 'grey30') +
     labs(x = 'Age at infection male recipient', y = 'Age at transmission female source', 
          col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
@@ -260,7 +260,7 @@ plot_CI_age_infection <- function(pairs, cutoff_date, outdir = NULL)
   tmp1 <- subset(tmp, SEX.SOURCE == 'M' & SEX.RECIPIENT == 'F') 
   p2 <- ggplot(tmp1, aes(x = AGE_INFECTION_REDUCED.RECIPIENT)) + 
     geom_point(aes(y = M, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5)) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2) +
+    geom_errorbar(aes(ymin = CL, ymax = CU, col = date_infection_before_cutoff_name.RECIPIENT), position = position_dodge(1.5), width = 0.2, col = 'grey30') +
     labs(x = 'Age at infection female recipient', y = 'Age at transmission male source', 
          col = 'Date infection recipient') +
     geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
@@ -1013,7 +1013,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     coord_cartesian(ylim= c(0, max_y_limits))
-  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 8, h = 3)
+  ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland_short.pdf'), w = 8, h = 3.5)
   
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
@@ -1121,8 +1121,8 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   
   ggplot(icrrs[COMM == 'inland'], aes(x = MIDPOINT_DATE, group = age_group)) + 
     geom_hline(yintercept = 1, linetype = 'dashed', alpha= 0.5) + 
-    geom_line(aes(y = M),position=position_dodge(width = 300), alpha = 0.5) + 
-    geom_errorbar(aes(ymin = CL, ymax = CU), alpha = 0.35, width = 300, position=position_dodge(width = 300)) + 
+    geom_line(aes(y = M),position=position_dodge(width = 300), col = 'grey50') + 
+    geom_errorbar(aes(ymin = CL, ymax = CU), width = 300, position=position_dodge(width = 300), col = 'grey30') + 
     geom_point(aes(y = M, col = age_group, shape = age_group),  size = 2, position=position_dodge(width = 300)) + 
     scale_color_viridis_d(option = 'D') + 
     theme_bw() + 
@@ -1236,10 +1236,10 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       geom_point(aes(col = ROUND_LABEL, shape = age_group, x = UNSUPPRESSION_RATE_RATIO_RATIO_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_y_continuous(limits = c(NA,2)) + 
       scale_color_manual(values = colors) + 
-      labs(x = 'Male-female ratio of the rate of infected\nindividuals that remain unsuppressed', 
+      labs(x = paste0('Male-female ratio of the rate of infected\nindividuals with unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
            y = paste0('Female-male ratio of the\nincidence rate relative\nto round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))])) + 
       theme_bw()  +
-      theme(legend.position = c(0.25, 0.77), 
+      theme(legend.position = c(0.25, 0.75), 
             legend.title = element_blank(), 
             legend.text=element_text(size=rel(0.5))) +
       guides(shape='none', color = guide_legend(byrow = T, nrow = 4,override.aes = list(size = 1), 
