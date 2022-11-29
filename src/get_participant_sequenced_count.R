@@ -16,7 +16,7 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_c
 
 # rounds of interest
 df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
-                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, '15S', 16:18))))
+                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, 15, '15S', 16:18))))
 
 # load meta data
 load(file.path.meta)
