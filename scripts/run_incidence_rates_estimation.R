@@ -27,11 +27,11 @@ indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 # set path to save results
 outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'incidence_rate_inland')
 
-# hiv status
-file.path.hivstatus <- file.path(indir, 'data', 'hivstatus_for_incidence_estimation_R6R19.rds')
+# sero conversion cohort status (all communities)
+file.path.seroconverter_cohort <- file.path(indir, 'data', 'seroconverter_cohort_R6R19.rds')
 
-# meta data
-file.path.verif1 <- file.path(indir, 'data', 'metadata_for_incidence_estimation_R6R19.rds')
+# sero conversion cohort status (continuously surveyed communities)
+# file.path.seroconverter_cohort <- file.path(indir, 'data', 'seroconverter_cohort_30comm_R6R19.rds')
 
 # function
 source(file.path(indir, 'functions', 'incidence_rate_estimation_functions.R'))
@@ -48,55 +48,8 @@ rounds_numeric_group_1 <- df_round[visit %in% rounds_group_1, round_numeric]
 rounds_numeric_group_2 <- df_round[visit %in% rounds_group_2, round_numeric]
 rounds_numeric_group_3 <- df_round[visit == rounds_group_3, round_numeric]
 
-# load data
-verif_1 <- as.data.table(readRDS(file.path.verif1))
-hivstatus_vlcopies_1 <- as.data.table(readRDS(file.path.hivstatus))
-
-
-####################################
-
-# RESTRICT ANALAYSIS BY CRITERIA  #
-
-####################################
-
-# Use Verification data to restrict analysis based on following criteria
-## 1. Age 15-49
-## 2. residency status: resident==1 
-## 3. Resides in inland communities 
-
-# Subset data based inclusion criteria 
-inland.comms<- c('1', '2', '4', '5', '6', '7', '8', '16', '19', '22', '24', '29', '33', '34', '40', '56', '57',
-                 '58', '62', '74', '77', '89', '94', '106', '107', '108', '120', '391', '602', '754')
-# sensitivity analysis
-# verif_el<-verif_1[resident==1 &ageyrs>=15 & ageyrs<=49 & comm_num%in%inland.comms]
-# central analysis
-verif_el<-verif_1[resident==1 &ageyrs>=15 & ageyrs<=49 & !comm_num%in%c(38,770,771,774),]
-verif_el[, table(round)]
-rm(verif_1)
-
-# only include HIV data as determined 
-hivstatus_vlcopies_1<-hivstatus_vlcopies_1[visit_id%in%verif_el[, visit_id],]
-table(hivstatus_vlcopies_1$round)
-
-
-###################################################
-
-# PREPARE HIV STATUS FOR EVERY AGE AND YEAR #
-
-###################################################
-
-hivstatus_vlcopies_1_inc <- prepare_hiv_status(hivstatus_vlcopies_1, verif_el)
-rm(hivstatus_vlcopies_1)
-rm(verif_el)
-
-
-###############################
-
-# FIND SEROCONVERSION STATUS #
-
-###############################
-
-status_df <- find_seroconvert_status(hivstatus_vlcopies_1_inc)
+# load data 
+seroconverter_cohort.list <- readRDS(file.path.seroconverter_cohort)
 
 
 ###############################
@@ -108,7 +61,7 @@ status_df <- find_seroconvert_status(hivstatus_vlcopies_1_inc)
 N <- 50
 seed = 12
 
-modelpreds.age.1218.list = seroconverter_cohort.list = modelaics.age.list = vector(mode = 'list', length = N)
+modelpreds.age.1218.list = modelaics.age.list = vector(mode = 'list', length = N)
 
 set.seed(seed)
 for(i in 1:N){
@@ -121,7 +74,7 @@ for(i in 1:N){
   
   ####################################
   
-  seroconverter_cohort <- find_seroconvert_cohort(status_df, hivstatus_vlcopies_1_inc)
+  seroconverter_cohort <- as.data.table(seroconverter_cohort.list[[i]])
   
   
   ############
@@ -184,17 +137,14 @@ for(i in 1:N){
 
   # prepare
   modelpreds.age.1218$iterations <- i
-  seroconverter_cohort$iterations <- i
   modelaics.age$iterations <- i
   
   modelpreds.age.1218.list[[i]] <- modelpreds.age.1218
-  seroconverter_cohort.list[[i]] <- seroconverter_cohort
   modelaics.age.list[[i]] <- modelaics.age
   
 }
 
 # load(file.path(outdir, 'list_long_results_221109.RData'))
-# rm(seroconverter_cohort.list)
 
 
 ###############################################################################################
@@ -205,8 +155,6 @@ for(i in 1:N){
 
 ps <- c(0.5, 0.025, 0.975)
 p_labs <- c('M','CL','CU')
-
-
 
 #
 # Summarise seroconverter_cohort
@@ -336,10 +284,10 @@ rm(modelaics.age.list)
 
 ##########################
 
-stats <- save_statistics(df_round, hivstatus_vlcopies_1_inc, status_df, 
-                            seroconverter_cohort_total, seroconverter_cohort_agg, 
-                            seroconverter_cohort_agg_s, seroconverter_cohort_agg_r,
-                            modelpreds.agegroup.1218, modelpreds)
+stats <- save_statistics_estimates(df_round, 
+                                   seroconverter_cohort_total, seroconverter_cohort_agg, 
+                                   seroconverter_cohort_agg_s, seroconverter_cohort_agg_r,
+                                   modelpreds.agegroup.1218, modelpreds)
 
 #########
 
@@ -439,7 +387,7 @@ write.csv(model_pred, file = file.name, row.names = F)
 
 
 #
-file.name <- file.path(outdir, 'incidence_inland_statistics_for_paper_221115.RDS')
+file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
 saveRDS(stats, file.name)
 # stats <- readRDS(file.name)
 

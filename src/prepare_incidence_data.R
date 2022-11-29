@@ -86,26 +86,105 @@ rm(verif_raw)
 
 ################
 
-# ADD ANONIMIZED ID AND KEEP NECESSARY COVARIATE  #
+# FIND ANONIMIZED ID  #
 
 ################
 
 # anonimized id
 anonimized_id <- data.table(research_id = verif_1[, sort(unique(research_id))])
 anonimized_id <- anonimized_id[research_id != '']
-anonimized_id[, anonimized_id := paste0('RkINC-', str_pad(1:nrow(anonimized_id), 5, pad = "0"))]
 
-# verif 1
-verif_1 <- merge(verif_1, anonimized_id, by = 'research_id')
-verif_1 <- verif_1[, .(anonimized_id, round, ROUND, visit, sex, comm_num, ageyrs, resident, birthdat)]
-verif_1[, visit_id:=paste(anonimized_id, round, sep=":")]
-setnames(verif_1, 'anonimized_id', 'research_id')
+# randomly assign new id
+set.seed(12)
+anonimized_id[, anonimized_id := paste0('RkINC-', sample(str_pad(1:nrow(anonimized_id), 5, pad = "0"), replace = F))]
 
-# hivstatus_vlcopies_1
-hivstatus_vlcopies_1 <- merge(hivstatus_vlcopies_1, anonimized_id, by = 'research_id')
-hivstatus_vlcopies_1 <- hivstatus_vlcopies_1[, .(anonimized_id, round, ROUND, hiv, hivstatus, hivdate, year)]
-hivstatus_vlcopies_1[, visit_id:=paste(anonimized_id, round, sep=":")]
-setnames(hivstatus_vlcopies_1, 'anonimized_id', 'research_id')
+
+####################################
+
+# RESTRICT ANALAYSIS BY CRITERIA  #
+
+####################################
+
+# Use Verification data to restrict analysis based on following criteria
+## 1. Age 15-49
+## 2. residency status: resident==1 
+## 3. Resides in inland communities 
+
+# Subset data based inclusion criteria 
+inland.comms<- c('1', '2', '4', '5', '6', '7', '8', '16', '19', '22', '24', '29', '33', '34', '40', '56', '57',
+                 '58', '62', '74', '77', '89', '94', '106', '107', '108', '120', '391', '602', '754')
+# sensitivity analysis
+# verif_el<-verif_1[resident==1 &ageyrs>=15 & ageyrs<=49 & comm_num%in%inland.comms]
+# central analysis
+verif_el<-verif_1[resident==1 &ageyrs>=15 & ageyrs<=49 & !comm_num%in%c(38,770,771,774),]
+verif_el[, table(round)]
+rm(verif_1)
+
+# only include HIV data as determined 
+hivstatus_vlcopies_1<-hivstatus_vlcopies_1[visit_id%in%verif_el[, visit_id],]
+table(hivstatus_vlcopies_1$round)
+
+
+###################################################
+
+# PREPARE HIV STATUS FOR EVERY AGE AND YEAR #
+
+###################################################
+
+hivstatus_vlcopies_1_inc <- prepare_hiv_status(hivstatus_vlcopies_1, verif_el)
+rm(hivstatus_vlcopies_1)
+rm(verif_el)
+
+
+###############################
+
+# FIND SEROCONVERSION STATUS #
+
+###############################
+
+status_df <- find_seroconvert_status(hivstatus_vlcopies_1_inc)
+
+################
+
+# FIND STATISTICS COHORT
+
+################
+
+stats <- save_statistics_incidence_cohort(hivstatus_vlcopies_1_inc, status_df)
+
+
+###############################
+
+# FIND SEROCONVERSION DATE #
+
+###############################
+
+N <- 50
+seed = 12
+
+seroconverter_cohort.list = vector(mode = 'list', length = N)
+
+set.seed(seed)
+for(i in 1:N){
+  
+  cat('\niteration', i)
+  
+  # generate random date of infection and find perosn year
+  seroconverter_cohort <- find_seroconvert_cohort(status_df, hivstatus_vlcopies_1_inc)
+  
+  # add anonimized id
+  seroconverter_cohort <- merge(seroconverter_cohort, anonimized_id, by = 'research_id')
+  
+  # keep only necessary covariate
+  seroconverter_cohort <- seroconverter_cohort[, .(anonimized_id, age, sex, number_missing_visits, 
+                                                   round, py, hivinc)]
+  
+  # prepare
+  seroconverter_cohort$iterations <- i
+  seroconverter_cohort.list[[i]] <- seroconverter_cohort
+  
+}
+
 
 ################
 
@@ -117,12 +196,14 @@ setnames(hivstatus_vlcopies_1, 'anonimized_id', 'research_id')
 file <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/','anonimized_id_for_incidence_estimate.csv')
 write.csv(anonimized_id, file = file, row.names = F)
 
-# verif 1
-file <- file.path(indir, 'data', 'metadata_for_incidence_estimation_R6R19.rds')
-saveRDS(verif_1, file = file)
+# statistics
+file.name <- file.path(outdir, 'incidence_inland_statistics_cohort_for_paper_221129.RDS')
+saveRDS(stats, file.name)
 
-# hivstatus_vlcopies_1
-file <- file.path(indir, 'data', 'hivstatus_for_incidence_estimation_R6R19.rds')
-saveRDS(hivstatus_vlcopies_1, file = file)
+# seroconvert cohort central analysis
+file <- file.path(indir, 'data', 'seroconverter_cohort_R6R19.rds')
+saveRDS(seroconverter_cohort.list, file = file)
 
-
+# seroconvert cohort sensitivity analysis (continuously surveyed commm)
+# file <- file.path(indir, 'data', 'seroconverter_cohort_30comm_R6R19.rds')
+# saveRDS(seroconverter_cohort.list, file = file)

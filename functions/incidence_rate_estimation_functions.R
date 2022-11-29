@@ -541,8 +541,59 @@ find_incidence_rate_by_age_group <- function(modelpreds.age.1218.all, seroconver
   return(model_pred)
 }
 
+save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df){
+  
+  stats <- list()
+  comma_thousands <- function(x) format(x, big.mark=",")
+  
+  # number of participants
+  RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)[round %in% 5:13]$research_id)
+  stats$N = comma_thousands(length(RESEARCH_IDS))
+  
+  # number of participants followed up
+  stats$N_FOLLOWUP <- comma_thousands(as.data.table(status_df)[research_id %in% RESEARCH_IDS & (cohortclass=="Serially negative" | cohortclass== "Seroconversion"), length(unique(research_id))])
+  
+  # proportion of seroconvert participants with missed visits
+  df_missed_visits <- unique(select(hivstatus_vlcopies_1_inc, c('research_id', 'number_missing_visits')))
+  tmp <- merge(status_df, df_missed_visits, by = 'research_id')
+  tmp$number_missing_visits_status = ifelse(tmp$number_missing_visits > 1, 'More than 1 missed visits', 
+                                            ifelse(tmp$number_missing_visits == 1, '1 missed visit', 'No missed visits'))
+  stats$TABLE_STATUS_SEROCONVERTED = as.data.table(tmp)[research_id %in% RESEARCH_IDS & cohortclass== "Seroconversion", table(number_missing_visits_status)]
+  stats$TABLE_STATUS_SEROCONVERTED_PROP <- round(stats$TABLE_STATUS_SEROCONVERTED / sum(stats$TABLE_STATUS_SEROCONVERTED) * 100, 1)
+  stats$TABLE_STATUS_SEROCONVERTED <- comma_thousands(stats$TABLE_STATUS_SEROCONVERTED)
+  
+  
+  # number of followed-up participants by age group, sex and round
+  part <- as.data.table(hivstatus_vlcopies_1_inc)
+  part[, age := floor(as.numeric(date-birthdate)/365)]
+  part <- part[age > 14 & age < 50]
+  part <- part[, list(age = min(age), sex = unique(sex)), by = c('research_id', 'round')]
+  part <- part[research_id %in% as.data.table(status_df)[research_id %in% RESEARCH_IDS, unique(research_id)]] # subset to followed-up
+  df_age_aggregated <- data.table(age = 15:49, age_group = c(rep('15-24', 10),  rep("25-34", 10), rep("35-49", 15)))
+  part <- merge(part, df_age_aggregated, by = 'age')
+  part_all <- part[, list(N = length(unique(research_id))), by = c('round', 'age_group', 'sex')]
+  part_s <- part[, list(N = length(unique(research_id))), by = c('round', 'sex')]
+  part_r <- part[, list(N = length(unique(research_id))), by = c('round')]
+  
+  part_s[, age_group := 'Total']
+  part_r[, age_group := 'Total']
+  part_r[, sex := 'Total']
+  part_all <- do.call('rbind', list(part_all, part_s, part_r))
+  part_all[, N := comma_thousands(N)]
+  
+  # merge
+  tab <- copy(part_all)
+  
+  tab[, age_group := factor(age_group, levels = c('Total', unique(df_age_aggregated$age_group)))]
+  tab[, sex := factor(sex, levels = c('Total', 'F', 'M'))]
+  tab <- tab[order(round, sex, age_group)]
+  
+  stats[['table']] <- tab
+  
+  return(stats)
+}
 
-save_statistics <- function(df_round, hivstatus_vlcopies_1_inc, status_df, 
+save_statistics_estimates <- function(df_round, 
                             seroconverter_cohort_total, seroconverter_cohort_agg, 
                             seroconverter_cohort_agg_s, seroconverter_cohort_agg_r,
                             modelpreds.agegroup.1218, modelpreds){
@@ -554,24 +605,8 @@ save_statistics <- function(df_round, hivstatus_vlcopies_1_inc, status_df,
   tmp <- subset(df_round, round_numeric %in% c(5:9, rounds_numeric_group_2))
   stats[['AVERAGE_MONTHS_ROUND']] <- round(mean(as.numeric(c(tmp$max_sample_date - tmp$min_sample_date)) / 366 * 12))
   
-  # number of participants
-  RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)[round %in% 5:13]$research_id)
-  stats$N = comma_thousands(length(RESEARCH_IDS))
-  
-  # number of participants followed up
-  stats$N_FOLLOWUP <- comma_thousands(as.data.table(status_df)[research_id %in% RESEARCH_IDS & (cohortclass=="Serially negative" | cohortclass== "Seroconversion"), length(unique(research_id))])
-  
   # number of incidence infection
   stats$TABLE_STATUS = comma_thousands(round(seroconverter_cohort_total[, hivinc]))
-  
-  # proportion of seroconvert participants with missed visits
-  df_missed_visits <- unique(select(hivstatus_vlcopies_1_inc, c('research_id', 'number_missing_visits')))
-  tmp <- merge(status_df, df_missed_visits, by = 'research_id')
-  tmp$number_missing_visits_status = ifelse(tmp$number_missing_visits > 1, 'More than 1 missed visits', 
-                                            ifelse(tmp$number_missing_visits == 1, '1 missed visit', 'No missed visits'))
-  stats$TABLE_STATUS_SEROCONVERTED = as.data.table(tmp)[research_id %in% RESEARCH_IDS & cohortclass== "Seroconversion", table(number_missing_visits_status)]
-  stats$TABLE_STATUS_SEROCONVERTED_PROP <- round(stats$TABLE_STATUS_SEROCONVERTED / sum(stats$TABLE_STATUS_SEROCONVERTED) * 100, 1)
-  stats$TABLE_STATUS_SEROCONVERTED <- comma_thousands(stats$TABLE_STATUS_SEROCONVERTED)
   
   # total py
   stats[['PY']] = comma_thousands(round(seroconverter_cohort_total[, .(py, CL_py, CU_py)]))
@@ -614,30 +649,11 @@ save_statistics <- function(df_round, hivstatus_vlcopies_1_inc, status_df,
   # merge
   tab <- merge(seroconverter_cohort_agg, inc_rate, by = c('round', 'sex', 'age_group'))
   
-  # number of followed-up participants by age group, sex and round
-  part <- as.data.table(hivstatus_vlcopies_1_inc)
-  part[, age := floor(as.numeric(date-birthdate)/365)]
-  part <- part[age > 14 & age < 50]
-  part <- part[, list(age = min(age), sex = unique(sex)), by = c('research_id', 'round')]
-  part <- part[research_id %in% as.data.table(status_df)[research_id %in% RESEARCH_IDS, unique(research_id)]] # subset to followed-up
-  df_age_aggregated <- data.table(age = 15:49, age_group = c(rep('15-24', 10),  rep("25-34", 10), rep("35-49", 15)))
-  part <- merge(part, df_age_aggregated, by = 'age')
-  part_all <- part[, list(N = length(unique(research_id))), by = c('round', 'age_group', 'sex')]
-  part_s <- part[, list(N = length(unique(research_id))), by = c('round', 'sex')]
-  part_r <- part[, list(N = length(unique(research_id))), by = c('round')]
-  
-  part_s[, age_group := 'Total']
-  part_r[, age_group := 'Total']
-  part_r[, sex := 'Total']
-  part_all <- do.call('rbind', list(part_all, part_s, part_r))
-  part_all[, N := comma_thousands(N)]
-  
-  # merge
-  tab <- merge(part_all, tab, by = c('round', 'sex', 'age_group'))
-  
   tab[, age_group := factor(age_group, levels = c('Total', unique(df_age_aggregated$age_group)))]
   tab[, sex := factor(sex, levels = c('Total', 'F', 'M'))]
+  tab[, dummy := 1]
   tab <- tab[order(round, sex, age_group)]
+  tab <- tab[, .(round, sex, age_group, dummy, INC, PY, EST)]
   
   stats[['table']] <- tab
   
