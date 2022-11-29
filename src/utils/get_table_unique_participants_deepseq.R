@@ -17,7 +17,7 @@ file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_U
 file.seq.count <- file.path(outdir, 'characteristics_sequenced_R14_18.rds')
 file.seq.count.ind <- file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds')
 
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_220909.csv')
+file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_221129.csv')
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'Quest_R6_R18_220909.csv')
 
 # Latest data from Rakai's CCS (Kate's data from 2022-03-08)

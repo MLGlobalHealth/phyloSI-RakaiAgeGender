@@ -24,6 +24,9 @@ file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_
 file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
 file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
 
+# Latest update from Joseph concerning dates of infection
+file.path.update.first.positive <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', '221128_requested_updated_serohistory.csv')
+
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
 
@@ -94,7 +97,11 @@ hiv[, hivdate := as.Date(hivdate, format = '%d-%B-%y')]
 hiv <- rbind(hiv.14, hiv)
 hiv[, round := gsub(' ', '', round)] # remove space in string
 
+# add last update on infected by joseph
+hiv.update <- as.data.table(read.csv(file.path.update.first.positive))
+hiv[study_id %in% hiv.update[, gsub('RK-(.+)', '\\1', study_id)], hiv := 'P'] # set to positive hiv test after first positive test
+
 # `save
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_220909.csv')
+file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
 write.csv(hiv, file = file.name, row.names = F)
 
