@@ -9,7 +9,7 @@ infile.ind.rccs <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/200316_pangea_
 infile.ind.mrc <- file.path(indir.deepsequencedata,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
 infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct.rda')
 
-file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20220329.RData')
+file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20221128.RData')
 file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
