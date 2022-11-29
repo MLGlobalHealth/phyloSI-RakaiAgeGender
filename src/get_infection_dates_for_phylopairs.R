@@ -1,8 +1,6 @@
 # AIMS:
 # compute generation intervals for pairs in a network.
 
-# TODO: check direction specified correctly.,,,
-
 ################
 # DEPENDENCIES #
 ################ 
@@ -43,9 +41,10 @@ if(usr == 'andrea')
     file.path(indir, x)
 }
 
-file.path.meta <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20220329.RData')
+file.path.meta <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
+# file.path.chains.data <- '~/Downloads/Rakai_phscnetworks_ruleo_sero.rda'
 file.path.chains.data.old <- .fp('X','211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks.rda')
-file.path.chains.data <- '~/Downloads/Rakai_phscnetworks_ruleo.rda'
+file.path.chains.data.old <- .fp('X','211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks_ruleo_sero.rda')
 file.path.round.timeline <- .fp('D', 'RCCS_data_estimate_incidence_inland_R6_R18/220903/RCCS_round_timeline_220905.RData')
 file.anonymisation.keys <- .fp('X','important_anonymisation_keys_210119.csv')
 file.path.tsiestimates <- .fp('A', 'PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T/aggregated_TSI_with_estimated_dates.csv')
@@ -173,7 +172,7 @@ plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table
 
 # get.extra.pairs.from.serohistory <- 1
 threshold.likely.connected.pairs <- 0.5
-get.sero.extra.pairs <- FALSE
+get.sero.extra.pairs <- TRUE
 build.network.from.pairs <- TRUE
 
 # Load anon. keys
@@ -187,6 +186,7 @@ meta <- subset(meta_env$meta_data,
 meta <- unique(meta[!is.na(aid)])
 stopifnot(meta[, uniqueN(aid) == .N])
 
+# file.path.chains.data <- file.path.chains.data.old
 # load chains 
 chains_env <- new.env()
 load(file.path.chains.data, envir=chains_env)
@@ -205,7 +205,8 @@ if(build.network.from.pairs)
     stopifnot(dpl[,all(H1 < H2)])
 
     idx <- dpl[SCORE > threshold.likely.connected.pairs, .(H1, H2, SCORE)]
-    tmp <- dc[ CATEGORISATION %like% 'close.and.adjacent.and.directed' , .(H1, H2, TYPE, SCORE)]
+    tmp <- dc[ CATEGORISATION %like% 'close.and.adjacent.and.directed.cat.sero' , .(H1, H2, TYPE, SCORE)]
+    stopifnot(tmp[, .N > 0])
     tmp <- tmp[, {z <- which(SCORE>.5); list(TYPE=TYPE[z], SCORE_DIR=SCORE[z])}, by=c('H1', 'H2')]
     dlinkdir <- merge(idx, tmp, by=c('H1', 'H2'), all.x=TRUE)
     stopifnot(tmp[,.N,by=c('H1', 'H2')][, all(N==1)])
@@ -213,6 +214,7 @@ if(build.network.from.pairs)
 
     # get range of dates
     drange <- get.infection.range.from.testing()
+
     # if add unsupperted but with strong SCORE_DIR
     if(get.sero.extra.pairs)
     {
@@ -276,12 +278,17 @@ if(build.network.from.pairs)
     setkey(idx,SOURCE,RECIPIENT)
     dnewpairs <- dnewpairs[idx]
     cat(nrow(dnewpairs), 'pairs remaining\n')
-
     filename <- file.path(out.dir, paste0('221124_study_networks_norccs_nohomosex.png'))
     png(filename, width = 600, height = 600)
     lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, 'recipients')]
     p3 <- plot.chains(dnewpairs, size.threshold = 3, ttl='After removing non-RCCS + homosexuals', sbttl=lab)
     dev.off()
+
+    # Solve multiple sources by assigning recipient with strongest linkage support
+    dnewpairs <- dnewpairs[, {
+        z <- which.max(SCORE);
+        list(SOURCE=SOURCE[z], SCORE=SCORE[z], SCORE_DIR=SCORE_DIR[z])
+    }, by='RECIPIENT']
 
     # get an idea of how many can be inland
     meta_env <- new.env()
@@ -289,20 +296,17 @@ if(build.network.from.pairs)
     cols <- c('aid', 'comm', 'round', 'sample_date')
     dcomms <- subset(meta_env$meta_data, select=cols)
     names(dcomms) <- toupper( names(dcomms) )
-    idx <- dcomms[!is.na(AID), .(COMM=paste0(unique(COMM), collapse='-'), uniqueN(COMM)), by='AID']
+    idx <- dcomms[!is.na(AID), .(COMM=paste0(sort(unique(COMM)), collapse='-'), uniqueN(COMM)), by='AID']
     dnewpairs <- double.merge(dnewpairs, idx[, .(AID, COMM)])
     dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', {
         cat(.N);
         print(table(COMM.SOURCE, COMM.RECIPIENT));
         NULL
     }]
-    dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', table(COMM.RECIPIENT)]
-
-    # Solve multiple sources by assigning recipient with strongest linkage support
-    dnewpairs <- dnewpairs[, {
-        z <- which.max(SCORE);
-        list(SOURCE=SOURCE[z], SCORE=SCORE[z], SCORE_DIR=SCORE_DIR[z])
-    }, by='RECIPIENT']
+    dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', uniqueN(RECIPIENT)]
+    dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', table(COMM.RECIPIENT)] |> knitr::kable()
+    dnewpairs[COMM.RECIPIENT %like% 'inland', table(COMM.SOURCE)] |> knitr::kable()
+    dnewpairs[COMM.RECIPIENT %like% 'inland', uniqueN(RECIPIENT)]
     
     filename <- file.path(out.dir, paste0('221124_study_networks_norccs_nohomosex_sourceattr.png'))
     png(filename, width = 600, height = 600)
@@ -315,6 +319,62 @@ if(build.network.from.pairs)
     idclus <- data.table(RECIPIENT=names(idclus$membership), IDCLU=unname(idclus$membership))
     dnewpairs <- merge(dnewpairs, idclus,by='RECIPIENT')
     setcolorder(dnewpairs, c('SOURCE','RECIPIENT'))
+
+    if(0)
+    {
+    meta_env <- new.env()
+    load(file.path.meta, envir=meta_env)
+    cols <- c('aid', 'comm', 'round', 'sample_date')
+    dcomms <- subset(meta_env$meta_data, select=cols)
+    names(dcomms) <- toupper( names(dcomms) )
+    idx <- dcomms[!is.na(AID), .(COMM=paste0(unique(COMM), collapse='-'), uniqueN(COMM)), by='AID']
+    dnewpairs <- double.merge(dnewpairs, idx[, .(AID, COMM)])
+    
+    dnewpairs <- dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland']
+    filename <- file.path(out.dir, paste0('221124_study_networks_norccs_nohomosex_onlyinland.png'))
+    png(filename, width = 600, height = 600)
+    lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, 'recipients')]
+    p4 <- plot.chains(dnewpairs, size.threshold = 2, ttl='After removing non-RCCS + homosexuals + non-inland', sbttl=lab)
+    dev.off()
+
+    tmp1 <- graph_from_data_frame(dnewpairs[, .(SOURCE,RECIPIENT)], directed=TRUE, vertices=NULL) |> components()
+    comps <- tmp1$membership
+    comps <- data.table(SOURCE=names(comps), COMP=unname(comps))
+    tmp1 <- merge(comps, dnewpairs)
+    setcolorder(tmp1, c('SOURCE','RECIPIENT'))
+    tmp1[, SIZE:=.N, by=COMP]
+
+    # If a recipient has multiple sources, pick the recipient with highest transmission score
+    dnewpairs <- tmp1[,  list(SOURCE=SOURCE[which.max(SCORE)]) ,by=RECIPIENT]
+    filename <- file.path(out.dir, paste0('221124_study_networks_norccs_nohomosex_onlyinland_maxscore.png'))
+    png(filename, width = 600, height = 600)
+    lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, 'recipients')]
+    p5 <- plot.chains(dnewpairs, size.threshold = 2, ttl='After removing non-RCCS + homosexuals + non-inland', sbttl=lab)
+    dev.off()
+    }
+}
+
+if(0)
+{
+    # compare new and old chains
+    tmp_env <- new.env()
+    load(file.path.chains.data.old, envir = tmp_env)
+    
+    dchain_old <- as.data.table(tmp_env$dchain)
+    chain_old <- keep.likely.transmission.pairs(dchain_old, threshold.likely.connected.pairs)
+    # if(! args$sensitivity.no.refinement)
+    #    chain_old <- get.extra.pairs.from.serohistory(dchain_old, meta)
+    chain_old <- subset(chain_old, select=c('SOURCE', 'RECIPIENT', 'IDCLU'))
+    setkey(chain_old, IDCLU, SOURCE)
+
+    tmp <- merge(chain[, .(SOURCE, RECIPIENT, NEW=TRUE)], chain_old[,  .(SOURCE, RECIPIENT, OLD=TRUE)], all.x=TRUE, all.y=TRUE)
+    tmp[, table(!is.na(NEW), !is.na(OLD))] |> knitr::kable()
+    setkey(tmp, SOURCE, RECIPIENT)
+
+
+    # THERE ARE NO PAIRS THAT ARE SWAPPED...
+    merge(tmp[NEW==TRUE, .(SOURCE, RECIPIENT)], tmp[OLD==TRUE, .(SOURCE=RECIPIENT, RECIPIENT=SOURCE)])
+    merge(tmp[OLD==TRUE, .(SOURCE, RECIPIENT)], tmp[NEW==TRUE, .(SOURCE=RECIPIENT, RECIPIENT=SOURCE)])
 
 }
 
@@ -355,6 +415,21 @@ if(build.network.from.pairs)
     check <- merge(dnewpairs, drange[, .(SOURCE=AID, MIN.SOURCE=MIN, MAX.SOURCE=MAX)], by='SOURCE')
     check <- merge(check, drange[, .(RECIPIENT=AID, MIN.RECIPIENT=MIN, MAX.RECIPIENT=MAX)], by='RECIPIENT')
     check[ MAX.RECIPIENT < MIN.SOURCE, stopifnot(.N==0)]
+}
+
+if(1)
+{
+    meta_env <- new.env()
+    load(file.path.meta, envir=meta_env)
+    cols <- c('aid', 'comm', 'round', 'sample_date')
+    dcomms <- subset(meta_env$meta_data, select=cols)
+    names(dcomms) <- toupper( names(dcomms) )
+
+    tmp <- dcomms[!is.na(AID), .(COMMS=paste0(unique(sort(COMM)), collapse='-')) , by='AID']
+    tmp <- double.merge(chain, tmp)
+    tmp <- tmp[ COMMS.RECIPIENT %like% 'inland' & ! COMMS.SOURCE == '']
+    tmp[ , table(COMMS.SOURCE)]
+    tmp[ , uniqueN(RECIPIENT)]
 }
 
 dancestors <- get.ancestors.from.chain(chain)
@@ -620,12 +695,18 @@ dresults[!is.na(M) &
          SEX.SOURCE != SEX.RECIPIENT &
          COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland', {
              cat('There are', .N, 'pairs with median DOI estimate(', sum(is.na(ROUND.M)), ') outside of range.\n'); .SD
-         } ][is.na(ROUND.M), range(M)]
+         } ][is.na(ROUND.M), .(SOURCE, RECIPIENT, M)] -> idx
+idx <- double.merge(idx, meta[, .(AID=aid, DFP=date_first_positive)])
+
+setkey(dprobs_roundallocation, SOURCE,RECIPIENT)
+setkey(idx, SOURCE,RECIPIENT)
+dprobs_roundallocation[idx] |> knitr::kable()
+
+
 
 
 # Save
-# filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
-filename <-file.path(out.dir, paste0('pairsdata_toshare', suffix, '.rds')) 
+filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
 saveRDS(dresults, filename)    
 
 if(0)
@@ -665,14 +746,13 @@ if(0)
     fwrite(all_ff_pairs, filename)
 }
 
-dresults[, table(DIRECTION) ]
-
 # make table
 cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'M', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'DIRECTION')
 dtable <- subset(dresults,select=cols)
 dtable[, table(SEX.SOURCE,SEX.RECIPIENT)]
 setnames(dtable, 'M', 'INFECTION_DATE')
 filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_table_toshare', suffix, '.csv'))
+# [1] "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live/RCCS_R15_R18/pairsdata_table_toshare_d1_w11_netfrompairs_seropairs.csv"
 fwrite(dtable, filename)
 
 ##############################
@@ -684,7 +764,7 @@ library(ggpubr)
 # For plots, only select pairs which appear in the analysis
 dresults <- dresults[SEX.SOURCE!=SEX.RECIPIENT]
 dresults <- dresults[ COMM.SOURCE != 'neuro' & COMM.RECIPIENT != 'neuro'] 
-dresults <- dresults[COMM.RECIPIENT == 'inland', ]
+dresults <- dresults[COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland', ]
 dresults <- dresults[! is.na(ROUND.M) ]
 cat(dresults[, .N], 'source-recipient pairs selected\n')
 # dresults[, table(COMM.SOURCE)]
@@ -939,10 +1019,13 @@ if(1)
     }
 
     # Plot schema
+    for(i in 101:200)
     {
-        i <- 17
+        i <- 129
+        cat(i, '\n')
         idx <- dresults[i, .(SOURCE,RECIPIENT)]
         # IDX <- copy(idx)
+
         tmp <- merge(idx, drange_test[, .(AID, MIN.SOURCE=MIN, MAX.SOURCE=MAX)], by.x='SOURCE', by.y='AID')
         tmp <- merge(tmp, drange_test[, .(AID, MIN.RECIPIENT=MIN, MAX.RECIPIENT=MAX)], by.x='RECIPIENT', by.y='AID')
         cols <- names(tmp)[names(tmp) %like% '^MIN|^MAX'] 
@@ -1029,8 +1112,9 @@ if(1)
             reqs + coord_flip()
 
         print(p_schema)
-        filename <- file.path(out.dir, 'supp_triangle_schema.pdf')
-        ggsave(filename, p_schema, width=10, height=10, units = 'cm')
+        #filename <- file.path(out.dir, 'supp_triangle_schema.pdf')
+        #ggsave(filename, p_schema, width=10, height=10, units = 'cm')
+        Sys.sleep(1)
     }
 
     tmp <- ggarrange_nature(plot_mae + theme(legend.spacing.x=unit(.3, 'cm')),
@@ -1038,6 +1122,7 @@ if(1)
                             common.legend = TRUE, legend = 'bottom',
                             labels = c('b','c','d'), ncol=3)
     tmp <- ggarrange_nature(p_predictions2, tmp, ncol=1, heights = c(6,4), labels=c('a', '')) 
+    tmp
     filename <- file.path(out.dir, 'edf_tsis_v_v2.pdf')
     ggsave_nature(filename, tmp, add_reqs=FALSE)
 
