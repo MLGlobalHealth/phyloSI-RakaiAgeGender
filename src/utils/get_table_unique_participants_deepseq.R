@@ -28,14 +28,14 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 
 # rounds of interest
 df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
-                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, '15S', 16:18))))
+                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, 15,'15S', 16:18))))
 
 # community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 
 ###############################################
 
-# GET META DATA 
+# GET META DATA
 
 ###############################################
 
@@ -244,6 +244,11 @@ do <- merge(arti,sequ,by=c('STUDY_ID','ROUND','COMM','SEX','AGEYRS','AGEGP'),all
 # keep round of interest
 do <- merge(do, df_round, by = c('COMM', 'ROUND'))
 
+# keep first visit only
+do[, r:= as.numeric(gsub('R','',gsub('S','.1',ROUND)))]
+setkey(do,STUDY_ID,r)
+do <- do[,.SD[1],by = STUDY_ID]
+
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                NO_ART = length(unique(STUDY_ID[ART==F])),
@@ -275,3 +280,30 @@ tmp <- sequ$STUDY_ID[sequ$STUDY_ID %notin% hivs$STUDY_ID & sequ$COMM=='inland']
 tmp # no individual missing
 tmp <- sequ$STUDY_ID[sequ$STUDY_ID %notin% hivi$STUDY_ID & sequ$COMM=='inland']
 hivs[STUDY_ID %in% tmp] # negative during round of interest
+
+## make table by round
+
+# count unique participants with positive test during rounds
+tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
+                NO_ART = length(unique(STUDY_ID[ART==F])),
+                SEQUENCE = length(unique(PT_ID))), by = c('ROUND','COMM','SEX','AGEGP')]
+
+tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
+                 HIV = length(unique(STUDY_ID[HIV=='P'])),
+                 NO_ART = length(unique(STUDY_ID[ART==F])),
+                 SEQUENCE = length(unique(PT_ID))), by = c('ROUND','COMM')]
+tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID[HIV=='P'])),
+                 NO_ART = length(unique(STUDY_ID[ART==F])),
+                 SEQUENCE = length(unique(PT_ID))), by = c('ROUND','COMM','SEX')]
+tab <- rbind(tab,tot1,tot2)
+
+tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
+tab[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Male'))]
+tab[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))]
+tab <- tab[order(COMM,ROUND,SEX,AGEGP),]
+tab[, c("COMM", "SEX", "AGEGP") := lapply(list(COMM, SEX, AGEGP), as.character)]
+
+tab[, pct:= round(SEQUENCE/HIV*100,0)]
+
+# save
+saveRDS(tab, file.path(outdir, 'RCCS_transmission_cohort_characteristics_rounds_R14_18.rds'))
