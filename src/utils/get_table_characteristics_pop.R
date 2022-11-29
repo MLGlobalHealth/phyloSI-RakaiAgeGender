@@ -24,10 +24,15 @@ file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_inciden
 # Latest data from Rakai's CCS (Kate's data from 2022-03-08)
 file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
 
+# Latest update from Joseph concerning dates of infection
+file.path.update.first.positive <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', '221128_requested_updated_serohistory.csv')
+
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
 
 # rounds of interest
+file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
+load(file.path.round.timeline)
 df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 10:18)), 
                   data.table(COMM = 'fishing', ROUND = paste0('R0', c(15, '15S', 16:18))))
 
@@ -114,7 +119,6 @@ rincp <- rincp[!(ROUND =='R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15
 #
 
 hiv <- as.data.table(read.csv(file.path.hiv))
-
 hiv[, round := gsub(' ', '', round)] # remove space in string
 
 # get hiv status
@@ -124,6 +128,12 @@ colnames(rhiv) <- toupper(colnames(rhiv))
 
 # add meta data from Joseph 
 hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
+
+# add last update on infected by joseph
+hiv.update <- as.data.table(read.csv(file.path.update.first.positive))
+hiv.update <- full_join(hiv.update, df_round_inland, by = character()) # find round of first positive test
+hiv.update <- hiv.update[firstposdat >= min_sample_date & firstposdat <= max_sample_date, .(study_id, round)]
+hivs[STUDY_ID %in% hiv.update[, gsub('RK-(.+)', '\\1', study_id)], HIV := 'P'] # set to positive hiv test after first positive test
 
 # add meta data from Kate
 tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], hivs[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
@@ -395,4 +405,6 @@ tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 # save
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
 saveRDS(tab, file.path(outdir, 'characteristics_study_population.rds'))
+
+
 
