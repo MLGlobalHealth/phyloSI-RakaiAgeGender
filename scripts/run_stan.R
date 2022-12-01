@@ -72,9 +72,9 @@ use_30com_pairs <- F
 use_contact_rates_prior <- F
 
 # obtained in script/ 
-file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
-file.incidence.30com.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221119.csv")
-file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")
+file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")#central analysis
+file.incidence.30com.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221119.csv")#sensitivity analysis restricted to community continuoursly surveyed
+file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")#sensitivity analysis using estimates obtained with loess regresssion
 
 # obtained in src/ for analysis
 file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData')
@@ -96,7 +96,7 @@ file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_s
 
 # sexual partnerships  rates
 file.number.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
-file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130.rds'))
+file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130b.rds'))
 
 # obtained in script/ for plots
 file.incidence.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
@@ -151,6 +151,8 @@ if(use_loess_inc_estimates){
 
 # for offset
 df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))#estimated secxual contact rate
+if('cntct.rates' %in% colnames(df_estimated_contact_rates))
+  setnames(df_estimated_contact_rates, 'cntct.rates', 'cntct.rate')
 
 #for plots
 unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio) # sex ratio of unsuppression rate
