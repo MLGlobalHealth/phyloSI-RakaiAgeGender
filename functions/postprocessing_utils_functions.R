@@ -1,4 +1,5 @@
-find_log_offset_by_round <- function(stan_data, eligible_count_round, use_number_susceptible_offset)
+find_log_offset_by_round <- function(stan_data, eligible_count_round, df_estimated_contact_rates, 
+                                     use_number_susceptible_offset, use_contact_rates_prior)
 {
   # find log offset including the proportion of susceptible, number of unsuppressed and time period of each round
   # come handy when we want to specify different offset formula 
@@ -35,6 +36,12 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round, use_number
         tmp <- eligible_count_wide[SEX == .SEX.SOURCE & COMM == .COMM & ROUND == .ROUND]
         log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
         
+        # add contact rates
+        tmp <- df_estimated_contact_rates[part.sex == .SEX.SOURCE]
+        colnames(tmp) <- toupper(colnames(tmp))
+        log_offset <- merge(log_offset, tmp[, .(PART.AGE, CONT.AGE, CNTCT.RATE)], 
+                            by.x = c('AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'), by.y = c('PART.AGE', 'CONT.AGE'))
+        
         # add period in year
         tmp <- df_round[ROUND == .ROUND & COMM == .COMM]
         log_offset[, PERIOD_SPAN := tmp[, ROUND_SPANYRS]]
@@ -44,6 +51,11 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round, use_number
           log_offset[, LOG_OFFSET := log(SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
         }else{
           log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED) + log(PERIOD_SPAN)]
+        }
+        
+        # potentially add contact rates
+        if(use_contact_rates_prior){
+          log_offset[, LOG_OFFSET := LOG_OFFSET + log(CNTCT.RATE)]
         }
 
         # check the order of ages is correct
@@ -60,6 +72,7 @@ find_log_offset_by_round <- function(stan_data, eligible_count_round, use_number
   }
   res <- do.call('rbind', res)
   
+  res[, log_CONTACT_RATES := log(CNTCT.RATE)]
   res[, log_INFECTED_NON_SUPPRESSED := log(INFECTED_NON_SUPPRESSED)]
   res[, log_PROP_SUSCEPTIBLE := log(PROP_SUSCEPTIBLE)]
   res[, log_SUSCEPTIBLE := log(SUSCEPTIBLE)]

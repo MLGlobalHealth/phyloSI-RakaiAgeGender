@@ -6,6 +6,8 @@ library(knitr)
 require(lubridate)
 library(rstan)
 library(gridExtra)
+library(lognorm)
+library(ggExtra)
 
 # laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
@@ -67,6 +69,7 @@ pairs_replicates.seed <- NULL
 viremic_viral_load_200ml <- F
 use_30com_inc_estimates <- F
 use_30com_pairs <- F
+use_contact_rates_prior <- F
 
 # obtained in script/ 
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
@@ -90,7 +93,10 @@ file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(indir, 'fit', "RC
 file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221116.csv'))
 file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221124.csv'))
 file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_221116.csv'))
-file.reported.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
+
+# sexual partnerships  rates
+file.number.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
+file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130.rds'))
 
 # obtained in script/ for plots
 file.incidence.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
@@ -143,9 +149,12 @@ if(use_loess_inc_estimates){
   incidence.inland <- fread(file.incidence.inland)
 }
 
+# for offset
+df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))#estimated secxual contact rate
+
 #for plots
 unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio) # sex ratio of unsuppression rate
-df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships)) # reported sexual contacts
+df_reported_contact <- as.data.table(readRDS(file.number.sexual.partnerships)) # estimated number of sexual contacts
 unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
 infected_share <- fread(file.prevalence.share) # share of infected count by sex
 
@@ -297,7 +306,8 @@ stan_data <- add_phylo_data(stan_data, pairs)
 stan_data <- add_incidence_cases(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates_lognormal_parameters(stan_data, incidence_cases_round)
-stan_data <- add_offset(stan_data, eligible_count_round, use_number_susceptible_offset)
+stan_data <- add_offset(stan_data, eligible_count_round, df_estimated_contact_rates,
+                        use_number_susceptible_offset, use_contact_rates_prior)
 stan_data <- add_offset_time(stan_data, eligible_count_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)

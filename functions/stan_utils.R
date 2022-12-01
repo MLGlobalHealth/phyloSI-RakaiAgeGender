@@ -196,9 +196,10 @@ add_incidence_rates_lognormal_parameters <- function(stan_data, incidence_cases_
   
 }
 
-add_offset <- function(stan_data, eligible_count, use_number_susceptible_offset){
+add_offset <- function(stan_data, eligible_count, df_estimated_contact_rates, 
+                       use_number_susceptible_offset, use_contact_rates_prior){
   
-  # add offset including the probability of susceptible and the number of infected unsuppressed
+  # add offset including the number of susceptible, the number of infected unsuppressed and potentially the contact rates
   
   eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
   eligible_count_wide[, PROP_SUSCEPTIBLE := SUSCEPTIBLE / ELIGIBLE]
@@ -222,11 +223,22 @@ add_offset <- function(stan_data, eligible_count, use_number_susceptible_offset)
       tmp <- eligible_count_wide[SEX == .SEX.SOURCE & ROUND == .ROUND]
       log_offset <- merge(log_offset, tmp[, .(AGEYRS, INFECTED_NON_SUPPRESSED)], by.x = 'AGE_TRANSMISSION.SOURCE', by.y = 'AGEYRS')
       
+      # add contact rates
+      tmp <- df_estimated_contact_rates[part.sex == .SEX.SOURCE]
+      colnames(tmp) <- toupper(colnames(tmp))
+      log_offset <- merge(log_offset, tmp[, .(PART.AGE, CONT.AGE, CNTCT.RATE)], 
+                          by.x = c('AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'), by.y = c('PART.AGE', 'CONT.AGE'))
+      
       # make log offset
       if(use_number_susceptible_offset){
         log_offset[, LOG_OFFSET := log(SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED)]
       }else{
         log_offset[, LOG_OFFSET := log(PROP_SUSCEPTIBLE) + log(INFECTED_NON_SUPPRESSED)]
+      }
+      
+      # potentially add contact rates
+      if(use_contact_rates_prior){
+        log_offset[, LOG_OFFSET := LOG_OFFSET + log(CNTCT.RATE)]
       }
       
       # check the order of ages is correct
