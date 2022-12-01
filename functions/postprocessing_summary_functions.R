@@ -398,17 +398,16 @@ find_summary_output_by_round <- function(samples, output, vars,
   return(tmp1)
 }
 
-find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
-                                         transform = NULL, log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
+find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual, transform = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   # incidence rate under original scenario
-  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, posterior_samples = T)
   
   # incidence rate under countefactual scenario
-  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, posterior_samples = T)
   setnames(tmp, 'value', 'value_counterfactual')
   
   # find relative incidence
@@ -440,16 +439,16 @@ find_relative_incidence_counterfactual <- function(samples, output, vars, log_of
 }
 
 find_difference_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual,
-                                                   transform = NULL, log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'){
+                                                   transform = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   # incidence rate under original scenario
-  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round,  posterior_samples = T)
   
   # incidence rate under countefactual scenario
-  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, posterior_samples = T)
   setnames(tmp, 'value', 'value_counterfactual')
   
   # find difference incidence
@@ -814,13 +813,13 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
     eligible_count_round.counterfactual[[i]] <- eligible_count_round.counterfactual.list[[i]]
     
     # find offset under counterfactual
-    log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]), use_number_susceptible_offset)
+    log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]), df_estimated_contact_rates,
+                                                                use_number_susceptible_offset, use_contact_rates_prior)
     
     # find incidence counterfactual by age of the recipient
     incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                   transform = 'exp', 
                                                                   log_offset_round = log_offset_round.counterfactual, 
-                                                                  log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
                                                                   save_output = F)
     # find relative difference incidence  by age of the recipient
     relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
@@ -1029,13 +1028,13 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   budget <- selected_males[, list(TREATED = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM')]
 
   # find offset under counterfactual
-  log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual), use_number_susceptible_offset)
+  log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual),df_estimated_contact_rates,
+                                                              use_number_susceptible_offset, use_contact_rates_prior)
   
   # find incidence counterfactual by age of the recipient
   incidence_counterfactual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                 transform = 'exp', 
                                                                 log_offset_round = log_offset_round.counterfactual, 
-                                                                log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED', 
                                                                 save_output = F)
   # find relative difference incidence  by age of the recipient
   relative_incidence_counterfactual <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
