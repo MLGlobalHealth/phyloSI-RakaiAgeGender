@@ -748,14 +748,22 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
   
   #
   # infected unsupressed count
-  ggplot(eligible_count_round, aes(x = AGEYRS)) +
-    geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = SEX)) +
-    # geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX), alpha = 0.5) +
+  tmp <- copy(eligible_count_round)
+  tmp[, SEX_LABEL := 'Women']
+  tmp[SEX == 'M', SEX_LABEL := 'Men']
+  tmp[, ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
+  ggplot(tmp, aes(x = AGEYRS)) +
+    geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = SEX_LABEL)) +
+    geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX_LABEL), alpha = 0.5) +
     labs(y = 'Number of HIV+ unsupressed census eligible', x = 'Age') +
-    facet_grid(ROUND~COMM, label = 'label_both') +
+    facet_wrap(~ROUND_LABEL, ncol = 2) +
+    scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
+    scale_color_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
     theme_bw() +
-    theme(legend.position = 'bottom')
-  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round_sex.png'), w = 7, h = 9)
+    theme(legend.position = 'bottom',    
+          strip.background = element_rect(colour="white", fill="white"),
+          legend.title = element_blank()) 
+  ggsave(paste0(outdir, '-data-census_eligible_unsuppressed_round_sex.png'), w = 4, h = 7)
   
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
     geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = ROUND)) +
