@@ -479,50 +479,49 @@ find_difference_incidence_counterfactual <- function(samples, output, vars, log_
   return(tmp1)
 }
 
+find.index.mass <- function(x, p){
+  # iterate over the index of x until the sum of x at the indices sum to p
+  # start with the index with the greatest x value and enlarge on the left or on the right
+  # by the following indices with the greatest x value
+  
+  stopifnot(p <= sum(x))
+  
+  n <- length(x)
+  
+  index.max <- which.max(x)
+  index.groups <- index.max
+  enter <- T
+  
+  while(enter){
+    if(max(index.groups) == n){
+      new.index = min(index.groups) - 1
+    }else if(min(index.groups) == 1){
+      new.index = max(index.groups) + 1
+    }else{
+      proposed.indices <- c(min(index.groups) - 1, max(index.groups) + 1)
+      new.index <- proposed.indices[which.max(x[proposed.indices])]
+    }
+    
+    new.index.groups <- c(index.groups, new.index)
+    if(sum(x[new.index.groups]) > p){
+      enter = F
+    }else if(sum(x[new.index.groups]) == p){
+      index.groups <- c(index.groups, new.index)
+      enter = F
+    } else{
+      index.groups <- c(index.groups, new.index)
+    }
+  }
+  
+  # check
+  stopifnot(x[index.groups] <= p)
+  
+  
+  return(sort(index.groups))
+}
 
 find_spreaders <- function(expected_contribution_age_source, outdir){
   
-  
-  find.index.mass <- function(x, p){
-    # iterate over the index of x until the sum of x at the indices sum to p
-    # start with the index with the greatest x value and enlarge on the left or on the right
-    # by the following indices with the greatest x value
-    
-    stopifnot(p <= sum(x))
-    
-    n <- length(x)
-    
-    index.max <- which.max(x)
-    index.groups <- index.max
-    enter <- T
-    
-    while(enter){
-      if(max(index.groups) == n){
-        new.index = min(index.groups) - 1
-      }else if(min(index.groups) == 1){
-        new.index = max(index.groups) + 1
-      }else{
-        proposed.indices <- c(min(index.groups) - 1, max(index.groups) + 1)
-        new.index <- proposed.indices[which.max(x[proposed.indices])]
-      }
-      
-      new.index.groups <- c(index.groups, new.index)
-      if(sum(x[new.index.groups]) > p){
-        enter = F
-      }else if(sum(x[new.index.groups]) == p){
-        index.groups <- c(index.groups, new.index)
-        enter = F
-      } else{
-        index.groups <- c(index.groups, new.index)
-      }
-    }
-    
-    # check
-    stopifnot(x[index.groups] <= p)
-    
-    
-    return(sort(index.groups))
-  }
   
   # age groups that contribute to 33%
   spreaders <- expected_contribution_age_source[, list(AGEYRS = AGE_TRANSMISSION.SOURCE[find.index.mass(M, 1/3)]), by = c('COMM', 'ROUND', 'LABEL_DIRECTION')]
@@ -584,25 +583,29 @@ find_spreaders <- function(expected_contribution_age_source, outdir){
   return(df_spreaders)
 }
 
-find_male_with_greatest_art_diff <- function(treatment_cascade, eligible_count_round.all, participation, 
+find_male_with_greatest_supp_diff <- function(treatment_cascade, eligible_count_round.all, participation, 
                                              only_participant, only.participant.treated, budget){
   
-  # find art covergae in population
-  ppu <- copy(treatment_cascade[, .(ROUND, SEX, COMM, AGEYRS, PROP_ART_COVERAGE_PARTICIPANTS_M, PROP_ART_COVERAGE_NONPARTICIPANTS_M)])
+  # find suppressed given infected in participants
+  ppu <- copy(treatment_cascade[, .(ROUND, SEX, COMM, AGEYRS, PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M)])
+  ppu[,PROP_SUPPRESSED_PARTICIPANTS_M := 1- PROP_UNSUPPRESSED_PARTICIPANTS_M ]
+  ppu[,PROP_SUPPRESSED_NONPARTICIPANTS_M := 1- PROP_UNSUPPRESSED_NONPARTICIPANTS_M ]
+  set(ppu, NULL, 'PROP_UNSUPPRESSED_NONPARTICIPANTS_M', NULL)
+  set(ppu, NULL, 'PROP_UNSUPPRESSED_PARTICIPANTS_M', NULL)
   pa <- copy(participation)
   pa[, ROUND := paste0('R0', ROUND)]
   ppu <- merge(ppu, pa, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'))
   if(nonparticipants.treated.like.participants){# baseline assumption
-    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_PARTICIPANTS_M * (1-PARTICIPATION)]
+    ppu[, PROP_SUPPRESSED_M := PROP_SUPPRESSED_PARTICIPANTS_M * PARTICIPATION + PROP_SUPPRESSED_NONPARTICIPANTS_M * (1-PARTICIPATION)]
   }else if(nonparticipants.not.treated){
-    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + 0 * (1-PARTICIPATION)]
+    ppu[, PROP_SUPPRESSED_M := PROP_SUPPRESSED_PARTICIPANTS_M * PARTICIPATION + 0 * (1-PARTICIPATION)]
   }else{
-    ppu[, PROP_ART_COVERAGE_M := PROP_ART_COVERAGE_PARTICIPANTS_M * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_M * (1-PARTICIPATION)]
+    ppu[, PROP_SUPPRESSED_M := PROP_SUPPRESSED_PARTICIPANTS_M * PARTICIPATION + PROP_SUPPRESSED_NONPARTICIPANTS_M * (1-PARTICIPATION)]
   }
   
-  # find difference in art uptake between male and female
-  ppu[, PROP_ART_COVERAGE_M.FEMALE := PROP_ART_COVERAGE_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
-  ppu[, INCREASE_ART_COVERAGE := PROP_ART_COVERAGE_M.FEMALE - PROP_ART_COVERAGE_M]
+  # find difference in suppression level uptake between male and female
+  ppu[, PROP_SUPPRESSED_M.FEMALE := PROP_SUPPRESSED_M[SEX == 'F'], by = c('AGEYRS', 'COMM', 'ROUND')]
+  ppu[, INCREASE_PROP_UNSUPPRESSED := PROP_SUPPRESSED_M.FEMALE - PROP_SUPPRESSED_M]
   ppu <- ppu[SEX == 'M']
   
   # get the budget of treating male
@@ -611,10 +614,10 @@ find_male_with_greatest_art_diff <- function(treatment_cascade, eligible_count_r
                                            PROP_UNSUPPRESSED_NONPARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL,
                                            INFECTED_NON_SUPPRESSED.FACTUAL)])
   
-  # find age groups to consider by ordering the male by the different in art uptake compared to female
+  # find age groups to consider by ordering the male by the different in suppression levl compared to female
   ppc <- merge(ppu, eli, by = c('SEX','COMM','AGEYRS','ROUND'))
   ppc <- merge(ppc, budget, by = c('SEX','COMM','ROUND'), allow.cartesian=TRUE)
-  ppc <- ppc[order(COMM,ROUND,1-INCREASE_ART_COVERAGE)]
+  ppc <- ppc[order(COMM,ROUND,1-INCREASE_PROP_UNSUPPRESSED)]
   ppc[, CUMSUM_TREATED := cumsum(TREATED), by = c('SEX', 'COMM', 'ROUND')]
   ppc[, proportion := CUMSUM_TREATED / TREATED.SPREADERS]
   ppc[, to_consider := proportion < 1 | proportion == min(proportion[proportion >= 1]), by = c('SEX', 'COMM', 'ROUND')]
@@ -756,7 +759,7 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
   # 
   
   # find age groups such that the sum of the unsuppressed matches the budget of the 1st scenario
-  noncomplier <- find_male_with_greatest_art_diff(treatment_cascade, eligible_count_round.all, participation, 
+  noncomplier <- find_male_with_greatest_supp_diff(treatment_cascade, eligible_count_round.all, participation, 
                                                   only_participant, only.participant.treated, budget)
   
   # find number of treated male by age group in this scenario 
