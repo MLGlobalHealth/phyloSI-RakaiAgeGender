@@ -61,7 +61,7 @@ samples <- rstan::extract(fit)
 # temporary
 if(!exists('use_contact_rates_prior')){
   use_contact_rates_prior = F
-  file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1112.rds'))
+  file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130.rds'))
   df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))
 }
 
