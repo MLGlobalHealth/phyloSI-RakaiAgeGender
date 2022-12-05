@@ -41,7 +41,7 @@ save_statistics_incidence_rate_ratio_trends <- function(ic, outdir.table){
   saveRDS(stats, paste0(outdir.table, '-data-incidence_rate_ratio_trends.rds'))
 }
 
-save_statistics_incidence_rate_trends <- function(icrr, icr, median_age, icrrs, icrrt){
+save_statistics_incidence_rate_trends <- function(icrr, icr, icrrs, icrrt, medage){
   
   ps <- c(0.5, 0.2, 0.8)
   p_labs <- c('M','CL','CU')
@@ -79,8 +79,10 @@ save_statistics_incidence_rate_trends <- function(icrr, icr, median_age, icrrs, 
   inc_rel_ratio <- inc_rel_ratio[order(COMM, ROUND)]
   
   # median age at infection
-  median_age[, MEDIAN_AGEYRS := round(MEDIAN_AGEYRS, 2)]
-  median_age <- median_age[order(COMM, ROUND, SEX_LABEL), .(COMM, ROUND, SEX_LABEL, MEDIAN_AGEYRS)]
+  median_age <- copy(medage[order(COMM, ROUND, SEX), ])
+  median_age[, M := round(M, 2)]
+  median_age[, CL := round(CL, 2)]
+  median_age[, CU := round(CU, 2)]
   
   #save
   stats <- list()
