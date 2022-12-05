@@ -1490,6 +1490,23 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   # Clean and merge to target labels
   #
   
+  # merge incidence cases counterfactual by ageto target labels and find incidence rates
+  # ic <- merge(incidence_counterfactual, df_target, by = 'counterfactual_index')
+  tmp <-  unique(eligible_count_round.counterfactual[ROUND == Round, .(COMM, ROUND, SEX, AGEYRS, SUSCEPTIBLE)])
+  tmp[, LABEL_RECIPIENT := 'Female recipients']
+  tmp[SEX == 'F', LABEL_RECIPIENT := 'Male recipients']
+  setnames(tmp, 'AGEYRS', 'AGE_INFECTION.RECIPIENT')
+  ic <- merge(incidence_counterfactual,tmp, by = c( 'COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_INFECTION.RECIPIENT'))
+  ic[, M := M / SUSCEPTIBLE]
+  ic[, CL := CL / SUSCEPTIBLE]
+  ic[, CU := CU / SUSCEPTIBLE]
+  
+  # same for incidence rate factual
+  icf  <- merge(icf,tmp, by = c('COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_INFECTION.RECIPIENT'))
+  icf[, M := M / SUSCEPTIBLE]
+  icf[, CL := CL / SUSCEPTIBLE]
+  icf[, CU := CU / SUSCEPTIBLE]
+  
   # merge udget by by age to target labels
   ecf[, INFECTED_SUPPRESSED := INFECTED - INFECTED_NON_SUPPRESSED]
   ecf[, INFECTED_ALREADY_SUPPRESSED := INFECTED_SUPPRESSED - TREATED]
@@ -1511,7 +1528,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
                                                               label.suppressed))]
   
   # format budget regardless of age, merge to target labels and add total number of unsuppressed in factual
-  bc <- melt.data.table(budget.counterfactual, id.vars = c('ROUND', 'SEX', 'COMM', 'label'))
+  bc <- copy(budget.counterfactual)
   # bc <- ecf[, .(value = sum(value)), by = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index', 'VARIABLE_LABEL', 'variable')]
   # bc <- merge(bc, tmp, by = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index'), allow.cartesian = T)
   # bc <- merge(bc, df_target, by = 'counterfactual_index')
@@ -1521,10 +1538,6 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   icf[, SEX_LABEL := 'In women']
   icf[IS_MF == F, SEX_LABEL := 'In men']
   icf[, SEX_LABEL := factor(SEX_LABEL, levels = c('In women', 'In men'))]
-  
-  # merge incidence cases counterfactual by ageto target labels
-  # ic <- merge(incidence_counterfactual, df_target, by = 'counterfactual_index')
-  ic <- copy(incidence_counterfactual)
   
   # merge incidence cases counterfactual relative to factual to target labels
   # ric <- merge(relative_incidence_counterfactual, df_target, by = 'counterfactual_index')
@@ -1586,7 +1599,8 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     
     # budget regardless of age
     p1 <- ggplot(bc.c) + 
-      geom_bar(aes(y = value, x = label, fill = label), stat = 'identity') +  
+      geom_bar(aes(y = TREATED, x = label, fill = label), stat = 'identity') +  
+      geom_errorbar(aes(ymin = TREATED_CL, ymax = TREATED_CU, x = label, fill = label),  alpha = 0.5, width = 0.15) +  
       labs(x = '', y = paste0('Additional number of\n men with suppressed virus'), fill = '') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
@@ -1605,15 +1619,16 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       ) +
       scale_fill_manual(values = cols) +
       guides(fill = 'none') + 
+      coord_cartesian(ylim = c(0, NA)) +
       scale_y_continuous(expand = expansion(mult = c(0, .05))) 
 
     # incidence cases by age
     p2 <- ggplot(ic.c) + 
-      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(label), fill = label), alpha = 0.2) + 
+      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, group = interaction(label), fill = label), alpha = 0.2) + 
       # geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, linetype = SEX_LABEL), alpha = 0.2) +
-      geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = SEX_LABEL), col = 'black') +
-      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = label)) + 
-      labs(x = 'Age', y = '\nIncident cases', linetype = 'No intervention', fill = 'Intervention', color = 'Intervention') + 
+      geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M*100, linetype = SEX_LABEL), col = 'black') +
+      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M*100, col = label)) + 
+      labs(x = 'Age', y = 'Incidence rates\nper 100 person-years', linetype = 'No intervention', fill = 'Intervention', color = 'Intervention') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_blank(), 
@@ -1781,7 +1796,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
                          counterfactual_index = 1:3, 
                          type = c('main spreaders', 'non compliers', 'random'),
                          LABEL_TARGET = c('Top 1/3 men sources', 
-                                          'Men age groups with greatest\ndifference in ART coverage\ncompared to women', 
+                                          'Men age groups with greatest\ndifference in suppression rate\ncompared to women', 
                                           'Untargeted intervention'))
   df_target[, LABEL_TARGET := factor(LABEL_TARGET, levels = df_target[, LABEL_TARGET])]
   
@@ -1978,7 +1993,7 @@ plot_counterfactual_strategy <- function(counterfactuals_a_a, incidence_factual,
                          counterfactual_index = 1:3, 
                          type = c('main spreaders', 'non compliers', 'random'),
                          LABEL_TARGET = c('Top 1/3 men sources', 
-                                          'Men age groups with greatest\ndifference in ART coverage\ncompared to women', 
+                                          'Men age groups with greatest\ndifference in suppression rate\ncompared to women', 
                                           'Untargeted intervention'))
   df_target[, LABEL_TARGET := factor(LABEL_TARGET, levels = df_target[, LABEL_TARGET])]
   
