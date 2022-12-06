@@ -100,6 +100,7 @@ file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(indir, 'f
 file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221116.csv'))
 file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221124.csv'))
 file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_221116.csv'))
+file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
 
 # sexual partnerships  rates
 file.number.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
@@ -170,7 +171,7 @@ unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio) # sex ratio of un
 df_reported_contact <- as.data.table(readRDS(file.number.sexual.partnerships)) # estimated number of sexual contacts
 unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
 infected_share <- fread(file.prevalence.share) # share of infected count by sex
-
+unsuppressed_median_age <-fread(file.unsuppressed_median_age) # median age of unsuppressed
 
 #
 # Define start time, end time and cutoff
