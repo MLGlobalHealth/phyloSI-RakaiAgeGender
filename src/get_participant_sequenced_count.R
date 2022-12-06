@@ -174,11 +174,11 @@ set(dcount, NULL, 'PARTICIPATED_TO_ROUND_RO15', NULL)
 dcount <- merge(dcount, df_round, by = c('COMM', 'ROUND'))
 
 # create age groups
-dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
+dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
                      labels=c('15-24','25-34','35-49'))]
 
 # save sequenced id
-saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds'))
+saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds'))
 
 
 ############################################
