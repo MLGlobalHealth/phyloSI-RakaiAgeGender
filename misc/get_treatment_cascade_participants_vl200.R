@@ -113,16 +113,16 @@ stopifnot(nrow(df[SUPPRESSION_RATE_POSTERIOR_SAMPLE > 1]) == 0)
 ####################################
 
 # melt
-df <- melt.data.table(df, id.vars= c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL'))
-df[, variable := gsub('(.+)_POSTERIOR_SAMPLE', '\\1', variable)]
+df1 <- melt.data.table(df, id.vars= c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL'))
+df1[, variable := gsub('(.+)_POSTERIOR_SAMPLE', '\\1', variable)]
 
 # round the empirical otherwise we get two entries 
-df[, PROP_UNSUPPRESSED_EMPIRICAL := round(PROP_UNSUPPRESSED_EMPIRICAL, 7)] 
-df[, PROP_ART_COVERAGE_EMPIRICAL := round(PROP_ART_COVERAGE_EMPIRICAL, 7)] 
-df[, SUPPRESSION_RATE_EMPIRICAL := round(SUPPRESSION_RATE_EMPIRICAL, 7)] 
+df1[, PROP_UNSUPPRESSED_EMPIRICAL := round(PROP_UNSUPPRESSED_EMPIRICAL, 7)] 
+df1[, PROP_ART_COVERAGE_EMPIRICAL := round(PROP_ART_COVERAGE_EMPIRICAL, 7)] 
+df1[, SUPPRESSION_RATE_EMPIRICAL := round(SUPPRESSION_RATE_EMPIRICAL, 7)] 
 
 # summarise
-ns = df[, list(q= quantile(value, prob=ps, na.rm = T), q_label=paste0(variable, '_', qlab)), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL', 'variable')]
+ns = df1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=paste0(variable, '_', qlab)), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL', 'variable')]
 ns = as.data.table(reshape2::dcast(ns, AGEYRS + SEX + COMM + ROUND + PROP_UNSUPPRESSED_EMPIRICAL + PROP_ART_COVERAGE_EMPIRICAL + SUPPRESSION_RATE_EMPIRICAL ~ q_label, value.var = "q"))
 
 # check all entries are complete
@@ -135,6 +135,9 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 # SAVE
 
 ####################################
+
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221121.rds')) 
+saveRDS(df, file = file.name)
 
 file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_vl200_221121.csv'))
 write.csv(ns, file = file.name, row.names = F)

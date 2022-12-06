@@ -1,5 +1,6 @@
 library(data.table)
 library(seqinr)
+library(dplyr)
 
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
@@ -9,19 +10,110 @@ infile.ind.rccs <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/200316_pangea_
 infile.ind.mrc <- file.path(indir.deepsequencedata,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
 infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct.rda')
 
-file.path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20221128.RData')
+file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
+file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
 file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
+file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+
+# load files
+community.keys <- as.data.table(read.csv(file.community.keys))
+community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 
 # rounds of interest
 df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
                   data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, 15, '15S', 16:18))))
 
-# load meta data
-load(file.path.meta)
+###############################################
 
-# load data
+# GET META DATA
+
+###############################################
+
+#
+# Meta data
+#
+
+meta_data <- as.data.table(read.csv(file.path.metadata)) #additional meta_data
+
+# find age
+meta_data[, date_birth := as.Date(paste0(birthyr, '-', birthmo, '-', '01'), format = '%Y-%m-%d')]
+meta_data[, AGEYRS := round(lubridate::time_length(difftime(sample_date, date_birth),"years"))]
+meta_data[is.na(AGEYRS), AGEYRS := round(lubridate::time_length(difftime(firstposvd, date_birth),"years"))]
+meta_data[is.na(AGEYRS)]
+
+# find community
+meta_data[, COMM := 'inland']
+meta_data[LakeVictoria_FishingCommunity == 'yes', COMM := 'fishing']
+
+# find hiv status
+meta_data[, HIV := ifelse(is.na(firstposvd), 'N', 'P')]
+
+# set sample date to hiv test if missing
+meta_data[is.na(sample_date) & !is.na(round), sample_date := firstposvd]
+
+# keep variable of interest
+meta_data[, round := paste0('R0', round)]
+colnames(meta_data) <- toupper(colnames(meta_data))
+meta_data <- meta_data[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, HIV, SAMPLE_DATE)]
+
+# set 15.1 to be 15S
+meta_data[ROUND == 'R015.1', ROUND := 'R015S']
+
+
+#
+# Quest
+#
+
+quest <- as.data.table(read.csv(file.path.quest))
+
+# keep variable of interest
+rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, intdate)]
+
+# find  community
+rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
+
+# to upper
+colnames(rinc) <- toupper(colnames(rinc))
+
+# sample date
+setnames(rinc, 'INTDATE', 'SAMPLE_DATE')
+
+# add meta data from Kate
+tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], rinc[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
+tmp <- merge(tmp, meta_data, by = c('STUDY_ID', 'ROUND'))
+rinc <- rbind(rinc[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS)], tmp[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS)])
+
+
+#
+# HIV
+#
+
+hiv <- as.data.table(read.csv(file.path.hiv))
+hiv[, round := gsub(' ', '', round)] # remove space in string
+
+# get hiv status
+rhiv <- hiv[, .(study_id, round, hiv)]
+rhiv[, round := gsub(" ", '', round, fixed = T)]
+colnames(rhiv) <- toupper(colnames(rhiv))
+
+# add meta data from Joseph
+hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
+
+# add meta data from Kate
+tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], hivs[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
+tmp <- merge(tmp, meta_data, by = c('STUDY_ID', 'ROUND'))
+hivs <- rbind(hivs[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS, HIV)], tmp[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS, HIV)])
+
+
+###############################################
+
+# GET SEQUENCES DATA
+
+###############################################
+
 alignment <- read.fasta(file = infile.sequence)
 unique(do.call(c, lapply(alignment, unique)))
 nsequence <- length(alignment)
@@ -45,13 +137,15 @@ cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences 
 # remove mrc cohort
 dinfo <- dinfo[!grepl('MRCUVRI', pangea_id)]
 
-# find meta data
-dm <- merge(dinfo, meta_data, by.x = c('pt_id'), by.y = c('study_id'))
-colnames(dm) <- toupper(colnames(dm))
-
 # remove neuro data
 neuro.metadata <- as.data.table(read.csv(file.path.neuro.metadata))
-dm <- dm[!PT_ID %in% neuro.metadata[, paste0('RK-', studyid)]]
+dinfo <- dinfo[!pt_id %in% neuro.metadata[, paste0('RK-', studyid)]]
+
+# find meta data
+hivs[, pt_id := paste0('RK-', STUDY_ID)]
+dm <- merge(dinfo, hivs, by = c('pt_id'))
+colnames(dm) <- toupper(colnames(dm))
+stopifnot(dm[, length(unique(PT_ID))] == dinfo[, length(unique(pt_id))])
 
 # keep sequences which meet minimum criteria
 load(infile.seq.criteria)
@@ -61,16 +155,14 @@ dm <- subset(dm,V1=='TRUE')
 
 # keep meta info closer to sample date
 dm[, VISIT_DT := as.Date(VISIT_DT)]
+dm[, SAMPLE_DATE := as.Date(SAMPLE_DATE)]
 dm[, DIFF_DATE := abs(VISIT_DT - SAMPLE_DATE), by = 'PANGEA_ID']
-dm[, IS_MIN := DIFF_DATE == min(DIFF_DATE), by = 'PANGEA_ID']
+dm[, IS_MIN := DIFF_DATE == min(na.omit(DIFF_DATE)), by = 'PANGEA_ID']
 dcount <- dm[IS_MIN == 1]
 stopifnot(nrow(dcount) == dm[, length(unique(PANGEA_ID))])
 dcount[, table(ROUND, COMM)]
 
-# find age at visit
-dcount[, AGEYRS := round(lubridate::time_length(difftime(VISIT_DT, DATE_BIRTH),"years"))] # round to match hivs
-stopifnot(nrow(dcount[is.na(AGEYRS)]) == 0)
-dcount <- dcount[AGEYRS > 14 & AGEYRS < 50]
+dcount[HIV == 'N'] ## negative but sequenceD?
 
 # set round to 15 if inland 15S
 dcount[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'pt_id']
@@ -82,11 +174,11 @@ set(dcount, NULL, 'PARTICIPATED_TO_ROUND_RO15', NULL)
 dcount <- merge(dcount, df_round, by = c('COMM', 'ROUND'))
 
 # create age groups
-dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,50),include.lowest=T,right=F,
+dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
                      labels=c('15-24','25-34','35-49'))]
 
 # save sequenced id
-saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds'))
+saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds'))
 
 
 ############################################

@@ -6,6 +6,9 @@ library(knitr)
 require(lubridate)
 library(rstan)
 library(gridExtra)
+library(lognorm)
+library(ggExtra)
+library(Hmisc)
 
 # laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
@@ -67,11 +70,12 @@ pairs_replicates.seed <- NULL
 viremic_viral_load_200ml <- F
 use_30com_inc_estimates <- F
 use_30com_pairs <- F
+use_contact_rates_prior <- F
 
 # obtained in script/ 
-file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
-file.incidence.30com.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221119.csv")
-file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")
+file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")#central analysis
+file.incidence.30com.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221119.csv")#sensitivity analysis restricted to community continuoursly surveyed
+file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")#sensitivity analysis using estimates obtained with loess regresssion
 
 # obtained in src/ for analysis
 file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData')
@@ -81,16 +85,26 @@ file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_22111
 
 # obtained in misc/ for analysis
 file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
+
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221116.csv")
 file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221116.csv")
+file.treatment.cascade.prop.participants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds'))
+file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221116.rds'))
+
 file.treatment.cascade.prop.participants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_vl200_221121.csv")
 file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221121.csv")
+file.treatment.cascade.prop.participants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221121.rds')) 
+file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221121.rds')) 
 
 # obtained in misc/ for plots
 file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221116.csv'))
 file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221124.csv'))
 file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_221116.csv'))
-file.reported.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
+file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
+
+# sexual partnerships  rates
+file.number.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
+file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130b.rds'))
 
 # obtained in script/ for plots
 file.incidence.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
@@ -127,9 +141,13 @@ proportion_prevalence <- fread(file.prevalence.prop)
 if(viremic_viral_load_200ml){
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants.vl200, 
                                               file.treatment.cascade.prop.nonparticipants.vl200)
+  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
+                                                              file.treatment.cascade.prop.nonparticipants.vl200.samples)
 }else{
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
                                               file.treatment.cascade.prop.nonparticipants)
+  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
+                                                              file.treatment.cascade.prop.nonparticipants.samples)
 }
 
 # load incidence estimates 
@@ -143,12 +161,17 @@ if(use_loess_inc_estimates){
   incidence.inland <- fread(file.incidence.inland)
 }
 
+# for offset
+df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))#estimated secxual contact rate
+if('cntct.rates' %in% colnames(df_estimated_contact_rates))
+  setnames(df_estimated_contact_rates, 'cntct.rates', 'cntct.rate')
+
 #for plots
 unsuppressed_rate_ratio <- fread(file.unsuppressed_rate_ratio) # sex ratio of unsuppression rate
-df_reported_contact <- as.data.table(readRDS(file.reported.sexual.partnerships)) # reported sexual contacts
+df_reported_contact <- as.data.table(readRDS(file.number.sexual.partnerships)) # estimated number of sexual contacts
 unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
 infected_share <- fread(file.prevalence.share) # share of infected count by sex
-
+unsuppressed_median_age <-fread(file.unsuppressed_median_age) # median age of unsuppressed
 
 #
 # Define start time, end time and cutoff
@@ -297,7 +320,8 @@ stan_data <- add_phylo_data(stan_data, pairs)
 stan_data <- add_incidence_cases(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates_lognormal_parameters(stan_data, incidence_cases_round)
-stan_data <- add_offset(stan_data, eligible_count_round, use_number_susceptible_offset)
+stan_data <- add_offset(stan_data, eligible_count_round, df_estimated_contact_rates,
+                        use_number_susceptible_offset, use_contact_rates_prior)
 stan_data <- add_offset_time(stan_data, eligible_count_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
@@ -341,6 +365,7 @@ if(1){
   plot_pairs(pairs, outfile.figures)
   plot_pairs_all(pairs.all, outfile.figures)
   plot_transmission_events_over_time(pairs, outfile.figures)
+  plot_date_collection_pairs(pairs, df_round_inland, outfile.figures)
   save_statistics_transmission_events(pairs, outdir.table)
 }
 
