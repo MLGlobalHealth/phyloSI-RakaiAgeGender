@@ -81,6 +81,9 @@ if(!exists('treatment_cascade_samples')){
                                                                 file.treatment.cascade.prop.nonparticipants.samples)
   }
 }
+file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
+
+
 #
 # offset
 #
@@ -107,7 +110,7 @@ unsuppressed_share_sex <- prepare_unsuppressed_share(unsuppressed_share, c('SEX'
 unsuppressed_share_sex_age <- prepare_unsuppressed_share(unsuppressed_share, c('SEX', 'AGEYRS'))
 prevalence_prop_sex<- prepare_infected_share(infected_share, 'SEX')
 reported_contact <- clean_reported_contact(df_reported_contact)
-
+df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age)
 
 #
 ## PPC
@@ -171,6 +174,38 @@ force_infection_age_recipient <-  find_summary_output_by_round(samples, 'log_bet
 plot_force_infection_sex_age_recipient(force_infection_age_recipient, outfile.figures)
 
 
+#
+# median age of source
+#
+
+cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
+
+# by 1-year age band
+median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
+                                                  transform = 'exp',
+                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+                                                  median_age_source = T)
+plot_median_age_source(median_age_source, outfile.figures)
+
+# by age groups
+df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+median_age_source_group <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                        transform = 'exp',
+                                                        standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                        quantile_age_source = T)
+expected_contribution_age_group_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                                                        c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                        transform = 'exp',
+                                                                        standardised.vars = c('INDEX_ROUND'))
+plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
+
+# total
+median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
+                                                  c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                  transform = 'exp',
+                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
+                                                  quantile_age_source = T)
+
 
 #
 # Contribution to transmission
@@ -186,8 +221,8 @@ plot_contribution_sex_source(contribution_sex_source, unsuppressed_share_sex, pr
 # age-specific contribution to transmission among all sources by sex
 contribution_age_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                          standardised.vars = c('INDEX_ROUND'))
-plot_contribution_age_source_unsuppressed(contribution_age_source, unsuppressed_share_sex_age, outfile.figures)
-plot_contribution_age_source(contribution_age_source, outfile.figures)
+plot_contribution_age_source_unsuppressed(contribution_age_source, unsuppressed_share_sex_age, median_age_source, outfile.figures)
+plot_contribution_age_source(contribution_age_source, median_age_source, outfile.figures)
 
 # contribution aggregated by age group of sources and recipients
 contribution_age_group_source <- find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
@@ -216,8 +251,8 @@ plot_contribution_sex_source(expected_contribution_sex_source, unsuppressed_shar
 expected_contribution_age_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                                   transform = 'exp',
                                                                   standardised.vars = c('INDEX_ROUND'))
-plot_contribution_age_source_unsuppressed(expected_contribution_age_source2, unsuppressed_share_sex_age, outfile.figures,'Expected_contribution')
-plot_contribution_age_source(expected_contribution_age_source2, outfile.figures,'Expected_contribution_sex')
+plot_contribution_age_source_unsuppressed(expected_contribution_age_source2, unsuppressed_share_sex_age, median_age_source, df_unsuppressed_median_age, outfile.figures,'Expected_contribution')
+plot_contribution_age_source(expected_contribution_age_source2, median_age_source, outfile.figures,'Expected_contribution_sex')
 save_statistics_expected_contribution(expected_contribution_sex_source, expected_contribution_age_source2, outdir.table)
 
 # age-specific sex ratio contribution to transmission
@@ -304,38 +339,6 @@ incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDE
                                                     per_susceptible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
 
-
-#
-# median age of source
-#
-
-cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
-
-# by 1-year age band
-median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
-                                                  transform = 'exp',
-                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
-                                                  median_age_source = T)
-plot_median_age_source(median_age_source, outfile.figures)
-
-# by age groups
-df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
-median_age_source_group <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                  transform = 'exp',
-                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                  quantile_age_source = T)
-expected_contribution_age_group_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',
-                                                                        c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                                        transform = 'exp',
-                                                                        standardised.vars = c('INDEX_ROUND'))
-plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
-
-# total
-median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
-                                                  c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                  transform = 'exp',
-                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
-                                                  quantile_age_source = T)
 
 #
 # Counterfactual: comparison of targets

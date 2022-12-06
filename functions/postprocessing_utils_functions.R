@@ -144,6 +144,20 @@ prepare_unsuppressed_share <- function(unsuppressed_share, vars){
   return(tmp1)
 }
 
+prepare_unsuppressed_median_age <- function(unsuppressed_median_age){
+  tmp1 <- copy(unsuppressed_median_age)
+  tmp1[, IS_MF := as.numeric(SEX == 'M')]
+  tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
+  tmp1 <- merge(tmp1, df_community, by = 'COMM')
+  
+  # find round label
+  tmp1[, ROUND := paste0('R0', ROUND)]
+  
+  # merge to index round
+  tmp1 <- merge(tmp1, df_round[, .(COMM, ROUND, INDEX_ROUND, LABEL_ROUND)],  by = c('COMM', 'ROUND'))
+  return(tmp1)
+}
+
 prepare_infected_share <- function(infected_share, vars){
   
   # reshape the share of infected count by sex
