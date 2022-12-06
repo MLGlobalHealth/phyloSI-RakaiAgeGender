@@ -85,10 +85,16 @@ file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_22111
 
 # obtained in misc/ for analysis
 file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
+
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221116.csv")
 file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221116.csv")
+file.treatment.cascade.prop.participants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds'))
+file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221116.rds'))
+
 file.treatment.cascade.prop.participants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_vl200_221121.csv")
 file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221121.csv")
+file.treatment.cascade.prop.participants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221121.rds')) 
+file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221121.rds')) 
 
 # obtained in misc/ for plots
 file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221116.csv'))
@@ -134,9 +140,13 @@ proportion_prevalence <- fread(file.prevalence.prop)
 if(viremic_viral_load_200ml){
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants.vl200, 
                                               file.treatment.cascade.prop.nonparticipants.vl200)
+  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
+                                                              file.treatment.cascade.prop.nonparticipants.vl200.samples)
 }else{
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
                                               file.treatment.cascade.prop.nonparticipants)
+  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
+                                                              file.treatment.cascade.prop.nonparticipants.samples)
 }
 
 # load incidence estimates 

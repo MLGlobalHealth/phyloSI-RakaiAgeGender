@@ -10,8 +10,8 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'central'
-stan_model <- 'gp_221115a'
+jobname <- 'newpairscontactpriorb'
+stan_model <- 'gp_221201d'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -64,7 +64,21 @@ if(!exists('use_contact_rates_prior')){
   file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130.rds'))
   df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))
 }
-
+if(!exists('treatment_cascade_samples')){
+  file.treatment.cascade.prop.participants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds'))
+  file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221116.rds'))
+  
+  file.treatment.cascade.prop.participants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221121.rds')) 
+  file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221121.rds')) 
+  
+  if(viremic_viral_load_200ml){
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.vl200.samples)
+  }else{
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.samples)
+  }
+}
 #
 # offset
 #
@@ -370,22 +384,22 @@ cat("\nPlot relative incidence infection if different number of male are treated
 # generate counterfactual treating only men participant as much as female are diagnosed/treated/suppressed
 counterfactuals_p_f <- make_counterfactual(samples, log_offset_round, stan_data, 
                                            eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade, proportion_prevalence, participation,
+                                           treatment_cascade_samples, proportion_prevalence, participation,
                                            only_participant = T, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
 #  generate counterfactual treating only men participant half way to as much as female are diagnosed/treated/suppressed
 counterfactuals_p_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                              eligible_count_smooth, eligible_count_round, 
-                                             treatment_cascade, proportion_prevalence, participation,
+                                             treatment_cascade_samples, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
 # generate counterfactual treating only men participant 95 95 95
 counterfactuals_p_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                                 eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade, proportion_prevalence, participation,
+                                                treatment_cascade_samples, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = NULL, s959595 = 1, s909090 = NULL, outdir.table)
 # generate counterfactual treating only men participant 90 90 90
 counterfactuals_p_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                                 eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade, proportion_prevalence, participation,
+                                                treatment_cascade_samples, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
 
 # plot
@@ -396,22 +410,22 @@ plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_
 # generate counterfactual treating all men as much as female are diagnosed/treated/suppressed
 counterfactuals_a_f <- make_counterfactual(samples, log_offset_round, stan_data, 
                                            eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade, proportion_prevalence, participation,
+                                           treatment_cascade_samples, proportion_prevalence, participation,
                                            only_participant = F, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
 #  generate counterfactual treating all men half way to as much as female are diagnosed/treated/suppressed
 counterfactuals_a_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                              eligible_count_smooth, eligible_count_round, 
-                                             treatment_cascade, proportion_prevalence, participation,
+                                             treatment_cascade_samples, proportion_prevalence, participation,
                                              only_participant = F, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
 # generate counterfactual treating all men 95 95 95
 counterfactuals_a_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                                 eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade, proportion_prevalence, participation,
+                                                treatment_cascade_samples, proportion_prevalence, participation,
                                                 only_participant = F, art_up_to_female = NULL, s959595 = 1, s909090 = NULL,outdir.table)
 # generate counterfactual treating all men 90 90 90
 counterfactuals_a_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                                 eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade, proportion_prevalence, participation,
+                                                treatment_cascade_samples, proportion_prevalence, participation,
                                                   only_participant = F, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
 # checks
 if(0){
