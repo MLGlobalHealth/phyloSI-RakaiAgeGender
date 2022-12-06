@@ -142,3 +142,70 @@ p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6
 ggsave(p, file = file.path(outdir, 'population_suppression_rate_221118.pdf'), w = 8, h = 8)
 
 
+####################################
+
+# PLOT SUPPRESSION RATE ROUND 18
+
+####################################
+
+tab <- copy(ns[variable %in% c('PROP_SUPPRESSION_GIVEN_DIAGNOSED')])
+tab[,SEX_LABEL := 'Men']
+tab[SEX == 'F',SEX_LABEL := 'Women']
+tab[,COMM_LABEL := 'Inland communities']
+tab[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
+tab[, ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
+
+tmp <- tab[ COMM == 'inland' & ROUND == c( 'R018')]
+ggplot(tmp, aes(x = AGEYRS)) + 
+  geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX_LABEL), alpha = 0.5) + 
+  geom_line(aes(y = M, col = SEX_LABEL)) + 
+  theme_bw() + 
+  labs(x = 'Age', y = 'Viral suppression rate in infected\npopulation in round 18', 
+       col = '', fill = '', shape = '', linetype= '') +
+  theme(legend.position = c(0.85, 0.17), 
+        strip.background = element_rect(colour="white", fill="white")) +
+  scale_color_manual(values = c('Men'='royalblue3','Women'='deeppink')) + 
+  scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) + 
+  scale_x_continuous(expand = c(0,0))  + 
+  guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
+         color = guide_legend(order = 3),fill = guide_legend(order = 3))
+ggsave(file = file.path(outdir, 'population_suppression_rate_R18_221201.pdf'), w = 4, h = 3.2)
+
+
+####################################
+
+# PLOT SUPPRESSION RATE GIVEN ART 
+
+####################################
+
+
+# add label
+tab <- copy(ns[variable %in% c('PROP_SUPPRESSION_GIVEN_ART')])
+tab[, VARIABLE_LEVEL := suppressed.label]
+
+tab[,SEX_LABEL := 'Men']
+tab[SEX == 'F',SEX_LABEL := 'Women']
+tab[,COMM_LABEL := 'Inland communities']
+tab[COMM == 'fishing',COMM_LABEL := 'Fishing communities']
+
+tmp <- tab[COMM == 'inland' & ROUND %in% c('R015', 'R016', 'R017', 'R018')]
+ggplot(tmp, aes(x = AGEYRS)) + 
+  geom_hline(aes(yintercept = 0.9), linetype='dashed', alpha = 0.5) +
+  geom_hline(aes(yintercept = 0.95), linetype='dashed', alpha = 0.5) +
+  geom_ribbon(aes(ymin = CL, ymax = CU, fill = ROUND), alpha = 0.25) + 
+  geom_line(aes(y = M, col = ROUND)) + 
+  facet_grid(~SEX_LABEL) + 
+  theme_bw() + 
+  labs(x = 'Age', y = "proportion of infected reporting ART use\nwho had a viral load < 1,000 cps / mL blood", 
+       col = '', fill = '') +
+  theme(legend.position = 'bottom', 
+        strip.background = element_rect(colour="white", fill="white")) +
+  ggsci::scale_color_jama()+
+  ggsci::scale_fill_jama()+
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1), expand = c(0,0)) +
+  scale_x_continuous(expand = c(0,0)) + 
+  guides(color = guide_legend(byrow = T, nrow = 3),
+         fill = guide_legend(byrow = T, nrow = 3))
+ggsave(file = file.path(outdir, 'population_suppression_rate_overtime_221201.pdf'), w = 6, h = 5)
+
