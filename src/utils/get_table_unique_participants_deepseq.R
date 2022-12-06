@@ -250,15 +250,15 @@ do <- do[AGEYRS > 14 & AGEYRS < 50]
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-               SEQUENCE = length(unique(STUDY_ID[!is.na(PT_ID)]))), by = c('COMM','SEX','AGEGP')]
+               SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM','SEX','AGEGP')]
 
 tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
                  HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                 SEQUENCE = length(unique(STUDY_ID[!is.na(PT_ID)]))), by = c('COMM')]
+                 SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM')]
 tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                 SEQUENCE = length(unique(STUDY_ID[!is.na(PT_ID)]))), by = c('COMM','SEX')]
+                 SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM','SEX')]
 tab <- rbind(tab,tot1,tot2)
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
@@ -281,10 +281,14 @@ hivs[STUDY_ID %in% tmp] # negative during round of interest
 
 ## make table by round
 
+ever.seq <- do[, list(ever.seq=length(unique(PANGEA_ID[!is.na(PANGEA_ID)]))),by='STUDY_ID']
+ever.seq[ever.seq>=1, ever.seq:=1]
+do <- merge(do, ever.seq,by='STUDY_ID',all.x=T)
+
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                 NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                SEQUENCE = length(unique(PT_ID))), by = c('ROUND','COMM')]
+                SEQUENCE = length(unique(STUDY_ID[ever.seq==1]))), by = c('ROUND','COMM')]
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
 tab <- tab[order(COMM,ROUND),]
