@@ -1330,6 +1330,27 @@ read_treatment_cascade <- function(file.treatment.cascade.prop.participants,
   return(treatment_cascade)
 }
 
+read_treatment_cascade_samples <- function(file.treatment.cascade.prop.participants.samples, 
+                                           file.treatment.cascade.prop.nonparticipants.samples){
+  
+  # posterior samples of the proportion of suppressed among infected
+  
+  # load treatment participants
+  treatment_cascade_participants <- as.data.table(readRDS(file.treatment.cascade.prop.participants.samples))
+  treatment_cascade_participants <- treatment_cascade_participants[, .(AGEYRS, SEX, COMM, ROUND, iterations, PROP_SUPPRESSED_POSTERIOR_SAMPLE)]
+  setnames(treatment_cascade_participants, 'PROP_SUPPRESSED_POSTERIOR_SAMPLE', 'PROP_SUPPRESSED_PARTICIPANTS')
+  
+  # load treatment participants
+  treatment_cascade_nonparticipants <- as.data.table(readRDS(file.treatment.cascade.prop.nonparticipants.samples))
+  treatment_cascade_nonparticipants <- treatment_cascade_nonparticipants[, .(AGEYRS, SEX, COMM, ROUND, iterations, PROP_SUPPRESSED_POSTERIOR_SAMPLE)]
+  setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_POSTERIOR_SAMPLE', 'PROP_SUPPRESSED_NONPARTICIPANTS')
+  
+  # merge
+  treatment_cascade <- merge(treatment_cascade_participants, treatment_cascade_nonparticipants, by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations'))
+  
+  return(treatment_cascade)
+}
+
 read_pairs <- function(file.pairs){
   pairs.all <- as.data.table(readRDS(file.pairs))
   setnames(pairs.all, 'M', 'DATE_INFECTION.RECIPIENT')
