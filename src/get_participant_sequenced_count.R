@@ -28,7 +28,7 @@ df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
 
 ###############################################
 
-# GET META DATA 
+# GET META DATA
 
 ###############################################
 
@@ -99,7 +99,7 @@ rhiv <- hiv[, .(study_id, round, hiv)]
 rhiv[, round := gsub(" ", '', round, fixed = T)]
 colnames(rhiv) <- toupper(colnames(rhiv))
 
-# add meta data from Joseph 
+# add meta data from Joseph
 hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
 
 # add meta data from Kate
@@ -110,7 +110,7 @@ hivs <- rbind(hivs[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS, HIV)], t
 
 ###############################################
 
-# GET SEQUENCES DATA 
+# GET SEQUENCES DATA
 
 ###############################################
 
