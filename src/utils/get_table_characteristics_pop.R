@@ -16,7 +16,7 @@ file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_U
 
 file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
-file.seq.count <- file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds')
+file.seq.count <- file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
@@ -326,9 +326,12 @@ uns[, ROUND := paste0('R0', ROUND)]
 
 # load seq count
 sequ <- as.data.table(readRDS(file.seq.count))
-sequ <- unique(sequ[, .(PT_ID, ROUND)])
+
+# keep age within 15-49
+sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
 
 # get first round when sequenced
+sequ <- unique(sequ[, .(PT_ID, ROUND)])
 sem <- sequ[, list(MIN_ROUND = min(ROUND)), by = c('PT_ID')]
 sem[, STUDY_ID := gsub('RK-(.+)', '\\1', PT_ID)]
 set(sem, NULL, 'PT_ID', NULL)
@@ -394,6 +397,4 @@ tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 # save
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
 saveRDS(tab, file.path(outdir, 'characteristics_study_population.rds'))
-
-
 

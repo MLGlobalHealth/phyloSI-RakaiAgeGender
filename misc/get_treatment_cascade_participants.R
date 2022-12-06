@@ -64,7 +64,7 @@ df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := 1]
 
 ######################################################################################
 
-# FIND ART COVERERAGE GIVEN DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS FOR ALL ROUND
+# FIND ART COVERERAGE GIVEN DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS FOR ROUND 15
 
 ######################################################################################
 
@@ -84,6 +84,21 @@ set(df, NULL, 'SUPPRESSION_RATE_EMPIRICAL_R016', NULL)
 df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE < PROP_SUPPRESSED_POSTERIOR_SAMPLE, PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE]
 stopifnot(nrow(df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE > 1]) == 0)
 
+######################################################################################
+
+# CORRECT ART COVERERAGE WITH SENSITIVITY AND SPECIFICITY FOR ROUNDS < 15 (WITHOUT VIRAL LOAD MEASUREMENTS)
+
+######################################################################################
+
+if(0){
+  specificity = 0.9
+  sensitivity = 1 - 0.85
+  
+  df[, PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE ]
+  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE * specificity + (1 - PROP_ART_COVERAGE_POSTERIOR_SAMPLE) * sensitivity]
+  set(df, NULL, 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE', NULL)
+  setnames(df, 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ', 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE')
+}
 
 ##########################################################################
 
@@ -113,16 +128,16 @@ stopifnot(nrow(df[SUPPRESSION_RATE_POSTERIOR_SAMPLE > 1]) == 0)
 ####################################
 
 # melt
-df <- melt.data.table(df, id.vars= c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL'))
-df[, variable := gsub('(.+)_POSTERIOR_SAMPLE', '\\1', variable)]
+df1 <- melt.data.table(df, id.vars= c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL'))
+df1[, variable := gsub('(.+)_POSTERIOR_SAMPLE', '\\1', variable)]
 
 # round the empirical otherwise we get two entries 
-df[, PROP_UNSUPPRESSED_EMPIRICAL := round(PROP_UNSUPPRESSED_EMPIRICAL, 7)] 
-df[, PROP_ART_COVERAGE_EMPIRICAL := round(PROP_ART_COVERAGE_EMPIRICAL, 7)] 
-df[, SUPPRESSION_RATE_EMPIRICAL := round(SUPPRESSION_RATE_EMPIRICAL, 7)] 
+df1[, PROP_UNSUPPRESSED_EMPIRICAL := round(PROP_UNSUPPRESSED_EMPIRICAL, 7)] 
+df1[, PROP_ART_COVERAGE_EMPIRICAL := round(PROP_ART_COVERAGE_EMPIRICAL, 7)] 
+df1[, SUPPRESSION_RATE_EMPIRICAL := round(SUPPRESSION_RATE_EMPIRICAL, 7)] 
 
 # summarise
-ns = df[, list(q= quantile(value, prob=ps, na.rm = T), q_label=paste0(variable, '_', qlab)), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL', 'variable')]
+ns = df1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=paste0(variable, '_', qlab)), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'PROP_UNSUPPRESSED_EMPIRICAL', 'PROP_ART_COVERAGE_EMPIRICAL', 'SUPPRESSION_RATE_EMPIRICAL', 'variable')]
 ns = as.data.table(reshape2::dcast(ns, AGEYRS + SEX + COMM + ROUND + PROP_UNSUPPRESSED_EMPIRICAL + PROP_ART_COVERAGE_EMPIRICAL + SUPPRESSION_RATE_EMPIRICAL ~ q_label, value.var = "q"))
 
 # check all entries are complete
@@ -136,5 +151,8 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221116.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds')) #_221116 without adjustement for sens/susc
+saveRDS(df, file = file.name)
+
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221201.csv')) #_221116 without adjustement for sens/susc
 write.csv(ns, file = file.name, row.names = F)

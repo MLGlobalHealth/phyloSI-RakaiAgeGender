@@ -58,12 +58,46 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
+# temporary
+if(!exists('use_contact_rates_prior')){
+  use_contact_rates_prior = F
+  file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130.rds'))
+  df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))
+}
+if(!exists('treatment_cascade_samples')){
+  source(file.path(indir, 'functions', 'summary_functions.R'))
+  
+  file.treatment.cascade.prop.participants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds'))
+  file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221116.rds'))
+  
+  file.treatment.cascade.prop.participants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221121.rds')) 
+  file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221121.rds')) 
+  
+  if(viremic_viral_load_200ml){
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.vl200.samples)
+  }else{
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.samples)
+  }
+}
+file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
+
 
 #
 # offset
 #
 
-log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, use_number_susceptible_offset)
+log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, df_estimated_contact_rates, 
+                                             use_number_susceptible_offset, use_contact_rates_prior)
+
+# offset formula (per year)
+log_offset_formula <- 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'
+if(!use_number_susceptible_offset)
+  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'
+if(use_contact_rates_prior)
+  log_offset_formula = paste0(log_offset_formula, ' + log_CONTACT_RATES')
+
 
 
 #
@@ -76,7 +110,7 @@ unsuppressed_share_sex <- prepare_unsuppressed_share(unsuppressed_share, c('SEX'
 unsuppressed_share_sex_age <- prepare_unsuppressed_share(unsuppressed_share, c('SEX', 'AGEYRS'))
 prevalence_prop_sex<- prepare_infected_share(infected_share, 'SEX')
 reported_contact <- clean_reported_contact(df_reported_contact)
-
+df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age)
 
 #
 ## PPC
@@ -92,7 +126,7 @@ plot_intensity_PP(intensity_PP_sampled, count_data, outfile.figures)
 intensity_PP <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'INDEX_AGE'),
                                              transform = 'exp',
                                              log_offset_round = log_offset_round,
-                                             log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
+                                             log_offset_formula = log_offset_formula)
 plot_intensity_PP_by_round(intensity_PP, outfile.figures)
 
 # predicted observed transmission
@@ -140,6 +174,38 @@ force_infection_age_recipient <-  find_summary_output_by_round(samples, 'log_bet
 plot_force_infection_sex_age_recipient(force_infection_age_recipient, outfile.figures)
 
 
+#
+# median age of source
+#
+
+cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
+
+# by 1-year age band
+median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
+                                                  transform = 'exp',
+                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
+                                                  median_age_source = T)
+plot_median_age_source(median_age_source, outfile.figures)
+
+# by age groups
+df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+median_age_source_group <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                        transform = 'exp',
+                                                        standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                        quantile_age_source = T)
+expected_contribution_age_group_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                                                        c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                        transform = 'exp',
+                                                                        standardised.vars = c('INDEX_ROUND'))
+plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
+
+# total
+median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
+                                                  c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                  transform = 'exp',
+                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
+                                                  quantile_age_source = T)
+
 
 #
 # Contribution to transmission
@@ -155,8 +221,8 @@ plot_contribution_sex_source(contribution_sex_source, unsuppressed_share_sex, pr
 # age-specific contribution to transmission among all sources by sex
 contribution_age_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                          standardised.vars = c('INDEX_ROUND'))
-plot_contribution_age_source_unsuppressed(contribution_age_source, unsuppressed_share_sex_age, outfile.figures)
-plot_contribution_age_source(contribution_age_source, outfile.figures)
+plot_contribution_age_source_unsuppressed(contribution_age_source, unsuppressed_share_sex_age, median_age_source, outfile.figures)
+plot_contribution_age_source(contribution_age_source, median_age_source, outfile.figures)
 
 # contribution aggregated by age group of sources and recipients
 contribution_age_group_source <- find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
@@ -185,8 +251,8 @@ plot_contribution_sex_source(expected_contribution_sex_source, unsuppressed_shar
 expected_contribution_age_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                                   transform = 'exp',
                                                                   standardised.vars = c('INDEX_ROUND'))
-plot_contribution_age_source_unsuppressed(expected_contribution_age_source2, unsuppressed_share_sex_age, outfile.figures,'Expected_contribution')
-plot_contribution_age_source(expected_contribution_age_source2, outfile.figures,'Expected_contribution_sex')
+plot_contribution_age_source_unsuppressed(expected_contribution_age_source2, unsuppressed_share_sex_age, median_age_source, df_unsuppressed_median_age, outfile.figures,'Expected_contribution')
+plot_contribution_age_source(expected_contribution_age_source2, median_age_source, outfile.figures,'Expected_contribution_sex')
 save_statistics_expected_contribution(expected_contribution_sex_source, expected_contribution_age_source2, outdir.table)
 
 # age-specific sex ratio contribution to transmission
@@ -233,7 +299,7 @@ cat("\nPlot transmission risk\n")
 transmission_risk_sex_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND'),
                                                              transform = 'exp',
                                                              log_offset_round = log_offset_round,
-                                                             log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                             log_offset_formula = log_offset_formula,
                                                              per_unsuppressed = T)
 plot_transmission_risk_sex_source(transmission_risk_sex_source, outfile.figures)
 
@@ -241,7 +307,7 @@ plot_transmission_risk_sex_source(transmission_risk_sex_source, outfile.figures)
 transmission_risk_age_source <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                             transform = 'exp',
                                                             log_offset_round = log_offset_round,
-                                                            log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                            log_offset_formula = log_offset_formula,
                                                             per_unsuppressed = T)
 plot_transmission_risk_sex_age_source(transmission_risk_age_source, outfile.figures)
 
@@ -259,7 +325,7 @@ df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
 incidence_tranmission <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'),
                                                       transform = 'exp',
                                                       log_offset_round = log_offset_round,
-                                                      log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                      log_offset_formula = log_offset_formula,
                                                       relative_baseline = T,
                                                       per_susceptible = T)
 plot_incidence_transmission(incidence_tranmission, outfile.figures)
@@ -268,43 +334,11 @@ plot_incidence_transmission(incidence_tranmission, outfile.figures)
 incidence_infection <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                     transform = 'exp',
                                                     log_offset_round = log_offset_round,
-                                                    log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED',
+                                                    log_offset_formula = log_offset_formula,
                                                     relative_baseline = T,
                                                     per_susceptible = T)
 plot_incidence_infection(incidence_infection, outfile.figures)
 
-
-#
-# median age of source
-#
-
-cat("\nPlot median age at transmission of the source by age at infection of recipient\n")
-
-# by 1-year age band
-median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
-                                                  transform = 'exp',
-                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
-                                                  median_age_source = T)
-plot_median_age_source(median_age_source, outfile.figures)
-
-# by age groups
-df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
-median_age_source_group <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                  transform = 'exp',
-                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                  quantile_age_source = T)
-expected_contribution_age_group_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',
-                                                                        c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                                        transform = 'exp',
-                                                                        standardised.vars = c('INDEX_ROUND'))
-plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
-
-# total
-median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
-                                                  c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                  transform = 'exp',
-                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
-                                                  quantile_age_source = T)
 
 #
 # Counterfactual: comparison of targets
@@ -316,9 +350,7 @@ cat("\nPlot relative incidence infection if different groups of male are targete
 # find incidence under the factual scenario by sex and age
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
-                                                  log_offset_round = log_offset_round,
-                                                  log_offset_formula = 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED')
-
+                                                  log_offset_round = log_offset_round)
 
 # find age groups that contribute the most
 expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
@@ -357,22 +389,22 @@ cat("\nPlot relative incidence infection if different number of male are treated
 # generate counterfactual treating only men participant as much as female are diagnosed/treated/suppressed
 counterfactuals_p_f <- make_counterfactual(samples, log_offset_round, stan_data, 
                                            eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade, proportion_prevalence, participation,
+                                           treatment_cascade_samples, proportion_prevalence, participation,
                                            only_participant = T, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
 #  generate counterfactual treating only men participant half way to as much as female are diagnosed/treated/suppressed
 counterfactuals_p_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                              eligible_count_smooth, eligible_count_round, 
-                                             treatment_cascade, proportion_prevalence, participation,
+                                             treatment_cascade_samples, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
 # generate counterfactual treating only men participant 95 95 95
 counterfactuals_p_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                                 eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade, proportion_prevalence, participation,
+                                                treatment_cascade_samples, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = NULL, s959595 = 1, s909090 = NULL, outdir.table)
 # generate counterfactual treating only men participant 90 90 90
 counterfactuals_p_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                                 eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade, proportion_prevalence, participation,
+                                                treatment_cascade_samples, proportion_prevalence, participation,
                                              only_participant = T, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
 
 # plot
@@ -383,22 +415,22 @@ plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_
 # generate counterfactual treating all men as much as female are diagnosed/treated/suppressed
 counterfactuals_a_f <- make_counterfactual(samples, log_offset_round, stan_data, 
                                            eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade, proportion_prevalence, participation,
+                                           treatment_cascade_samples, proportion_prevalence, participation,
                                            only_participant = F, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
 #  generate counterfactual treating all men half way to as much as female are diagnosed/treated/suppressed
 counterfactuals_a_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                              eligible_count_smooth, eligible_count_round, 
-                                             treatment_cascade, proportion_prevalence, participation,
+                                             treatment_cascade_samples, proportion_prevalence, participation,
                                              only_participant = F, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
 # generate counterfactual treating all men 95 95 95
 counterfactuals_a_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                                 eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade, proportion_prevalence, participation,
+                                                treatment_cascade_samples, proportion_prevalence, participation,
                                                 only_participant = F, art_up_to_female = NULL, s959595 = 1, s909090 = NULL,outdir.table)
 # generate counterfactual treating all men 90 90 90
 counterfactuals_a_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
                                                 eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade, proportion_prevalence, participation,
+                                                treatment_cascade_samples, proportion_prevalence, participation,
                                                   only_participant = F, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
 # checks
 if(0){
@@ -430,11 +462,18 @@ plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_
 
 cat("\nPlot NNT\n")
 
+# log offset formula (per year per unsuppressed)
+log_offset_formula_perunsuppressed <- 'log_SUSCEPTIBLE'
+if(!use_number_susceptible_offset)
+  log_offset_formula_perunsuppressed = 'log_PROP_SUSCEPTIBLE'
+if(use_contact_rates_prior)
+  log_offset_formula_perunsuppressed = paste0(log_offset_formula_perunsuppressed, ' + log_CONTACT_RATES')
+
 # NNT by 1 year age band
 NNT <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'),
                                    transform = 'exp',
                                    log_offset_round = log_offset_round,
-                                   log_offset_formula = 'log_SUSCEPTIBLE',
+                                   log_offset_formula = log_offset_formula_perunsuppressed,
                                    invert = T)
 plot_NNT(NNT, outfile.figures)
 
@@ -443,7 +482,7 @@ df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-29', '30-34', '35-39'
 NNT_grouped <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'),
                                            transform = 'exp',
                                            log_offset_round = log_offset_round,
-                                           log_offset_formula = 'log_SUSCEPTIBLE',
+                                           log_offset_formula = log_offset_formula_perunsuppressed,
                                            invert = T)
 plot_NNT_group(NNT_grouped, outfile.figures)
 

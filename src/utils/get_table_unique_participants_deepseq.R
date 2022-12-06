@@ -239,28 +239,26 @@ sequ <- as.data.table(readRDS(file.seq.count.ind))
 sequ[, STUDY_ID:= gsub('RK-','',PT_ID)]
 
 # merge three datasets
-do <- merge(arti,sequ,by=c('STUDY_ID','ROUND','COMM','SEX','AGEYRS','AGEGP'),all=T)
+do <- merge(arti,sequ,by=c('STUDY_ID','ROUND','COMM','SEX','HIV','AGEYRS','AGEGP'),all=T)
 
 # keep round of interest
 do <- merge(do, df_round, by = c('COMM', 'ROUND'))
 
-# keep first visit only
-do[, r:= as.numeric(gsub('R','',gsub('S','.1',ROUND)))]
-setkey(do,STUDY_ID,r)
-do <- do[,.SD[1],by = STUDY_ID]
+# restric age
+do <- do[AGEYRS > 14 & AGEYRS < 50]
 
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
-               NO_ART = length(unique(STUDY_ID[ART==F])),
-               SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX','AGEGP')]
+               NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
+               SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM','SEX','AGEGP')]
 
 tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
                  HIV = length(unique(STUDY_ID[HIV=='P'])),
-                 NO_ART = length(unique(STUDY_ID[ART==F])),
-                 SEQUENCE = length(unique(PT_ID))), by = c('COMM')]
+                 NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
+                 SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM')]
 tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID[HIV=='P'])),
-                 NO_ART = length(unique(STUDY_ID[ART==F])),
-                 SEQUENCE = length(unique(PT_ID))), by = c('COMM','SEX')]
+                 NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
+                 SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM','SEX')]
 tab <- rbind(tab,tot1,tot2)
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
@@ -283,25 +281,18 @@ hivs[STUDY_ID %in% tmp] # negative during round of interest
 
 ## make table by round
 
+ever.seq <- do[, list(ever.seq=length(unique(PANGEA_ID[!is.na(PANGEA_ID)]))),by='STUDY_ID']
+ever.seq[ever.seq>=1, ever.seq:=1]
+do <- merge(do, ever.seq,by='STUDY_ID',all.x=T)
+
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
-                NO_ART = length(unique(STUDY_ID[ART==F])),
-                SEQUENCE = length(unique(PT_ID))), by = c('ROUND','COMM','SEX','AGEGP')]
-
-tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
-                 HIV = length(unique(STUDY_ID[HIV=='P'])),
-                 NO_ART = length(unique(STUDY_ID[ART==F])),
-                 SEQUENCE = length(unique(PT_ID))), by = c('ROUND','COMM')]
-tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID[HIV=='P'])),
-                 NO_ART = length(unique(STUDY_ID[ART==F])),
-                 SEQUENCE = length(unique(PT_ID))), by = c('ROUND','COMM','SEX')]
-tab <- rbind(tab,tot1,tot2)
+                NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
+                SEQUENCE = length(unique(STUDY_ID[ever.seq==1]))), by = c('ROUND','COMM')]
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
-tab[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Male'))]
-tab[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))]
-tab <- tab[order(COMM,ROUND,SEX,AGEGP),]
-tab[, c("COMM", "SEX", "AGEGP") := lapply(list(COMM, SEX, AGEGP), as.character)]
+tab <- tab[order(COMM,ROUND),]
+tab[, c("COMM") := lapply(list(COMM), as.character)]
 
 tab[, pct:= round(SEQUENCE/HIV*100,0)]
 
