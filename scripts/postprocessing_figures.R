@@ -10,8 +10,8 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'newpairscontactpriorb'
-stan_model <- 'gp_221201d'
+jobname <- 'central'
+stan_model <- 'gp_221115a'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -65,6 +65,8 @@ if(!exists('use_contact_rates_prior')){
   df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))
 }
 if(!exists('treatment_cascade_samples')){
+  source(file.path(indir, 'functions', 'summary_functions.R'))
+  
   file.treatment.cascade.prop.participants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds'))
   file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221116.rds'))
   
