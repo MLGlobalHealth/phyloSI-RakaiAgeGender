@@ -158,6 +158,7 @@ dm[, VISIT_DT := as.Date(VISIT_DT)]
 dm[, SAMPLE_DATE := as.Date(SAMPLE_DATE)]
 dm[, DIFF_DATE := abs(VISIT_DT - SAMPLE_DATE), by = 'PANGEA_ID']
 dm[, IS_MIN := DIFF_DATE == min(na.omit(DIFF_DATE)), by = 'PANGEA_ID']
+dcount <- dm[IS_MIN == 1]
 stopifnot(nrow(dcount) == dm[, length(unique(PANGEA_ID))])
 dcount[, table(ROUND, COMM)]
 
