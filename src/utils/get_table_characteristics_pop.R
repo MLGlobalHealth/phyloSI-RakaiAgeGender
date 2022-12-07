@@ -330,19 +330,12 @@ sequ <- as.data.table(readRDS(file.seq.count))
 # keep age within 15-49
 sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
 
-# get first round when sequenced
-sequ <- unique(sequ[, .(PT_ID, ROUND)])
-sem <- sequ[, list(MIN_ROUND = min(ROUND)), by = c('PT_ID')]
-sem[, STUDY_ID := gsub('RK-(.+)', '\\1', PT_ID)]
-set(sem, NULL, 'PT_ID', NULL)
-
 # merge to meta_data
-semt <- merge(rincp[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS)], sem, by = 'STUDY_ID')
-stopifnot(semt[, length(unique(STUDY_ID))] == sem[, length(unique(STUDY_ID))])
+semt <- merge(hivs[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, HIV)], unique(sequ[, .(STUDY_ID)]), by = 'STUDY_ID')
+stopifnot(semt[, length(unique(STUDY_ID))] == sequ[, length(unique(STUDY_ID))])
 
-# keep only rounds after first sequencing
-semt <- semt[ROUND >= MIN_ROUND]
-stopifnot(semt[, length(unique(STUDY_ID))] == sem[, length(unique(STUDY_ID))])
+# keep only positive participants
+semt <- semt[HIV == 'P']
 
 # get sequenced table
 seqs <- semt[, list(SEQUENCE = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')]
