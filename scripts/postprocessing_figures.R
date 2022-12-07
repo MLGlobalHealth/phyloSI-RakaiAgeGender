@@ -82,6 +82,7 @@ if(!exists('treatment_cascade_samples')){
   }
 }
 file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
+unsuppressed_median_age <-fread(file.unsuppressed_median_age) # median age of unsuppressed
 
 
 #
