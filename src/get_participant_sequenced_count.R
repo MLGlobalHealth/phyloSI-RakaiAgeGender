@@ -177,6 +177,9 @@ dcount <- merge(dcount, df_round, by = c('COMM', 'ROUND'))
 dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
                      labels=c('15-24','25-34','35-49'))]
 
+# keep necessary variable
+dcount <- dcount[, .(COMM, ROUND, PANGEA_ID, PT_ID, STUDY_ID, SEX, AGEYRS, AGEGP, DIFF_DATE)]
+
 # save sequenced id
 saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds'))
 

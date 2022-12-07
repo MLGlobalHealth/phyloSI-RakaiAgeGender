@@ -10,6 +10,12 @@ indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_p
 indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
 indir.repository <- '~/Documents/GitHub/phyloflows'
 
+if(0){
+  indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+  indir.repository <- '~/git/phyloflows'
+}
+
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
@@ -236,29 +242,33 @@ art[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('T
 
 # load seq count
 sequ <- as.data.table(readRDS(file.seq.count.ind))
-sequ[, STUDY_ID:= gsub('RK-','',PT_ID)]
 
-# merge three datasets
-do <- merge(arti,sequ,by=c('STUDY_ID','ROUND','COMM','SEX','HIV','AGEYRS','AGEGP'),all=T)
+# keep age within 15-49
+sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
 
-# keep round of interest
-do <- merge(do, df_round, by = c('COMM', 'ROUND'))
+# merge to meta_data
+do <- merge(hivs[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, ART, HIV)], unique(sequ[, .(STUDY_ID)]), by = 'STUDY_ID')
+stopifnot(do[, length(unique(STUDY_ID))] == sequ[, length(unique(STUDY_ID))])
 
-# restric age
-do <- do[AGEYRS > 14 & AGEYRS < 50]
+# keep only positive participants
+do <- do[HIV == 'P']
+
+# create age groups
+do[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
+                     labels=c('15-24','25-34','35-49'))]
 
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-               SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM','SEX','AGEGP')]
+               SEQUENCE = length(unique(STUDY_ID[HIV=='P']))), by = c('COMM','SEX','AGEGP')]
 
 tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
                  HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                 SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM')]
+                 SEQUENCE = length(unique(STUDY_ID[HIV=='P']))), by = c('COMM')]
 tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                 SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM','SEX')]
+                 SEQUENCE = length(unique(STUDY_ID[HIV=='P']))), by = c('COMM','SEX')]
 tab <- rbind(tab,tot1,tot2)
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
@@ -280,15 +290,10 @@ tmp <- sequ$STUDY_ID[sequ$STUDY_ID %notin% hivi$STUDY_ID & sequ$COMM=='inland']
 hivs[STUDY_ID %in% tmp] # negative during round of interest
 
 ## make table by round
-
-ever.seq <- do[, list(ever.seq=length(unique(PANGEA_ID[!is.na(PANGEA_ID)]))),by='STUDY_ID']
-ever.seq[ever.seq>=1, ever.seq:=1]
-do <- merge(do, ever.seq,by='STUDY_ID',all.x=T)
-
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                 NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                SEQUENCE = length(unique(STUDY_ID[ever.seq==1]))), by = c('ROUND','COMM')]
+                SEQUENCE = length(unique(STUDY_ID[HIV=='P' ]))), by = c('ROUND','COMM')]
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
 tab <- tab[order(COMM,ROUND),]
