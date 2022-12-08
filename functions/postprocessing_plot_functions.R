@@ -618,17 +618,38 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   
   
   # plot 2
-  tmp3 <- tmp2[type !='Contribution of men to infected\nindividuals' & ROUND == 'R018']
+  type_cont <- 'Contribution of\nto HIV incidence'
+  
+  # contribution from output
+  tmp <- copy(contribution_sex_source)
+  tmp[, type  := type_cont]
+  
+  # combine
+  unsuppressed_prop_sex[, type  := 'Contribution to\ninfected individuals with\nunsuppressed virus']
+  tmp2 <- rbind(tmp, unsuppressed_prop_sex, fill=TRUE)
+
+  # subset to round 18
+  tmp3 <- tmp2[ROUND == 'R018']
+  
+  # make type
   tmp3[!grepl('unsuppressed', type),type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
   tmp3[grepl('unsuppressed', type),type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
   tmp3[, type := factor(type, levels = c(tmp3[grepl('unsuppressed', type), unique(type)], 
                                          tmp3[!grepl('unsuppressed', type), unique(type)]))]
-  p <- ggplot(tmp3, aes(x = type, group = type)) +
-    geom_bar(aes(y = M, fill = type), position = position_dodge(width = 0.2), stat = 'identity') +
-    geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0.2, size = 0.5)  +
+  
+  # make type by direction
+  tmp3[, type_direction := paste0(type, LABEL_DIRECTION)]
+  tmp3[, type_direction := factor(type_direction, levels = c(tmp3[grepl('unsuppressed', type_direction) & LABEL_DIRECTION== 'Female -> Male', unique(type_direction)], 
+                                                   tmp3[!grepl('unsuppressed', type_direction) & LABEL_DIRECTION== 'Female -> Male', unique(type_direction)],
+                                                   tmp3[grepl('unsuppressed', type_direction) & LABEL_DIRECTION== 'Male -> Female', unique(type_direction)],
+                                                   tmp3[!grepl('unsuppressed', type_direction) & LABEL_DIRECTION== 'Male -> Female', unique(type_direction)]))]
+  
+  p <- ggplot(tmp3, aes(x = type, group = type_direction)) +
+    geom_bar(aes(y = M, fill = type_direction), stat = 'identity', position ='stack') +
+    geom_errorbar(data=tmp3[LABEL_DIRECTION== 'Male -> Female'],aes(ymin = CL, ymax = CU), col = 'black', width = 0.2, size = 0.5)  +
     labs(x = '', y = 'Percent', col = '', shape = '', linetype = '') + 
     theme_bw() +
-    scale_fill_manual(values = c('grey70', 'lightblue3')) + 
+    scale_fill_manual(values = c('grey70', 'lightpink', 'grey50', 'lightblue3')) + 
     theme(strip.background = element_rect(colour="white", fill="white"),
           # axis.text.x = element_text(angle= 70, hjust = 1),
           strip.text = element_text(size = rel(1)),
@@ -790,7 +811,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   Rounds.all <- list('inland' = paste0('R0', c(18)), 'fishing' = paste0('R0', c(18)))
   
   # y label
-  type_cont <- 'Contribution to HIV incidence'
+  type_cont <- 'Contribution of men to transmission'
   
   # contribution output
   cont <- copy(contribution_age_source)
@@ -802,7 +823,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   # find unsuppressed share by sex and age
   uns <- copy(unsuppressed_share_sex_age)
   setnames(uns, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
-  uns[, type := 'Contribution to infected\nindividuals with unsuppressed virus']
+  uns[, type := 'Contribution of men to infected\nindividuals with unsuppressed virus']
 
   # find median age of unsuppressed 
   median_uns <- copy(df_unsuppressed_median_age[quantile == 'C50'])
@@ -810,9 +831,19 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   # prepare plotting function
   plot.p <- function(cont.p, uns.p, cont_b.p, median_age.p,median_uns.p, level_y){
       
+    Levels <- c(cont.p[!grepl('Female', LABEL_SOURCE), unique(LABEL_TRANSMITTING_PARTNER)], 
+                cont.p[grepl('Female', LABEL_SOURCE), unique(LABEL_TRANSMITTING_PARTNER)])
+    print(Levels)
+    cont.p[, LABEL_TRANSMITTING_PARTNER := factor(LABEL_TRANSMITTING_PARTNER, levels = Levels)]
+    uns.p[, LABEL_TRANSMITTING_PARTNER := factor(LABEL_TRANSMITTING_PARTNER, levels = Levels)]
+    median_uns.p[, LABEL_TRANSMITTING_PARTNER := factor(LABEL_TRANSMITTING_PARTNER, levels = Levels)]
+    median_age.p[, LABEL_TRANSMITTING_PARTNER := factor(LABEL_TRANSMITTING_PARTNER, levels = Levels)]
+    
     ggplot(cont.p) +
-      geom_ribbon(data = uns.p, aes(x = AGE_TRANSMISSION.SOURCE,ymin = CL, ymax = CU, linetype=type), alpha = 0.3, fill='grey50')+
-      geom_line(data = uns.p, aes(x = AGE_TRANSMISSION.SOURCE,y = M,linetype = type)) + 
+      geom_ribbon(data = uns.p[LABEL_SOURCE == 'Female sources'], aes(x = AGE_TRANSMISSION.SOURCE,ymin = CL, ymax = CU, linetype=type), alpha = 0.3, fill='grey70')+
+      geom_line(data = uns.p[LABEL_SOURCE == 'Female sources'], aes(x = AGE_TRANSMISSION.SOURCE,y = M,linetype = type), col='grey70') + 
+      geom_ribbon(data = uns.p[LABEL_SOURCE == 'Male sources'], aes(x = AGE_TRANSMISSION.SOURCE,ymin = CL, ymax = CU, linetype=type), alpha = 0.3, fill='grey50')+
+      geom_line(data = uns.p[LABEL_SOURCE == 'Male sources'], aes(x = AGE_TRANSMISSION.SOURCE,y = M,linetype = type), col='grey50') + 
       geom_ribbon(aes(x = AGE_TRANSMISSION.SOURCE,ymin = CL, ymax = CU, fill = LABEL_SOURCE, size = type), alpha = 0.6) + 
       geom_line(aes(x = AGE_TRANSMISSION.SOURCE,y = M, col = LABEL_SOURCE, size = type), stat = 'identity', position = "identity") + 
       scale_color_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
@@ -870,7 +901,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     p_legend <- ggplot(cont.p[LABEL_SOURCE == 'Female sources'], aes(x = AGE_TRANSMISSION.SOURCE)) + 
       geom_ribbon(aes(ymin = CL, ymax = CU, fill = type), alpha = 0.6) + 
       geom_line(aes(y = M, col = type), stat = 'identity', position = "identity") + 
-      geom_line(data = uns.p, aes(y = M, size = type), col = 'black', linetype = 'dashed') + 
+      geom_line(data = uns.p, aes(y = M, size = type), col = 'black', linetype = 'dashed') + # grey
       geom_ribbon(data = uns.p, aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + 
       geom_line(data = cont_b.p, aes(y = M, linetype=type), col = 'lightpink1') + 
       theme_bw() +
@@ -910,14 +941,14 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       p_legend2 <- ggplot(cont.p[LABEL_SOURCE == 'Female sources' & ROUND %in% Rounds], aes(x = AGE_TRANSMISSION.SOURCE)) + 
         geom_ribbon(aes(ymin = CL, ymax = CU, fill = type), alpha = 0.6) + 
         geom_line(aes(y = M, col = type), stat = 'identity', position = "identity") + 
-        geom_line(data = uns.p[ROUND %in% Rounds], aes(y = M, size = type), col = 'black', linetype = 'dashed') + 
-        geom_ribbon(data = uns.p[ROUND %in% Rounds], aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + 
-        geom_line(data = cont_b.p[ROUND %in% Rounds], aes(y = M, linetype=type), col = 'lightpink1') + 
+        geom_line(data = uns.p[ROUND %in% Rounds], aes(y = M, size = type), col = 'grey50', linetype = 'dashed') + 
+        geom_ribbon(data = uns.p[ROUND %in% Rounds], aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + # 
+        geom_line(data = cont_b.p[ROUND %in% Rounds], aes(y = M, linetype=type), col = 'lightblue3') + 
         theme_bw() +
         scale_alpha_manual(values = 1) + 
         scale_size_manual(values = 0.5) + 
-        scale_color_manual(values = 'lightpink1') +
-        scale_fill_manual(values = 'lightpink1') + 
+        scale_color_manual(values = 'lightblue3') +
+        scale_fill_manual(values = 'lightblue3') + 
         scale_linetype_manual(values  = 'solid') +
         theme(legend.position = 'bottom', 
               legend.title = element_blank()) + 
