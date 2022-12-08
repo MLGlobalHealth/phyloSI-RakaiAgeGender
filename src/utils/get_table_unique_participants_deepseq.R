@@ -86,7 +86,7 @@ meta_data[ROUND == 'R015.1', ROUND := 'R015S']
 quest <- as.data.table(read.csv(file.path.quest))
 
 # keep variable of interest
-rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed)]
+rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed, cuarvmed)]
 
 # find  community
 rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
@@ -98,8 +98,15 @@ colnames(rinc) <- toupper(colnames(rinc))
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 
 # get ART status
-rinc[, ART := ARVMED ==1]
-rinc[is.na(ARVMED), ART := F]
+rinc[!ROUND %in% c('R016', 'R017', 'R018'), ART := ARVMED ==1]
+rinc[!ROUND %in% c('R016', 'R017', 'R018') & is.na(ARVMED), ART := F]
+rinc[ROUND == 'R016', ART := ARVMED ==1 | CUARVMED ==1]
+rinc[ROUND == 'R016' & (is.na(ARVMED) | is.na(CUARVMED)), ART := F]
+rinc[ROUND %in% c('R017', 'R018'), ART := CUARVMED ==1]
+rinc[ROUND %in% c('R017', 'R018') & is.na(CUARVMED), ART := F]
+
+# art was not reported in round 10
+rinc[ROUND == 'R010', ART := NA]
 
 # add meta data from Kate
 tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], rinc[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
