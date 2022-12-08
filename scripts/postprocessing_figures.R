@@ -10,8 +10,8 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'central'
-stan_model <- 'gp_221115a'
+jobname <- 'newpairs'
+stan_model <- 'gp_221124d'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -82,6 +82,7 @@ if(!exists('treatment_cascade_samples')){
   }
 }
 file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
+unsuppressed_median_age <-fread(file.unsuppressed_median_age) # median age of unsuppressed
 
 
 #
@@ -111,6 +112,7 @@ unsuppressed_share_sex_age <- prepare_unsuppressed_share(unsuppressed_share, c('
 prevalence_prop_sex<- prepare_infected_share(infected_share, 'SEX')
 reported_contact <- clean_reported_contact(df_reported_contact)
 df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age)
+
 
 #
 ## PPC
@@ -221,7 +223,7 @@ plot_contribution_sex_source(contribution_sex_source, unsuppressed_share_sex, pr
 # age-specific contribution to transmission among all sources by sex
 contribution_age_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                          standardised.vars = c('INDEX_ROUND'))
-plot_contribution_age_source_unsuppressed(contribution_age_source, unsuppressed_share_sex_age, median_age_source, outfile.figures)
+plot_contribution_age_source_unsuppressed(contribution_age_source, unsuppressed_share_sex_age, median_age_source, df_unsuppressed_median_age, outfile.figures)
 plot_contribution_age_source(contribution_age_source, median_age_source, outfile.figures)
 
 # contribution aggregated by age group of sources and recipients

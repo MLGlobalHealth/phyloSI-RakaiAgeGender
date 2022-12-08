@@ -12,7 +12,7 @@ infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct
 
 file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
@@ -176,6 +176,9 @@ dcount <- merge(dcount, df_round, by = c('COMM', 'ROUND'))
 # create age groups
 dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
                      labels=c('15-24','25-34','35-49'))]
+
+# keep necessary variable
+dcount <- dcount[, .(COMM, ROUND, PANGEA_ID, PT_ID, STUDY_ID, SEX, AGEYRS, AGEGP, DIFF_DATE)]
 
 # save sequenced id
 saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds'))

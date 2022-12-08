@@ -21,11 +21,16 @@ file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_U
 
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
-# round 15 to 18
+# round 15 to 18 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
+
+# round 15 to 18 without 16
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
 
-# round 14
+# round 16
+file.path.quest.16 <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R19_VoIs_Dec072022.csv')
+
+# round < 14
 file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
 file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
 
@@ -36,23 +41,23 @@ file.path.update.first.positive <- file.path(indir.deepsequencedata, 'RCCS_R15_R
 community.keys <- as.data.table(read.csv(file.community.keys))
 
 
-
 ################################
 
 # QUEST
 
 ################################
 
-# load datasets round 10-14 
-quest.14<-as.data.table(read_dta(file.path.quest.614))
-quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate, arvmed, cuarvmed)]
-quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
-quest.14[, intdate := as.Date(intdate)]
 
-# load datasets ROUND 15 TO 18
+# load datasets ROUND 15 TO 18 without 16
 quest <- as.data.table(read.csv(file.path.quest))
 quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate, birthdat, arvmed, cuarvmed)]
 quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
+
+# load datasets rond 16 and combine
+quest.16 <- as.data.table(read.csv(file.path.quest.16))
+quest.16<- quest.16[, .(round, study_id, ageyrs, sex, comm_num, intdate, birthdat, arvmed, cuarvmed)]
+quest.16[, intdate := as.Date(intdate, format = '%d-%B-%y')]
+quest <- rbind(quest[round != 'R016'], quest.16[round == 'R016'])
 
 # find age in quest (some old age were not correct taking month for year (e.g., H109070))
 quest[, birthdat2 := birthdat]
@@ -73,11 +78,17 @@ quest[, range(ageyrs)]
 # remove unecessary column
 set(quest, NULL, c('birthdat2', 'birthdat'), NULL)
 
+# load datasets round 10-14 
+quest.14<-as.data.table(read_dta(file.path.quest.614))
+quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate, arvmed, cuarvmed)]
+quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
+quest.14[, intdate := as.Date(intdate)]
+
 # merge to 10-14 
 quest <- rbind(quest.14, quest)
 
 # `save
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
+file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 write.csv(quest, file = file.name, row.names = F)
 
 
