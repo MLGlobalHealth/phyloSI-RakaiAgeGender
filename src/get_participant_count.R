@@ -13,7 +13,7 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_c
 file.census.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
@@ -85,7 +85,7 @@ rpr[PARTICIPATION_SMOOTH > 1, PARTICIPATION_SMOOTH := 1]
 tmp <- rpr[!ROUND %in% c("06", "07", "08", "09"), list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]
 saveRDS(tmp, file.path(outdir, 'Participation.rds'))
 
-file <- file.path(indir.repository, 'data', 'RCCS_participation_221116.csv')
+file <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
 tmp <- rpr[, .(AGEYRS, ROUND, SEX, COMM, PARTICIPANT, PARTICIPATION_SMOOTH)]
 setnames(tmp, 'PARTICIPATION_SMOOTH', 'PARTICIPATION')
 write.csv(tmp, file = file, row.names = F)

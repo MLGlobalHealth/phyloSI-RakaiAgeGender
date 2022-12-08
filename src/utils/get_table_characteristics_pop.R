@@ -19,7 +19,7 @@ path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants
 file.seq.count <- file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 
 # Latest data from Rakai's CCS (Kate's data from 2022-03-08)
 file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
@@ -217,6 +217,9 @@ hivp <- merge(hivp, df_round, by = c('COMM', 'ROUND'))
 # keep HIV positive  
 sart <- hivs[HIV == 'P']
 
+# round 10 did not report art variable
+sart[ROUND == 'R010', ART := NA]
+
 # find participant
 sartp <- sart[, list(SELF_REPORTED_ART = sum(ART == F),  TYPE = 'Total'), by = c('COMM', 'ROUND')]
 sartp <- rbind(sartp, sart[SEX == 'F', list(SELF_REPORTED_ART = sum(ART== F),  TYPE = 'Female'), by = c('COMM', 'ROUND')])
@@ -373,7 +376,7 @@ tab <- tab[order(COMM, ROUND, TYPE)]
 # check that the counts make sense (e.g., there cannot be more participant than census eligible)
 stopifnot(nrow(tab[ELIGIBLE  < PARTICIPANT ]) == 0)
 stopifnot(nrow(tab[PARTICIPANT  < HIV ]) == 0)
-stopifnot(nrow(tab[HIV  < SELF_REPORTED_ART ]) == 0)
+stopifnot(nrow(tab[HIV  < as.numeric(SELF_REPORTED_ART) ]) == 0)
 stopifnot(nrow(tab[HIV  < as.numeric(SEQUENCE) & COMM == 'inland']) == 0)
 stopifnot(nrow(tab[HIV  < as.numeric(INFECTED_TESTED) ]) == 0)
 
