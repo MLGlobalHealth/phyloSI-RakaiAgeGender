@@ -33,8 +33,8 @@ file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_P
 community.keys <- as.data.table(read.csv(file.community.keys))
 
 # rounds of interest
-df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
-                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, 15,'15S', 16:18))))
+df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 10:18)),
+                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(10:15,'15S', 16:18))))
 
 # community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
@@ -245,10 +245,12 @@ sequ <- as.data.table(readRDS(file.seq.count.ind))
 
 # keep age within 15-49
 sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
+sequ[,  EVER.SEQ:=T]
 
 # merge to meta_data
-do <- merge(hivs[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, ART, HIV)], unique(sequ[, .(STUDY_ID)]), by = 'STUDY_ID')
-stopifnot(do[, length(unique(STUDY_ID))] == sequ[, length(unique(STUDY_ID))])
+do <- merge(hivs[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, ART, HIV)], unique(sequ[, .(STUDY_ID, EVER.SEQ)]), by = 'STUDY_ID',all.x=T)
+do <- merge(do, df_round, by = c('COMM', 'ROUND'))
+do[is.na(EVER.SEQ),EVER.SEQ:=F]
 
 # keep only positive participants
 do <- do[HIV == 'P']
@@ -260,15 +262,15 @@ do[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-               SEQUENCE = length(unique(STUDY_ID[HIV=='P']))), by = c('COMM','SEX','AGEGP')]
+               SEQUENCE = length(unique(STUDY_ID[HIV=='P' & EVER.SEQ==T]))), by = c('COMM','SEX','AGEGP')]
 
 tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
                  HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                 SEQUENCE = length(unique(STUDY_ID[HIV=='P']))), by = c('COMM')]
+                 SEQUENCE = length(unique(STUDY_ID[HIV=='P' & EVER.SEQ==T]))), by = c('COMM')]
 tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                 SEQUENCE = length(unique(STUDY_ID[HIV=='P']))), by = c('COMM','SEX')]
+                 SEQUENCE = length(unique(STUDY_ID[HIV=='P' & EVER.SEQ==T]))), by = c('COMM','SEX')]
 tab <- rbind(tab,tot1,tot2)
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
@@ -293,7 +295,7 @@ hivs[STUDY_ID %in% tmp] # negative during round of interest
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                 NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                SEQUENCE = length(unique(STUDY_ID[HIV=='P' ]))), by = c('ROUND','COMM')]
+                SEQUENCE = length(unique(STUDY_ID[HIV=='P' & EVER.SEQ==T]))), by = c('ROUND','COMM')]
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
 tab <- tab[order(COMM,ROUND),]
