@@ -1695,6 +1695,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   ecf[, INFECTED_ALREADY_SUPPRESSED := INFECTED_SUPPRESSED - TREATED]
   ecf <- ecf[, .(ROUND, SEX, AGEYRS, COMM, label, INFECTED_NON_SUPPRESSED, INFECTED_ALREADY_SUPPRESSED, TREATED)]
   ecf <- melt.data.table(ecf, id.vars = c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label'))
+  ecf <- ecf[AGEYRS!=0] # ageyrs ==0 is the total
   
   # make labels
   label.suppressed = 'Virally suppressed in round 18'; label.unsuppressed = 'Virally unsuppressed'; 
@@ -2128,7 +2129,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
             legend.position = 'none') +
       scale_color_manual(values = cols) +
       scale_fill_manual(values = cols) +
-      scale_y_continuous(labels = scales::percent, limits = c(0,0.80), expand = c(0,0)) + 
+      scale_y_continuous(labels = scales::percent, limits = c(0,1), expand = c(0,0)) + 
       scale_x_continuous(expand = c(0,0)) 
     
     # ireduction infection regardless of age

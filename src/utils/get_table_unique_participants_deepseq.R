@@ -10,12 +10,18 @@ indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_p
 indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
 indir.repository <- '~/Documents/GitHub/phyloflows'
 
+if(0){
+  indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+  indir.repository <- '~/git/phyloflows'
+}
+
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 file.seq.count <- file.path(outdir, 'characteristics_sequenced_R14_18.rds')
-file.seq.count.ind <- file.path(outdir, 'characteristics_sequenced_ind_R14_18.rds')
+file.seq.count.ind <- file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_221129.csv')
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'Quest_R6_R18_220909.csv')
@@ -27,8 +33,8 @@ file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_P
 community.keys <- as.data.table(read.csv(file.community.keys))
 
 # rounds of interest
-df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
-                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, 15,'15S', 16:18))))
+df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 10:18)),
+                  data.table(COMM = 'fishing', ROUND = paste0('R0', c(10:15,'15S', 16:18))))
 
 # community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
@@ -80,7 +86,7 @@ meta_data[ROUND == 'R015.1', ROUND := 'R015S']
 quest <- as.data.table(read.csv(file.path.quest))
 
 # keep variable of interest
-rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed)]
+rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed, cuarvmed)]
 
 # find  community
 rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
@@ -92,8 +98,15 @@ colnames(rinc) <- toupper(colnames(rinc))
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 
 # get ART status
-rinc[, ART := ARVMED ==1]
-rinc[is.na(ARVMED), ART := F]
+rinc[!ROUND %in% c('R016', 'R017', 'R018'), ART := ARVMED ==1]
+rinc[!ROUND %in% c('R016', 'R017', 'R018') & is.na(ARVMED), ART := F]
+rinc[ROUND == 'R016', ART := ARVMED ==1 | CUARVMED ==1]
+rinc[ROUND == 'R016' & (is.na(ARVMED) | is.na(CUARVMED)), ART := F]
+rinc[ROUND %in% c('R017', 'R018'), ART := CUARVMED ==1]
+rinc[ROUND %in% c('R017', 'R018') & is.na(CUARVMED), ART := F]
+
+# art was not reported in round 10
+rinc[ROUND == 'R010', ART := NA]
 
 # add meta data from Kate
 tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], rinc[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
@@ -236,29 +249,35 @@ art[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('T
 
 # load seq count
 sequ <- as.data.table(readRDS(file.seq.count.ind))
-sequ[, STUDY_ID:= gsub('RK-','',PT_ID)]
 
-# merge three datasets
-do <- merge(arti,sequ,by=c('STUDY_ID','ROUND','COMM','SEX','HIV','AGEYRS','AGEGP'),all=T)
+# keep age within 15-49
+sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
+sequ[,  EVER.SEQ:=T]
 
-# keep round of interest
+# merge to meta_data
+do <- merge(hivs[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, ART, HIV)], unique(sequ[, .(STUDY_ID, EVER.SEQ)]), by = 'STUDY_ID',all.x=T)
 do <- merge(do, df_round, by = c('COMM', 'ROUND'))
+do[is.na(EVER.SEQ),EVER.SEQ:=F]
 
-# restric age
-do <- do[AGEYRS > 14 & AGEYRS < 50]
+# keep only positive participants
+do <- do[HIV == 'P']
+
+# create age groups
+do[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
+                     labels=c('15-24','25-34','35-49'))]
 
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-               SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM','SEX','AGEGP')]
+               SEQUENCE = length(unique(STUDY_ID[HIV=='P' & EVER.SEQ==T]))), by = c('COMM','SEX','AGEGP')]
 
 tot1 <- do[,list(SEX = 'Total', AGEGP = 'Total',
                  HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                 SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM')]
+                 SEQUENCE = length(unique(STUDY_ID[HIV=='P' & EVER.SEQ==T]))), by = c('COMM')]
 tot2 <- do[,list(AGEGP = 'Total', HIV = length(unique(STUDY_ID[HIV=='P'])),
                  NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                 SEQUENCE = length(unique(STUDY_ID[!is.na(PANGEA_ID)]))), by = c('COMM','SEX')]
+                 SEQUENCE = length(unique(STUDY_ID[HIV=='P' & EVER.SEQ==T]))), by = c('COMM','SEX')]
 tab <- rbind(tab,tot1,tot2)
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
@@ -280,15 +299,10 @@ tmp <- sequ$STUDY_ID[sequ$STUDY_ID %notin% hivi$STUDY_ID & sequ$COMM=='inland']
 hivs[STUDY_ID %in% tmp] # negative during round of interest
 
 ## make table by round
-
-ever.seq <- do[, list(ever.seq=length(unique(PANGEA_ID[!is.na(PANGEA_ID)]))),by='STUDY_ID']
-ever.seq[ever.seq>=1, ever.seq:=1]
-do <- merge(do, ever.seq,by='STUDY_ID',all.x=T)
-
 # count unique participants with positive test during rounds
 tab <- do[,list(HIV = length(unique(STUDY_ID[HIV=='P'])),
                 NO_ART = length(unique(STUDY_ID[HIV=='P' & ART==F])),
-                SEQUENCE = length(unique(STUDY_ID[ever.seq==1]))), by = c('ROUND','COMM')]
+                SEQUENCE = length(unique(STUDY_ID[HIV=='P' & EVER.SEQ==T]))), by = c('ROUND','COMM')]
 
 tab[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total','Inland','Fishing'))]
 tab <- tab[order(COMM,ROUND),]

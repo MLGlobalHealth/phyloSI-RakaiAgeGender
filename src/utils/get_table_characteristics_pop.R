@@ -19,7 +19,7 @@ path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants
 file.seq.count <- file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 
 # Latest data from Rakai's CCS (Kate's data from 2022-03-08)
 file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
@@ -82,7 +82,7 @@ meta_data[ROUND == 'R015.1', ROUND := 'R015S']
 quest <- as.data.table(read.csv(file.path.quest))
 
 # keep variable of interest
-rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed)]
+rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed, cuarvmed)]
 
 # find  community
 rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
@@ -94,8 +94,15 @@ colnames(rinc) <- toupper(colnames(rinc))
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 
 # get ART status
-rinc[, ART := ARVMED ==1]
-rinc[is.na(ARVMED), ART := F]
+rinc[!ROUND %in% c('R016', 'R017', 'R018'), ART := ARVMED ==1]
+rinc[!ROUND %in% c('R016', 'R017', 'R018') & is.na(ARVMED), ART := F]
+rinc[ROUND == 'R016', ART := ARVMED ==1 | CUARVMED ==1]
+rinc[ROUND == 'R016' & (is.na(ARVMED) | is.na(CUARVMED)), ART := F]
+rinc[ROUND %in% c('R017', 'R018'), ART := CUARVMED ==1]
+rinc[ROUND %in% c('R017', 'R018') & is.na(CUARVMED), ART := F]
+
+# art was not reported in round 10
+rinc[ROUND == 'R010', ART := NA]
 
 # add meta data from Kate
 tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], rinc[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
@@ -330,19 +337,12 @@ sequ <- as.data.table(readRDS(file.seq.count))
 # keep age within 15-49
 sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
 
-# get first round when sequenced
-sequ <- unique(sequ[, .(PT_ID, ROUND)])
-sem <- sequ[, list(MIN_ROUND = min(ROUND)), by = c('PT_ID')]
-sem[, STUDY_ID := gsub('RK-(.+)', '\\1', PT_ID)]
-set(sem, NULL, 'PT_ID', NULL)
-
 # merge to meta_data
-semt <- merge(rincp[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS)], sem, by = 'STUDY_ID')
-stopifnot(semt[, length(unique(STUDY_ID))] == sem[, length(unique(STUDY_ID))])
+semt <- merge(hivs[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, HIV)], unique(sequ[, .(STUDY_ID)]), by = 'STUDY_ID')
+stopifnot(semt[, length(unique(STUDY_ID))] == sequ[, length(unique(STUDY_ID))])
 
-# keep only rounds after first sequencing
-semt <- semt[ROUND >= MIN_ROUND]
-stopifnot(semt[, length(unique(STUDY_ID))] == sem[, length(unique(STUDY_ID))])
+# keep only positive participants
+semt <- semt[HIV == 'P']
 
 # get sequenced table
 seqs <- semt[, list(SEQUENCE = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')]
@@ -380,7 +380,7 @@ tab <- tab[order(COMM, ROUND, TYPE)]
 # check that the counts make sense (e.g., there cannot be more participant than census eligible)
 stopifnot(nrow(tab[ELIGIBLE  < PARTICIPANT ]) == 0)
 stopifnot(nrow(tab[PARTICIPANT  < HIV ]) == 0)
-stopifnot(nrow(tab[HIV  < SELF_REPORTED_ART ]) == 0)
+stopifnot(nrow(tab[HIV  < as.numeric(SELF_REPORTED_ART) ]) == 0)
 stopifnot(nrow(tab[HIV  < as.numeric(SEQUENCE) & COMM == 'inland']) == 0)
 stopifnot(nrow(tab[HIV  < as.numeric(INFECTED_TESTED) ]) == 0)
 

@@ -9,11 +9,12 @@ library("haven")
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.repository <- '~/git/phyloflows'
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_220909.csv')
+file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 
 # load files
@@ -52,8 +53,12 @@ hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
 rprev <- hivs[HIV == 'P']
 
 # get ART status
-rprev[, ART := ARVMED ==1]
-rprev[is.na(ARVMED), ART := F]
+rprev[!ROUND %in% c('R016', 'R017', 'R018'), ART := ARVMED ==1]
+rprev[!ROUND %in% c('R016', 'R017', 'R018') & is.na(ARVMED), ART := F]
+rprev[ROUND == 'R016', ART := ARVMED ==1 | CUARVMED ==1]
+rprev[ROUND == 'R016' & (is.na(ARVMED) | is.na(CUARVMED)), ART := F]
+rprev[ROUND %in% c('R017', 'R018'), ART := CUARVMED ==1]
+rprev[ROUND %in% c('R017', 'R018') & is.na(CUARVMED), ART := F]
 rprev[, table(ROUND)]
 
 
@@ -109,10 +114,6 @@ DT <- subset(DT, AGEYRS > 14 & AGEYRS < 50)
 # keep infected
 DT <- DT[HIV_STATUS ==1]
 
-# get ART status
-DT[, ART := ARVMED ==1]
-DT[is.na(ARVMED), ART := F]
-
 # merge to self-reported data
 tmp <- DT[, .(STUDY_ID, ROUND, SEX, FC, VLNS, AGEYRS)]
 tmp[, ROUND := paste0('R0', ROUND)]
@@ -123,17 +124,9 @@ rprev <- merge(rprev, tmp, by.x = c('STUDY_ID', 'ROUND', 'SEX', 'COMM'), by.y = 
 rprev[!is.na(AGEYRS2), AGEYRS := AGEYRS2]
 set(rprev, NULL, 'AGEYRS2', NULL)
 
-# find percentage of participant who did not report art but had not viremic viral load
-tmp <- rprev[COMM == 'inland' & ART == F & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
-                                        N = length(STUDY_ID)), by = 'ROUND']
-tmp[, PROP := round(X / N * 100, 2)]
-tmp
-
-# find percentage of participant who report art and had not viremic viral load
-tmp <- rprev[COMM == 'inland' & ART == T & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
-                                                              N = length(STUDY_ID)), by = 'ROUND']
-tmp[, PROP := round(X / N * 100, 2)]
-tmp
+# find sensitivity and specificity of self-reported art use
+sensitivity_specificity_art <- find_sensitivity_specificity_art(rprev)
+table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev)
 
 # set art to true if viremic viral load
 rprev[VLNS == 0, ART := T]
@@ -173,4 +166,16 @@ rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('
 #################################
 
 write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv'), row.names = F)
+
+#################################
+
+# SAVE SENSITIVITY /SPECIFICITY ART  #
+
+#################################
+
+file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
+write.csv(sensitivity_specificity_art, file = file, row.names = F)
+
+file = file.path(outdir, 'table_sensitivity_specificity_art.rds')
+saveRDS(table_sensitivity_specificity_art , file)
 
