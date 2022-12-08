@@ -1,3 +1,5 @@
+require(xtable)
+
 get.dtable <- function(DT)
 {
     tmp <- DT[COMM=='inland' & ! is.na(ART) & ! is.na(VLNS)] 
@@ -182,7 +184,7 @@ make_table_sensitivity_specificity_art <- function(rprev)
     dtable[ AGE_GROUP!='ALL', LABEL := AGE_GROUP]
 
     # add empty rows only containing label 'Age' after the 'Female'/'Male' labels
-    empty_row  <- dtable[1, lapply(.SD, function(x) NA) , .SDcols=names(empty_row)]
+    empty_row  <- dtable[1, lapply(.SD, function(x) NA) , .SDcols=names(dtable)]
     empty_row[, LABEL:='Age']
     idx <- dtable[, LABEL %like% 'ale']
     idx <- c(0, cumsum(idx[-length(idx)]))
@@ -200,25 +202,45 @@ make_table_sensitivity_specificity_art <- function(rprev)
     
     make.table.for.round <- function(i)
     {
+        .gs <- function(x)
+        {
+            # makes correct align for Age levels
+            x <- gsub('(Age)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{Age\\}', x) 
+            x <- gsub('(15-24)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{15-24\\}', x)  
+            x <- gsub('(25-34)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{15-24\\}', x)  
+            x <- gsub('(35-49)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{15-24\\}', x)  
+
+            # puts CI on two different lines 95%\n[80-100]
+            if(0)
+            {
+                x <- gsub("([0-9]*.[0-9]\\\\\\%)",
+                          "\\\\shortstack{\\1\\\\\\\\", x)
+                x <- gsub("(\\[.*\\])",
+                          "\\1}", x)
+            }
+            x
+        }
+
         table.cols <- c("LABEL", "ARV_NAIVE_SUPP", "ARV_NAIVE_NOTSUPP", "ARV_REPORT_SUPP", "ARV_REPORT_NOTSUPP", "SPECIFICITY", "SENSITIVITY")
-        SD <- dtable[ROUND == round, .SD, .SDcols=table.cols]
+        SD <- dtable[ROUND == i, .SD, .SDcols=table.cols]
 
 
         filename <- paste0('~/Downloads/ART_supp_sensitivity_table',i,'.tex')
         SD |> 
-        xtable() |>
-        print(include.rownames=FALSE,
-              include.colnames=FALSE,
-              only.contents=TRUE,
-              booktabs=FALSE,
-              comment=FALSE,
-              type='latex',
-              file=filename,
-              hline.after = NULL,
-              compress=FALSE
-              ) -> x
-        # x <- gsub('^.*midrule|\\\\bottomrule.*$', '',x)
-        x
+            xtable() |>
+            print(include.rownames=FALSE,
+                  include.colnames=FALSE,
+                  only.contents=TRUE,
+                  booktabs=FALSE,
+                  comment=FALSE,
+                  type='latex',
+                  file=filename,
+                  hline.after = NULL,
+                  compress=FALSE
+                  ) -> x
+
+        writeLines(text=.gs(readLines(filename)), filename)
+
     }
 
     tex.table <- lapply(rnds, make.table.for.round)
