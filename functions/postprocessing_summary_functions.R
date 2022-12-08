@@ -220,7 +220,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
                                          log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_susceptible = F, posterior_samples = F, relative_baseline = F, 
-                                         invert = F, median_age_source = F, quantile_age_source = F, sex_ratio = F, save_output = T){
+                                         invert = F, median_age_source = F, quantile_age_source = F, sex_ratio = F, save_output = T, add_male_age_classification_nonsymmetric = F){
   
   # summarise outputs by round
   
@@ -255,6 +255,20 @@ find_summary_output_by_round <- function(samples, output, vars,
   if('INDEX_ROUND' %in% names(tmp1)){
     #  merge to map rounds 
     tmp1 <- merge(tmp1, df_round, by = c('INDEX_ROUND'))
+  }
+  
+  if(add_male_age_classification_nonsymmetric){
+
+    tmp1[INDEX_DIRECTION == 1, `:=` (AGE_INFECTION.MALE = AGE_INFECTION.RECIPIENT, 
+                                     AGE_INFECTION.FEMALE = AGE_TRANSMISSION.SOURCE)]
+    tmp1[INDEX_DIRECTION == 2, `:=` (AGE_INFECTION.MALE = AGE_TRANSMISSION.SOURCE, 
+                                     AGE_INFECTION.FEMALE = AGE_INFECTION.RECIPIENT )]
+    
+    tmp1[, AGE_CLASSIFICATION.MALE := '0-6']
+    tmp1[AGE_INFECTION.MALE < AGE_INFECTION.FEMALE, AGE_CLASSIFICATION.MALE := '<0']
+    tmp1[AGE_INFECTION.MALE > AGE_INFECTION.FEMALE + 7, AGE_CLASSIFICATION.MALE := '>7']
+    
+    vars <- c(vars, 'AGE_CLASSIFICATION.MALE')
   }
   
   if(!is.null(log_offset_round)){

@@ -14,7 +14,7 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
 # files
-participants <- file.path(indir.repository, 'data', 'RCCS_participation_221116.csv')
+participants <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
 eligible <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
 
@@ -109,5 +109,5 @@ p <- ggplot(tmp1[COMM == 'inland']) +
          fill = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
          color = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
          pattern = guide_legend(byrow = T, nrow = 2, override.aes = list(fill = "white", col = 'black'), order = 3))
-ggsave(p, file = file.path(outdir, 'Participants_aggregated_age_221116.pdf'), w = 3.2, h = 6.2)
+ggsave(p, file = file.path(outdir, 'Participants_aggregated_age_221208.pdf'), w = 3.2, h = 6.2)
 

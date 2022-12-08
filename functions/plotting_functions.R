@@ -1203,7 +1203,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     labs(y = 'Incidence rate relative to round 10', col= 'Age', shape= 'Gender', 
          x = 'Date (midpoint of survey interval)', linetype = 'Gender') + 
     scale_y_log10()
-  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_age_group_sex.pdf'), w = 4.2,h = 4.8)
+  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_age_group_sex.pdf'), w = 4.2,h = 5.1)
   
   
   #
@@ -1353,15 +1353,14 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       labs(x = paste0('Male-female ratio of the rate of infected\nindividuals with unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
            y = paste0('Female-male ratio of the\nincidence rate relative\nto round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))])) + 
       theme_bw()  +
-      theme(legend.position = c(0.25, 0.8), 
+      theme(legend.position = c(0.25, 0.74), 
             legend.title = element_blank(), 
-            legend.text=element_text(size=rel(0.8))) +
+            legend.text=element_text(size=rel(0.5))) +
       guides(shape='none', color = guide_legend(byrow = T, nrow = 4,override.aes = list(size = 1), 
                                                 keywidth = unit(0.01, 'pt'), keyheight = unit(0.001, 'pt'))) 
     
       # scale_y_log10()
-    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.png'), w = 3.5, h = 2.5)
-    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.pdf'), w = 4.4, h = 3.6)
+    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.pdf'), w = 3.5, h = 2.4)
     
   }
   
