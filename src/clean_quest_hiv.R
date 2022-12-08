@@ -6,9 +6,14 @@ library(lubridate)
 library(rstan)
 library("haven")
 
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-indir.repository <- '~/git/phyloflows'
+if(Sys.info()['user'] == 'andrea')
+{
+    # indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    # indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+    indir.repository <- '~/git/phyloflows'
+    indir.deepsequence_analyses <- '/home/andrea/Documents/Box/ratmann_deepseq_analyses/live'
+    indir.deepsequencedata <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata'
+}
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 
