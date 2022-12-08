@@ -59,14 +59,14 @@ fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
 # temporary
+source(file.path(indir, 'functions', 'summary_functions.R'))
 if(!exists('use_contact_rates_prior')){
   use_contact_rates_prior = F
   file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130.rds'))
   df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))
 }
 if(!exists('treatment_cascade_samples')){
-  source(file.path(indir, 'functions', 'summary_functions.R'))
-  
+
   file.treatment.cascade.prop.participants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds'))
   file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221116.rds'))
   
@@ -83,7 +83,7 @@ if(!exists('treatment_cascade_samples')){
 }
 file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
 unsuppressed_median_age <-fread(file.unsuppressed_median_age) # median age of unsuppressed
-
+df_direction <- get.df.direction()
 
 #
 # offset
@@ -200,6 +200,7 @@ expected_contribution_age_group_source2 <- find_summary_output_by_round(samples,
                                                                         transform = 'exp',
                                                                         standardised.vars = c('INDEX_ROUND'))
 plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
+plot_median_age_source_group_all_rounds(median_age_source_group, expected_contribution_age_group_source2, outfile.figures)
 
 # total
 median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
@@ -299,6 +300,8 @@ plot_contribution_age_classification_male(expected_contribution_age_classificati
 #
 # Transmission flows (absolute)
 #
+
+cat("\nPlot tranmission flows (absolute)\n")
 
 # find number of transmission by age group of sources and recipients
 incidence_age_group_source  <- find_summary_output_by_round(samples, 'log_beta', 
