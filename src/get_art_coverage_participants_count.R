@@ -9,6 +9,14 @@ library("haven")
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.repository <- '~/git/phyloflows'
+
+if(Sys.info()['user'] == 'andrea')
+{
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+    indir.repository <- '~/git/phyloflows'
+}
+
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
@@ -22,6 +30,8 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 quest <- as.data.table(read.csv(file.path.quest))
 hiv <- as.data.table(read.csv(file.path.hiv))
 
+# load helpers
+source(file.path(indir.repository, 'src/functions/sensitivity_specificity_art.R'))
 
 
 #################################
@@ -127,6 +137,7 @@ set(rprev, NULL, 'AGEYRS2', NULL)
 # find sensitivity and specificity of self-reported art use
 sensitivity_specificity_art <- find_sensitivity_specificity_art(rprev)
 table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev)
+
 
 # set art to true if viremic viral load
 rprev[VLNS == 0, ART := T]
