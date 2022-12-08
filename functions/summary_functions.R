@@ -1176,6 +1176,11 @@ get.df.direction <- function()
   df_direction[, LABEL_DIRECTION := ifelse(IS_MF == 1, 'Male -> Female', 'Female -> Male')]
   df_direction[, LABEL_SOURCE := ifelse(IS_MF == 1, 'Male sources', 'Female sources')]
   df_direction[, LABEL_RECIPIENT := ifelse(IS_MF == 1, 'Female recipients', 'Male recipients')]
+  df_direction[, LABEL_GENDER_SOURCE := ifelse(IS_MF == 1, 'Men', 'Women')]
+  df_direction[, LABEL_GENDER_RECIPIENT := ifelse(IS_MF == 1, 'Women', 'Men')]
+  df_direction[, LABEL_TRANSMITTING_PARTNER := ifelse(IS_MF == 1, 'Male transmitting partner', 'Female transmitting partner')]
+  df_direction[, LABEL_INFECTED_PARTNER := ifelse(IS_MF == 1, 'Female infected partner', 'Male infected partner')]
+  
   df_direction
 }
 
