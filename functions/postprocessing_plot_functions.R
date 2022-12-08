@@ -558,7 +558,7 @@ plot_force_infection_sex_age_recipient <- function(force_infection_age_recipient
 plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_prop_sex, prevalence_prop_sex,outdir, lab = NULL){
   
   # y axis label
-  type_cont <- 'Contribution from male\nsources to HIV incidence'
+  type_cont <- 'Contribution of men\nto HIV incidence'
   
   # contribution from output
   tmp <- copy(contribution_sex_source)
@@ -568,8 +568,8 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   tmp <- tmp[LABEL_DIRECTION == 'Male -> Female']
   
   # add share of male among infected and infected unsuppressed
-  prevalence_prop_sex[, type  := 'Share of males among infected\nindividuals']
-  unsuppressed_prop_sex[, type  := 'Share of males among\ninfected individuals with\nunsuppressed virus']
+  prevalence_prop_sex[, type  := 'Contribution of men to infected\nindividuals']
+  unsuppressed_prop_sex[, type  := 'Contribution of men to\ninfected individuals with\nunsuppressed virus']
   tmp1 <- rbind(prevalence_prop_sex, unsuppressed_prop_sex, fill=TRUE)
   tmp1[, type := factor(type , levels = c(unique(prevalence_prop_sex$type), unique(unsuppressed_prop_sex$type)))]
   tmp1 <- tmp1[LABEL_DIRECTION == 'Male -> Female']
@@ -618,11 +618,11 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
   
   
   # plot 2
-  tmp3 <- tmp2[grepl('unsuppressed|Contribution', type) & ROUND == 'R018']
-  tmp3[grepl('Contribution', type),type := paste0(type, '\n', gsub('\n', ', ', LABEL_ROUND))]
-  tmp3[grepl('unsuppressed', type),type := paste0(type, '\n', gsub('\n', ', ', LABEL_ROUND))]
+  tmp3 <- tmp2[type !='Contribution of men to infected\nindividuals' & ROUND == 'R018']
+  tmp3[!grepl('unsuppressed', type),type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
+  tmp3[grepl('unsuppressed', type),type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
   tmp3[, type := factor(type, levels = c(tmp3[grepl('unsuppressed', type), unique(type)], 
-                                         tmp3[grepl('Contribution', type), unique(type)]))]
+                                         tmp3[!grepl('unsuppressed', type), unique(type)]))]
   p <- ggplot(tmp3, aes(x = type, group = type)) +
     geom_bar(aes(y = M, fill = type), position = position_dodge(width = 0.2), stat = 'identity') +
     geom_errorbar(aes(ymin = CL, ymax = CU), col = 'grey50', width = 0.2, size = 0.5)  +
@@ -643,12 +643,12 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
           panel.grid.minor.x = element_blank(), 
           panel.grid.minor.y = element_blank(), 
           legend.margin = margin(),
-          legend.text = element_text(size = rel(0.8)),
+          legend.text = element_text(size = rel(0.7)),
           legend.title = element_blank())  + 
     scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1))  +
     coord_flip()
   if(is.null(lab)) lab =  'Contribution'
-  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex_barplot.png'), w = 5, h = 2.3)
+  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex_barplot.png'), w = 5, h = 1.7)
   
 }
 
@@ -802,7 +802,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   # find unsuppressed share by sex and age
   uns <- copy(unsuppressed_share_sex_age)
   setnames(uns, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
-  uns[, type := 'Share among infected\nindividuals with unsuppressed virus']
+  uns[, type := 'Contribution to infected\nindividuals with unsuppressed virus']
 
   # find median age of unsuppressed 
   median_uns <- copy(df_unsuppressed_median_age[quantile == 'C50'])
@@ -819,7 +819,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
       new_scale_fill() +
       new_scale_color() +
-      labs(x = 'Age of the source', y = 'Percent') + 
+      labs(x = 'Age of transmitting partner', y = 'Percent') + 
       geom_errorbarh(data = median_uns.p, aes(xmin = CL, xmax = CU, y = level_y+0.0006), height = 0, size = 0.7) + 
       geom_errorbarh(data = median_age.p, aes(xmin = CL, xmax = CU, y = level_y, col = LABEL_SOURCE, fill = LABEL_SOURCE), height = 0, size = 0.7) + 
       geom_point(data = median_age.p, aes(x = M, y = level_y, col = LABEL_SOURCE, fill = LABEL_SOURCE), size = 2,  shape = 4, stroke = 0.7) + 
@@ -827,14 +827,14 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       scale_color_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
       scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
       theme_bw() +
-      facet_grid(LABEL_ROUND~LABEL_SOURCE) +
+      facet_grid(LABEL_ROUND~LABEL_TRANSMITTING_PARTNER) +
       # scale_color_manual(values = c('#FF4949')) + 
       scale_alpha_manual(values = 1) + 
       scale_size_manual(values = 0.5) + 
       # scale_fill_manual(values = c('Male source'='#C6DCE4','Female source'='#F2D1D1')) + 
       scale_linetype_manual(values  = 'dashed') +
       theme(strip.background = element_rect(colour="white", fill="white"),
-            strip.text = element_text(size = 9.3),
+            strip.text = element_text(size = rel(1)),
             legend.position = 'none', 
             legend.title = element_blank(), 
             panel.grid.minor = element_blank()) + 
@@ -859,7 +859,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     cont_b.p <- cont.p[ROUND %in% Rounds]
     cont_b.p[, min_INDEX_ROUND :=  min(INDEX_ROUND), by = 'COMM']
     cont_b.p <- cont_b.p[INDEX_ROUND == min_INDEX_ROUND]
-    cont_b.p[, type := paste0(type, '\nin ', gsub('\n', ', ', LABEL_ROUND))]
+    cont_b.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
     cont_b.p <- select(cont_b.p, -LABEL_ROUND)
     
     # plot all rounds
@@ -872,11 +872,11 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       geom_line(aes(y = M, col = type), stat = 'identity', position = "identity") + 
       geom_line(data = uns.p, aes(y = M, size = type), col = 'black', linetype = 'dashed') + 
       geom_ribbon(data = uns.p, aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + 
-      geom_line(data = cont_b.p, aes(y = M, linetype=type), col = 'pink4') + 
+      geom_line(data = cont_b.p, aes(y = M, linetype=type), col = 'lightpink1') + 
       theme_bw() +
       scale_alpha_manual(values = 1) + 
       scale_size_manual(values = 0.5) + 
-      scale_color_manual(values = 'deeppink') +
+      scale_color_manual(values = 'lightpink1') +
       scale_fill_manual(values = 'lightpink1') + 
       scale_linetype_manual(values  = 'solid') +
       theme(legend.position = 'bottom', 
@@ -901,22 +901,22 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     # plot selected rounds
     p <- plot.p(cont.p[ROUND %in% Rounds], uns.p[ROUND %in% Rounds], cont_b.p, median_age.p[ROUND %in% Rounds], 
                 median_uns.p[ROUND %in% Rounds], 0.002) + 
-      facet_grid(.~LABEL_SOURCE) 
+      facet_grid(.~LABEL_TRANSMITTING_PARTNER) 
     
     # plot legend2 if unique round
     if(length(Rounds) == 1){
-      cont.p[, type := paste0(type, '\n', gsub('\n', ', ', LABEL_ROUND))]
-      uns.p[, type := paste0(type, '\n', gsub('\n', ', ', LABEL_ROUND))]
+      cont.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
+      uns.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
       p_legend2 <- ggplot(cont.p[LABEL_SOURCE == 'Female sources' & ROUND %in% Rounds], aes(x = AGE_TRANSMISSION.SOURCE)) + 
         geom_ribbon(aes(ymin = CL, ymax = CU, fill = type), alpha = 0.6) + 
         geom_line(aes(y = M, col = type), stat = 'identity', position = "identity") + 
         geom_line(data = uns.p[ROUND %in% Rounds], aes(y = M, size = type), col = 'black', linetype = 'dashed') + 
         geom_ribbon(data = uns.p[ROUND %in% Rounds], aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + 
-        geom_line(data = cont_b.p[ROUND %in% Rounds], aes(y = M, linetype=type), col = 'pink4') + 
+        geom_line(data = cont_b.p[ROUND %in% Rounds], aes(y = M, linetype=type), col = 'lightpink1') + 
         theme_bw() +
         scale_alpha_manual(values = 1) + 
         scale_size_manual(values = 0.5) + 
-        scale_color_manual(values = 'deeppink') +
+        scale_color_manual(values = 'lightpink1') +
         scale_fill_manual(values = 'lightpink1') + 
         scale_linetype_manual(values  = 'solid') +
         theme(legend.position = 'bottom', 
@@ -930,7 +930,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     pp <- ggarrange(p, legend.grob = get_legend(p_legend2), legend = 'bottom') 
     
     # save
-    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.2, h = 2.7)
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.8, h = 3.1)
     
   }
 }
@@ -950,24 +950,24 @@ plot_contribution_age_source <- function(contribution_age_source, median_age_sou
   # prepare plotting function
   plot.p <- function(cont.p, median_age.p, level_y){
     ggplot(cont.p) +
-      geom_errorbarh(data = median_age.p[LABEL_SOURCE == 'Female sources'], aes(xmin = CL, xmax = CU, y = level_y + 0.0006, col = LABEL_SOURCE, fill = LABEL_SOURCE), height = 0, size = 0.7) + 
-      geom_point(data = median_age.p[LABEL_SOURCE == 'Female sources'], aes(x = M, y = level_y+0.0006, col = LABEL_SOURCE, fill = LABEL_SOURCE), size = 2, shape = 4, stroke = 0.7) + 
-      geom_errorbarh(data = median_age.p[LABEL_SOURCE == 'Male sources'], aes(xmin = CL, xmax = CU, y = level_y, col = LABEL_SOURCE, fill = LABEL_SOURCE), height = 0, size = 0.7) + 
-      geom_point(data = median_age.p[LABEL_SOURCE == 'Male sources'], aes(x = M, y = level_y, col = LABEL_SOURCE, fill = LABEL_SOURCE), size = 2, shape = 4, stroke = 0.7) + 
-      scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) +
-      new_scale_fill() + 
-      geom_line(aes(x = AGE_TRANSMISSION.SOURCE, y = M, col = LABEL_SOURCE)) + 
-      geom_ribbon(aes(x = AGE_TRANSMISSION.SOURCE, ymin = CL, ymax = CU, fill = LABEL_SOURCE), alpha = 0.5) +
-      scale_color_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
-      scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
-      labs(x = 'Age', y = '\nContribution to HIV incidence') + 
+      geom_errorbarh(data = median_age.p[LABEL_SOURCE == 'Female sources'], aes(xmin = CL, xmax = CU, y = level_y + 0.0006, col = LABEL_TRANSMITTING_PARTNER, fill = LABEL_TRANSMITTING_PARTNER), height = 0, size = 0.7) + 
+      geom_point(data = median_age.p[LABEL_SOURCE == 'Female sources'], aes(x = M, y = level_y+0.0006, col = LABEL_TRANSMITTING_PARTNER, fill = LABEL_TRANSMITTING_PARTNER), size = 2, shape = 4, stroke = 0.7) + 
+      geom_errorbarh(data = median_age.p[LABEL_SOURCE == 'Male sources'], aes(xmin = CL, xmax = CU, y = level_y, col = LABEL_TRANSMITTING_PARTNER, fill = LABEL_TRANSMITTING_PARTNER), height = 0, size = 0.7) + 
+      geom_point(data = median_age.p[LABEL_SOURCE == 'Male sources'], aes(x = M, y = level_y, col = LABEL_TRANSMITTING_PARTNER, fill = LABEL_TRANSMITTING_PARTNER), size = 2, shape = 4, stroke = 0.7) + 
+      geom_line(aes(x = AGE_TRANSMISSION.SOURCE, y = M, col = LABEL_TRANSMITTING_PARTNER)) + 
+      geom_ribbon(aes(x = AGE_TRANSMISSION.SOURCE, ymin = CL, ymax = CU, fill = LABEL_TRANSMITTING_PARTNER), alpha = 0.5) +
+      scale_color_manual(values = c('Male transmitting partner'='lightblue3','Female transmitting partner'='lightpink1')) + 
+      scale_fill_manual(values = c('Male transmitting partner'='lightblue3','Female transmitting partner'='lightpink1')) + 
+      labs(x = 'Age of transmitting partner', y = '\nContribution of transmitting partner to HIV incidence', col = '', fill = '', shape = '') + 
       theme_bw() +
       facet_grid(LABEL_ROUND~.) +
       theme(strip.background = element_rect(colour="white", fill="white"),
             legend.title = element_blank(), 
-            panel.grid.minor = element_blank(), 
-            strip.text = element_text(size = 9.3), 
-            axis.title = element_text(size = 12)) + 
+            legend.direction = 'vertical',
+            panel.grid.minor = element_blank()
+            # strip.text = element_text(size = 9.3), 
+            # axis.title = element_text(size = 12)
+            ) + 
       scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
       scale_x_continuous(expand = c(0,0), 
                          breaks = c(seq(min(cont.p[, unique(AGE_TRANSMISSION.SOURCE)]), max(cont.p[, unique(AGE_TRANSMISSION.SOURCE)]), 5))) 
@@ -989,7 +989,7 @@ plot_contribution_age_source <- function(contribution_age_source, median_age_sou
     
     # selected rounds
     pp <- plot.p(cont.p[ROUND %in% Rounds], median_age.p[ROUND %in% Rounds], 0.0015)+ 
-      theme(legend.position =  'none')
+      theme(legend.position =  'bottom')
     
     # selected rounds horizontal
     pp.hori <-  plot.p(cont.p[ROUND %in% Rounds], median_age.p[ROUND %in% Rounds], 0.003) + 
@@ -1596,14 +1596,14 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
   mas <- mas[(COMM == 'inland' & ROUND %in% paste0('R0', c(15, 18)))|(COMM == 'fishing' & ROUND %in% paste0('R0', c(15, 18)))]
   
   # dcast
-  mag <- dcast.data.table(mas, LABEL_ROUND + COMM + AGE_GROUP_INFECTION.RECIPIENT + LABEL_RECIPIENT ~ quantile, value.var = 'M')
+  mag <- dcast.data.table(mas, LABEL_ROUND + COMM + AGE_GROUP_INFECTION.RECIPIENT + LABEL_RECIPIENT + LABEL_INFECTED_PARTNER ~ quantile, value.var = 'M')
   
   # find expected transmission flows towards each age group of the recipient for the width of the boxplot
-  eca <- expected_contribution_age_group_source2[, .(LABEL_ROUND, COMM, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT, M)]
+  eca <- expected_contribution_age_group_source2[, .(LABEL_ROUND, COMM, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT, LABEL_INFECTED_PARTNER, M)]
   setnames(eca, 'M', "M_CONTRIBUTION")
   
   # merge
-  mac <- merge(mag, eca, by =  c('LABEL_ROUND', 'COMM', 'AGE_GROUP_INFECTION.RECIPIENT', 'LABEL_RECIPIENT'))
+  mac <- merge(mag, eca, by =  c('LABEL_ROUND', 'COMM', 'AGE_GROUP_INFECTION.RECIPIENT', 'LABEL_RECIPIENT', 'LABEL_INFECTED_PARTNER'))
 
   # find boxplot quantiles for reported contact
   rec <- copy(reported_contact)
@@ -1612,14 +1612,14 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
                     C50 = quantile(part.age, 0.5), 
                     C75 = quantile(part.age, 0.75), 
                     C90 = quantile(part.age, 0.9), 
-                    CONTRIBUTION = .N), by = c('COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_GROUP')]
+                    CONTRIBUTION = .N), by = c('COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_GROUP', 'LABEL_INFECTED_PARTNER')]
   rec[, M_CONTRIBUTION := CONTRIBUTION / sum(CONTRIBUTION), by = c('COMM', 'ROUND')]
   set(rec, NULL, 'CONTRIBUTION', NULL)
   setnames(rec, 'AGE_GROUP', 'AGE_GROUP_INFECTION.RECIPIENT')
   
   # make labels
-  mac[, LABEL := paste0('Estimated transmission\nsources, ', LABEL_ROUND)]
-  rec[, LABEL := paste0('Estimated sexual contacts\nin last year, ', mac[grepl('Round 15', LABEL_ROUND), as.character(unique(LABEL_ROUND))])]
+  mac[, LABEL := paste0('Transmitting partner,\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
+  rec[, LABEL := paste0('Sexual contacts in last year,\n', mac[grepl('Round 15', LABEL_ROUND), gsub('.*\n(.+)', '\\1', as.character(unique(LABEL_ROUND)))])]
   dt <- rbind(mac, rec, fill=TRUE)
   
   # plot
@@ -1629,10 +1629,10 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
   for(i in seq_along(communities)){
     
     tmp <- dt[COMM == communities[i]]
-    tmp <- tmp[order(LABEL, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT)]
+    tmp <- tmp[order(LABEL, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT, LABEL_INFECTED_PARTNER)]
     
     # width of the boxplot need to be proportional to a max (just for the figure to look pretty)
-    widths <- tmp[order(LABEL, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT), M_CONTRIBUTION]
+    widths <- tmp[order(LABEL, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT, LABEL_INFECTED_PARTNER), M_CONTRIBUTION]
     widths <- widths * 1.2 / max(widths)
     
     p <- ggplot(tmp) + 
@@ -1642,9 +1642,9 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
                        group= interaction(LABEL, AGE_GROUP_INFECTION.RECIPIENT)),
                    width = widths, varwidth = T, col = 'black', outlier.shape = NA, 
                    size = 0.2, position = position_dodge2(width = widths)) +
-      facet_grid(.~LABEL_RECIPIENT) + 
+      facet_grid(.~LABEL_INFECTED_PARTNER) + 
       theme_bw() +
-      labs(x = 'Age recipient', y = 'Age source') +
+      labs(x = 'Age of infected partner', y = 'Age of transmitting partner') +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_text(size = rel(1)),
             legend.position = 'bottom', 
@@ -1659,6 +1659,67 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
                            max(range_age_non_extended))) + 
       guides(color = guide_legend(order = 1))
     ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 6, h = 4.7)
+    
+  }
+}
+
+plot_median_age_source_group_all_rounds <- function(median_age_source_group, expected_contribution_age_group_source2, outdir){
+  
+  mas <- copy(median_age_source_group)
+  
+  # select rounds to be plotted
+  # mas <- mas[(COMM == 'inland' & ROUND %in% paste0('R0', c(15, 18)))|(COMM == 'fishing' & ROUND %in% paste0('R0', c(15, 18)))]
+  
+  # dcast
+  mag <- dcast.data.table(mas, LABEL_ROUND + COMM + AGE_GROUP_INFECTION.RECIPIENT + LABEL_RECIPIENT + LABEL_INFECTED_PARTNER ~ quantile, value.var = 'M')
+  
+  # find expected transmission flows towards each age group of the recipient for the width of the boxplot
+  eca <- expected_contribution_age_group_source2[, .(LABEL_ROUND, COMM, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT, LABEL_INFECTED_PARTNER, M)]
+  setnames(eca, 'M', "M_CONTRIBUTION")
+  
+  # merge
+  mac <- merge(mag, eca, by =  c('LABEL_ROUND', 'COMM', 'AGE_GROUP_INFECTION.RECIPIENT', 'LABEL_RECIPIENT', 'LABEL_INFECTED_PARTNER'))
+  
+  # make labels
+  mac[, LABEL := paste0('Transmitting partner,\n', LABEL_ROUND)]
+  
+  # plot
+  communities <- mac[, unique(COMM)]
+  cols <- palette_round_inland
+  
+  for(i in seq_along(communities)){
+    
+    tmp <- mac[COMM == communities[i]]
+    tmp <- tmp[order(LABEL, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT, LABEL_INFECTED_PARTNER)]
+    
+    # width of the boxplot need to be proportional to a max (just for the figure to look pretty)
+    widths <- tmp[order(LABEL, AGE_GROUP_INFECTION.RECIPIENT, LABEL_RECIPIENT, LABEL_INFECTED_PARTNER), M_CONTRIBUTION]
+    widths <- widths * 1.2 / max(widths)
+    
+    p <- ggplot(tmp) + 
+      geom_boxplot(stat = "identity",
+                   aes(x = AGE_GROUP_INFECTION.RECIPIENT, fill = LABEL,
+                       lower  = C25,upper = C75, middle = C50, ymin = C10, ymax = C90, 
+                       group= interaction(LABEL, AGE_GROUP_INFECTION.RECIPIENT)),
+                   width = widths, varwidth = T, col = 'black', outlier.shape = NA, 
+                   size = 0.2, position = position_dodge2(width = widths)) +
+      facet_grid(.~LABEL_INFECTED_PARTNER) + 
+      theme_bw() +
+      labs(x = 'Age of infected partner', y = 'Age of transmitting partner') +
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom', 
+            axis.text.x = element_text(angle= 30, hjust =1),
+            panel.grid.minor.x = element_blank(), 
+            legend.spacing.x = unit(0.1, 'cm'),
+            legend.title = element_blank()) +
+      # scale_color_manual(values = cols)  +
+      scale_fill_manual(values = cols)  +
+      scale_y_continuous(expand = c(0.01,0.01), limits = range_age_non_extended,
+                         breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
+                                    max(range_age_non_extended))) + 
+      guides(color = guide_legend(order = 1))
+    ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_AllRounds_', communities[i], '.pdf'), w = 8, h = 6)
     
   }
 }

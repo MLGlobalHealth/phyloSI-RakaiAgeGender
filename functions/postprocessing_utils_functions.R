@@ -219,6 +219,7 @@ clean_reported_contact <- function(df_reported_contact){
   
   # create variables
   reported_contact[, LABEL_RECIPIENT := ifelse(SEX == 'Female', 'Female recipients', 'Male recipients')]
+  reported_contact <- merge(reported_contact, df_direction, by = 'LABEL_RECIPIENT')
   
   # keep age of interset
   reported_contact <- reported_contact[AGE_GROUP != "[50,55)"]
