@@ -10,8 +10,8 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'newpairs'
-stan_model <- 'gp_221124d'
+jobname <- 'central'
+stan_model <- 'gp_221115a'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -288,6 +288,39 @@ expected_contribution_age_classification_source <- find_summary_output_by_round(
                                                                         standardised.vars = c('INDEX_ROUND'))
 plot_contribution_age_classification(expected_contribution_age_classification_source, outfile.figures,'Expected_contribution')
 
+# contribution aggregated by age group of recipients and classification of age of male
+expected_contribution_age_classification_male <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                                                                c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                                transform = 'exp',
+                                                                                add_male_age_classification_nonsymmetric = T,
+                                                                                standardised.vars = c('INDEX_ROUND'))
+plot_contribution_age_classification_male(expected_contribution_age_classification_male, outfile.figures,'Expected_contribution')
+
+#
+# Transmission flows (absolute)
+#
+
+# find number of transmission by age group of sources and recipients
+incidence_age_group_source  <- find_summary_output_by_round(samples, 'log_beta', 
+                                                            c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                            transform = 'exp',
+                                                            log_offset_round = log_offset_round)
+plot_transmission_age_group(incidence_age_group_source, outfile.figures)
+
+# find number of transmission by age group of recipients and classification of age of sources
+incidence_age_classification_source  <- find_summary_output_by_round(samples, 'log_beta', 
+                                                            c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_CLASSIFICATION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                            transform = 'exp',
+                                                            log_offset_round = log_offset_round)
+plot_transmission_age_classification(incidence_age_classification_source, outfile.figures)
+
+# find number of transmission by age group of recipients and classification of age of male
+incidence_age_classification_male  <- find_summary_output_by_round(samples, 'log_beta', 
+                                                                   c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                   transform = 'exp',
+                                                                   add_male_age_classification_nonsymmetric = T,
+                                                                   log_offset_round = log_offset_round)
+plot_transmission_age_classification_male(incidence_age_classification_male, outfile.figures)
 
 
 #
