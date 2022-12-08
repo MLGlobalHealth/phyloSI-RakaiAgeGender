@@ -80,7 +80,7 @@ file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_lo
 # obtained in src/ for analysis
 file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData')
 file.eligible.count <- file.path(indir, 'data', 'RCCS_census_eligible_individuals_221116.csv')
-file.participation <- file.path(indir, 'data', 'RCCS_participation_221116.csv')
+file.participation <- file.path(indir, 'data', 'RCCS_participation_221208.csv')
 file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_221116.csv')
 
 # obtained in misc/ for analysis

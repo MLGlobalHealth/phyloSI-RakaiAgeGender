@@ -8,7 +8,7 @@ The data in ```data/``` contain
 * source-recipient pairs, in file ```pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds```.
 
 * count of census eligible population by age, gender and round, in file ```RCCS_census_eligible_individuals_221116.csv```
-* participation rates to the RCCS survey by age, gender and round, in file ```RCCS_participation_221116.csv```
+* participation rates to the RCCS survey by age, gender and round, in file ```RCCS_participation_221208.csv```
 * count of participants by hiv status, age, gender and round, in file ```aggregated_count_hiv_positive.csv``` used in ```misc/get_estimates_prevalence.R``` to estimate smooth proportion of hiv prevalence among population.
 * count of participants by self-reported art use, age, gender and round, in file ```aggregated_participants_count_art_coverage.csv``` used in ```misc/get_estimates_art_coverage_participants.R``` to estimate smooth proportion of art coverage among participants.
 * count of participants by viremic viral loads, age, gender and round, in file ```aggregated_participants_count_unsuppressed.csv``` used in ```misc/get_estimates_unsuppressed_proportion_participants.R``` to estimate smooth proportion of viral suppression among participants.
