@@ -12,7 +12,10 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_casc
 
 # posterior samples
 file.unsuppressedviralload <- file.path(indir.repository, 'fit',  paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_vl200_221121.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_vl200_221208.rds'))
+
+# specificity and sensitivity art reporting
+file.spec.sens.art = file.path(indir.repository, 'data', 'sensitivity_specificity_art_vl200.csv')
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -85,6 +88,35 @@ df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE < PROP_SUPPRESSED_POSTERIOR_SAMPLE, PROP_A
 stopifnot(nrow(df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE > 1]) == 0)
 
 
+######################################################################################
+
+# CORRECT ART COVERERAGE WITH SENSITIVITY AND SPECIFICITY FOR ROUNDS < 15 (WITHOUT VIRAL LOAD MEASUREMENTS)
+
+######################################################################################
+
+if(1){
+  
+  # load file
+  sensitivity_specificity_art <- as.data.table(read.csv(file.spec.sens.art))
+  
+  # use specificity and sensitivity from round 15 
+  spa <- sensitivity_specificity_art[ROUND == 'R015' ]
+  
+  # select variable of interest
+  spa <- spa[, .(SEX, AGEYRS, SPEC_M, SENS_M)]
+  
+  # merge
+  df <- merge(df, spa, by = c('SEX', 'AGEYRS'))
+  
+  df[, PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE ]
+  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE * SPEC_M + (1 - PROP_ART_COVERAGE_POSTERIOR_SAMPLE) * (1-SENS_M)]
+  set(df, NULL, 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE', NULL)
+  set(df, NULL, 'SPEC_M', NULL)
+  set(df, NULL, 'SENS_M', NULL)
+  setnames(df, 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ', 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE')
+  
+}
+
 ##########################################################################
 
 # FIND SUPPRESSION RATE AMONG HIV POSITIVE PARTICIPANTS FOR ALL ROUND
@@ -136,8 +168,8 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221121.rds')) 
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds')) 
 saveRDS(df, file = file.name)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_vl200_221121.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_vl200_221208.csv'))
 write.csv(ns, file = file.name, row.names = F)

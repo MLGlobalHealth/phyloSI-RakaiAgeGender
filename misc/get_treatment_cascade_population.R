@@ -12,14 +12,17 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_casc
 
 # posterior samples participants
 file.unsuppressedviralload <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221208.rds'))
 
 # posterior samples non-participants
 file.unsuppressedviralload.np <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
-file.selfreportedart.np <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221116.rds'))
+file.selfreportedart.np <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221208.rds'))
 
 # participation rate
-file.participation <- file.path(indir.repository, 'data', 'RCCS_participation_221116.csv')
+file.participation <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
+
+# specificity and sensitivity art reporting
+file.spec.sens.art = file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -88,7 +91,7 @@ df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1, SUPPRESSION_RATE_NONPA
 
 ####################################
 
-# FIND PROPORTION OF ART USE GIVEN INFECTED
+# FIND PROPORTION OF ART USE GIVEN INFECTED FOR ROUND 15
 
 ####################################
 
@@ -106,9 +109,50 @@ set(df, NULL, 'SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE_R016', NULL)
 # add constraint that art coverage must be smaller than prop suppression (can occur if prop suppression > art coverage)
 df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE < PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE, PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE]
 df[PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE < PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE, PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE]
-stopifnot(nrow(df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
 
-# find art coverage in population
+
+######################################################################################
+
+# CORRECT ART COVERERAGE WITH SENSITIVITY AND SPECIFICITY FOR ROUNDS < 15 (WITHOUT VIRAL LOAD MEASUREMENTS)
+
+######################################################################################
+
+if(1){
+  
+  # load file
+  sensitivity_specificity_art <- as.data.table(read.csv(file.spec.sens.art))
+  
+  # use specificity and sensitivity from round 15 
+  spa <- sensitivity_specificity_art[ROUND == 'R015' ]
+  
+  # select variable of interest
+  spa <- spa[, .(SEX, AGEYRS, SPEC_M, SENS_M)]
+  
+  # merge
+  df <- merge(df, spa, by = c('SEX', 'AGEYRS'))
+  
+  df[, PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE ]
+  df[, PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE ]
+  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE * SPEC_M + (1 - PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE) * (1-SENS_M)]
+  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE * SPEC_M + (1 - PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE) * (1-SENS_M)]
+  set(df, NULL, 'PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE', NULL)
+  set(df, NULL, 'PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE', NULL)
+  set(df, NULL, 'SPEC_M', NULL)
+  set(df, NULL, 'SENS_M', NULL)
+  setnames(df, 'PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE_ADJ', 'PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE')
+  setnames(df, 'PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE_ADJ', 'PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE')
+  
+}
+
+######################################################################################
+
+# CORRECT ART COVERERAGE IN POPULATION
+
+######################################################################################
+
+stopifnot(nrow(df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
+stopifnot(nrow(df[PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
+
 df[, PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE * PARTICIPATION + PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE * (1-PARTICIPATION)]
 
 
@@ -162,7 +206,6 @@ df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_
 
 # find art coverage given diagnosed in population
 df[, PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE := min(1, PROP_ART_COVERAGE_POSTERIOR_SAMPLE / PROP_DIAGNOSED_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
-
 stopifnot(nrow(df[PROP_ART_COVERAGE_GIVEN_DIAGNOSED_POSTERIOR_SAMPLE>1]) == 0)
 
 # find suppression given art use in the population (i.e., suppression rate)
@@ -205,9 +248,9 @@ stopifnot(nrow(df[COMM == 'fishing']) == df[, length(unique(AGEYRS))] * df[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221116.rds'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
 saveRDS(df, file = file.name)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221116.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221208.csv'))
 write.csv(ns, file = file.name, row.names = F)
 

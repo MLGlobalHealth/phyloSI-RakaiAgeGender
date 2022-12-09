@@ -12,7 +12,10 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_casc
 
 # posterior samples
 file.unsuppressedviralload <- file.path(indir.repository, 'fit',  paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221208.rds'))
+
+# specificity and sensitivity art reporting
+file.spec.sens.art = file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -90,14 +93,27 @@ stopifnot(nrow(df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE > 1]) == 0)
 
 ######################################################################################
 
-if(0){
-  specificity = 0.9
-  sensitivity = 1 - 0.85
+if(1){
+  
+  # load file
+  sensitivity_specificity_art <- as.data.table(read.csv(file.spec.sens.art))
+  
+  # use specificity and sensitivity from round 15 
+  spa <- sensitivity_specificity_art[ROUND == 'R015' ]
+
+  # select variable of interest
+  spa <- spa[, .(SEX, AGEYRS, SPEC_M, SENS_M)]
+  
+  # merge
+  df <- merge(df, spa, by = c('SEX', 'AGEYRS'))
   
   df[, PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE ]
-  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE * specificity + (1 - PROP_ART_COVERAGE_POSTERIOR_SAMPLE) * sensitivity]
+  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE * SPEC_M + (1 - PROP_ART_COVERAGE_POSTERIOR_SAMPLE) * (1-SENS_M)]
   set(df, NULL, 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE', NULL)
+  set(df, NULL, 'SPEC_M', NULL)
+  set(df, NULL, 'SENS_M', NULL)
   setnames(df, 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ', 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE')
+  
 }
 
 ##########################################################################
@@ -151,8 +167,8 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds')) #_221116 without adjustement for sens/susc
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221208.rds')) #221208b without adjustement for sens/susc
 saveRDS(df, file = file.name)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221201.csv')) #_221116 without adjustement for sens/susc
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221208.csv')) #221208b without adjustement for sens/susc
 write.csv(ns, file = file.name, row.names = F)
