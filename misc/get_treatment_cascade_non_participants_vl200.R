@@ -176,5 +176,5 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds')) 
 saveRDS(df, file = file.name)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_vl200_2211208.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv'))
 write.csv(ns, file = file.name, row.names = F)
