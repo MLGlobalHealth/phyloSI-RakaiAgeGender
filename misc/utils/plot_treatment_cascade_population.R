@@ -15,7 +15,7 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 
 # files
-file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221116.csv'))
+file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221208.csv'))
 
 # treatment cascade population
 ns  <- as.data.table( read.csv(file.cascade.population) )
@@ -65,7 +65,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0)) + 
   guides(color = guide_legend(byrow = T, nrow = 3),
          fill = guide_legend(byrow = T, nrow = 3))
-ggsave(file = file.path(outdir, 'treatment_cascade_inland_population_221108.pdf'), w = 6.5, h = 4.5)  
+ggsave(file = file.path(outdir, 'treatment_cascade_inland_population_221208.pdf'), w = 6.5, h = 4.5)  
 
 # ALL ROUNDS
 tmp <- tab[COMM == 'inland']
@@ -139,7 +139,7 @@ p2 <- ggplot(tmp, aes(x = AGEYRS)) +
 p2 <- ggarrange(p2, labels = c('b'))
 
 p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6, 0.4), widths = c(0.45, 0.55))
-ggsave(p, file = file.path(outdir, 'population_suppression_rate_221118.pdf'), w = 8, h = 8)
+ggsave(p, file = file.path(outdir, 'population_suppression_rate_221208.pdf'), w = 8, h = 8)
 
 
 ####################################
@@ -170,7 +170,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'population_suppression_rate_R18_221201.pdf'), w = 4, h = 3.2)
+ggsave(file = file.path(outdir, 'population_suppression_rate_R18_221208.pdf'), w = 4, h = 3.2)
 
 
 ####################################
@@ -207,5 +207,5 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0)) + 
   guides(color = guide_legend(byrow = T, nrow = 3),
          fill = guide_legend(byrow = T, nrow = 3))
-ggsave(file = file.path(outdir, 'population_suppression_rate_overtime_221201.pdf'), w = 6, h = 5)
+ggsave(file = file.path(outdir, 'population_suppression_rate_overtime_221208.pdf'), w = 6, h = 5)
 

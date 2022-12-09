@@ -10,8 +10,8 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'central'
-stan_model <- 'gp_221115a'
+jobname <- 'newpairscontactpriorb'
+stan_model <- 'gp_221201d'
 
 indir <- "/rds/general/user/mm3218/home/git/phyloflows"
 outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
@@ -60,29 +60,6 @@ samples <- rstan::extract(fit)
 
 # temporary
 source(file.path(indir, 'functions', 'summary_functions.R'))
-if(!exists('use_contact_rates_prior')){
-  use_contact_rates_prior = F
-  file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130.rds'))
-  df_estimated_contact_rates <- as.data.table(readRDS(file.sexual.partnerships.rates))
-}
-if(!exists('treatment_cascade_samples')){
-
-  file.treatment.cascade.prop.participants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221116.rds'))
-  file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221116.rds'))
-  
-  file.treatment.cascade.prop.participants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221121.rds')) 
-  file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221121.rds')) 
-  
-  if(viremic_viral_load_200ml){
-    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
-                                                                file.treatment.cascade.prop.nonparticipants.vl200.samples)
-  }else{
-    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
-                                                                file.treatment.cascade.prop.nonparticipants.samples)
-  }
-}
-file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
-unsuppressed_median_age <-fread(file.unsuppressed_median_age) # median age of unsuppressed
 df_direction <- get.df.direction()
 
 #
@@ -296,6 +273,35 @@ expected_contribution_age_classification_male <- find_summary_output_by_round(sa
                                                                                 add_male_age_classification_nonsymmetric = T,
                                                                                 standardised.vars = c('INDEX_ROUND'))
 plot_contribution_age_classification_male(expected_contribution_age_classification_male, outfile.figures,'Expected_contribution')
+
+#
+# Make table
+
+# contribution aggregated by age group of recipient 
+expected_contribution_sex_age_group_recipient <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                      c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                      transform = 'exp',
+                                      standardised.vars = c('INDEX_ROUND'))
+expected_contribution_age_group_recipient <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                      c('INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                      transform = 'exp',
+                                      standardised.vars = c('INDEX_ROUND'))
+
+# contribution aggregated by  classification of age of male
+expected_contribution_sex_age_classification_male <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                      c('INDEX_DIRECTION', 'INDEX_ROUND'),
+                                      transform = 'exp',
+                                      add_male_age_classification_nonsymmetric = T,
+                                      standardised.vars = c('INDEX_ROUND'))
+expected_contribution_age_classification_male_total <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                      c('INDEX_ROUND'),
+                                      transform = 'exp',
+                                      add_male_age_classification_nonsymmetric = T,
+                                      standardised.vars = c('INDEX_ROUND'))
+
+make_transmission_flows_table(expected_contribution_age_classification_male, expected_contribution_sex_age_group_recipient, 
+                                          expected_contribution_sex_age_classification_male, expected_contribution_age_group_recipient, 
+                                          expected_contribution_age_classification_male_total, expected_contribution_sex_source, outdir.table)
 
 #
 # Transmission flows (absolute)

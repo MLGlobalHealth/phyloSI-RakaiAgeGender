@@ -1283,20 +1283,11 @@ read_treatment_cascade <- function(file.treatment.cascade.prop.participants,
                                          file.treatment.cascade.prop.nonparticipants){
   
   # PROP_SUPPRESSED_M: Proportion of suppressed among infected
-  # PROP_DIAGNOSED_M: Proportion of diagnosed given infected
-  # PROP_ART_COVERAGE_M: Proportion of art used given infected
-  # SUPPRESSION_RATE_M: Prportion of suppressed given art use
   
   # participants
   treatment_cascade_participants <- fread(file.treatment.cascade.prop.participants)
   treatment_cascade_participants <- treatment_cascade_participants[, .(AGEYRS, SEX, COMM, ROUND, 
-                                                                       PROP_DIAGNOSED_M, 
-                                                                       PROP_ART_COVERAGE_M,
-                                                                       PROP_SUPPRESSED_M, PROP_SUPPRESSED_CL, PROP_SUPPRESSED_CU,
-                                                                       SUPPRESSION_RATE_M)]
-  setnames(treatment_cascade_participants, 'PROP_DIAGNOSED_M', 'PROP_DIAGNOSED_PARTICIPANTS_M')
-  setnames(treatment_cascade_participants, 'PROP_ART_COVERAGE_M', 'PROP_ART_COVERAGE_PARTICIPANTS_M')
-  setnames(treatment_cascade_participants, 'SUPPRESSION_RATE_M', 'SUPPRESSION_RATE_PARTICIPANTS_M')
+                                                                       PROP_SUPPRESSED_M, PROP_SUPPRESSED_CL, PROP_SUPPRESSED_CU)]
   setnames(treatment_cascade_participants, 'PROP_SUPPRESSED_M', 'PROP_SUPPRESSED_PARTICIPANTS_M')
   setnames(treatment_cascade_participants, 'PROP_SUPPRESSED_CL', 'PROP_SUPPRESSED_PARTICIPANTS_CL')
   setnames(treatment_cascade_participants, 'PROP_SUPPRESSED_CU', 'PROP_SUPPRESSED_PARTICIPANTS_CU')
@@ -1306,20 +1297,14 @@ read_treatment_cascade <- function(file.treatment.cascade.prop.participants,
   treatment_cascade_participants <- select(treatment_cascade_participants, -c('PROP_SUPPRESSED_PARTICIPANTS_M', 
                                                                               'PROP_SUPPRESSED_PARTICIPANTS_CU', 
                                                                               'PROP_SUPPRESSED_PARTICIPANTS_CL'))
-  stopifnot(treatment_cascade_participants[, all(PROP_DIAGNOSED_PARTICIPANTS_M) == 1]) # all participants are diagnosed
-  
+
   # non-participants
   treatment_cascade_nonparticipants <- fread(file.treatment.cascade.prop.nonparticipants)
   treatment_cascade_nonparticipants <- treatment_cascade_nonparticipants[, .(AGEYRS, SEX, COMM, ROUND, 
-                                                                             PROP_DIAGNOSED_M, PROP_ART_COVERAGE_M,
-                                                                             PROP_SUPPRESSED_M, PROP_SUPPRESSED_CL, PROP_SUPPRESSED_CU,
-                                                                             SUPPRESSION_RATE_M)]
-  setnames(treatment_cascade_nonparticipants, 'PROP_DIAGNOSED_M', 'PROP_DIAGNOSED_NONPARTICIPANTS_M')
-  setnames(treatment_cascade_nonparticipants, 'SUPPRESSION_RATE_M', 'SUPPRESSION_RATE_NONPARTICIPANTS_M')
+                                                                             PROP_SUPPRESSED_M, PROP_SUPPRESSED_CL, PROP_SUPPRESSED_CU)]
   setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_M', 'PROP_SUPPRESSED_NONPARTICIPANTS_M')
   setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_CL', 'PROP_SUPPRESSED_NONPARTICIPANTS_CL')
   setnames(treatment_cascade_nonparticipants, 'PROP_SUPPRESSED_CU', 'PROP_SUPPRESSED_NONPARTICIPANTS_CU')
-  setnames(treatment_cascade_nonparticipants, 'PROP_ART_COVERAGE_M', 'PROP_ART_COVERAGE_NONPARTICIPANTS_M')
   treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_M := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_M]
   treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_CL := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_CU]
   treatment_cascade_nonparticipants[, PROP_UNSUPPRESSED_NONPARTICIPANTS_CU := 1 - PROP_SUPPRESSED_NONPARTICIPANTS_CL]

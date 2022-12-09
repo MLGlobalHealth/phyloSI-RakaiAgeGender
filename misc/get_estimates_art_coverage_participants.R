@@ -57,7 +57,7 @@ if(1){
     scale_x_continuous(expand = c(0,0))+ 
     scale_fill_manual(values = c('#90B77D', '#425F57'), 
                       labels = c('Reported ART use', 'Did not report ART use')) 
-  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_221101.pdf')), w=7, h=9)
+  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_221208.pdf')), w=7, h=9)
   
 }
 
@@ -132,7 +132,7 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_221116.rds')
+  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_221208.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
 }
@@ -162,6 +162,8 @@ for(i in seq_along(rounds)){
   # load samples
   if(round == '15'){ # change after add of 15s
     filename <- paste0('art_gp_stanfit_round',round,'_221116.rds')
+  }else if(as.numeric(round) >= 16){# change after joseph update
+    filename <- paste0('art_gp_stanfit_round',round,'_221208.rds')
   }else{
     filename <- paste0('art_gp_stanfit_round',round,'_221101.rds')
   }
@@ -292,8 +294,8 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 #########
 
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221116.rds'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221208.rds'))
 saveRDS(nsinf.samples, file = file.name)
 
-file.name <- file.path(outdir, paste0('RCCS_art_model_fit_221116.RDS'))
+file.name <- file.path(outdir, paste0('RCCS_art_model_fit_221208.RDS'))
 saveRDS(stats, file = file.name)
