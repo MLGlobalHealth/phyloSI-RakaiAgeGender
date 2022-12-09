@@ -136,7 +136,7 @@ set(rprev, NULL, 'AGEYRS2', NULL)
 
 # find sensitivity and specificity of self-reported art use
 sensitivity_specificity_art <- find_sensitivity_specificity_art(rprev)
-table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev)
+table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev, break.lines=FALSE)
 
 
 # set art to true if viremic viral load
