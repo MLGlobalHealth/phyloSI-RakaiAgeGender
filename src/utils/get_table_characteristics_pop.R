@@ -259,11 +259,8 @@ setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
 dall[, HIV_AND_VL := ifelse( HIV_STATUS == 1 & !is.na(VL_COPIES), 1, 0)]
 dall <- dall[! SEX=='']
 
-# keep within census eligible age
-DT <- subset(dall, AGEYRS > 14 & AGEYRS < 49)
-
 # remove HIV+ individuals with missing VLs  
-DT <- subset(DT, HIV_STATUS==0 | HIV_AND_VL==1)
+DT <- subset(dall, HIV_STATUS==0 | HIV_AND_VL==1)
 
 # set ARVMED to 0 for HIV-
 set(DT, DT[, which(ARVMED==1 & HIV_STATUS==0)], 'ARVMED', 0) 
@@ -286,6 +283,12 @@ set(DT, NULL, 'HIV_AND_VLD', DT[, as.integer(VLD==1 & HIV_AND_VL==1)])
 # reset undetectable to VLC 0
 set(DT, DT[, which(HIV_AND_VL==1 & VLU==1)], 'VLC', 0)
 setkey(DT, ROUND, FC, SEX, AGEYRS)
+
+# keep within census eligible age
+DT <- subset(DT, AGEYRS > 14 & AGEYRS < 50)
+
+# keep infected
+DT <- DT[HIV_STATUS ==1]
 
 # use age from quest
 DT[, round := paste0('R0', ROUND)]
@@ -322,7 +325,6 @@ uns <- rbind(uns, vla[SEX == 'M' & AGEYRS < 25, list(UNSUPPRESSED = sum(VLNS_N),
 uns <- rbind(uns, vla[SEX == 'M' & AGEYRS > 24 & AGEYRS < 35, list(UNSUPPRESSED = sum(VLNS_N), INFECTED_TESTED = sum(HIV_N),  TYPE = 'Male, 25-34'), by = c('COMM', 'ROUND')])
 uns <- rbind(uns, vla[SEX == 'M' & AGEYRS > 34, list(UNSUPPRESSED = sum(VLNS_N), INFECTED_TESTED = sum(HIV_N),  TYPE = 'Male, 35-49'), by = c('COMM', 'ROUND')])
 uns[, ROUND := paste0('R0', ROUND)]
-
 
 
 ########################################################################
