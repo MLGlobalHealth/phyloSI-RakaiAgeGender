@@ -58,6 +58,7 @@ only.transmission.after.start.observational.period <- T
 only.transmission.before.stop.observational.period <- T
 use_number_susceptible_offset <- T
 only.one.community <- 'inland'
+use_contact_rates_prior <- T
 
 # indicators -- sensitivity analyses
 nonparticipants.treated.like.participants <- F
@@ -70,7 +71,6 @@ pairs_replicates.seed <- NULL
 viremic_viral_load_200ml <- F
 use_30com_inc_estimates <- F
 use_30com_pairs <- F
-use_contact_rates_prior <- F
 
 # obtained in script/ 
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")#central analysis
