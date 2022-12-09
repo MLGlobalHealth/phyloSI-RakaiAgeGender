@@ -12,7 +12,10 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_casc
 
 # posterior samples
 file.unsuppressedviralload <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221116.rds'))
+file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221208.rds'))
+
+# specificity and sensitivity art reporting
+file.spec.sens.art = file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -84,34 +87,53 @@ stopifnot(nrow(df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE > 1]) == 0)
 df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 
 
-######################################################################################
+##########################################################################
 
-# CORRECT ART COVERERAGE WITH SENSITIVITY AND SPECIFICITY FOR ROUNDS < 15 (WITHOUT VIRAL LOAD MEASUREMENTS)
+# FIND PROP SUPPRESSED AMONG HIV POSITIVE PARTICIPANTS FOR ROUNDS WITHOUT VIRAL LOAD MEASUREMENTS
 
-######################################################################################
+##########################################################################
 
-if(0){
-  specificity = 0.9
-  sensitivity = 1 - 0.85
+if(1){
   
-  df[, PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE ]
-  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ := PROP_ART_COVERAGE_POSTERIOR_SAMPLE * specificity + (1 - PROP_ART_COVERAGE_POSTERIOR_SAMPLE) * sensitivity]
-  set(df, NULL, 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE', NULL)
-  setnames(df, 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE_ADJ', 'PROP_ART_COVERAGE_POSTERIOR_SAMPLE')
+  #
+  #  USE SENSITIVITY AND SPECIFICITY IN ROUND 15
+  #
+  
+  # load file
+  sensitivity_specificity_art <- as.data.table(read.csv(file.spec.sens.art))
+  
+  # use specificity and sensitivity from round 15 
+  spa <- sensitivity_specificity_art[ROUND == 'R015' ]
+  
+  # select variable of interest
+  spa <- spa[, .(SEX, AGEYRS, SPEC_M, SENS_M)]
+  
+  # merge
+  df <- merge(df, spa, by = c('SEX', 'AGEYRS'))
+  
+  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_SUPPRESSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE * SPEC_M + (1 - PROP_ART_COVERAGE_POSTERIOR_SAMPLE) * (1-SENS_M)]
+  set(df, NULL, 'SPEC_M', NULL)
+  set(df, NULL, 'SENS_M', NULL)
+
+}else{
+  
+  #
+  #  USE PROP SUPPRESSION GIVEN ART UPTAKE IN ROUND 16
+  #
+  
+  # for round <15 find % suppressed by using the same suppression rate as round 16
+  df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
+  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), SUPPRESSION_RATE_POSTERIOR_SAMPLE := SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
+  df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_SUPPRESSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE * SUPPRESSION_RATE_POSTERIOR_SAMPLE, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
+  set(df, NULL, 'SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016', NULL)
   
 }
 
-####################################
+##########################################################################
 
-# FIND SUPPRESSION RATE AMONG NEWLY REGISTERED HIV-POSITIVE FOR ALL ROUND
+# FIND PROP UNSUPPRESSED AND SUPPRESSION RATE
 
-####################################
-
-# for round <15 find % suppressed by using the same suppression rate as round 16
-df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
-df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), SUPPRESSION_RATE_POSTERIOR_SAMPLE := SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
-df[ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), PROP_SUPPRESSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE * SUPPRESSION_RATE_POSTERIOR_SAMPLE, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
-set(df, NULL, 'SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016', NULL)
+##########################################################################
 
 # find proportion suppressed among HIV positive participants
 df[, PROP_UNSUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_SUPPRESSED_POSTERIOR_SAMPLE]
@@ -119,7 +141,7 @@ df[, PROP_UNSUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_SUPPRESSED_POSTERIOR_SAMPLE]
 # find prop suppressed given diagnosed among art participants
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 
-stopifnot(nrow(df[SUPPRESSION_RATE_POSTERIOR_SAMPLE > 1]) == 0)
+stopifnot(nrow(df[!ROUND %in% c('R010', 'R011', 'R012', 'R013', 'R014', 'R015S'), SUPPRESSION_RATE_POSTERIOR_SAMPLE > 1]) == 0)
 
 
 ####################################
@@ -152,9 +174,9 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221116.rds')) # 221116 withotu adjusting for sens/suc
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds')) # 221208b withotu adjusting for sens/suc
 saveRDS(df, file = file.name)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221201.csv')) # 221116 withotu adjusting for sens/suc
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221208.csv')) # 221208b withotu adjusting for sens/suc
 write.csv(ns, file = file.name, row.names = F)
 

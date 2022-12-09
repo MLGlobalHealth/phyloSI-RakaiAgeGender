@@ -402,6 +402,9 @@ find_summary_output_by_round <- function(samples, output, vars,
   
   if(save_output){
     file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')))
+    if(add_male_age_classification_nonsymmetric == T){
+      file = paste0(file, '_male_age_classification')
+    }
     if(!is.null(standardised.vars)){
       file = paste0(file, 'standardisedby_', tolower(paste0(gsub('INDEX_', '', standardised.vars), collapse = '_')))
     }

@@ -645,9 +645,9 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
                                                    tmp3[!grepl('unsuppressed', type_direction) & LABEL_DIRECTION== 'Male -> Female', unique(type_direction)]))]
   
   p <- ggplot(tmp3, aes(x = type, group = type_direction)) +
-    geom_bar(aes(y = M, fill = type_direction), stat = 'identity', position ='stack') +
+    geom_bar(aes(y = M, fill = type_direction), stat = 'identity', position ='stack', width = 0.9) +
     geom_errorbar(data=tmp3[LABEL_DIRECTION== 'Male -> Female'],aes(ymin = CL, ymax = CU), col = 'black', width = 0.2, size = 0.5)  +
-    labs(x = '', y = 'Percent', col = '', shape = '', linetype = '') + 
+    labs(x = '', y = 'Gender', col = '', shape = '', linetype = '') + 
     theme_bw() +
     scale_fill_manual(values = c('grey70', 'lightpink', 'grey50', 'lightblue3')) + 
     theme(strip.background = element_rect(colour="white", fill="white"),
@@ -666,10 +666,11 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
           legend.margin = margin(),
           legend.text = element_text(size = rel(0.7)),
           legend.title = element_blank())  + 
-    scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1))  +
+    scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1))  + 
+    scale_x_discrete(expand = c(0,0)) +
     coord_flip()
   if(is.null(lab)) lab =  'Contribution'
-  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex_barplot.png'), w = 5, h = 1.7)
+  ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex_barplot.png'), w = 5, h = 1.1)
   
 }
 
@@ -811,7 +812,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   Rounds.all <- list('inland' = paste0('R0', c(18)), 'fishing' = paste0('R0', c(18)))
   
   # y label
-  type_cont <- 'Contribution of men to transmission'
+  type_cont <- 'Contribution to transmission'
   
   # contribution output
   cont <- copy(contribution_age_source)
@@ -823,7 +824,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   # find unsuppressed share by sex and age
   uns <- copy(unsuppressed_share_sex_age)
   setnames(uns, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
-  uns[, type := 'Contribution of men to infected\nindividuals with unsuppressed virus']
+  uns[, type := 'Contribution to infected\nindividuals with unsuppressed virus']
 
   # find median age of unsuppressed 
   median_uns <- copy(df_unsuppressed_median_age[quantile == 'C50'])
@@ -850,7 +851,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       scale_fill_manual(values = c('Male sources'='lightblue3','Female sources'='lightpink1')) + 
       new_scale_fill() +
       new_scale_color() +
-      labs(x = 'Age of transmitting partner', y = 'Percent') + 
+      labs(x = 'Age at transmission', y = 'Percent') + 
       geom_errorbarh(data = median_uns.p, aes(xmin = CL, xmax = CU, y = level_y+0.0006), height = 0, size = 0.7) + 
       geom_errorbarh(data = median_age.p, aes(xmin = CL, xmax = CU, y = level_y, col = LABEL_SOURCE, fill = LABEL_SOURCE), height = 0, size = 0.7) + 
       geom_point(data = median_age.p, aes(x = M, y = level_y, col = LABEL_SOURCE, fill = LABEL_SOURCE), size = 2,  shape = 4, stroke = 0.7) + 
@@ -961,7 +962,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     pp <- ggarrange(p, legend.grob = get_legend(p_legend2), legend = 'bottom') 
     
     # save
-    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.8, h = 3.1)
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.8, h = 3.6)
     
   }
 }
@@ -989,7 +990,7 @@ plot_contribution_age_source <- function(contribution_age_source, median_age_sou
       geom_ribbon(aes(x = AGE_TRANSMISSION.SOURCE, ymin = CL, ymax = CU, fill = LABEL_TRANSMITTING_PARTNER), alpha = 0.5) +
       scale_color_manual(values = c('Male transmitting partner'='lightblue3','Female transmitting partner'='lightpink1')) + 
       scale_fill_manual(values = c('Male transmitting partner'='lightblue3','Female transmitting partner'='lightpink1')) + 
-      labs(x = 'Age of transmitting partner', y = '\nContribution of transmitting partner to HIV incidence', col = '', fill = '', shape = '') + 
+      labs(x = 'Age at transmission', y = '\nContribution of transmitting partner to HIV incidence', col = '', fill = '', shape = '') + 
       theme_bw() +
       facet_grid(LABEL_ROUND~.) +
       theme(strip.background = element_rect(colour="white", fill="white"),
@@ -1689,7 +1690,7 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
                          breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
                            max(range_age_non_extended))) + 
       guides(color = guide_legend(order = 1))
-    ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 6, h = 4.7)
+    ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 6, h = 4.4)
     
   }
 }

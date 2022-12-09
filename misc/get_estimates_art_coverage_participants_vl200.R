@@ -57,7 +57,7 @@ if(1){
     scale_x_continuous(expand = c(0,0))+ 
     scale_fill_manual(values = c('#90B77D', '#425F57'), 
                       labels = c('Reported ART use', 'Did not report ART use')) 
-  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_221121_vl200.pdf')), w=7, h=9)
+  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_221208_vl200.pdf')), w=7, h=9)
   
 }
 
@@ -132,7 +132,7 @@ for(round in c("R015", 'R016', 'R017', 'R018')){
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_vl200_221121.rds')
+  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_vl200_221208.rds')
   saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
 }
@@ -160,9 +160,11 @@ for(i in seq_along(rounds)){
   x_predict <- seq(rart[, min(AGE_LABEL)], rart[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  if(as.numeric(round) >= '15'){ # change after 15
+  if(as.numeric(round) == 15){ # change after 15 using 200ml
     filename <- paste0('art_gp_stanfit_round',round,'_vl200_221121.rds')
-  }else{
+  }else if(as.numeric(round) >= 16){ # change after round 16 using 200ml and joseph update art variable
+    filename <- paste0('art_gp_stanfit_round',round,'_vl200_221208.rds')
+  }else{ # use same as 1000ml for rounds 10-14
     filename <- paste0('art_gp_stanfit_round',round,'_221101.rds')
   }
   fit <- readRDS(file.path(outdir,filename))
@@ -292,8 +294,8 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 #########
 
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_vl200_221121.rds'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_vl200_221208.rds'))
 saveRDS(nsinf.samples, file = file.name)
 
-file.name <- file.path(outdir, paste0('RCCS_art_model_fit_vl200_221121.RDS'))
+file.name <- file.path(outdir, paste0('RCCS_art_model_fit_vl200_221208.RDS'))
 saveRDS(stats, file = file.name)

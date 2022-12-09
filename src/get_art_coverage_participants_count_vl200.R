@@ -10,6 +10,8 @@ indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.repository <- '~/git/phyloflows'
 
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
+
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
@@ -21,7 +23,8 @@ community.keys <- as.data.table(read.csv(file.community.keys))
 quest <- as.data.table(read.csv(file.path.quest))
 hiv <- as.data.table(read.csv(file.path.hiv))
 
-
+# load helpers
+source(file.path(indir.repository, 'src/functions/sensitivity_specificity_art.R'))
 
 #################################
 
@@ -75,7 +78,7 @@ VIREMIC_VIRAL_LOAD = 200 # WHO standards
 
 # Load data: exclude round 20 as incomplete
 dall <- fread(path.tests)
-dall <- dall[ROUND %in% c(15:18, 15.5)]
+dall <- dall[ROUND %in% c(15:18)]
 
 # rename variables according to Oli's old script + remove 1 unknown sex
 setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
@@ -123,17 +126,9 @@ rprev <- merge(rprev, tmp, by.x = c('STUDY_ID', 'ROUND', 'SEX', 'COMM'), by.y = 
 rprev[!is.na(AGEYRS2), AGEYRS := AGEYRS2]
 set(rprev, NULL, 'AGEYRS2', NULL)
 
-# find percentage of participant who did not report art but had not viremic viral load
-tmp <- rprev[COMM == 'inland' & ART == F & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
-                                                              N = length(STUDY_ID)), by = 'ROUND']
-tmp[, PROP := round(X / N * 100, 2)]
-tmp
-
-# find percentage of participant who report art and had not viremic viral load
-tmp <- rprev[COMM == 'inland' & ART == T & !is.na(VLNS), list(X = length(STUDY_ID[VLNS == 0]), 
-                                                              N = length(STUDY_ID)), by = 'ROUND']
-tmp[, PROP := round(X / N * 100, 2)]
-tmp
+# find sensitivity and specificity of self-reported art use
+sensitivity_specificity_art <- find_sensitivity_specificity_art(rprev, quest)
+table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev, quest)
 
 # set art to true if viremic viral load
 rprev[VLNS == 0, ART := T]
@@ -173,4 +168,18 @@ rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('
 #################################
 
 write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage_vl200.csv'), row.names = F)
+
+
+#################################
+
+# SAVE SENSITIVITY /SPECIFICITY ART  #
+
+#################################
+
+file = file.path(indir.repository, 'data', 'sensitivity_specificity_art_vl200.csv')
+write.csv(sensitivity_specificity_art, file = file, row.names = F)
+
+file = file.path(outdir, 'table_sensitivity_specificity_art_vl200.rds')
+saveRDS(table_sensitivity_specificity_art , file)
+
 

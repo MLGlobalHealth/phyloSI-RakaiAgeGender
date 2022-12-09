@@ -13,7 +13,7 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_
 
 # files
 file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
-infile.unsuppressed <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221116.csv'))
+infile.unsuppressed <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221208.csv'))
 infile.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_age_group_221116.csv'))
 
 load(file.path.round.timeline)
@@ -94,8 +94,8 @@ for(i in seq_along(communities)){
     guides(fill = guide_legend(override.aes = list(shape = 21), order = 1), 
            linetype = guide_legend(order = 2), 
            shape = guide_legend(order = 2, override.aes = list(fill = 'black')))
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221116.png')), w = 8,h = 3.5)
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221116.pdf')), w = 8,h = 3.5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221208.png')), w = 8,h = 3.5)
+  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221208.pdf')), w = 8,h = 3.5)
 }
 
 # find statistics
