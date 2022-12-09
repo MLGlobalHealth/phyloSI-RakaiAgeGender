@@ -1,8 +1,15 @@
 require(xtable)
 
-get.dtable <- function(DT)
+get.dtable <- function(DT, quest)
 {
     tmp <- DT[COMM=='inland' & ! is.na(ART) & ! is.na(VLNS)] 
+    
+    # use age from quest
+    set(tmp, NULL, 'AGEYRS', NULL)
+    tmp <- merge(tmp, quest, by.x = c('ROUND', 'STUDY_ID'), by.y = c('round', 'study_id'))
+    setnames(tmp, 'ageyrs', 'AGEYRS')
+    
+    # find age group
     tmp[, AGE_GROUP := '35-49']
     tmp[AGEYRS < 35, AGE_GROUP := '25-34']
     tmp[AGEYRS < 25,AGE_GROUP := '15-24' ]
@@ -21,92 +28,11 @@ get.dtable <- function(DT)
     dtable
 }
 
-find_sensitivity_specificity_art <- function(rprev)
+find_sensitivity_specificity_art <- function(rprev, quest)
 { 
-    if(0) # all of this is in the table
-    {
-        # find percentage of participant who did not report art but had not viremic viral load
-        tmp <- rprev[COMM == 'inland' & ART == F & !is.na(VLNS), 
-                     list(X = length(STUDY_ID[VLNS == 0]), 
-                          N = length(STUDY_ID)), by = 'ROUND']
-        tmp[, PROP := round(X / N * 100, 2)]
-        tmp
 
-        # find percentage of participant who report art and had not viremic viral load
-        tmp <- rprev[COMM == 'inland' & ART == T & !is.na(VLNS),
-                     list(X = length(STUDY_ID[VLNS == 0]), 
-                          N = length(STUDY_ID)), by = 'ROUND']
 
-        tmp[, PROP := round(X / N * 100, 2)]
-        tmp
-
-        if(0)
-        { # plot
-
-            df <- copy(rprev)
-            df[, AGE_GROUP := '35-49']
-            df[AGEYRS < 35, AGE_GROUP := '25-34']
-            df[AGEYRS < 25,AGE_GROUP := '15-24' ]
-
-            # find percentage of participant who did not report art but had not viremic viral load
-            tmp <- df[COMM == 'inland' & ART == F & !is.na(VLNS),
-                      list(X = length(STUDY_ID[VLNS == 0]), 
-                           N = length(STUDY_ID)), by = c('ROUND', 'AGE_GROUP', 'SEX')]
-            tmp[, PROP := X / N ]
-            tmp[, CL := binom::binom.confint(X, N, methods = 'agresti-coull')$lower, by = c('ROUND', 'AGE_GROUP', 'SEX')]
-            tmp[, CU := binom::binom.confint(X, N, methods = 'agresti-coull')$upper, by = c('ROUND', 'AGE_GROUP', 'SEX')]
-            tmp1 <- df[COMM == 'inland' & ART == F & !is.na(VLNS),
-                       list(X = length(STUDY_ID[VLNS == 0]), 
-                            N = length(STUDY_ID)), by = 'ROUND']
-
-            tmp1[, PROP := X / N ]
-            tmp1[, CL := binom::binom.confint(X, N, methods = 'agresti-coull')$lower, by = c('ROUND')]
-            tmp1[, CU := binom::binom.confint(X, N, methods = 'agresti-coull')$upper, by = c('ROUND')]
-
-            ggplot(tmp, aes(x = SEX, fill = AGE_GROUP)) + 
-                geom_hline(data = tmp1, aes(yintercept= PROP), col = 'grey30') +
-                geom_hline(data = tmp1, aes(yintercept= CL), linetype = 'dashed', col = 'grey30') +
-                geom_hline(data = tmp1, aes(yintercept= CU), linetype = 'dashed', col = 'grey30') +
-                geom_bar(aes(y =PROP),stat = 'identity', position = position_dodge()) + 
-                geom_errorbar(aes(ymin = CL, ymax = CU), position = position_dodge(width = 0.9), width = 0.2) + 
-                theme_bw() + 
-                facet_grid(ROUND~.) + 
-                labs(x = 'sex', y = 'p(suppressed == T | art == no)') + 
-                scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0.01)))
-
-            # find percentage of participant who report art and had not viremic viral load
-            tmp1 <- df[COMM == 'inland' & ART == T & !is.na(VLNS),
-                       list(X = length(STUDY_ID[VLNS == 0]), 
-                            N = length(STUDY_ID)),
-                        by = c('ROUND', 'AGE_GROUP', 'SEX')]
-            tmp1[, PROP := X / N ]
-            tmp1[, CL := binom::binom.confint(X, N, methods = 'agresti-coull')$lower,
-                 by = c('ROUND', 'AGE_GROUP', 'SEX')]
-            tmp1[, CU := binom::binom.confint(X, N, methods = 'agresti-coull')$upper,
-                 by = c('ROUND', 'AGE_GROUP', 'SEX')]
-            tmp <- df[COMM == 'inland' & ART == T & !is.na(VLNS),
-                      list(X = length(STUDY_ID[VLNS == 0]), 
-                           N = length(STUDY_ID)), by = 'ROUND']
-            tmp[, PROP := X / N ]
-            tmp[, CL := binom::binom.confint(X, N, methods = 'agresti-coull')$lower,
-                by = c('ROUND')]
-            tmp[, CU := binom::binom.confint(X, N, methods = 'agresti-coull')$upper,
-                by = c('ROUND')]
-
-            ggplot(tmp1, aes(x = SEX, fill = AGE_GROUP)) + 
-                geom_hline(data = tmp, aes(yintercept= PROP), col = 'grey30') +
-                geom_hline(data = tmp, aes(yintercept= CL), linetype = 'dashed', col = 'grey30') +
-                geom_hline(data = tmp, aes(yintercept= CU), linetype = 'dashed', col = 'grey30') +
-                geom_bar(aes(y =PROP),stat = 'identity', position = position_dodge()) + 
-                geom_errorbar(aes(ymin = CL, ymax = CU), position = position_dodge(width = 0.9), width = 0.2) + 
-                theme_bw() + 
-                facet_grid(ROUND~.) + 
-                labs(x = 'age group', y = 'p(suppressed == T | art == yes)') + 
-                scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0.01)))
-        }
-    }
-
-    tmp <- get.dtable(rprev)
+    tmp <- get.dtable(rprev, quest)
     .agr.coull <- function(yes,no)
     {
         agr.coull <- binom::binom.confint(yes, yes+no, methods = 'agresti-coull')
@@ -128,12 +54,62 @@ find_sensitivity_specificity_art <- function(rprev)
         )
     }]) -> tmp
     tmp
+    
+    #
+    # extrapolate linearly
+    
+    # age to predict
+    AGEYRSPREDICT = 15:49
+    
+    # take midpoont of age group
+    tmp[, AGEYRS := mean(c(as.numeric(gsub('(.+)-.*', '\\1', AGE_GROUP)), as.numeric(gsub('.*-(.+)', '\\1', AGE_GROUP)))), by = 'AGE_GROUP']
+    
+    # plug value of round 16 for missing value in round 15
+    tmp[ROUND == 'R015' & SEX == "M" & AGE_GROUP == '15-24', SPEC_M := tmp[ROUND == 'R016' & SEX == "M" & AGE_GROUP == '15-24', SPEC_M]]
+    
+    # take linear interpolation
+    tmp1 <- tmp[, {
+        
+        linearapprox.SENS_M <- approx(AGEYRS, SENS_M, xout=AGEYRSPREDICT)$y
+        linearapprox.SENS_M[1:(which.min(is.na(linearapprox.SENS_M)) - 1)] = SENS_M[1]
+        linearapprox.SENS_M[which.max(is.na(linearapprox.SENS_M)):length(linearapprox.SENS_M)] = SENS_M[length(SENS_M)]
+        
+        linearapprox.SPEC_M  <- approx(AGEYRS, SPEC_M , xout=AGEYRSPREDICT)$y
+        linearapprox.SPEC_M [1:(which.min(is.na(linearapprox.SPEC_M )) - 1)] = SPEC_M [1]
+        linearapprox.SPEC_M [which.max(is.na(linearapprox.SPEC_M )):length(linearapprox.SPEC_M )] = SPEC_M [length(SPEC_M )]
+        
+        list(AGEYRS = AGEYRSPREDICT, SENS_M = linearapprox.SENS_M, SPEC_M = linearapprox.SPEC_M)
+    }, by = c('ROUND', 'SEX')]
+    
+    if(0){ # plot
+
+        ggplot(tmp) + 
+            geom_point(aes(x = AGEYRS, y =1-SENS_M), alpha = 0.4) + 
+            geom_line(data = tmp1, aes(x = AGEYRS, y = 1-SENS_M, col= 'linear')) + 
+            theme_bw() + 
+            facet_grid(ROUND~SEX) + 
+            labs(x = 'age group', y = 'p(suppressed == T | art == no)') + 
+            scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0.01)))
+        ggsave('~/Downloads/sens_linear_new.png', w = 6, h = 8)
+        
+        ggplot(tmp) + 
+            geom_point(aes(x = AGEYRS, y =SPEC_M), alpha = 0.4) + 
+            geom_line(data = tmp1, aes(x = AGEYRS, y = SPEC_M, col= 'linear')) + 
+            theme_bw() + 
+            facet_grid(ROUND~SEX) + 
+            labs(x = 'age group', y = 'p(suppressed == T | art == yes)') + 
+            scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0.01)))
+        ggsave('~/Downloads/spe_linear_new.png', w = 6, h = 8)
+        
+    }
+    
+    return(tmp1)
 }
 
-make_table_sensitivity_specificity_art <- function(rprev)
+make_table_sensitivity_specificity_art <- function(rprev, quest)
 {
 
-    dtable <- get.dtable(rprev)
+    dtable <- get.dtable(rprev, quest)
 
     cols <- names(dtable)[names(dtable) %like% 'ARV']
     tmp <- dtable[, c(AGE_GROUP='ALL', lapply(.SD, sum)) 

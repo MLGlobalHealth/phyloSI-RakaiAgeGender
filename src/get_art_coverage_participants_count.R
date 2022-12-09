@@ -86,7 +86,7 @@ VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 
 # Load data: exclude round 20 as incomplete
 dall <- fread(path.tests)
-dall <- dall[ROUND %in% c(15:18, 15.5)]
+dall <- dall[ROUND %in% c(15:18)]
 
 # rename variables according to Oli's old script + remove 1 unknown sex
 setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
@@ -136,8 +136,7 @@ set(rprev, NULL, 'AGEYRS2', NULL)
 
 # find sensitivity and specificity of self-reported art use
 sensitivity_specificity_art <- find_sensitivity_specificity_art(rprev)
-table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev)
-
+table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev, quest)
 
 # set art to true if viremic viral load
 rprev[VLNS == 0, ART := T]
@@ -184,7 +183,7 @@ write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participa
 
 #################################
 
-file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
+file = file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
 write.csv(sensitivity_specificity_art, file = file, row.names = F)
 
 file = file.path(outdir, 'table_sensitivity_specificity_art.rds')
