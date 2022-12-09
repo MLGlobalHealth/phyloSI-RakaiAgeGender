@@ -7,7 +7,7 @@ library(dplyr)
 indir.repository <- '~/git/phyloflows'
 
 # files
-file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221116.rds'))
+file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
 file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
 file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 
@@ -78,7 +78,7 @@ sinf.age = as.data.table(reshape2::dcast(sinf.age, ... ~ q_label, value.var = "q
 setnames(sinf.age, qlab, paste0('PREVALENCE_AGE_GROUP_', qlab))
 
 # plot
-ggplot(sing.age[ROUND == 18], aes(x = AGE_GROUP, group = SEX)) + 
+ggplot(sing.age, aes(x = AGE_GROUP, group = SEX)) + 
   geom_errorbar(aes(ymin = PROP_UNSUPPRESSED_AGE_GROUP_CL, ymax = PROP_UNSUPPRESSED_AGE_GROUP_CU), alpha = 0.5, width = 0.3, position=position_dodge(width = 0.3)) + 
   geom_point(aes(y = PROP_UNSUPPRESSED_AGE_GROUP_M, col = SEX), position=position_dodge(width = 0.3)) + 
   facet_grid(ROUND~COMM) + 
@@ -96,7 +96,7 @@ ggplot(sinf.age, aes(x = AGE_GROUP, group = SEX)) +
 
 #########################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221116.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221208.csv'))
 write.csv(sing.age, file = file.name, row.names = F)
 
 file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_age_group_221116.csv'))

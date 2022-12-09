@@ -7,7 +7,7 @@ library(dplyr)
 indir.repository <- '~/git/phyloflows'
 
 # files
-file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221116.rds'))
+file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
 file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
 file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 
@@ -68,5 +68,5 @@ sing = as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
 
 #########################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_median_age_221206.csv'))
+file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_median_age_221208.csv'))
 write.csv(sing, file = file.name, row.names = F)
