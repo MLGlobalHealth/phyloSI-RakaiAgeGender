@@ -1,4 +1,5 @@
 require(xtable)
+require(stringr)
 
 get.dtable <- function(DT, quest)
 {
@@ -28,9 +29,9 @@ get.dtable <- function(DT, quest)
     dtable
 }
 
+
 find_sensitivity_specificity_art <- function(rprev, quest)
 { 
-
 
     tmp <- get.dtable(rprev, quest)
     .agr.coull <- function(yes,no)
@@ -106,23 +107,9 @@ find_sensitivity_specificity_art <- function(rprev, quest)
     return(tmp1)
 }
 
-make_table_sensitivity_specificity_art <- function(rprev, quest)
+
+make_table_sensitivity_specificity_art <- function(rprev, quest, break.lines=FALSE)
 {
-
-    dtable <- get.dtable(rprev, quest)
-
-    cols <- names(dtable)[names(dtable) %like% 'ARV']
-    tmp <- dtable[, c(AGE_GROUP='ALL', lapply(.SD, sum)) 
-                  , .SDcols=cols,
-                  by=c('ROUND', 'SEX')]
-    tmp1 <- tmp[, c(SEX='ALL', AGE_GROUP='ALL', lapply(.SD, sum)) 
-                , .SDcols=cols, by='ROUND']
-
-    dtable <- rbind(dtable, tmp, tmp1)
-    dtable[, AGE_GROUP := paste0('Z', AGE_GROUP)]
-    dtable[, AGE_GROUP := gsub('ZA', 'A', AGE_GROUP)]
-    setkey(dtable, ROUND, SEX, AGE_GROUP)
-    dtable[, AGE_GROUP := gsub('Z', '', AGE_GROUP)]
 
     .agr.coull.format <- function(yes,no, newline=FALSE)
     {
@@ -146,31 +133,78 @@ make_table_sensitivity_specificity_art <- function(rprev, quest)
         out
     }
 
-    # only missing specificity and sensitivity
+    # get confusion matrix and totals
+    dtable <- get.dtable(rprev, quest)
+    cols <- names(dtable)[names(dtable) %like% 'ARV']
+    tmp <- dtable[, c(AGE_GROUP='ALL', lapply(.SD, sum)) 
+                  , .SDcols=cols,
+                  by=c('ROUND', 'SEX')]
+    tmp1 <- tmp[, c(SEX='ALL', AGE_GROUP='ALL', lapply(.SD, sum)) 
+                , .SDcols=cols, by='ROUND']
+    dtable <- rbind(dtable, tmp, tmp1)
+    # reorder rows so that Totals are at the top
+    dtable[, AGE_GROUP := paste0('Z', AGE_GROUP)]
+    dtable[, AGE_GROUP := gsub('ZA', 'A', AGE_GROUP)]
+    setkey(dtable, ROUND, SEX, AGE_GROUP)
+    dtable[, AGE_GROUP := gsub('Z', '', AGE_GROUP)]
+
+    # get agresti coull intervals for sensitivity and specificity
     dtable[, `:=` (
-        SPECIFICITY = .agr.coull.format(ARV_REPORT_SUPP, ARV_REPORT_NOTSUPP, newline=TRUE),
-        SENSITIVITY = .agr.coull.format(ARV_NAIVE_NOTSUPP, ARV_NAIVE_SUPP, newline=TRUE)
+        SPECIFICITY = .agr.coull.format(ARV_REPORT_SUPP,
+                                        ARV_REPORT_NOTSUPP,
+                                        newline=TRUE),
+        SENSITIVITY = .agr.coull.format(ARV_NAIVE_NOTSUPP,
+                                        ARV_NAIVE_SUPP,
+                                        newline=TRUE)
     ), ]
     dtable[SPECIFICITY %like% 'NaN', SPECIFICITY := '']
     dtable[SENSITIVITY %like% 'NaN', SENSITIVITY := '']
+
+    if(break.lines)
+    {   # split CIs in second row
+        cols <- setdiff(names(dtable), c('SPECIFICITY', 'SENSITIVITY'))
+        .f <- function(x) stringr::str_split(x, '\n') |> unlist()
+        dtable <- dtable[, .(
+            SENSITIVITY = .f(SENSITIVITY),
+            SPECIFICITY = .f(SPECIFICITY)
+        ) , by=cols] 
+    }
 
     dtable[ AGE_GROUP=='ALL' & SEX=='ALL', LABEL := 'Total']
     dtable[ AGE_GROUP=='ALL' & SEX=='F', LABEL := 'Female']
     dtable[ AGE_GROUP=='ALL' & SEX=='M', LABEL := 'Male']
     dtable[ AGE_GROUP!='ALL', LABEL := AGE_GROUP]
 
+    if(break.lines)
+    {
+        second.entry.to.na <- function(x){
+            x[ (1:length(x)) %%2 == 0]  <- NA; x
+        }
+        cols <- c("SEX", "AGE_GROUP", 
+                  "ARV_NAIVE_SUPP","ARV_NAIVE_NOTSUPP",
+                  "ARV_REPORT_SUPP","ARV_REPORT_NOTSUPP")
+        dtable[, (cols) := lapply(.SD, second.entry.to.na) , .SDcols=cols]
+    }
+
     # add empty rows only containing label 'Age' after the 'Female'/'Male' labels
     empty_row  <- dtable[1, lapply(.SD, function(x) NA) , .SDcols=names(dtable)]
     empty_row[, LABEL:='Age']
     idx <- dtable[, LABEL %like% 'ale']
-    idx <- c(0, cumsum(idx[-length(idx)]))
+    idx <- c(0, cumsum(idx[-length(idx)])) 
+    if(break.lines)
+        idx <- idx %/% 2
     dtable[, DUMMY := idx]
     dtable <- dtable[, rbind(.SD, empty_row), by=DUMMY]
     dtable <- dtable[1:(.N-1)]
     dtable[, DUMMY := NULL]
 
+    # fix rounds after transform
     rnds <- dtable[!is.na(ROUND), unique(ROUND)]
-    dtable[is.na(ROUND), ROUND:=rep(rnds, each=2)]
+    dtable[is.na(ROUND), ROUND:=rep(rnds, each=.N/length(rnds))]
+
+    # fix labels now:
+    idx <- which(dtable$LABEL == shift(dtable$LABEL, 1))
+    dtable[idx, LABEL := NA]
 
     # integer as integers
     cols <- names(dtable)[names(dtable) %like% 'ARV']
@@ -183,11 +217,11 @@ make_table_sensitivity_specificity_art <- function(rprev, quest)
             # makes correct align for Age levels
             x <- gsub('(Age)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{Age\\}', x) 
             x <- gsub('(15-24)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{15-24\\}', x)  
-            x <- gsub('(25-34)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{15-24\\}', x)  
-            x <- gsub('(35-49)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{15-24\\}', x)  
+            x <- gsub('(25-34)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{25-34\\}', x)  
+            x <- gsub('(35-49)', '\\\\\\multicolumn\\{1\\}\\{r|\\}\\{35-49\\}', x)  
 
             # puts CI on two different lines 95%\n[80-100]
-            if(0)
+            if(break.lines)
             {
                 x <- gsub("([0-9]*.[0-9]\\\\\\%)",
                           "\\\\shortstack{\\1\\\\\\\\", x)
