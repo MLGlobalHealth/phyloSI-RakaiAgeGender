@@ -18,7 +18,7 @@ The data in ```data/``` contain
 * Individual-level seroconvert cohort data with information on rounds of enrollment, age, sex, hiv status, in file ```seroconverter_cohort_R6R19.rds```
 * HIV incidence rates estimates by age, gender and round, in file ```Rakai_incpredictions_inland_221107.csv```
 
-* Sexual contact rate estimates by age and gender for round 15, in file ```inland_R015_cntcts_rate_1130.rds```
+* Sexual contact rate estimates by age and gender for round 15, in file ```inland_R015_cntcts_rate_1130b.rds```
 
 ## Fit
 * smooth proportion of hiv prevalence in population by age, gender and round, in file ```RCCS_prevalence_estimates_DATE.csv```
