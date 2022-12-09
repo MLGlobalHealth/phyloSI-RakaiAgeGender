@@ -17,9 +17,9 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_casc
 # files
 artuse.path.np <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage.csv')
 artuse.path.p <- file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv')
-file.cascade.participants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221116.csv'))
-file.cascade.nonparticipants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221116.csv'))
-file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221116.csv'))
+file.cascade.participants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221208.csv'))
+file.cascade.nonparticipants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221208.csv'))
+file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221208.csv'))
 
 # find count of newly registered participants who reported art use
 rart.nonpart <- as.data.table( read.csv(artuse.path.np) )
@@ -238,7 +238,7 @@ p <- grid.arrange(pP.M, pNP.M, p.ART, p.US, layout_matrix = rbind(c(1, 2, 3, 4),
                                                                   c(NA, NA, NA, 4)), 
                   heights = c(0.95, 0.05, 0.02), 
                   widths =  c(rep(0.22, 3),0.25))
-ggsave(p, file = file.path(outdir, 'summary_estimates_art_suppressed.pdf'), w = 9, h = 12)
+ggsave(p, file = file.path(outdir, 'summary_estimates_art_suppressed_221208.pdf'), w = 9, h = 12)
 
 
 
