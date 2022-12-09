@@ -53,3 +53,151 @@ save_statistics_PPC <- function(predict_y_source_recipient, count_data, predict_
   
   saveRDS(stats, file = paste0(outdir, '-statistics_prediction.RDS'))
 }
+
+make_transmission_flows_table <- function(expected_contribution_age_classification_male, expected_contribution_sex_age_group_recipient, 
+                                          expected_contribution_sex_age_classification_male, expected_contribution_age_group_recipient, 
+                                          expected_contribution_age_classification_male_total, expected_contribution_sex_source, outdir){
+  
+  
+  table <- list()
+  
+  Rounds <- c('R010', 'R015', 'R018')
+  
+  n_digits <- 1
+  
+  #
+  # transmission flows by gender-direction age group recipient and age classification male
+  #
+  
+  saa <- copy(expected_contribution_age_classification_male)
+  saa <- saa[, .(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT, AGE_CLASSIFICATION.MALE, M, CL, CU)]
+  saa[, M := format(round(M * 100, n_digits),  nsmall = n_digits) ]
+  saa[, CI := paste0('[', format(round(CL * 100, n_digits),  nsmall = n_digits), '-', format(round(CU * 100, n_digits),  nsmall = n_digits), ']') ]
+  saa[, CI := gsub(' ', '', CI)]
+  set(saa, NULL, "CL", NULL)
+  set(saa, NULL, "CU", NULL)
+  
+  saa <- saa[order(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT, AGE_CLASSIFICATION.MALE)]
+  
+  tmp <- dcast.data.table(saa, COMM + ROUND + LABEL_DIRECTION + AGE_CLASSIFICATION.MALE~ AGE_GROUP_INFECTION.RECIPIENT, value.var = 'M')
+  names(tmp)[grepl('-', names(tmp))] <- paste0('M_', names(tmp)[grepl('-', names(tmp))])
+  saa <- dcast.data.table(saa, COMM + ROUND + LABEL_DIRECTION + AGE_CLASSIFICATION.MALE~ AGE_GROUP_INFECTION.RECIPIENT, value.var = 'CI')
+  names(saa)[grepl('-', names(tmp))] <- paste0('CI_', names(tmp)[grepl('-', names(tmp))])
+  saa <- merge(tmp, saa, by = c('COMM', 'ROUND', 'LABEL_DIRECTION', 'AGE_CLASSIFICATION.MALE'))
+  
+  saa <- saa[ROUND %in% Rounds]
+  
+  table[['flows_gender_ager_agem']] <- saa
+  
+  
+  #
+  # transmission flows by gender-direction age group recipient
+  #
+  
+  saa <- copy(expected_contribution_sex_age_group_recipient)
+  saa <- saa[, .(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT, M, CL, CU)]
+  saa[, M := format(round(M * 100, n_digits),  nsmall = n_digits) ]
+  saa[, CI := paste0('[', format(round(CL * 100, n_digits),  nsmall = n_digits), '-', format(round(CU * 100, n_digits),  nsmall = n_digits), ']') ]
+  saa[, CI := gsub(' ', '', CI)]
+  set(saa, NULL, "CL", NULL)
+  set(saa, NULL, "CU", NULL)
+  
+  saa <- saa[order(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT)]
+  
+  tmp <- dcast.data.table(saa, COMM + ROUND + LABEL_DIRECTION ~ AGE_GROUP_INFECTION.RECIPIENT, value.var = 'M')
+  names(tmp)[grepl('-', names(tmp))] <- paste0('M_', names(tmp)[grepl('-', names(tmp))])
+  saa <- dcast.data.table(saa, COMM + ROUND + LABEL_DIRECTION ~ AGE_GROUP_INFECTION.RECIPIENT, value.var = 'CI')
+  names(saa)[grepl('-', names(tmp))] <- paste0('CI_', names(tmp)[grepl('-', names(tmp))])
+  saa <- merge(tmp, saa, by = c('COMM', 'ROUND', 'LABEL_DIRECTION'))
+  
+  saa <- saa[ROUND %in% Rounds]
+  
+  table[['flows_gender_ager']] <- saa
+  
+  
+  #
+  # transmission flows by gender-direction age classification male 
+  #
+  
+  saa <- copy(expected_contribution_sex_age_classification_male)
+  saa <- saa[, .(COMM, ROUND, LABEL_DIRECTION, AGE_CLASSIFICATION.MALE, M, CL, CU)]
+  saa[, M := format(round(M * 100, n_digits),  nsmall = n_digits) ]
+  saa[, CI := paste0('[', format(round(CL * 100, n_digits),  nsmall = n_digits), '-', format(round(CU * 100, n_digits),  nsmall = n_digits), ']') ]
+  saa[, CI := gsub(' ', '', CI)]
+  set(saa, NULL, "CL", NULL)
+  set(saa, NULL, "CU", NULL)
+  
+  saa <- saa[order(COMM, ROUND, LABEL_DIRECTION, AGE_CLASSIFICATION.MALE)]
+  
+  saa <- saa[ROUND %in% Rounds]
+  
+  table[['flows_gender_agem']] <- saa
+  
+  
+  #
+  # transmission flows by age group recipient 
+  #
+  
+  saa <- copy(expected_contribution_age_group_recipient)
+  saa <- saa[, .(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT, M, CL, CU)]
+  saa[, M := format(round(M * 100, n_digits),  nsmall = n_digits) ]
+  saa[, CI := paste0('[', format(round(CL * 100, n_digits),  nsmall = n_digits), '-', format(round(CU * 100, n_digits),  nsmall = n_digits), ']') ]
+  saa[, CI := gsub(' ', '', CI)]
+  set(saa, NULL, "CL", NULL)
+  set(saa, NULL, "CU", NULL)
+  
+  saa <- saa[order(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT)]
+  
+  tmp <- dcast.data.table(saa, COMM + ROUND ~ AGE_GROUP_INFECTION.RECIPIENT, value.var = 'M')
+  names(tmp)[grepl('-', names(tmp))] <- paste0('M_', names(tmp)[grepl('-', names(tmp))])
+  saa <- dcast.data.table(saa, COMM + ROUND ~ AGE_GROUP_INFECTION.RECIPIENT, value.var = 'CI')
+  names(saa)[grepl('-', names(tmp))] <- paste0('CI_', names(tmp)[grepl('-', names(tmp))])
+  saa <- merge(tmp, saa, by = c('COMM', 'ROUND'))
+  
+  saa <- saa[ROUND %in% Rounds]
+  
+  table[['flows_ager']] <- saa
+  
+  
+  #
+  # transmission flows by age classification male
+  #
+  
+  saa <- copy(expected_contribution_age_classification_male_total)
+  saa <- saa[, .(COMM, ROUND, AGE_CLASSIFICATION.MALE, M, CL, CU)]
+  saa[, M := format(round(M * 100, n_digits),  nsmall = n_digits) ]
+  saa[, CI := paste0('[', format(round(CL * 100, n_digits),  nsmall = n_digits), '-', format(round(CU * 100, n_digits),  nsmall = n_digits), ']') ]
+  saa[, CI := gsub(' ', '', CI)]
+  set(saa, NULL, "CL", NULL)
+  set(saa, NULL, "CU", NULL)
+  
+  saa <- saa[order(COMM, ROUND, AGE_CLASSIFICATION.MALE)]
+  
+  saa <- saa[ROUND %in% Rounds]
+  
+  table[['flows_agem']] <- saa
+  
+  
+  #
+  # transmission flows by gender-direction 
+  #
+  
+  saa <- copy(expected_contribution_sex_source)
+  saa <- saa[, .(COMM, ROUND, LABEL_DIRECTION, M, CL, CU)]
+  saa[, M := format(round(M * 100, n_digits),  nsmall = n_digits) ]
+  saa[, CI := paste0('[', format(round(CL * 100, n_digits),  nsmall = n_digits), '-', format(round(CU * 100, n_digits),  nsmall = n_digits), ']') ]
+  saa[, CI := gsub(' ', '', CI)]
+  set(saa, NULL, "CL", NULL)
+  set(saa, NULL, "CU", NULL)
+  
+  saa <- saa[order(COMM, ROUND, LABEL_DIRECTION)]
+  
+  saa <- saa[ROUND %in% Rounds]
+  
+  table[['flows_gender']] <- saa
+  
+  saveRDS(table, file = paste0(outdir, '-transmission_flows_table.rds'))
+  
+  return(table)
+}
+
