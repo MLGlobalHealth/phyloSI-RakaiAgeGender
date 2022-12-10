@@ -834,7 +834,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       
     Levels <- c(cont.p[!grepl('Female', LABEL_SOURCE), unique(LABEL_TRANSMITTING_PARTNER)], 
                 cont.p[grepl('Female', LABEL_SOURCE), unique(LABEL_TRANSMITTING_PARTNER)])
-    print(Levels)
+
     cont.p[, LABEL_TRANSMITTING_PARTNER := factor(LABEL_TRANSMITTING_PARTNER, levels = Levels)]
     uns.p[, LABEL_TRANSMITTING_PARTNER := factor(LABEL_TRANSMITTING_PARTNER, levels = Levels)]
     median_uns.p[, LABEL_TRANSMITTING_PARTNER := factor(LABEL_TRANSMITTING_PARTNER, levels = Levels)]
