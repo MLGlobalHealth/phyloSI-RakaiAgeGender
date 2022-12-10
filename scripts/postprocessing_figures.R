@@ -299,7 +299,7 @@ expected_contribution_age_classification_male_total <- find_summary_output_by_ro
                                       add_male_age_classification_nonsymmetric = T,
                                       standardised.vars = c('INDEX_ROUND'))
 
-make_transmission_flows_table(expected_contribution_age_classification_male, expected_contribution_sex_age_group_recipient, 
+tt <- make_transmission_flows_table(expected_contribution_age_classification_male, expected_contribution_sex_age_group_recipient, 
                                           expected_contribution_sex_age_classification_male, expected_contribution_age_group_recipient, 
                                           expected_contribution_age_classification_male_total, expected_contribution_sex_source, outdir.table)
 
