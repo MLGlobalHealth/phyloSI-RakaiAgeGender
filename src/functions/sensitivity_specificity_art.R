@@ -34,6 +34,16 @@ find_sensitivity_specificity_art <- function(rprev, quest)
 { 
 
     tmp <- get.dtable(rprev, quest)
+    
+    # save XX needed for paper
+    .r <- function(x) formatC(x*100, digits=2, format='f')
+    tmp[, 
+        sum(ARV_REPORT_SUPP)/ (sum(ARV_REPORT_NOTSUPP) + sum(ARV_REPORT_SUPP))
+        ] |> .r() -> aggregated_sensitivity
+    filename <- file.path('~/Downloads', 'arv_sensitivity_suppression_aggregate.rds')
+    cat('Saving aggregated sensitivity for Sexpr in',filename,'\n')
+    saveRDS(aggregated_sensitivity, filename)
+
     .agr.coull <- function(yes,no)
     {
         agr.coull <- binom::binom.confint(yes, yes+no, methods = 'agresti-coull')
