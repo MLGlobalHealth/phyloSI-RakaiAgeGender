@@ -194,7 +194,7 @@ make_transmission_flows_table <- function(expected_contribution_age_classificati
   
   table[['flows_gender']] <- saa
   
-  saveRDS(table, file = paste0(outdir, '-transmission_flows_table.rds'))
+  saveRDS(table, file = paste0(outdir, '-output-transmission_flows_table.rds'))
   
   return(table)
 }
