@@ -179,12 +179,43 @@ expected_contribution_age_group_source2 <- find_summary_output_by_round(samples,
 plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
 plot_median_age_source_group_all_rounds(median_age_source_group, expected_contribution_age_group_source2, outfile.figures)
 
+# by age group (other aggregation)
+df_age_aggregated <- get.age.aggregated.map(c('15-29', '30-49'))
+median_age_source_group2 <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                         transform = 'exp',
+                                                         standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                         quantile_age_source = T)
+
 # total
 median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
                                                   c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
                                                   standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
                                                   quantile_age_source = T)
+
+# save
+save_median_age_source(median_age_source_group, median_age_source_group2, median_age_source, outdir.table)
+
+#
+# median age difference male to female
+#
+
+cat("\nPlot median age difference at transmission\n")
+
+
+# age group recipient
+df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+median_age_diff_group <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                        transform = 'exp',
+                                                        standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                        quantile_age_diff = T)
+
+# total
+median_age_diff <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
+                                                      transform = 'exp',
+                                                      standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
+                                                      quantile_age_diff = T)
+save_median_age_diff(median_age_diff_group, outdir.table)
 
 
 #
@@ -233,7 +264,7 @@ expected_contribution_age_source2 <- find_summary_output_by_round(samples, 'log_
                                                                   standardised.vars = c('INDEX_ROUND'))
 plot_contribution_age_source_unsuppressed(expected_contribution_age_source2, unsuppressed_share_sex_age, median_age_source, df_unsuppressed_median_age, outfile.figures,'Expected_contribution')
 plot_contribution_age_source(expected_contribution_age_source2, median_age_source, outfile.figures,'Expected_contribution_sex')
-save_statistics_expected_contribution(expected_contribution_sex_source, expected_contribution_age_source2, outdir.table)
+save_statistics_expected_contribution(expected_contribution_sex_source, median_age_source, outdir.table)
 
 # age-specific sex ratio contribution to transmission
 expected_contribution_age_source_sex_ratio <- find_summary_output_by_round(samples, 'log_lambda_latent',
@@ -430,7 +461,8 @@ plot_counterfactual_strategy(counterfactuals_a_a, incidence_factual, 'Unsuppress
 
 cat("\nPlot relative incidence infection if different number of male are treated\n")
 
-# generate counterfactual treating only men participant as much as female are diagnosed/treated/suppressed
+##
+## generate counterfactual treating only men participant as much as female are diagnosed/treated/suppressed
 counterfactuals_p_f <- make_counterfactual(samples, log_offset_round, stan_data, 
                                            eligible_count_smooth, eligible_count_round, 
                                            treatment_cascade_samples, proportion_prevalence, participation,
@@ -455,8 +487,12 @@ counterfactuals_p_909090 <- make_counterfactual(samples, log_offset_round, stan_
 plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_p_959595, counterfactuals_p_909090, 
                     incidence_factual, "Diagnosed unsuppressed", outfile.figures)
 
+# save
+save_counterfactual_results(counterfactuals_p_f, counterfactuals_p_f05, 
+                            counterfactuals_p_959595, counterfactuals_p_909090, "Diagnosed unsuppressed", outdir.table)
 
-# generate counterfactual treating all men as much as female are diagnosed/treated/suppressed
+##
+## generate counterfactual treating all men as much as female are diagnosed/treated/suppressed
 counterfactuals_a_f <- make_counterfactual(samples, log_offset_round, stan_data, 
                                            eligible_count_smooth, eligible_count_round, 
                                            treatment_cascade_samples, proportion_prevalence, participation,
@@ -499,6 +535,9 @@ if(0){
 plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_a_959595, counterfactuals_a_909090, 
                     incidence_factual, "Unsuppressed", outfile.figures)
 
+# save
+save_counterfactual_results(counterfactuals_a_f, counterfactuals_a_f05, 
+                            counterfactuals_a_959595, counterfactuals_a_909090, "Unsuppressed", outdir.table)
 
 #
 # Find NNT
