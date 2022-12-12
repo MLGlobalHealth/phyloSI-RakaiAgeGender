@@ -366,7 +366,7 @@ if(1){
   plot_pairs_all(pairs.all, outfile.figures)
   plot_transmission_events_over_time(pairs, outfile.figures)
   plot_date_collection_pairs(pairs, df_round_inland, outfile.figures)
-  save_statistics_transmission_events(pairs, outdir.table)
+  save_statistics_transmission_events(pairs, pairs.all, outdir.table)
 }
 
 
