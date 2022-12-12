@@ -1806,7 +1806,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   relative_incidence_counterfactual_all <- counterfactuals_p_f$relative_incidence_counterfactual_all 
   relative_incidence_counterfactual_all[, label := label.f]
   
-  # incident cases counterfactual 
+  # incident rate per py counterfactual 
   incidence_counterfactual <- counterfactuals_p_f$incidence_counterfactual 
   incidence_counterfactual[, label := label.f]
   
@@ -1831,7 +1831,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   relative_incidence_counterfactual_all.f05 <- counterfactuals_p_f05$relative_incidence_counterfactual_all 
   relative_incidence_counterfactual_all.f05[, label := label.f05]
   
-  # incident cases counterfactual 
+  # incident rate per py counterfactual 
   incidence_counterfactual.f05 <- counterfactuals_p_f05$incidence_counterfactual 
   incidence_counterfactual.f05[, label := label.f05]
   
@@ -1856,7 +1856,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   relative_incidence_counterfactual_all.959595 <- counterfactuals_p_959595$relative_incidence_counterfactual_all 
   relative_incidence_counterfactual_all.959595[, label := label.959595]
   
-  # incident cases counterfactual 
+  # incident rate per py counterfactual 
   incidence_counterfactual.959595 <- counterfactuals_p_959595$incidence_counterfactual 
   incidence_counterfactual.959595[, label := label.959595]
 
@@ -1881,7 +1881,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   relative_incidence_counterfactual_all.909090 <- counterfactuals_p_909090$relative_incidence_counterfactual_all 
   relative_incidence_counterfactual_all.909090[, label := label.909090]
   
-  # incident cases counterfactual 
+  # incident rate per py counterfactual 
   incidence_counterfactual.909090 <- counterfactuals_p_909090$incidence_counterfactual 
   incidence_counterfactual.909090[, label := label.909090]
   
@@ -1935,15 +1935,15 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   tmp[SEX == 'F', LABEL_RECIPIENT := 'Male recipients']
   setnames(tmp, 'AGEYRS', 'AGE_INFECTION.RECIPIENT')
   ic <- merge(incidence_counterfactual,tmp, by = c( 'COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_INFECTION.RECIPIENT'))
-  ic[, M := M / SUSCEPTIBLE]
-  ic[, CL := CL / SUSCEPTIBLE]
-  ic[, CU := CU / SUSCEPTIBLE]
+  # ic[, M := M / SUSCEPTIBLE]
+  # ic[, CL := CL / SUSCEPTIBLE]
+  # ic[, CU := CU / SUSCEPTIBLE]
   
   # same for incidence rate factual
   icf  <- merge(icf,tmp, by = c('COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_INFECTION.RECIPIENT'))
-  icf[, M := M / SUSCEPTIBLE]
-  icf[, CL := CL / SUSCEPTIBLE]
-  icf[, CU := CU / SUSCEPTIBLE]
+  # icf[, M := M / SUSCEPTIBLE]
+  # icf[, CL := CL / SUSCEPTIBLE]
+  # icf[, CU := CU / SUSCEPTIBLE]
   
   # merge udget by by age to target labels
   ecf[, INFECTED_SUPPRESSED := INFECTED - INFECTED_NON_SUPPRESSED]
@@ -1984,6 +1984,11 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   # ric.all <- merge(relative_incidence_counterfactual_all, df_target, by = 'counterfactual_index')
   ric.all <- copy(relative_incidence_counterfactual_all)
   
+  
+  #
+  # Plot
+  # 
+  
   communities <- ric[, unique(COMM)]
   cols <- c('#F1A661', '#C55300', '#749F82')
   
@@ -2017,7 +2022,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_x_continuous(expand = c(0,0)) + 
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 6))
-    file = paste0(outdir, '-output-counterfactual_strategy_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
+    file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
     ggsave(p, file = file, w = 3.9, h = 3.7)
     
     # reduction in unsuppressed
@@ -2032,7 +2037,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_y_continuous(labels = scales::percent, limits = c(0, NA)) + 
       scale_color_manual(values = cols) + 
       guides(color = guide_legend(byrow = T, nrow = 4))
-    file = paste0(outdir, '-output-counterfactual_strategy_budget_reduction_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
+    file = paste0(outdir, '-output-counterfactual_budget_reduction_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
     ggsave(p, file = file, w = 5, h = 6)
     
     
@@ -2255,7 +2260,7 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
   # relative incidence cases counterfactual compared to factual regardless age
   relative_incidence_counterfactual_all <- counterfactuals_p_a$relative_incidence_counterfactual_all 
   
-  # incidence cases counterfactual by age
+  # incidence rates per py counterfactual by age
   incidence_counterfactual <- counterfactuals_p_a$incidence_counterfactual 
   
   
@@ -2344,14 +2349,14 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
       scale_fill_manual(values = cols) +
       scale_y_continuous(expand = expansion(mult = c(0, .05))) 
     
-    # incidence cases by age
+    # incidence rates per py  by age
     fit_data_label <- 'No intervention\nRound 18'
     p2 <- ggplot(ic.c) + 
-      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.2) + 
-      geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, linetype = fit_data_label), alpha = 0.2) + 
-      geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M, linetype = fit_data_label), col = 'black') +
-      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
-      labs(x = 'Age', y = 'Incidence cases') + 
+      geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.2) + 
+      geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL*100, ymax = CU*100, linetype = fit_data_label), alpha = 0.2) + 
+      geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M*100, linetype = fit_data_label), col = 'black') +
+      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M*100, col = LABEL_TARGET)) + 
+      labs(x = 'Age', y = 'Incidence rates\nper 100 person-years') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_blank(), 
