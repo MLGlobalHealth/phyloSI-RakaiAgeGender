@@ -1465,7 +1465,8 @@ prepare.pairs.input.for.bayesian.model <- function(DT)
     setcolorder(dresults, cols)
 
     cols <- c('SOURCE','RECIPIENT')
-    chain_tmp <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
+    chain_tmp <- chain[ SCORE > threshold.likely.connected.pairs]
+    # chain_tmp <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
     idx <- merge(dresults[,..cols], chain_tmp[,..cols], by=cols)
     idx[, DIRECTION := 'phyloscanner']
     dresults <- merge(dresults, idx, all.x=TRUE, by=cols)
@@ -1476,7 +1477,7 @@ prepare.pairs.input.for.bayesian.model <- function(DT)
 
 get.community.type.at.infection.date <- function(DT, comm_number=TRUE)
 {
-    # DT <- copy(dresults)
+    # DT <- copy(dresults); comm_number=TRUE
     meta_env <- new.env()
     load(file.path.meta, envir=meta_env)
     
@@ -1509,7 +1510,8 @@ get.community.type.at.infection.date <- function(DT, comm_number=TRUE)
     }
     dcomms[is.na(COMM_NUM), stopifnot(all(ROUND == 'neuro'))]
 
-    # dcomms <- dcomms[aid %in% dresults[, c(SOURCE,RECIPIENT)]]
+    .f <- function(x) paste0(unique(sort(as.character(x))), collapse='_')
+    dcomms_collapse <- dcomms[, .(COMM=.f(COMM), COMM_NUM=.f(COMM_NUM)),by='AID']
 
     # For participants with date of infection, set 
     # community as the comm with visit date closest to estimated infection time
@@ -1529,11 +1531,18 @@ get.community.type.at.infection.date <- function(DT, comm_number=TRUE)
             out_list <- c(out_list, list(COMM_NUM.SOURCE=CNS, COMM_NUM.RECIPIENT=CNR))
         }
         out_list
-    }, by='RECIPIENT'] -> tmp
+    }, by='RECIPIENT'] -> dt_with_inf_date
+
+    # find inf date also for remaining participants without estimated inf. date
+    dt_without_inf_date <- double.merge(DT[ is.na(M), .(SOURCE,RECIPIENT)], dcomms_collapse)
+
+    # check
+    dt_with_inf_date[, .N , by=c('RECIPIENT', 'SOURCE')][, stopifnot(all(N == 1))]
+    dt_without_inf_date[, .N , by=c('RECIPIENT', 'SOURCE')][, stopifnot(all(N == 1))]
+    tmp <- rbind(dt_without_inf_date, dt_with_inf_date)
 
     DT <- merge(DT, tmp, by=c('SOURCE', 'RECIPIENT'), all.x=TRUE) 
-    # DT[ is.na(COMM.RECIPIENT) & is.na(COMM.SOURCE)]
-    
+    DT[SEX.SOURCE == SEX.RECIPIENT]
     return(DT)
 }
 

@@ -26,9 +26,9 @@ file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_inciden
 path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 
 # load files
-community.keys <- as.data.table(read.csv(file.community.keys))
-quest <- as.data.table(read.csv(file.path.quest))
-hiv <- as.data.table(read.csv(file.path.hiv))
+community.keys <- fread(file.community.keys)
+quest <- fread(file.path.quest)
+hiv <- fread(file.path.hiv)
 
 # load helpers
 source(file.path(indir.repository, 'src/functions/sensitivity_specificity_art.R'))
