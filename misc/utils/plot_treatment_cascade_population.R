@@ -209,3 +209,22 @@ ggplot(tmp, aes(x = AGEYRS)) +
          fill = guide_legend(byrow = T, nrow = 3))
 ggsave(file = file.path(outdir, 'population_suppression_rate_overtime_221208.pdf'), w = 6, h = 5)
 
+
+
+####################################
+
+# SAVE PROPORTION OF SUPPRESSED
+
+####################################
+
+n_digit <- 1
+
+tab <- ns[variable == 'PROP_SUPPRESSION_GIVEN_DIAGNOSED']
+tab <- tab[COMM == 'inland' & ROUND == 'R018']
+tab <- tab[, .(ROUND, SEX, AGEYRS, M, CL, CU)]
+tab <- tab[, `:=` (M = format(round(M*100, n_digit), n_digit), 
+                   CL  = format(round(CL*100, n_digit), n_digit), 
+                   CU = format(round(CU*100, n_digit), n_digit))]
+tab <- tab[order(ROUND, SEX, AGEYRS)]
+
+saveRDS(tab, file = file.path(outdir, 'prop_suppressed_given_diagnosed.rds'))
