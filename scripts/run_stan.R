@@ -71,6 +71,7 @@ pairs_replicates.seed <- NULL
 viremic_viral_load_200ml <- F
 use_30com_inc_estimates <- F
 use_30com_pairs <- F
+use_tsi_non_refined <- F
 
 # obtained in script/ 
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")#central analysis
@@ -85,6 +86,7 @@ file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_22111
 
 # obtained in misc/ for analysis
 file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
+file.pairs.nonrefined <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
 
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221208.csv")
 file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv")
@@ -122,7 +124,11 @@ source(file.path(indir, 'functions', 'statistics_functions.R'))
 source(file.path(indir, 'functions', 'stan_utils.R'))
 
 # load pairs
-pairs.all <- read_pairs(file.pairs)
+if(use_tsi_non_refined){
+  pairs.all <- read_pairs(file.pairs.nonrefined)
+} else{
+  pairs.all <- read_pairs(file.pairs)
+}
 
 # load round timeline
 load(file.path.round.timeline)
