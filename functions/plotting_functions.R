@@ -1442,9 +1442,9 @@ plot_pairs <- function(pairs, outdir)
       sex <- SEX[j]
       
       tmp1 <- tmp[COMM.RECIPIENT == comm & SEX.SOURCE == sex ]
-      p[[index]] <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE, y = AGE_INFECTION.RECIPIENT)) + 
+      p[[index]] <- ggplot(tmp1, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
         geom_point(aes(col = LABEL_ROUND)) + 
-        labs(x = 'Age at transmission source', y = 'Age at infection recipient', col = '') +
+        labs(y = 'Age at transmission source', x = 'Age at infection recipient', col = '') +
         geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
         theme_bw() + 
         coord_fixed() +
