@@ -8,11 +8,11 @@ library("haven")
 
 if(Sys.info()['user'] == 'andrea')
 {
-    # indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    # indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
     indir.repository <- '~/git/phyloflows'
-    indir.deepsequence_analyses <- '/home/andrea/Documents/Box/ratmann_deepseq_analyses/live'
-    indir.deepsequencedata <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata'
+    # indir.deepsequence_analyses <- '/home/andrea/Documents/Box/ratmann_deepseq_analyses/live'
+    # indir.deepsequencedata <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata'
 }
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
@@ -38,7 +38,7 @@ file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_inc
 file.path.update.first.positive <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', '221128_requested_updated_serohistory.csv')
 
 # load files
-community.keys <- as.data.table(read.csv(file.community.keys))
+community.keys <- fread(file.community.keys)
 
 
 ################################
