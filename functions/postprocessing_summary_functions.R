@@ -220,7 +220,7 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
                                          log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_susceptible = F, posterior_samples = F, relative_baseline = F, 
-                                         invert = F, median_age_source = F, quantile_age_source = F, sex_ratio = F, save_output = T, add_male_age_classification_nonsymmetric = F){
+                                         invert = F, median_age_source = F, quantile_age_source = F, quantile_age_difference = F, sex_ratio = F, save_output = T, add_male_age_classification_nonsymmetric = F){
   
   # summarise outputs by round
   
@@ -313,6 +313,23 @@ find_summary_output_by_round <- function(samples, output, vars,
                         quantile = c('C10', 'C25', 'C50', 'C75', 'C90')), by = c('iterations', vars)]
     vars = c(vars, 'quantile')
   }
+  
+  if(quantile_age_difference){
+    # find age male and age female
+    tmp1[INDEX_DIRECTION == 1, `:=` (AGE_INFECTION.MALE = AGE_INFECTION.RECIPIENT, 
+                                     AGE_INFECTION.FEMALE = AGE_TRANSMISSION.SOURCE)]
+    tmp1[INDEX_DIRECTION == 2, `:=` (AGE_INFECTION.MALE = AGE_TRANSMISSION.SOURCE, 
+                                     AGE_INFECTION.FEMALE = AGE_INFECTION.RECIPIENT )]
+    
+    # take quantile of the difference male age - female age
+    setnames(tmp1, 'value', 'delta')
+    vars <- standardised.vars
+    tmp1 <- tmp1[, list(value = Hmisc::wtd.quantile(x = (AGE_INFECTION.MALE - AGE_INFECTION.FEMALE), weight = delta,
+                                                    probs = c(0.1, 0.25, 0.5, 0.75, 0.9), normwt = TRUE),
+                        quantile = c('C10', 'C25', 'C50', 'C75', 'C90')), by = c('iterations', vars)]
+    vars = c(vars, 'quantile')
+
+  }
 
   if(per_unsuppressed){
     # divide by the number of unsuppressed
@@ -404,6 +421,9 @@ find_summary_output_by_round <- function(samples, output, vars,
     file = paste0(outdir.table, '-output-', output, 'by_', tolower(paste0(gsub('INDEX_', '', vars), collapse = '_')))
     if(add_male_age_classification_nonsymmetric == T){
       file = paste0(file, '_male_age_classification')
+    }
+    if(quantile_age_difference){
+      file = paste0(file, '_age_difference')
     }
     if(!is.null(standardised.vars)){
       file = paste0(file, 'standardisedby_', tolower(paste0(gsub('INDEX_', '', standardised.vars), collapse = '_')))
