@@ -69,13 +69,24 @@ df_direction <- get.df.direction()
 log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, df_estimated_contact_rates, 
                                              use_number_susceptible_offset, use_contact_rates_prior)
 
-# offset formula (per year)
+# log offset formula (per year)
 log_offset_formula <- 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'
 if(!use_number_susceptible_offset)
   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'
 if(use_contact_rates_prior)
   log_offset_formula = paste0(log_offset_formula, ' + log_CONTACT_RATES')
 
+# log offset formula (per year per unsuppressed)
+log_offset_formula_perunsuppressed <- 'log_SUSCEPTIBLE'
+if(!use_number_susceptible_offset)
+  log_offset_formula_perunsuppressed = 'log_PROP_SUSCEPTIBLE'
+if(use_contact_rates_prior)
+  log_offset_formula_perunsuppressed = paste0(log_offset_formula_perunsuppressed, ' + log_CONTACT_RATES')
+
+# log offset formula (per year per susceptible)
+log_offset_formula_persusceptible <- 'log_INFECTED_NON_SUPPRESSED'
+if(use_contact_rates_prior)
+  log_offset_formula_persusceptible = paste0(log_offset_formula_persusceptible, ' + log_CONTACT_RATES')
 
 
 #
@@ -421,11 +432,6 @@ plot_incidence_infection(incidence_infection, outfile.figures)
 
 cat("\nPlot relative incidence infection if different groups of male are targeted\n")
 
-# log offset formula (per year per susceptible)
-log_offset_formula_persusceptible <- 'log_INFECTED_NON_SUPPRESSED'
-if(use_contact_rates_prior)
-  log_offset_formula_persusceptible = paste0(log_offset_formula_persusceptible, ' + log_CONTACT_RATES')
-
 # find incidence under the factual scenario by sex and age
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
@@ -550,13 +556,6 @@ save_counterfactual_results(counterfactuals_a_f, counterfactuals_a_f05,
 #
 
 cat("\nPlot NNT\n")
-
-# log offset formula (per year per unsuppressed)
-log_offset_formula_perunsuppressed <- 'log_SUSCEPTIBLE'
-if(!use_number_susceptible_offset)
-  log_offset_formula_perunsuppressed = 'log_PROP_SUSCEPTIBLE'
-if(use_contact_rates_prior)
-  log_offset_formula_perunsuppressed = paste0(log_offset_formula_perunsuppressed, ' + log_CONTACT_RATES')
 
 # NNT by 1 year age band
 NNT <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT', 'AGE_TRANSMISSION.SOURCE'),
