@@ -1356,7 +1356,9 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       theme(legend.position = c(0.25, 0.74), 
             legend.title = element_blank(), 
             legend.text=element_text(size=rel(0.5))) +
-      guides(shape='none', color = guide_legend(byrow = T, nrow = 4,override.aes = list(size = 1), 
+      guides(shape=guide_legend(override.aes = list(size = 1), 
+                                keywidth = unit(0.01, 'pt'), keyheight = unit(0.001, 'pt')), 
+             color = guide_legend(byrow = T, nrow = 4,override.aes = list(size = 1), 
                                                 keywidth = unit(0.01, 'pt'), keyheight = unit(0.001, 'pt'))) 
     
       # scale_y_log10()
