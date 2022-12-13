@@ -421,10 +421,15 @@ plot_incidence_infection(incidence_infection, outfile.figures)
 
 cat("\nPlot relative incidence infection if different groups of male are targeted\n")
 
+# log offset formula (per year per susceptible)
+log_offset_formula_persusceptible <- 'log_INFECTED_NON_SUPPRESSED'
+if(use_contact_rates_prior)
+  log_offset_formula_persusceptible = paste0(log_offset_formula_persusceptible, ' + log_CONTACT_RATES')
 
 # find incidence under the factual scenario by sex and age
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
+                                                  log_offset_formula = log_offset_formula_persusceptible,
                                                   log_offset_round = log_offset_round)
 
 # find age groups that contribute the most
@@ -538,6 +543,7 @@ plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_
 # save
 save_counterfactual_results(counterfactuals_a_f, counterfactuals_a_f05, 
                             counterfactuals_a_959595, counterfactuals_a_909090, "Unsuppressed", outdir.table)
+
 
 #
 # Find NNT

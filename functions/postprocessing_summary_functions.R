@@ -863,11 +863,6 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
                                                                   log_offset_round = log_offset_round.counterfactual, 
                                                                   save_output = F)
     
-    # log offset formula (per year per susceptible)
-    log_offset_formula_persusceptible <- 'log_INFECTED_NON_SUPPRESSED'
-    if(use_contact_rates_prior)
-      log_offset_formula_persusceptible = paste0(log_offset_formula_persusceptible, ' + log_CONTACT_RATES')
-    
     # find relative difference incidence  by age of the recipient
     relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                                      log_offset_round, 
@@ -1079,11 +1074,6 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual),df_estimated_contact_rates,
                                                               use_number_susceptible_offset, use_contact_rates_prior)
   
-  # log offset formula (per year per susceptible)
-  log_offset_formula_persusceptible <- 'log_INFECTED_NON_SUPPRESSED'
-  if(use_contact_rates_prior)
-    log_offset_formula_persusceptible = paste0(log_offset_formula_persusceptible, ' + log_CONTACT_RATES')
-  
   # find incidence rate counterfactual by age of the recipient
   incidence_counterfactual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                            transform = 'exp', 
@@ -1117,7 +1107,7 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
                                                                      c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                      transform = 'exp', 
                                                                      sex_ratio = T,
-                                                                     log_offset_round = log_offset_round, 
+                                                                     log_offset_round = log_offset_round.counterfactual, 
                                                                      log_offset_formula = log_offset_formula_persusceptible,
                                                                      save_output = F)
   
@@ -1127,7 +1117,7 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
                                                                             c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                                                                             transform = 'exp', 
                                                                             sex_ratio = T,
-                                                                            log_offset_round = log_offset_round, 
+                                                                            log_offset_round = log_offset_round.counterfactual, 
                                                                             log_offset_formula = log_offset_formula_persusceptible,
                                                                             save_output = F)
   
@@ -1137,7 +1127,7 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
                                                                             c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
                                                                             transform = 'exp', 
                                                                             sex_ratio = T,
-                                                                            log_offset_round = log_offset_round, 
+                                                                            log_offset_round = log_offset_round.counterfactual, 
                                                                             log_offset_formula = log_offset_formula_persusceptible,
                                                                             save_output = F)
   # find relative difference incidence total
@@ -1145,7 +1135,7 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
                                                                             c('INDEX_DIRECTION', 'INDEX_ROUND'), 
                                                                             transform = 'exp', 
                                                                             sex_ratio = T,
-                                                                            log_offset_round = log_offset_round, 
+                                                                            log_offset_round = log_offset_round.counterfactual, 
                                                                             log_offset_formula = log_offset_formula_persusceptible,
                                                                             save_output = F)
   
