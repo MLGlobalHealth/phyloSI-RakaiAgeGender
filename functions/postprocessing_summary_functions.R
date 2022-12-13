@@ -857,10 +857,11 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
     log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]), df_estimated_contact_rates,
                                                                 use_number_susceptible_offset, use_contact_rates_prior)
     
-    # find incidence counterfactual by age of the recipient
+    # find incidence rate counterfactual by age of the recipient
     incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                   transform = 'exp', 
                                                                   log_offset_round = log_offset_round.counterfactual, 
+                                                                  log_offset_formula = log_offset_formula_persusceptible,
                                                                   save_output = F)
     
     # find relative difference incidence  by age of the recipient
@@ -1072,10 +1073,11 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual),df_estimated_contact_rates,
                                                               use_number_susceptible_offset, use_contact_rates_prior)
   
-  # find incidence counterfactual by age of the recipient
+  # find incidence rate counterfactual by age of the recipient
   incidence_counterfactual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                            transform = 'exp', 
                                                            log_offset_round = log_offset_round.counterfactual, 
+                                                           log_offset_formula = log_offset_formula_persusceptible,
                                                            save_output = F)
   
   # find relative difference incidence  by age of the recipient
