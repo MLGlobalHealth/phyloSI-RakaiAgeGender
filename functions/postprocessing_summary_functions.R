@@ -220,7 +220,8 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
                                          log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_susceptible = F, posterior_samples = F, relative_baseline = F, 
-                                         invert = F, median_age_source = F, quantile_age_source = F, quantile_age_difference = F, sex_ratio = F, save_output = T, add_male_age_classification_nonsymmetric = F){
+                                         invert = F, median_age_source = F, quantile_age_source = F, quantile_age_difference = F, sex_ratio = F, save_output = T, add_male_age_classification_nonsymmetric = F, 
+                                         df_age_aggregated_new = NULL){
   
   # summarise outputs by round
   
@@ -234,6 +235,10 @@ find_summary_output_by_round <- function(samples, output, vars,
     setnames(tmp1, 2:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_ROUND'))
   }else{
     setnames(tmp1, 2:4, c('INDEX_DIRECTION', 'INDEX_ROUND', 'INDEX_AGE'))
+  }
+  
+  if(!is.null(df_age_aggregated_new)){
+    df_age_aggregated <- copy(df_age_aggregated_new)
   }
   
   if('INDEX_AGE' %in% names(tmp1)){
@@ -442,16 +447,16 @@ find_summary_output_by_round <- function(samples, output, vars,
   return(tmp1)
 }
 
-find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual, log_offset_formula = 'LOG_OFFSET', transform = NULL){
+find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual, log_offset_formula = 'LOG_OFFSET', transform = NULL, df_age_aggregated_new = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   # incidence rate under original scenario
-  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T)
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T, df_age_aggregated_new = df_age_aggregated_new)
   
   # incidence rate under countefactual scenario
-  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T)
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T, df_age_aggregated_new = df_age_aggregated_new)
   setnames(tmp, 'value', 'value_counterfactual')
   
   # find relative incidence
@@ -1100,12 +1105,12 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
   relative_incidence_counterfactual_group1 <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                                                   log_offset_round, log_offset_round.counterfactual,
-                                                                                  transform = 'exp')
+                                                                                  transform = 'exp', df_age_aggregated_new = df_age_aggregated)
   # find relative difference incidence  by age group2 recipient
   df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
   relative_incidence_counterfactual_group2 <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                                                      log_offset_round, log_offset_round.counterfactual,
-                                                                                     transform = 'exp')
+                                                                                     transform = 'exp', df_age_aggregated_new = df_age_aggregated)
   
   # find relative difference incidence 
   relative_incidence_counterfactual_all <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND'),
@@ -1129,7 +1134,8 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
                                                                             sex_ratio = T,
                                                                             log_offset_round = log_offset_round.counterfactual, 
                                                                             log_offset_formula = log_offset_formula_persusceptible,
-                                                                            save_output = F)
+                                                                            save_output = F, 
+                                                                            df_age_aggregated_new = df_age_aggregated)
   
   # incidence rate sex ratio  by age group2 recipient
   df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
@@ -1139,7 +1145,8 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
                                                                             sex_ratio = T,
                                                                             log_offset_round = log_offset_round.counterfactual, 
                                                                             log_offset_formula = log_offset_formula_persusceptible,
-                                                                            save_output = F)
+                                                                            save_output = F, 
+                                                                            df_age_aggregated_new = df_age_aggregated)
   # incidence rate sex ratiototal
   sex_ratio_incidence_counterfactual_all <- find_summary_output_by_round(samples, 'log_beta', 
                                                                             c('INDEX_DIRECTION', 'INDEX_ROUND'), 
