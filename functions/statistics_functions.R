@@ -85,11 +85,15 @@ save_statistics_incidence_rate_trends <- function(icrr, icr, icrrs, icrrt, medag
   inc_rel_ratio <- inc_rel_ratio[order(COMM, ROUND)]
   
   # median age at infection
+  n_digit <- 1
   median_age <- copy(medage[order(COMM,SEX, ROUND)])
-  median_age[, M := round(M)]
-  median_age[, CL := round(CL)]
-  median_age[, CU := round(CU)]
-  
+  median_age[, M_roundn := format(round(M, n_digit), nsmall = n_digit)]
+  median_age[, CL_roundn  := format(round(CL, n_digit), nsmall = n_digit)]
+  median_age[, CU_roundn  := format(round(CU, n_digit), nsmall = n_digit)]
+  median_age[, M_round0 := round(M)]
+  median_age[, CL_round0  := round(CL)]
+  median_age[, CU_round0  := round(CU)]
+
   #save
   stats <- list()
   

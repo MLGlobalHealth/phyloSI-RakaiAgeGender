@@ -308,8 +308,8 @@ find_summary_output_by_round <- function(samples, output, vars,
     # take quantile of the age of the source
     setnames(tmp1, 'value', 'delta')
     vars <- standardised.vars
-    tmp1 <- tmp1[, list(value = Hmisc::wtd.quantile(x = AGE_TRANSMISSION.SOURCE, weight = delta,
-                                                        probs = c(0.1, 0.25, 0.5, 0.75, 0.9), normwt = TRUE),
+    tmp1 <- tmp1[, list(value = wquantile(x = AGE_TRANSMISSION.SOURCE, weights = delta,
+                                                        probs = c(0.1, 0.25, 0.5, 0.75, 0.9)),
                         quantile = c('C10', 'C25', 'C50', 'C75', 'C90')), by = c('iterations', vars)]
     vars = c(vars, 'quantile')
   }
@@ -324,8 +324,8 @@ find_summary_output_by_round <- function(samples, output, vars,
     # take quantile of the difference male age - female age
     setnames(tmp1, 'value', 'delta')
     vars <- standardised.vars
-    tmp1 <- tmp1[, list(value = Hmisc::wtd.quantile(x = (AGE_INFECTION.MALE - AGE_INFECTION.FEMALE), weight = delta,
-                                                    probs = c(0.1, 0.25, 0.5, 0.75, 0.9), normwt = TRUE),
+    tmp1 <- tmp1[, list(value = wquantile(x = (AGE_INFECTION.MALE - AGE_INFECTION.FEMALE), weights = delta,
+                                                    probs = c(0.1, 0.25, 0.5, 0.75, 0.9)),
                         quantile = c('C10', 'C25', 'C50', 'C75', 'C90')), by = c('iterations', vars)]
     vars = c(vars, 'quantile')
 
