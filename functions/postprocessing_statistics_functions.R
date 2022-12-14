@@ -202,6 +202,7 @@ make_transmission_flows_table <- function(expected_contribution_age_classificati
 save_median_age_diff <- function(median_age_diff_group, outdir){
   
   table <- list()
+  n_digits <- 1
   
   #
   # median age difference male to female
@@ -211,6 +212,9 @@ save_median_age_diff <- function(median_age_diff_group, outdir){
   mad <- mad[ROUND == "R018" & quantile == 'C50']
   mad <- mad[, .(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT, quantile, M, CL, CU)]
   mad <- mad[order(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT)]
+  mad[, M := format(round(M, n_digits), nsmall=n_digits)]
+  mad[, CL := format(round(CL, n_digits), nsmall=n_digits)]
+  mad[, CU := format(round(CU, n_digits), nsmall=n_digits)]
   table[['median_age_difference']] <- mad
   
   #
@@ -223,6 +227,7 @@ save_median_age_diff <- function(median_age_diff_group, outdir){
 save_median_age_source <- function(median_age_source_group, median_age_source_group2, 
                                    median_age_source, outdir){
   table <- list()
+  n_digits <- 1
   
   #
   # Median age source
@@ -232,6 +237,9 @@ save_median_age_source <- function(median_age_source_group, median_age_source_gr
   mas <- mas[ROUND %in% c('R010', 'R018') & quantile == 'C50']
   mas <- mas[, .(COMM, ROUND, LABEL_SOURCE, AGE_GROUP_INFECTION.RECIPIENT, M, CL, CU)]
   mas <- mas[order(COMM, ROUND, LABEL_SOURCE, AGE_GROUP_INFECTION.RECIPIENT)]
+  mas[, M := format(round(M, n_digits), nsmall = n_digits)]
+  mas[, CL := format(round(CL, n_digits), nsmall = n_digits)]
+  mas[, CU := format(round(CU, n_digits), nsmall = n_digits)]
   
   table[['median_age_source_agg']] <- mas
   
@@ -243,6 +251,9 @@ save_median_age_source <- function(median_age_source_group, median_age_source_gr
   mas <- mas[ROUND %in% c('R010', 'R018') & quantile == 'C50']
   mas <- mas[, .(COMM, ROUND, LABEL_SOURCE, AGE_GROUP_INFECTION.RECIPIENT, M, CL, CU)]
   mas <- mas[order(COMM, ROUND, LABEL_SOURCE, AGE_GROUP_INFECTION.RECIPIENT)]
+  mas[, M := format(round(M, n_digits), nsmall = n_digits)]
+  mas[, CL := format(round(CL, n_digits), nsmall = n_digits)]
+  mas[, CU := format(round(CU, n_digits), nsmall = n_digits)]
   
   table[['median_age_source_agg2']] <- mas
   
@@ -254,6 +265,9 @@ save_median_age_source <- function(median_age_source_group, median_age_source_gr
   mas <- mas[ROUND %in% c('R010', 'R018') & quantile == 'C50']
   mas <- mas[, .(COMM, ROUND, LABEL_SOURCE, M, CL, CU)]
   mas <- mas[order(COMM, ROUND, LABEL_SOURCE)]
+  mas[, M := format(round(M, n_digits), nsmall = n_digits)]
+  mas[, CL := format(round(CL, n_digits), nsmall = n_digits)]
+  mas[, CU := format(round(CU, n_digits), nsmall = n_digits)]
   
   table[['median_age_source']] <- mas
   
@@ -262,7 +276,7 @@ save_median_age_source <- function(median_age_source_group, median_age_source_gr
   #
   
   saveRDS(table, paste0(outdir, '-output-median_age_source.rds'))
-  
+
 }
 
 save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f05, 
