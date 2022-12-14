@@ -1,28 +1,28 @@
-save_statistics_expected_contribution <- function(expected_contribution_sex_source, median_age_source, outdir){
+save_statistics_expected_contribution <- function(expected_contribution_sex_source, expected_contribution_age_group_source_total, outdir){
   
   n_digits <- 1
   
   # contribution of men in first and last round 
-  ecm <- expected_contribution_sex_source
+  ecm <- copy(expected_contribution_sex_source)
   ecm[, MAX_INDEX_ROUND := max(INDEX_ROUND), by = c('COMM')]
   ecm <- ecm[INDEX_ROUND == 1 | INDEX_ROUND == MAX_INDEX_ROUND, .(M, CL, CU), by = c('COMM', 'LABEL_SOURCE', 'ROUND', 'MAX_INDEX_ROUND', 'INDEX_ROUND')]
   ecm <- ecm[, .(M = round(M*100, n_digits), CL = round(CL * 100, n_digits), CU = round(CU * 100, n_digits)), by = c('COMM', 'LABEL_SOURCE', 'ROUND')]
   ecm <- ecm[order(COMM, LABEL_SOURCE, ROUND)]
   
-  # age median of contribution 
-  median_age <- copy(median_age_source)
-  median_age[, MAX_INDEX_ROUND := max(INDEX_ROUND), by = c('COMM')]
-  median_age <- median_age[quantile == 'C50']
-  median_age <- median_age[INDEX_ROUND == 1 | INDEX_ROUND == MAX_INDEX_ROUND, .(M, CL, CU), by = c('COMM', 'LABEL_SOURCE', 'ROUND', 'MAX_INDEX_ROUND', 'INDEX_ROUND')]
-  median_age <- median_age[order(COMM, LABEL_SOURCE, ROUND)]
+  # contribution of men by age in last round 
+  ecma <- copy(expected_contribution_age_group_source_total)
+  ecma[, MAX_INDEX_ROUND := max(INDEX_ROUND), by = c('COMM')]
+  ecma <- ecma[ INDEX_ROUND == MAX_INDEX_ROUND, .(M, CL, CU), by = c('COMM', 'ROUND', 'LABEL_SOURCE', 'AGE_GROUP_TRANSMISSION.SOURCE')]
+  ecma <- ecma[, .(M = round(M*100, n_digits), CL = round(CL * 100, n_digits), CU = round(CU * 100, n_digits)), by = c('COMM', 'ROUND', 'LABEL_SOURCE', 'AGE_GROUP_TRANSMISSION.SOURCE')]
+  ecma <- ecma[order(COMM, ROUND, LABEL_SOURCE, AGE_GROUP_TRANSMISSION.SOURCE)]
   
   # save
   stats <- list()
   stats$contribution_male <- ecm
-  stats$median_age <- median_age
+  stats$contribution_male_age <- ecma
   
   saveRDS(stats, paste0(outdir, '-output-contribution.rds'))
-  
+
 }
 
 save_statistics_PPC <- function(predict_y_source_recipient, count_data, predict_incidence_rate_round, incidence_cases_recipient_round, outdir){
