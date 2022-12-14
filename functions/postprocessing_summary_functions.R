@@ -426,6 +426,12 @@ find_summary_output_by_round <- function(samples, output, vars,
     if(quantile_age_difference){
       file = paste0(file, '_age_difference')
     }
+    if(relative_baseline){
+      file = paste0(file, '_relative_baseline')
+    }
+    if(per_susceptible){
+      file = paste0(file, '_per_susceptible')
+    }
     if(!is.null(standardised.vars)){
       file = paste0(file, 'standardisedby_', tolower(paste0(gsub('INDEX_', '', standardised.vars), collapse = '_')))
     }
@@ -1069,6 +1075,12 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   # find number of male treated under counterfactual
   budget <- eligible_count_round.counterfactual[AGEYRS == 0, .(ROUND, SEX, COMM, TREATED, TREATED_CL, TREATED_CU)]
 
+  # find number of male by age treated under counterfactual
+  budget_age <- eligible_count_round.counterfactual[grepl('-', AGEYRS), .(ROUND, SEX, AGEYRS, COMM, TREATED, TREATED_CL, TREATED_CU, PROP_TREATED, PROP_TREATED_CL, PROP_TREATED_CU)]
+  setnames(budget_age, 'AGEYRS', 'AGE_GROUP')
+  eligible_count_round.counterfactual <- eligible_count_round.counterfactual[!(grepl('-', AGEYRS) | AGEYRS == 0)]
+  eligible_count_round.counterfactual[, AGEYRS := as.numeric(AGEYRS)]
+  
   # find offset under counterfactual
   log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual),df_estimated_contact_rates,
                                                               use_number_susceptible_offset, use_contact_rates_prior)
@@ -1139,6 +1151,7 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   
   # group
   counterfactuals <- list(budget = budget, 
+                          budget_age = budget_age,
                         incidence_counterfactual = incidence_counterfactual, 
                         relative_incidence_counterfactual = relative_incidence_counterfactual, 
                         eligible_count_round.counterfactual = eligible_count_round.counterfactual,
@@ -1337,15 +1350,33 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
                 INFECTED_NON_SUPPRESSED, INFECTED_NON_SUPPRESSED.FACTUAL, TREATED)]
   
   #
-  # find total treated across ages
+  # find variable across ages
   #
   
-  df2 <- df1[, list(TREATED = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM', 'iterations')]
+  df2 <- df1[, list(TREATED = sum(TREATED), 
+                    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED), 
+                    INFECTED_NON_SUPPRESSED.FACTUAL = sum(INFECTED_NON_SUPPRESSED.FACTUAL)), by = c('ROUND', 'SEX', 'COMM', 'iterations')]
   df2[, AGEYRS := 0]
   df1 <- rbind(df1, df2,fill=TRUE)
+
+  #
+  # find variable across 5-year age band 
+  #
+  
+  tmp <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+  tmp <- unique(tmp[, .(AGE_GROUP_TRANSMISSION.SOURCE, AGE_TRANSMISSION.SOURCE)])
+  setnames(tmp, c('AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_TRANSMISSION.SOURCE'), c('AGE_GROUP', 'AGEYRS'))
+  df2 <- merge(df1, tmp, by = 'AGEYRS')
+  df2 <- df2[, list(TREATED = sum(TREATED), 
+                    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED), 
+                    INFECTED_NON_SUPPRESSED.FACTUAL = sum(INFECTED_NON_SUPPRESSED.FACTUAL)), by = c('ROUND', 'SEX', 'COMM', 'AGE_GROUP', 'iterations')]
+  setnames(df2, 'AGE_GROUP', 'AGEYRS')
+  df1 <- rbind(df1, df2,fill=TRUE)
+  df1[, PROP_TREATED := TREATED / TREATED[AGEYRS == 0], by = c('ROUND', 'SEX', 'COMM', 'iterations')]
+  
   
   #
-  # summarise
+  # summarise by 1-year age band
   #
   
   ps <- c(0.025,0.5,0.975)
@@ -1354,23 +1385,29 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
   df1 <- melt.data.table(df1, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'iterations'))
   ns = df1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=paste0(variable, '_', qlab)), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'variable')]
   ns = as.data.table(reshape2::dcast(ns, AGEYRS + SEX + COMM + ROUND  ~ q_label, value.var = "q"))
-  ns <- merge(ns, unique(df[, .(ROUND, SEX, COMM, AGEYRS, ELIGIBLE, EMPIRICAL_PREVALENCE, PREVALENCE_CL, PREVALENCE_CU, PREVALENCE_M, 
-                                PARTICIPANT.x, INFECTED, SUSCEPTIBLE, PARTICIPANT.y, PARTICIPATION, spreader)]), 
-              by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'), all.x = T)
+  
+  # merge to all var
+  tmp <- unique(df[, .(ROUND, SEX, COMM, AGEYRS, ELIGIBLE, INFECTED, SUSCEPTIBLE, PARTICIPATION)])
+  tmp[, AGEYRS := as.character(AGEYRS)]
+  ns <- merge(ns, tmp, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'), all.x = T)
   setnames(ns, 'INFECTED_NON_SUPPRESSED_M', 'INFECTED_NON_SUPPRESSED')
   setnames(ns, 'INFECTED_NON_SUPPRESSED.FACTUAL_M', 'INFECTED_NON_SUPPRESSED.FACTUAL')
   setnames(ns, 'TREATED_M', 'TREATED')
+  setnames(ns, 'PROP_TREATED_M', 'PROP_TREATED')
   
   # subset to community
   ns <- ns[COMM %in% df_community[, unique(COMM)]]
   
   # if treeated negtive then do not do the counterfactual
-  ns[TREATED < 0, INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL]
-  ns[TREATED < 0, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL :=  PROP_UNSUPPRESSED_PARTICIPANTS_M]
-  ns[TREATED < 0, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL :=  PROP_UNSUPPRESSED_NONPARTICIPANTS_M]
+  ns[TREATED < 0, INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL] # this is what's going to be used in the offset
+  ns[TREATED < 0, INFECTED_NON_SUPPRESSED_CL := INFECTED_NON_SUPPRESSED.FACTUAL_CL]
+  ns[TREATED < 0, INFECTED_NON_SUPPRESSED_CU := INFECTED_NON_SUPPRESSED.FACTUAL_CU]
   ns[TREATED < 0, TREATED := 0]
   ns[TREATED < 0, TREATED_CL := 0]
   ns[TREATED < 0, TREATED_CU := 0]
+  
+
+  
   
   return(ns)
 }

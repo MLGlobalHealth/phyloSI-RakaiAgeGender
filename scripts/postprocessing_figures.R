@@ -275,7 +275,6 @@ expected_contribution_age_source2 <- find_summary_output_by_round(samples, 'log_
                                                                   standardised.vars = c('INDEX_ROUND'))
 plot_contribution_age_source_unsuppressed(expected_contribution_age_source2, unsuppressed_share_sex_age, median_age_source, df_unsuppressed_median_age, outfile.figures,'Expected_contribution')
 plot_contribution_age_source(expected_contribution_age_source2, median_age_source, outfile.figures,'Expected_contribution_sex')
-save_statistics_expected_contribution(expected_contribution_sex_source, median_age_source, outdir.table)
 
 # age-specific sex ratio contribution to transmission
 expected_contribution_age_source_sex_ratio <- find_summary_output_by_round(samples, 'log_lambda_latent',
@@ -317,7 +316,18 @@ expected_contribution_age_classification_male <- find_summary_output_by_round(sa
 plot_contribution_age_classification_male(expected_contribution_age_classification_male, outfile.figures,'Expected_contribution')
 
 #
-# Make table
+# Make table 1
+# contribution aggregated by age group source and sex
+df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+expected_contribution_age_group_source_total <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                                                             c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'),
+                                                                             transform = 'exp',
+                                                                             standardised.vars = c('INDEX_ROUND', 'INDEX_DIRECTION'))
+save_statistics_expected_contribution(expected_contribution_sex_source, expected_contribution_age_group_source_total, outdir.table)
+
+#
+# Make table 2
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
 
 # contribution aggregated by age group of recipient 
 expected_contribution_sex_age_group_recipient <- find_summary_output_by_round(samples, 'log_lambda_latent',
@@ -501,6 +511,7 @@ plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_
 # save
 save_counterfactual_results(counterfactuals_p_f, counterfactuals_p_f05, 
                             counterfactuals_p_959595, counterfactuals_p_909090, "Diagnosed unsuppressed", outdir.table)
+
 
 ##
 ## generate counterfactual treating all men as much as female are diagnosed/treated/suppressed
