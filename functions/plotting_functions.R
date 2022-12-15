@@ -1350,10 +1350,10 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       geom_point(aes(col = ROUND_LABEL, shape = age_group, x = UNSUPPRESSION_RATE_RATIO_RATIO_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_y_continuous(limits = c(NA,2)) + 
       scale_color_manual(values = colors) + 
-      labs(x = paste0('Male-female ratio of the rate of infected\nindividuals with unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
+      labs(x = paste0('Male-female ratio of the rate of individuals\nwith HIV who have unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
            y = paste0('Female-male ratio of the\nincidence rate relative\nto round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))])) + 
       theme_bw()  +
-      theme(legend.position = c(0.25, 0.74), 
+      theme(legend.position = 'none', 
             legend.title = element_blank(), 
             legend.text=element_text(size=rel(0.5))) +
       guides(shape=guide_legend(override.aes = list(size = 1), 
@@ -1362,7 +1362,7 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
                                                 keywidth = unit(0.01, 'pt'), keyheight = unit(0.001, 'pt'))) 
     
       # scale_y_log10()
-    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.pdf'), w = 3.5, h = 2.4)
+    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.pdf'), w = 3.7, h = 2.4)
     
   }
   
