@@ -215,6 +215,9 @@ save_median_age_diff <- function(median_age_diff_group, outdir){
   mad[, M := format(round(M, n_digits), nsmall=n_digits)]
   mad[, CL := format(round(CL, n_digits), nsmall=n_digits)]
   mad[, CU := format(round(CU, n_digits), nsmall=n_digits)]
+  mad[, M := gsub(' ', '', M)]
+  mad[, CL := gsub(' ', '', CL)]
+  mad[, CU := gsub(' ', '', CU)]
   table[['median_age_difference']] <- mad
   
   #
@@ -316,6 +319,10 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   budget.counterfactual <- counterfactuals_p_f$budget 
   budget.counterfactual[, label := label.f]
   
+  # number of male treated by age
+  budget_age.counterfactual <- counterfactuals_p_f$budget_age
+  budget_age.counterfactual[, label := label.f]
+  
   # relative incident cases counterfactual compared to factual by age group 
   relative_incidence_counterfactual_group  <- counterfactuals_p_f$relative_incidence_counterfactual_group2
   relative_incidence_counterfactual_group[, label := label.f]
@@ -340,6 +347,10 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   # number of male treated regardless of age
   budget.counterfactual.f05 <- counterfactuals_p_f05$budget 
   budget.counterfactual.f05[, label := label.f05]
+  
+  # number of male treated by age
+  budget_age.counterfactual.f05 <- counterfactuals_p_f05$budget_age
+  budget_age.counterfactual.f05[, label := label.f05]
   
   # relative incident cases counterfactual compared to factual by age group 
   relative_incidence_counterfactual_group.f05  <- counterfactuals_p_f05$relative_incidence_counterfactual_group2
@@ -366,6 +377,10 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   budget.counterfactual.959595 <- counterfactuals_p_959595$budget 
   budget.counterfactual.959595[, label := label.959595]
   
+  # number of male treated by age
+  budget_age.counterfactual.959595 <- counterfactuals_p_959595$budget_age
+  budget_age.counterfactual.959595[, label := label.959595]
+  
   # relative incident cases counterfactual compared to factual by age group 
   relative_incidence_counterfactual_group.959595  <- counterfactuals_p_959595$relative_incidence_counterfactual_group2
   relative_incidence_counterfactual_group.959595[, label := label.959595]
@@ -391,8 +406,12 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   budget.counterfactual.909090 <- counterfactuals_p_909090$budget 
   budget.counterfactual.909090[, label := label.909090]
   
+  # number of male treated by age
+  budget_age.counterfactual.909090 <- counterfactuals_p_909090$budget_age
+  budget_age.counterfactual.909090[, label := label.909090]
+  
   # relative incident cases counterfactual compared to factual by age group 
-  relative_incidence_counterfactual_group.909090  <- counterfactuals_p_909090$relative_incidence_counterfactual_group2
+  relative_incidence_counterfactual_group.909090  <- counterfactuals_p_909090$relative_incidence_counterfactual_group1
   relative_incidence_counterfactual_group.909090[, label := label.909090]
   
   # relative incident cases counterfactual compared to factual regardless of age
@@ -400,7 +419,7 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   relative_incidence_counterfactual_all.909090[, label := label.909090]
   
   # sex ratio incident cases counterfactual  by age group
-  sex_ratio_incidence_counterfactual_group.909090 <- counterfactuals_p_909090$sex_ratio_incidence_counterfactual_group2 
+  sex_ratio_incidence_counterfactual_group.909090 <- counterfactuals_p_909090$sex_ratio_incidence_counterfactual_group1 
   sex_ratio_incidence_counterfactual_group.909090[, label := label.909090]
   
   # sex ratio incident cases counterfactual  by age group regardless of age
@@ -415,6 +434,10 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   budget.counterfactual <- do.call('rbind', list(budget.counterfactual, budget.counterfactual.f05, 
                                                  budget.counterfactual.959595, budget.counterfactual.909090))
   budget.counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
+  
+  budget_age.counterfactual <- do.call('rbind', list(budget_age.counterfactual, budget_age.counterfactual.f05, 
+                                                     budget_age.counterfactual.959595, budget_age.counterfactual.909090))
+  budget_age.counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
   relative_incidence_counterfactual_group <- do.call('rbind', list(relative_incidence_counterfactual_group, relative_incidence_counterfactual_group.f05, 
                                                                    relative_incidence_counterfactual_group.959595, relative_incidence_counterfactual_group.909090))
@@ -439,6 +462,7 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   
   Round <- 'R018'
   budget.counterfactual <- budget.counterfactual[ROUND == Round & SEX == 'M']
+  budget_age.counterfactual <- budget_age.counterfactual[ROUND == Round & SEX == 'M']
   relative_incidence_counterfactual_group <- relative_incidence_counterfactual_group[ROUND == Round & IS_MF == T]
   relative_incidence_counterfactual_all <- relative_incidence_counterfactual_all[ROUND == Round & IS_MF == T]
   sex_ratio_incidence_counterfactual_group <- sex_ratio_incidence_counterfactual_group[ROUND == Round]
@@ -448,43 +472,88 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   #
   # budget
   #
-  
+  n_digits <- 1
   bc <- copy(budget.counterfactual[order(COMM, ROUND, SEX, label)])
-  bc[, `:=` (TREATED = round(TREATED), TREATED_CL = round(TREATED_CL), TREATED_CU = round(TREATED_CU))]
+  bc[, `:=` (TREATED = format(round(TREATED, n_digits), nsmall = n_digits), 
+             TREATED_CL = format(round(TREATED_CL, n_digits), nsmall = n_digits), 
+             TREATED_CU = format(round(TREATED_CU), nsmall=n_digits))]
+  bc[, TREATED := gsub(' ', '', TREATED)]
+  bc[, TREATED_CL := gsub(' ', '', TREATED_CL)]
+  bc[, TREATED_CU := gsub(' ', '', TREATED_CU)]
+  
   
   #
-  # relative incidence rate
+  # relative incidence 
   #
   
-  ric <- copy(relative_incidence_counterfactual_group)
-  ric <-ric[order(COMM, ROUND, LABEL_RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT, label), .(COMM, ROUND, LABEL_RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT, label, M, CL, CU)]
+  n_digits <- 1
+  
   ric.all <- copy(relative_incidence_counterfactual_all)
   ric.all <-ric.all[order(COMM, ROUND, LABEL_RECIPIENT, label), .(COMM, ROUND, LABEL_RECIPIENT, label, M, CL, CU)]
   ric.all[, AGE_GROUP_INFECTION.RECIPIENT := 'All']
-  ric <- rbind(ric, ric.all)
-  ric[, `:=` (M = format(round(M*100, 1), nsmall = 1), CL = format(round(CL*100, 1), nsmall = 1), 
-              CU = format(round(CU*100, 1), nsmall = 1))]
+  ric.all[, `:=` (M = format(round(M*100, n_digits), nsmall = n_digits), CL = format(round(CL*100, n_digits), nsmall = n_digits), 
+              CU = format(round(CU*100, n_digits), nsmall = n_digits))]
   
+ 
   #
   # sex incidence rate ratio
   #
   
-  ser <- copy(sex_ratio_incidence_counterfactual_group)
-  ser <-ser[order(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT, label), .(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT, label, M, CL, CU)]
+  n_digits <- 2
+  
   ser.all <- copy(sex_ratio_incidence_counterfactual_all)
   ser.all <-ser.all[order(COMM, ROUND, label), .(COMM, ROUND, label, M, CL, CU)]
-  ser.all[, AGE_GROUP_INFECTION.RECIPIENT := 'All']
-  ser <- rbind(ser, ser.all)
-  ser[, `:=` (M = format(round(M, 1), nsmall = 1), CL = format(round(CL, 1), nsmall = 1), 
-              CU = format(round(CU, 1), nsmall = 1))]
+  ser.all[, `:=` (M = format(round(M, n_digits), nsmall = n_digits), CL = format(round(CL, n_digits), nsmall = n_digits), 
+              CU = format(round(CU, n_digits), nsmall = n_digits))]
+  
+  #
+  # budget by age
+  #
+  
+  n_digits <- 1
+  
+  bca <- copy(budget_age.counterfactual[order(label, COMM, ROUND, SEX, AGE_GROUP)])
+  bca[, `:=` (TREATED = format(round(TREATED, n_digits), nsmall = n_digits), 
+             TREATED_CL = format(round(TREATED_CL, n_digits), nsmall = n_digits), 
+             TREATED_CU = format(round(TREATED_CU), nsmall=n_digits), 
+             PROP_TREATED = format(round(PROP_TREATED * 100, n_digits), n_digits),
+             PROP_TREATED_CL = format(round(PROP_TREATED_CL * 100, n_digits), n_digits),
+             PROP_TREATED_CU = format(round(PROP_TREATED_CU * 100, n_digits), n_digits))]
+  
+  #
+  # relative incidence by age
+  #
+  
+  n_digits <- 1
+  
+  ric <- copy(relative_incidence_counterfactual_group)
+  ric <-ric[order(COMM, ROUND, LABEL_RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT, label), .(COMM, ROUND, LABEL_RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT, label, M, CL, CU)]
+  ric[, `:=` (M = format(round(M*100, n_digits), nsmall = n_digits), CL = format(round(CL*100, n_digits), nsmall = n_digits), 
+              CU = format(round(CU*100, n_digits), nsmall = n_digits))]
+  
+  
+  #
+  # sex incidence rate ratio by age
+  #
+  
+  n_digits <- 2
+  
+  ser <- copy(sex_ratio_incidence_counterfactual_group)
+  ser <-ser[order(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT, label), .(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT, label, M, CL, CU)]
+  ser[, `:=` (M = format(round(M, n_digits), nsmall = n_digits), CL = format(round(CL, n_digits), nsmall = n_digits), 
+              CU = format(round(CU, n_digits), nsmall = n_digits))]
   
   
   #
   # save
   #
+  
   table <- list('budget' = bc, 
-                'relative_incidence' = ric, 
-                'indidence_rate_ratio' = ser)
+                'relative_incidence' = ric.all, 
+                'indidence_rate_ratio' = ser.all, 
+                'budget_age' = bca, 
+                'relative_incidence_age' = ric, 
+                'indidence_rate_ratio_age' = ser)
   file = paste0(outdir, '-output-statistics_budget_counterfactual_', gsub(' ' , '', lab), '.rds')
   saveRDS(table, file)
   return(table)
