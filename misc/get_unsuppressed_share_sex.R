@@ -6,6 +6,10 @@ library(dplyr)
 # directory to repository
 indir.repository <- '~/git/phyloflows'
 
+# outdir
+indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+
 # files
 file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
 file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
@@ -91,6 +95,9 @@ sing = as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
 # name
 setnames(sing, qlab, paste0('UNSUPPRESSED_SHARE_SEX_', qlab))
 
+#merge
+sing <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
+
 # plot
 ggplot(sing, aes(x = ROUND)) + 
   geom_point(aes(y = UNSUPPRESSED_SHARE_SEX_M)) + 
@@ -100,12 +107,84 @@ ggplot(sing, aes(x = ROUND)) +
   scale_y_continuous(limits = c(0,1))
 
 
+#####################################################
+
+# FIND SHARE OF INFECTED UNSUPPRESSED ACROSS AGE BY SEX
+
+#####################################################
+
+# find share of unsuppressed by sex across age
+df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations', 'SEX')]
+df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED]
+
+# summarise
+ps <- c(0.025,0.5,0.975)
+qlab <- c('CL','M','CU')
+sing.age = df[, list(q= quantile(UNSUPPRESSED_SHARE, prob=ps, na.rm = T), q_label=qlab), by=c('ROUND', 'COMM', 'SEX', 'AGEYRS')]
+sing.age = as.data.table(reshape2::dcast(sing.age, ... ~ q_label, value.var = "q"))
+
+# name
+setnames(sing.age, qlab, paste0('UNSUPPRESSED_SHARE_AGE_BY_SEX_', qlab))
+
+# merge
+sing <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX', 'AGEYRS'))
+
+# plot
+ggplot(sing.age[COMM == 'inland'], aes(x = AGEYRS)) + 
+  geom_line(aes(y = UNSUPPRESSED_SHARE_AGE_BY_SEX_M)) + 
+  geom_ribbon(aes(ymin = UNSUPPRESSED_SHARE_AGE_BY_SEX_CL, ymax = UNSUPPRESSED_SHARE_AGE_BY_SEX_CU), alpha = 0.5) + 
+  facet_grid(ROUND~COMM+SEX) + 
+  theme_bw()
+
+
 #########################################
 
 # SAVE
 
 #########################################
 
-tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
 file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_share_sex_221208.csv'))
-write.csv(tmp, file = file.name, row.names = F)
+write.csv(sing, file = file.name, row.names = F)
+
+
+
+#########################################
+
+# FIND SEX SHARE OF INFECTED BY AGE GROUP 
+
+#########################################
+
+# age groups
+df_age_aggregated <- data.table(AGEYRS = df[, sort(unique(AGEYRS))])
+df_age_aggregated[, INDEX_AGE_GROUP := 7]
+df_age_aggregated[AGEYRS < 45, INDEX_AGE_GROUP := 6]
+df_age_aggregated[AGEYRS < 40, INDEX_AGE_GROUP := 5]
+df_age_aggregated[AGEYRS < 35, INDEX_AGE_GROUP := 4]
+df_age_aggregated[AGEYRS < 30, INDEX_AGE_GROUP := 3]
+df_age_aggregated[AGEYRS < 25, INDEX_AGE_GROUP := 2]
+df_age_aggregated[AGEYRS < 20, INDEX_AGE_GROUP := 1]
+df_age_aggregated[, AGE_GROUP := c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49')[INDEX_AGE_GROUP]]
+
+# aggregated by age groups
+dfa <- merge(df, df_age_aggregated, by = 'AGEYRS')
+dfa <- dfa[, list(UNSUPPRESSED = sum(UNSUPPRESSED)), by = c('ROUND', 'COMM', 'AGE_GROUP', 'SEX', 'iterations')]
+
+# find share of unsuppressed by sex across age
+dfa[, UNSUPPRESSED_SHARE := UNSUPPRESSED / sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'SEX', 'iterations')]
+
+# summarise
+sing = dfa[, list(q= quantile(UNSUPPRESSED_SHARE, prob=ps, na.rm = T), q_label=qlab), by=c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')]
+sing = as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
+
+# save for round 18 inland
+n_digits <- 1
+tmp <- sing[ROUND == '18' & COMM == 'inland']
+tmp[, `:=` (CL = format(round(CL*100, n_digits), nsmall = n_digits), 
+            CU = format(round(CU*100, n_digits), nsmall = n_digits), 
+            M = format(round(M*100, n_digits), nsmall = n_digits))]
+tmp[, CL := gsub(' ', '', CL)]
+tmp[, CU := gsub(' ', '', CU)]
+tmp[, M := gsub(' ', '', M)]
+file.name <- file.path(outdir, paste0('RCCS_shareunsuppressed_age_group_5years_R18_221215.rds'))
+saveRDS(tmp, file = file.name)
+
