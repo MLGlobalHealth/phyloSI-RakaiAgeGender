@@ -531,6 +531,7 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   n_digits <- 1
   
   bca <- copy(budget_age.counterfactual[order(label, COMM, ROUND, SEX, AGE_GROUP)])
+  bca[PROP_TREATED_CL < 0, PROP_TREATED_CL := 0]
   bca[, `:=` (TREATED = format(round(TREATED, n_digits), nsmall = n_digits), 
              TREATED_CL = format(round(TREATED_CL, n_digits), nsmall = n_digits), 
              TREATED_CU = format(round(TREATED_CU), nsmall=n_digits), 
