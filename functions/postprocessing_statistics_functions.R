@@ -199,16 +199,16 @@ make_transmission_flows_table <- function(expected_contribution_age_classificati
   return(table)
 }
 
-save_median_age_diff <- function(median_age_diff_group, outdir){
+save_median_age_diff <- function(median_age_diff_group1, median_age_diff_group2, outdir){
   
   table <- list()
   n_digits <- 1
   
   #
-  # median age difference male to female
+  # median age difference male to female age group 1
   #
   
-  mad <- copy(median_age_diff_group)
+  mad <- copy(median_age_diff_group1)
   mad <- mad[ROUND == "R018" & quantile == 'C50']
   mad <- mad[, .(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT, quantile, M, CL, CU)]
   mad <- mad[order(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT)]
@@ -218,13 +218,31 @@ save_median_age_diff <- function(median_age_diff_group, outdir){
   mad[, M := gsub(' ', '', M)]
   mad[, CL := gsub(' ', '', CL)]
   mad[, CU := gsub(' ', '', CU)]
-  table[['median_age_difference']] <- mad
+  table[['median_age_difference_group1']] <- mad
+  
+  #
+  # median age difference male to female age group 2
+  #
+  
+  mad <- copy(median_age_diff_group2)
+  mad <- mad[ROUND == "R018" & quantile == 'C50']
+  mad <- mad[, .(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT, quantile, M, CL, CU)]
+  mad <- mad[order(COMM, ROUND, LABEL_DIRECTION, AGE_GROUP_INFECTION.RECIPIENT)]
+  mad[, M := format(round(M, n_digits), nsmall=n_digits)]
+  mad[, CL := format(round(CL, n_digits), nsmall=n_digits)]
+  mad[, CU := format(round(CU, n_digits), nsmall=n_digits)]
+  mad[, M := gsub(' ', '', M)]
+  mad[, CL := gsub(' ', '', CL)]
+  mad[, CU := gsub(' ', '', CU)]
+  table[['median_age_difference_group2']] <- mad
   
   #
   #Save
   #
   
   saveRDS(table, paste0(outdir, '-output-median_age_difference.rds'))
+  
+
 }
 
 save_median_age_source <- function(median_age_source_group, median_age_source_group2, 
