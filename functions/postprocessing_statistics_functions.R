@@ -429,7 +429,7 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   budget_age.counterfactual.909090[, label := label.909090]
   
   # relative incident cases counterfactual compared to factual by age group 
-  relative_incidence_counterfactual_group.909090  <- counterfactuals_p_909090$relative_incidence_counterfactual_group1
+  relative_incidence_counterfactual_group.909090  <- counterfactuals_p_909090$relative_incidence_counterfactual_group2
   relative_incidence_counterfactual_group.909090[, label := label.909090]
   
   # relative incident cases counterfactual compared to factual regardless of age
@@ -437,7 +437,7 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   relative_incidence_counterfactual_all.909090[, label := label.909090]
   
   # sex ratio incident cases counterfactual  by age group
-  sex_ratio_incidence_counterfactual_group.909090 <- counterfactuals_p_909090$sex_ratio_incidence_counterfactual_group1 
+  sex_ratio_incidence_counterfactual_group.909090 <- counterfactuals_p_909090$sex_ratio_incidence_counterfactual_group2 
   sex_ratio_incidence_counterfactual_group.909090[, label := label.909090]
   
   # sex ratio incident cases counterfactual  by age group regardless of age
@@ -545,7 +545,7 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   n_digits <- 1
   
   ric <- copy(relative_incidence_counterfactual_group)
-  ric <-ric[order(COMM, ROUND, LABEL_RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT, label), .(COMM, ROUND, LABEL_RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT, label, M, CL, CU)]
+  ric <-ric[order(label, COMM, ROUND, LABEL_RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT), .(COMM, ROUND, LABEL_RECIPIENT, AGE_GROUP_INFECTION.RECIPIENT, label, M, CL, CU)]
   ric[, `:=` (M = format(round(M*100, n_digits), nsmall = n_digits), CL = format(round(CL*100, n_digits), nsmall = n_digits), 
               CU = format(round(CU*100, n_digits), nsmall = n_digits))]
   
@@ -557,7 +557,7 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   n_digits <- 2
   
   ser <- copy(sex_ratio_incidence_counterfactual_group)
-  ser <-ser[order(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT, label), .(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT, label, M, CL, CU)]
+  ser <-ser[order(label, COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT), .(COMM, ROUND, AGE_GROUP_INFECTION.RECIPIENT, label, M, CL, CU)]
   ser[, `:=` (M = format(round(M, n_digits), nsmall = n_digits), CL = format(round(CL, n_digits), nsmall = n_digits), 
               CU = format(round(CU, n_digits), nsmall = n_digits))]
   
