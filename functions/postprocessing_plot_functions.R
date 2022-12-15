@@ -824,7 +824,7 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
   # find unsuppressed share by sex and age
   uns <- copy(unsuppressed_share_sex_age)
   setnames(uns, 'AGEYRS', 'AGE_TRANSMISSION.SOURCE')
-  uns[, type := 'Contribution to infected\nindividuals with unsuppressed virus']
+  uns[, type := 'Contribution to individuals with\nHIV who have unsuppressed virus']
 
   # find median age of unsuppressed 
   median_uns <- copy(df_unsuppressed_median_age[quantile == 'C50'])
@@ -2013,7 +2013,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       geom_bar(aes(y = value, fill = VARIABLE_LABEL2), stat = 'identity') +  
       facet_wrap(~label, ncol = 1) + 
       theme_bw() + 
-      labs(y = 'Number of infected men', x = 'Age', col = 'Male treated') + 
+      labs(y = 'Number of men with HIV', x = 'Age', col = 'Male treated') + 
       theme(legend.title = element_blank(),
             legend.position = 'none',
             strip.background = element_rect(colour="white", fill="white"), 
@@ -2659,4 +2659,87 @@ plot_counterfactual_strategy <- function(counterfactuals_a_a, incidence_factual,
     
   }
 }
+
+
+
+plot_contribution_age_incidence_unsuppressed_contact <- function(expected_contribution_age_source, df_contribution_sexual_contact, unsuppressed_share_age, outdir)
+{
+  
+  # contribution to incidence
+  cti <- copy(expected_contribution_age_source)
+  
+  # contribution to sexual contact
+  cts <- copy(df_contribution_sexual_contact)
+  
+  # contribution to individual with unsuppressed virus
+  ctu <- copy(unsuppressed_share_age)
+  
+  # select one round
+  Round <- 'R018'
+  cti <- cti[ROUND == Round]
+  ctu <- ctu[ROUND == Round]
+  
+  label.cont.inc <- 'Contribution to HIV incidence'
+  label.cont.uns <- 'Contribution to individuals with unsuppressed virus'
+  label.cont.cont <- 'Contribution to sexual contacts'
+  # plot
+  communities <- cti[, unique(COMM)]
+  for(i in seq_along(communities)){
+    Comm <- communities[i]
+    
+    cti.c <- cti[COMM == Comm]
+    ctu.c <- ctu[COMM == Comm]
+    
+    
+    ggplot() + 
+      geom_line(data = cti.c[LABEL_SOURCE == 'Female sources'], aes(x = AGE_TRANSMISSION.SOURCE, y = M), col = 'lightpink1') + 
+      geom_ribbon(data = cti.c[LABEL_SOURCE == 'Female sources'], aes(x = AGE_TRANSMISSION.SOURCE, ymin = CL, ymax = CU), fill = 'lightpink1', alpha = 0.3)  +
+      geom_line(data = cti.c[LABEL_SOURCE == 'Male sources'], aes(x = AGE_TRANSMISSION.SOURCE, y = M), col = 'lightblue3') + 
+      geom_ribbon(data = cti.c[LABEL_SOURCE == 'Male sources'], aes(x = AGE_TRANSMISSION.SOURCE, ymin = CL, ymax = CU), fill = 'lightblue3', alpha = 0.3)  + 
+      geom_ribbon(data = ctu.c[LABEL_SOURCE == 'Female sources'], aes(x = AGEYRS,ymin = CL, ymax = CU), alpha = 0.3, fill='grey70')+
+      geom_line(data = ctu.c[LABEL_SOURCE == 'Female sources'], aes(x = AGEYRS,y = M,linetype = type), col='grey70', linetype = 'dashed') + 
+      geom_ribbon(data = ctu.c[LABEL_SOURCE == 'Male sources'], aes(x = AGEYRS,ymin = CL, ymax = CU), alpha = 0.3, fill='grey50')+
+      geom_line(data = ctu.c[LABEL_SOURCE == 'Male sources'], aes(x = AGEYRS,y = M,linetype = type), col='grey50', linetype = 'dashed') + 
+      geom_line(data = cts[LABEL_SOURCE == 'Female sources'], aes(x = AGEYRS, y = PROP_M), col = '#DC3535') + 
+      geom_line(data = cts[LABEL_SOURCE == 'Male sources'], aes(x = AGEYRS, y = PROP_M), col = '#2B3467') + 
+      theme_bw() +
+      facet_grid(.~LABEL_SOURCE) + 
+      labs(x = 'Age at transmission', y = 'Percent') + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'none', 
+            legend.title = element_blank(), 
+            panel.grid.minor = element_blank()) + 
+      scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
+      scale_x_continuous(expand = c(0,0),
+                         breaks = c(seq(min(cti.c[, unique(AGE_TRANSMISSION.SOURCE)]), max(cti.c[, unique(AGE_TRANSMISSION.SOURCE)]), 5))) 
+    ggsave(file = paste0(outdir, '-output-contribution_age_incidence_unsuppressed_contact_age_', communities[i], '.pdf'), w = 6.5, h = 3.6)
+    
+    if(0){
+      # for legend
+      
+      ggplot() + 
+        geom_line(data = cts, aes(x = AGEYRS, y = PROP_M, color = LABEL_GENDER_SOURCE)) + 
+        theme_bw() +
+        facet_grid(.~LABEL_SOURCE) + 
+        scale_color_manual(values= c('#DC3535', '#2B3467')) + 
+        labs(x = 'Age at transmission', y = 'Percent', 
+             col= paste0('Contribution to sexual contacts,\n', df_round[ROUND == 'R015' & COMM == 'inland', gsub('.*\n(.+)', '\\1', LABEL_ROUND)])) + 
+        theme(strip.background = element_rect(colour="white", fill="white"),
+              strip.text = element_text(size = rel(1)),
+              legend.position = 'right', 
+              panel.grid.minor = element_blank()) + 
+        scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))+ 
+        scale_x_continuous(expand = c(0,0),
+                           breaks = c(seq(min(cti.c[, unique(AGE_TRANSMISSION.SOURCE)]), max(cti.c[, unique(AGE_TRANSMISSION.SOURCE)]), 5))) 
+      # ggsave(file = paste0('~/Downloads/legend.pdf'), w = 4, h = 3)
+      
+      
+    }
+
+  }
+  
+  
+}
+
 

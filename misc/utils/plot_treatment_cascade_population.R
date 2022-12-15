@@ -160,7 +160,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX_LABEL), alpha = 0.5) + 
   geom_line(aes(y = M, col = SEX_LABEL)) + 
   theme_bw() + 
-  labs(x = 'Age', y = 'Proportion of infected individuals\nwith suppressed virus in round 18', 
+  labs(x = 'Age', y = 'Proportion of individuals with HIV\nwho have suppressed virus in round 18', 
        col = '', fill = '', shape = '', linetype= '') +
   theme(legend.position = c(0.85, 0.17), 
         strip.background = element_rect(colour="white", fill="white")) +
