@@ -61,10 +61,7 @@ samples <- rstan::extract(fit)
 # temporary
 source(file.path(indir, 'functions', 'summary_functions.R'))
 df_direction <- get.df.direction()
-# file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221208.csv'))
-# unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
-# file.contribution.sexual.contacts <- file.path(indir, 'data', paste0('age_dist_inlandR015.rds'))
-# contribution_sexual_contact <- fread(file.contribution.sexual.contacts) 
+
 
 #
 # offset
@@ -101,11 +98,11 @@ count_data <- prepare_count_data(stan_data)
 incidence_cases_recipient_round <- prepare_incidence_cases(incidence_cases_round)
 unsuppressed_share_sex <- prepare_unsuppressed_share(unsuppressed_share, c('SEX'))
 unsuppressed_share_sex_age <- prepare_unsuppressed_share(unsuppressed_share, c('SEX', 'AGEYRS'))
-# unsuppressed_share_age <- prepare_unsuppressed_share(unsuppressed_share, c('SEX', 'AGEYRS'), 'SEX')
 prevalence_prop_sex<- prepare_infected_share(infected_share, 'SEX')
 reported_contact <- clean_reported_contact(df_reported_contact)
 df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age)
-# df_contribution_sexual_contact <- clean_contribution_sexual_contact(contribution_sexual_contact)
+
+
 
 
 #
@@ -220,7 +217,6 @@ save_median_age_source(median_age_source_group, median_age_source_group2, median
 
 cat("\nPlot median age difference at transmission\n")
 
-
 # age group recipient
 df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
 median_age_diff_group1 <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'AGE_GROUP_INFECTION.RECIPIENT'),
@@ -286,7 +282,11 @@ plot_contribution_sex_source(expected_contribution_sex_source, unsuppressed_shar
 expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                                  transform = 'exp',
                                                                  standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'))
-# plot_contribution_age_incidence_unsuppressed_contact(expected_contribution_age_source, df_contribution_sexual_contact, unsuppressed_share_age, outfile.figures)
+
+# age-specific contribution to transmission among all age source and reicpient by sex
+expected_contribution_age_source_recipient <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
+                                                                 transform = 'exp',
+                                                                 standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'))
 
 # age-specific contribution to transmission among all age and  sex
 expected_contribution_age_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
