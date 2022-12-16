@@ -188,3 +188,31 @@ tmp[, M := gsub(' ', '', M)]
 file.name <- file.path(outdir, paste0('RCCS_shareunsuppressed_age_group_5years_R18_221215.rds'))
 saveRDS(tmp, file = file.name)
 
+
+#########################################
+
+# FIND SEX SHARE OF INFECTED BY SEX 
+
+#########################################
+
+
+dfa <- df[, list(UNSUPPRESSED = sum(UNSUPPRESSED)), by = c('ROUND', 'COMM', 'SEX', 'iterations')]
+
+# find share of unsuppressed by sex across age
+dfa[, UNSUPPRESSED_SHARE := UNSUPPRESSED / sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations')]
+
+# summarise
+sing = dfa[, list(q= quantile(UNSUPPRESSED_SHARE, prob=ps, na.rm = T), q_label=qlab), by=c('ROUND', 'COMM', 'SEX')]
+sing = as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
+
+# save for round 18 inland
+n_digits <- 1
+tmp <- sing[ROUND == '18' & COMM == 'inland']
+tmp[, `:=` (CL = format(round(CL*100, n_digits), nsmall = n_digits), 
+            CU = format(round(CU*100, n_digits), nsmall = n_digits), 
+            M = format(round(M*100, n_digits), nsmall = n_digits))]
+tmp[, CL := gsub(' ', '', CL)]
+tmp[, CU := gsub(' ', '', CU)]
+tmp[, M := gsub(' ', '', M)]
+file.name <- file.path(outdir, paste0('RCCS_shareunsuppressed_total_R18_221215.rds'))
+saveRDS(tmp, file = file.name)
