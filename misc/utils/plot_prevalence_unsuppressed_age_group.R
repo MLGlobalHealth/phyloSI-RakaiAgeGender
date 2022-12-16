@@ -24,7 +24,7 @@ unsuppressed <- as.data.table(read.csv(infile.unsuppressed))
 tmp <- data.table(reshape2::melt(prevalence, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
 tmp[, TYPE := 'HIV prevalence']
 tmp1 <- data.table(reshape2::melt(unsuppressed, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
-tmp1[, TYPE := 'HIV-positive with\nunsuppressed viral load']
+tmp1[, TYPE := 'HIV-positive with\nunsuppressed virus']
 tmp <- rbind(tmp, tmp1)
 tmp[, variable := stringi::stri_sub(variable,-2,-1)]
 tmp[variable == '_M', variable := 'M']
