@@ -48,7 +48,7 @@ df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
 #####################################################
 
-# FIND PROPORTION UNSUPPRESSED BY AGE GROUP '15-24', '25-34', '35-49'
+# FIND  PREVALENCE & PROPORTION UNSUPPRESSED BY AGE GROUP '15-24', '25-34', '35-49'
 
 #####################################################
 
@@ -110,7 +110,7 @@ write.csv(sinf.age, file = file.name, row.names = F)
 
 #####################################################
 
-# FIND PROPORTION UNSUPPRESSED BY AGE GROUP '15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'
+# FIND  PREVALENCE &  PROPORTION UNSUPPRESSED BY AGE GROUP '15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'
 
 #####################################################
 
@@ -193,4 +193,78 @@ tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M := gsub(' ', '', DIFF_PROP_UNSUPPRESSED
 file.name <- file.path(outdir, paste0('RCCS_diffpropunsuppressed_age_group_5years_R18_221215.rds'))
 saveRDS(tmp, file = file.name)
 
+
+
+#####################################################
+
+# FIND PREVALENCE & PROPORTION UNSUPPRESSED ACROSS AGE
+
+#####################################################
+
+# aggregated across ages
+df_1 <- df[, list(INFECTED = sum(INFECTED), 
+                    UNSUPPRESSED = sum(UNSUPPRESSED), 
+                    ELIGIBLE = sum(ELIGIBLE)), by = c('ROUND', 'COMM', 'SEX', 'iterations')]
+
+# find prevalence and unsuppressed
+df_1[, PROP_UNSUPPRESSED := UNSUPPRESSED / INFECTED]
+df_1[, PREVALENCE := INFECTED / ELIGIBLE]
+df_1[, DIFF_PROP_UNSUPPRESSED := PROP_UNSUPPRESSED[SEX == 'M'] -  PROP_UNSUPPRESSED[SEX == 'F'], by = c('ROUND', 'COMM', 'iterations')]
+
+# summarise unsuppressed
+ps <- c(0.025,0.5,0.975)
+qlab <- c('CL','M','CU')
+sing.t = df_1[, list(q= quantile(na.omit(PROP_UNSUPPRESSED), prob=ps, na.rm = T), q_label=qlab), by=c('ROUND', 'COMM', 'SEX')]
+sing.t = as.data.table(reshape2::dcast(sing.t, ... ~ q_label, value.var = "q"))
+setnames(sing.t, qlab, paste0('PROP_UNSUPPRESSED_AGE_GROUP_', qlab))
+
+# summarise prevalence
+sinf.t = df_1[, list(q= quantile(PREVALENCE, prob=ps, na.rm = T), q_label=qlab), by=c('ROUND', 'COMM', 'SEX')]
+sinf.t = as.data.table(reshape2::dcast(sinf.t, ... ~ q_label, value.var = "q"))
+setnames(sinf.t, qlab, paste0('PREVALENCE_AGE_GROUP_', qlab))
+
+# summarise difference prop unsuppressed
+sind.t <- unique(df_1[, .(ROUND, COMM, iterations, DIFF_PROP_UNSUPPRESSED)])
+sind.t = sind.t[, list(q= quantile(DIFF_PROP_UNSUPPRESSED, prob=ps, na.rm = T), q_label=qlab), by=c('ROUND', 'COMM')]
+sind.t = as.data.table(reshape2::dcast(sind.t, ... ~ q_label, value.var = "q"))
+setnames(sind.t, qlab, paste0('DIFF_PROP_UNSUPPRESSED_AGE_GROUP_', qlab))
+
+
+#########################################
+
+# SAVE FOR ROUND 18
+
+#########################################
+
+n_digits <- 1
+
+tmp <- sing.t[ROUND == '18' & COMM == 'inland']
+tmp[, `:=` (PROP_UNSUPPRESSED_AGE_GROUP_CL = format(round(PROP_UNSUPPRESSED_AGE_GROUP_CL*100, n_digits), nsmall = n_digits), 
+            PROP_UNSUPPRESSED_AGE_GROUP_CU = format(round(PROP_UNSUPPRESSED_AGE_GROUP_CU*100, n_digits), nsmall = n_digits), 
+            PROP_UNSUPPRESSED_AGE_GROUP_M = format(round(PROP_UNSUPPRESSED_AGE_GROUP_M*100, n_digits), nsmall = n_digits))]
+tmp[, PROP_UNSUPPRESSED_AGE_GROUP_CL := gsub(' ', '', PROP_UNSUPPRESSED_AGE_GROUP_CL)]
+tmp[, PROP_UNSUPPRESSED_AGE_GROUP_CU := gsub(' ', '', PROP_UNSUPPRESSED_AGE_GROUP_CU)]
+tmp[, PROP_UNSUPPRESSED_AGE_GROUP_M := gsub(' ', '', PROP_UNSUPPRESSED_AGE_GROUP_M)]
+file.name <- file.path(outdir, paste0('RCCS_propunsuppressed_total_R18_221215.rds'))
+saveRDS(tmp, file = file.name)
+
+tmp <- sinf.t[ROUND == '18' & COMM == 'inland']
+tmp[, `:=` (PREVALENCE_AGE_GROUP_CL = format(round(PREVALENCE_AGE_GROUP_CL*100, n_digits), nsmall = n_digits), 
+            PREVALENCE_AGE_GROUP_CU = format(round(PREVALENCE_AGE_GROUP_CU*100, n_digits), nsmall = n_digits), 
+            PREVALENCE_AGE_GROUP_M = format(round(PREVALENCE_AGE_GROUP_M*100, n_digits), nsmall = n_digits))]
+tmp[, PREVALENCE_AGE_GROUP_CL := gsub(' ', '', PREVALENCE_AGE_GROUP_CL)]
+tmp[, PREVALENCE_AGE_GROUP_CU := gsub(' ', '', PREVALENCE_AGE_GROUP_CU)]
+tmp[, PREVALENCE_AGE_GROUP_M := gsub(' ', '', PREVALENCE_AGE_GROUP_M)]
+file.name <- file.path(outdir, paste0('RCCS_prevalence_total_R18_221215.rds'))
+saveRDS(tmp, file = file.name)
+
+tmp <- sind.t[ROUND == '18' & COMM == 'inland']
+tmp[, `:=` (DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL = format(round(DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL*100, n_digits), nsmall = n_digits), 
+            DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CU = format(round(DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CU*100, n_digits), nsmall = n_digits), 
+            DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M = format(round(DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M*100, n_digits), nsmall = n_digits))]
+tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL := gsub(' ', '', DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL)]
+tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CU := gsub(' ', '', DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CU)]
+tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M := gsub(' ', '', DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M)]
+file.name <- file.path(outdir, paste0('RCCS_diffpropunsuppressed_total_R18_221215.rds'))
+saveRDS(tmp, file = file.name)
 
