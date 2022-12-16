@@ -1,4 +1,5 @@
 library(data.table)
+library(ggplot2)
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
@@ -50,3 +51,14 @@ ggplot(tmp, aes(x = round, y = as.factor(COMM_NUM))) +
   theme_bw() + 
   labs(x = 'Round', y = 'Community index')
 ggsave('~/Downloads/communities_surveyed.png', w = 6, h = 5)
+
+df <- data.table(expand.grid(comm_id = inlcom[, sort(unique(comm_id))], 
+                             round = inlcom[, sort(unique(round))]))
+tmp <- merge(df, inlcom, by = c('comm_id', 'round'), all.x = T)
+tmp[, SURVEYED :=T]
+tmp[is.na(COMM_NUM), SURVEYED :=F]
+ggplot(tmp, aes(x = round, y = as.factor(comm_id))) + 
+  geom_raster(aes(fill = SURVEYED)) + 
+  theme_bw() + 
+  labs(x = 'Round', y = 'Community index')
+ggsave('~/Downloads/communities_grouped_surveyed.png', w = 6, h = 5)
