@@ -40,13 +40,36 @@ numcom.unique <- length(Reduce(intersect, inlcom[, .(list(unique(comm_id))), rou
 saveRDS(list(numcom, numcom.total, numcom.unique), file.path(outdir, 'number_communities_surveyed.rds'))
 
 # plot
-df <- data.table(expand.grid(COMM_NUM = inlcom[, sort(unique(COMM_NUM))], 
+df <- data.table(expand.grid(COMM_NUM = inlcom[, sort(unique(COMM_NUM))],
                              round = inlcom[, sort(unique(round))]))
 tmp <- merge(df, inlcom, by = c('COMM_NUM', 'round'), all.x = T)
 tmp[, SURVEYED :=T]
 tmp[is.na(comm_id), SURVEYED :=F]
-ggplot(tmp, aes(x = round, y = as.factor(COMM_NUM))) + 
-  geom_raster(aes(fill = SURVEYED)) + 
-  theme_bw() + 
+ggplot(tmp, aes(x = round, y = as.factor(COMM_NUM))) +
+  geom_raster(aes(fill = SURVEYED)) +
+  theme_bw() +
   labs(x = 'Round', y = 'Community index')
 ggsave('~/Downloads/communities_surveyed.png', w = 6, h = 5)
+
+
+# make table
+df <- data.table(expand.grid(COMM_NUM = inlcom[, sort(unique(COMM_NUM))],
+                             round = inlcom[, sort(unique(round))]))
+tmp <- merge(df, inlcom, by = c('COMM_NUM', 'round'), all.x = T)
+tmp[, SURVEYED :=1]
+tmp[is.na(comm_id), SURVEYED :=0]
+tmp2 <- unique(subset(inlcom,select=c('COMM_NUM','comm_id')))
+tmp <- merge(subset(tmp,select=c('COMM_NUM','round','SURVEYED')),tmp2,by=c('COMM_NUM'),all=T)
+# just keep rounds 10-18
+dr <- data.table(round=paste0('R0',seq(10,18,1)))
+tmp <- merge(tmp,dr,by='round')
+# aggregate the communities together
+tmp <- dcast(tmp, comm_id~round,value.var = 'SURVEYED',fun.aggregate=sum)
+tmp <- melt(tmp, id.vars=c('comm_id'),variable.name='round')
+# recode
+tmp[value==0, SURVEYED:= 'No']
+tmp[value>0, SURVEYED:= 'Yes']
+set(tmp,NULL,'value',NULL)
+tmp <- dcast(tmp, comm_id~round,value.var = 'SURVEYED')
+
+saveRDS(tmp, file.path(outdir, 'communities_surveyed_by_round.rds'))
