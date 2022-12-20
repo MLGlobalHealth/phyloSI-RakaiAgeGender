@@ -332,7 +332,7 @@ stan_data <- add_offset_time(stan_data, eligible_count_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
 stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
-                                      n_knots_rows = 6, n_knots_columns = 6,
+                                      n_knots_rows = 10, n_knots_columns = 10,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_init <- add_init(stan_data)
