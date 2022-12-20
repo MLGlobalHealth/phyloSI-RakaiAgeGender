@@ -894,6 +894,58 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     cont_b.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
     cont_b.p <- select(cont_b.p, -LABEL_ROUND)
     
+    # plot selected rounds
+    p <- plot.p(cont.p[ROUND %in% Rounds], uns.p[ROUND %in% Rounds], cont_b.p, median_age.p[ROUND %in% Rounds], 
+                median_uns.p[ROUND %in% Rounds], 0.002) + 
+      facet_grid(.~LABEL_TRANSMITTING_PARTNER) 
+    
+    # plot legend2 if unique round
+    if(length(Rounds) == 1){
+      cont.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
+      uns.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
+      p_legend2 <- ggplot(cont.p[LABEL_SOURCE == 'Female sources' & ROUND %in% Rounds], aes(x = AGE_TRANSMISSION.SOURCE)) + 
+        geom_ribbon(aes(ymin = CL, ymax = CU, fill = type), alpha = 0.6) + 
+        geom_line(aes(y = M, col = type), stat = 'identity', position = "identity") + 
+        geom_line(data = uns.p[ROUND %in% Rounds], aes(y = M, size = type), col = 'grey50', linetype = 'dashed') + 
+        geom_ribbon(data = uns.p[ROUND %in% Rounds], aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + # 
+        geom_line(data = cont_b.p[ROUND %in% Rounds], aes(y = M, linetype=type), col = 'lightblue3') + 
+        theme_bw() +
+        scale_alpha_manual(values = 1) + 
+        scale_size_manual(values = 0.5) + 
+        scale_color_manual(values = 'lightblue3') +
+        scale_fill_manual(values = 'lightblue3') + 
+        scale_linetype_manual(values  = 'solid') +
+        theme(legend.position = 'bottom', 
+              legend.title = element_blank()) + 
+        guides(fill = guide_legend(order = 1), color=guide_legend(order = 1),
+               alpha = guide_legend(order = 3), 
+               linetype = 'none')
+    }
+    
+    # add legends
+    pp <- ggarrange(p, legend.grob = get_legend(p_legend2), legend = 'bottom') 
+    
+    # save
+    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.8, h = 3.6)
+    
+  }
+  
+  # make plots
+  for(i in seq_along(communities)){
+    
+    cont.p <- cont[COMM == communities[i]]
+    uns.p <- uns[COMM == communities[i]]
+    median_age.p <- median_age[COMM == communities[i]]
+    Rounds <- Rounds.all[[communities[i]]]
+    median_uns.p <- median_uns[COMM == communities[i]]
+    
+    # find contribution in the first round 
+    cont_b.p <- cont.p[ROUND %in% Rounds]
+    cont_b.p[, min_INDEX_ROUND :=  min(INDEX_ROUND), by = 'COMM']
+    cont_b.p <- cont_b.p[INDEX_ROUND == min_INDEX_ROUND]
+    cont_b.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
+    cont_b.p <- select(cont_b.p, -LABEL_ROUND)
+    
     # plot all rounds
     p.all <- plot.p(cont.p, uns.p, cont_b.p, median_age.p,median_uns.p, 0.003) + # last argument tune the level of the triangle
       theme(legend.position = 'none')
@@ -930,40 +982,6 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
       
     }
 
-    # plot selected rounds
-    p <- plot.p(cont.p[ROUND %in% Rounds], uns.p[ROUND %in% Rounds], cont_b.p, median_age.p[ROUND %in% Rounds], 
-                median_uns.p[ROUND %in% Rounds], 0.002) + 
-      facet_grid(.~LABEL_TRANSMITTING_PARTNER) 
-    
-    # plot legend2 if unique round
-    if(length(Rounds) == 1){
-      cont.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
-      uns.p[, type := paste0(type, ',\n', gsub('.*\n(.+)', '\\1', LABEL_ROUND))]
-      p_legend2 <- ggplot(cont.p[LABEL_SOURCE == 'Female sources' & ROUND %in% Rounds], aes(x = AGE_TRANSMISSION.SOURCE)) + 
-        geom_ribbon(aes(ymin = CL, ymax = CU, fill = type), alpha = 0.6) + 
-        geom_line(aes(y = M, col = type), stat = 'identity', position = "identity") + 
-        geom_line(data = uns.p[ROUND %in% Rounds], aes(y = M, size = type), col = 'grey50', linetype = 'dashed') + 
-        geom_ribbon(data = uns.p[ROUND %in% Rounds], aes(ymin = CL, ymax = CU, size = type), alpha = 0.3, fill='grey50') + # 
-        geom_line(data = cont_b.p[ROUND %in% Rounds], aes(y = M, linetype=type), col = 'lightblue3') + 
-        theme_bw() +
-        scale_alpha_manual(values = 1) + 
-        scale_size_manual(values = 0.5) + 
-        scale_color_manual(values = 'lightblue3') +
-        scale_fill_manual(values = 'lightblue3') + 
-        scale_linetype_manual(values  = 'solid') +
-        theme(legend.position = 'bottom', 
-              legend.title = element_blank()) + 
-        guides(fill = guide_legend(order = 1), color=guide_legend(order = 1),
-               alpha = guide_legend(order = 3), 
-               linetype = 'none')
-    }
-    
-    # add legends
-    pp <- ggarrange(p, legend.grob = get_legend(p_legend2), legend = 'bottom') 
-    
-    # save
-    ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.8, h = 3.6)
-    
   }
 }
 
