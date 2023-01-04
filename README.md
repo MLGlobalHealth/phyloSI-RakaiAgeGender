@@ -74,23 +74,25 @@ The scripts in ```misc/``` read the aggregated data and fit smoothing models to 
 * Combine art coverage and viral suppression estimates to obtain treatment cascade in population with file ```get_treatment_cascade_population.R```
 
 ### Run the incidence rates analysis
-* To run the age-specific HIV incidence rates analysis, run ```scripts/run_incidence_rates_estimation.R```
+To run the age-specific HIV incidence rates analysis, run in the console 
+```bash
+INDIR="/rds/general/user/mm3218/home/git/phyloflows"
+OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"
+Rscript scripts/run_incidence_rates_estimation.R --indir=$INDIR --outdir==$OUTDIR
+```
 
 ### Run the transmission flows analysis
-We provide a script that can be run on a laptop. The following modifications need to be done to the start of the bash script
-```bash
-run_stan_laptop.sh
-```
-First, set the the directory in which the repository is and the the output directory (where the results should be stored):
+We provide a bash shell script that can be run on a laptop. The following modifications need to be done to the start of the bash script ```run_stan_laptop.sh```. First, set the the directory in which the repository is located, and the output directory where the results should be stored in lines XYZ:
 ```bash
 INDIR="/rds/general/user/mm3218/home/git/phyloflows"
 OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"
 ```
-Second, set as appropriatly the virtual environment 
+Second, set as appropriatly your virtual environment in lines XYZ: 
 ```bash
 module load anaconda3/personal
 ```
-Lastly, from the repository directory, on the terminal console execute,
+
+You can then execute the bash script. Run on the terminal console from the repository directory
 ```bash
 ./run_stan_laptop.sh
 ```
