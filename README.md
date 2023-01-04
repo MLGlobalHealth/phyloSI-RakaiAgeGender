@@ -50,12 +50,12 @@ We thank all contributors, program staff and participants to the Rakai Community
 ## Installation 
 A ```yml``` file is provided and can be used to build a conda virtual environment containing all R dependencies. Create the environment using:
 ```bash
-$ cd phyloflows
-$ conda env create -f phyloflows.yml
+$ cd phyloSI-RakaiAgeGender
+$ conda env create -f phyloSI-RakaiAgeGender.yml
 ```
 Then activate the environment for use:
 ```bash
-$ source activate phyloflows
+$ source activate phyloSI-RakaiAgeGender
 ```
 
 ## Usage
@@ -76,17 +76,20 @@ The scripts in ```misc/``` read the aggregated data and fit smoothing models to 
 ### Run the incidence rates analysis
 To run the age-specific HIV incidence rates analysis, run in the console 
 ```bash
-INDIR="/rds/general/user/mm3218/home/git/phyloflows"
-OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"
+INDIR="/rds/general/user/<user>/home/git/phyloSI-RakaiAgeGender"
+OUTDIR="/rds/general/user/<user>/home/projects/2021/phyloSI-RakaiAgeGender"
 Rscript scripts/run_incidence_rates_estimation.R --indir=$INDIR --outdir=$OUTDIR
 ```
+where `<user>` is your username on the HPC (e.g. mm3218)
 
 ### Run the transmission flows analysis
 We provide a bash shell script that can be run on a laptop. The following modifications need to be done to the start of the bash script ```run_stan_laptop.sh```. First, set the the directory in which the repository is located, and the output directory where the results should be stored in lines XYZ:
 ```bash
-INDIR="/rds/general/user/mm3218/home/git/phyloflows"
-OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"
+INDIR="/rds/general/user/<user>/home/git/phyloSI-RakaiAgeGender"
+OUTDIR="/rds/general/user/<user>/home/projects/2021/phyloSI-RakaiAgeGender"
 ```
+where `<user>` is your username on the HPC (e.g. mm3218)
+
 Second, set as appropriatly your virtual environment in lines XYZ: 
 ```bash
 module load anaconda3/personal
