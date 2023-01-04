@@ -1,4 +1,4 @@
-name: phyloflows
+name: phyloSI-RakaiAgeGender
 channels:
   - defaults
   - bioconda
