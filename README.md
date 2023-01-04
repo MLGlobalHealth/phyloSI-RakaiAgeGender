@@ -27,8 +27,7 @@ The data in ```data/``` contain
 * smooth estimates of art coverage and viral suppression in first-time participants by age, gender and round in file ```RCCS_treatment_cascade_nonparticipants_estimates_DATE.csv```
 
 ## License
-- The code in this repository is licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
-- The data ??
+- The code and data in this repository are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
 
 ## Warranty
 
@@ -41,11 +40,7 @@ XXX
 
 ## Acknowledgements
 
-XXX
-
-## Funding
-
-XXX
+We thank all contributors, program staff and participants to the Rakai Community Cohort Study; all members of the PANGEA-HIV consortium, the Rakai Health Sciences Program, and CDC Uganda for comments on an earlier version of the manuscript; the Imperial College Research Computing Service (https://doi.org/10.14469/hpc/2232) and the Biomedical Research Computing Cluster at the University of Oxford for providing the computational resources to perform this study; the Office of Cyberinfrastructure and Computational Biology at the National Institute for Allergy and Infectious Diseases for data management support. This study was supported by the Bill & Melinda Gates Foundation (OPP1175094, OPP1084362); the National Institute of Allergy and Infectious Diseases (U01AI051171, U01AI075115, UM1AI069530-16, R01AI087409, U01AI100031, R01AI110324, R01AI114438, K25AI114461, R01AI123002, K01AI125086, R01AI128779, R01AI143333, R21AI145682, R01AI155080); the National Institute of Mental Health (F31MH095649, R01MH099733, R01MH107275, R01MH115799); the National Institute of Child Health and Development (R01HD038883, R01HD050180, R01HD070769, R01HD091003); the Division of Intramural Research of the National Institute for Allergy and Infectious Diseases (K01AA024068), the National Heart, Lung, and Blood Institute (R01HL152813), the Fogarty International Center (D43TW009578, D43TW010557), TODO, the World Bank, the Doris Duke Charitable Foundation, the Johns Hopkins University Center for AIDS Research (P30AI094189), and the President’s Emergency Plan for AIDS Relief through the Centers for Disease Control and Prevention (NU2GGH000817). 
 
 ## System Requirements
 - macOS or UNIX, the code was developed on macOS Big Sur 11.7
