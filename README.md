@@ -1,7 +1,7 @@
-# phyloflows: phylo-SIR model for estimating shifting patterns in HIV transmission dynamics in Rakai, Uganda.
+# phyloSI-RakaiAgeGender
 
 ## Overview
-This repository contains the code for the phylo-SIR model to estimate shifting patterns in HIV transmission dynamics in Rakai, Uganda.
+This repository contains the code and data for the analyses presented in the paper Monod et al. Growing gender inequity in HIV infection in Africa: sources and policy implications.
 
 ## Data
 The data in ```data/``` contain
