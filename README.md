@@ -78,7 +78,7 @@ To run the age-specific HIV incidence rates analysis, run in the console
 ```bash
 INDIR="/rds/general/user/mm3218/home/git/phyloflows"
 OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"
-Rscript scripts/run_incidence_rates_estimation.R --indir=$INDIR --outdir==$OUTDIR
+Rscript scripts/run_incidence_rates_estimation.R --indir=$INDIR --outdir=$OUTDIR
 ```
 
 ### Run the transmission flows analysis
