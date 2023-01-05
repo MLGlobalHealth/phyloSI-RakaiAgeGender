@@ -58,10 +58,6 @@ outdir.table <- .outdir.table
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-source(file.path(indir, 'functions', 'summary_functions.R'))
-df_direction <- get.df.direction()
-
 
 #
 # offset
