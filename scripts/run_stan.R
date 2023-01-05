@@ -147,13 +147,18 @@ proportion_prevalence <- fread(file.prevalence.prop)
 if(viremic_viral_load_200ml){
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants.vl200, 
                                               file.treatment.cascade.prop.nonparticipants.vl200)
-  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
-                                                              file.treatment.cascade.prop.nonparticipants.vl200.samples)
+  if(file.exists(file.treatment.cascade.prop.participants.vl200.samples) & file.exists(file.treatment.cascade.prop.nonparticipants.vl200.samples)){
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.vl200.samples)
+  }
 }else{
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
                                               file.treatment.cascade.prop.nonparticipants)
-  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
-                                                              file.treatment.cascade.prop.nonparticipants.samples)
+  if(file.exists(file.treatment.cascade.prop.participants.samples) & file.exists(file.treatment.cascade.prop.nonparticipants.samples)){
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.samples)
+  }
+
 }
 
 # load incidence estimates 
