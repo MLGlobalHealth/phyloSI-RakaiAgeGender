@@ -171,10 +171,11 @@ plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table
 #     MAIN     #
 ################
 
-# get.extra.pairs.from.serohistory <- 1
 threshold.likely.connected.pairs <- 0.5
-get.sero.extra.pairs <- TRUE
+threshold.direction <- 0.5
+get.sero.extra.pairs <- FALSE
 build.network.from.pairs <- TRUE
+postpone.samesex.removal <- TRUE
 
 # Load anon. keys
 aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
@@ -204,6 +205,29 @@ if(! build.network.from.pairs)
 
 }else{
 
+    # prepare helpers
+    get.communities.where.participated <- function()
+    {
+        # For each AID reports the community type(s) where each participant had participated
+        meta_env <- new.env()
+        load(file.path.meta, envir=meta_env)
+        cols <- c('aid', 'comm', 'round', 'sample_date', 'sex')
+        dcomms <- subset(meta_env$meta_data, select=cols)
+        names(dcomms) <- toupper( names(dcomms) )
+        dcomms <- dcomms[!is.na(AID), 
+            .(COMM=paste0(sort(unique(COMM)), collapse='-'), uniqueN(COMM), SEX=unique(SEX)), by='AID']
+        dcomms[, uniqueN(AID) == .N ]
+        dcomms
+    }
+    dcomms <- get.communities.where.participated()
+
+    table.pairs.in.inland <- function(DT)
+    {
+        double.merge(DT, dcomms[, .(AID, COMM, SEX)], by_col = 'AID')[
+            COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland'][,
+            { cat(.N, '\n'); table(SEX.SOURCE,SEX.RECIPIENT) } ]
+    }
+
     # study dc instead..
     cat('\n Building Network from pairs...\n\n')
 
@@ -213,13 +237,16 @@ if(! build.network.from.pairs)
     stopifnot(dpl[, .N, by=c('H1', 'H2')][, all(N==1)])
     stopifnot(dpl[,all(H1 < H2)])
 
+    dpl[, table(SCORE == 1)]
+
+    # Merge linkage and direction score and subset to linkage score > threshold
     idx <- dpl[SCORE > threshold.likely.connected.pairs, .(H1, H2, SCORE)]
-    tmp <- dc[ CATEGORISATION %like% 'close.and.adjacent.and.directed.cat.sero' , .(H1, H2, TYPE, SCORE)]
-    stopifnot(tmp[, .N > 0])
-    tmp <- tmp[, {z <- which(SCORE>.5); list(TYPE=TYPE[z], SCORE_DIR=SCORE[z])}, by=c('H1', 'H2')]
-    dlinkdir <- merge(idx, tmp, by=c('H1', 'H2'), all.x=TRUE)
-    stopifnot(tmp[,.N,by=c('H1', 'H2')][, all(N==1)])
+    dir_scores <- dc[ CATEGORISATION %like% 'close.and.adjacent.and.directed.cat.sero' , .(H1, H2, TYPE, SCORE)]
+    dir_scores <- dir_scores[, {z <- which(SCORE>threshold.direction); list(TYPE=TYPE[z], SCORE_DIR=SCORE[z])}, by=c('H1', 'H2')]
+    dlinkdir <- merge(idx, dir_scores, by=c('H1', 'H2'), all.x=TRUE)
+    stopifnot(dir_scores[,.N,by=c('H1', 'H2')][, all(N==1)])
     stopifnot(dlinkdir[,.N,by=c('H1', 'H2')][, all(N==1)])
+    
 
     # get range of dates
     drange <- get.infection.range.from.testing()
@@ -238,7 +265,7 @@ if(! build.network.from.pairs)
         dlinkdir <- rbind(dlinkdir, sero_extra_pairs)
     }
 
-    # assign SCORE_DIR and check...
+    # check direction is consistent with the serohistory (btw we subset to RCCS here)
     dlinkdir <- merge(dlinkdir, drange[,.(H1=AID, MIN.1=MIN, MAX.1=MAX)], by='H1')
     dlinkdir <- merge(dlinkdir, drange[,.(H2=AID, MIN.2=MIN, MAX.2=MAX)], by='H2')
     dlinkdir[MAX.1 < MIN.2 & is.na(TYPE), `:=` (TYPE='12', SCORE_DIR=1) ]
@@ -247,64 +274,77 @@ if(! build.network.from.pairs)
     dlinkdir[MAX.2 < MIN.1, stopifnot(all(TYPE=='21'))]
     dlinkdir[, `:=` (MAX.1=NULL, MAX.2=NULL, MIN.1=NULL, MIN.2=NULL)]
 
-    # Assign direction of transmission
+    # Assign source and recipient labels
     dnewpairs <- rbind(
         dlinkdir[TYPE == '12', .(SOURCE=H1, RECIPIENT=H2, SCORE, SCORE_DIR)],
         dlinkdir[TYPE == '21', .(SOURCE=H2, RECIPIENT=H1, SCORE, SCORE_DIR)]
     ) |> unique() 
     stopifnot(dnewpairs[,.N,by=c('SOURCE', 'RECIPIENT')][, all(N==1)])
 
-    dnewpairs[, cat('There are ', .N, 'pairs with score>threshold and', sum(SCORE < .5), 'pairs with only one possible direction of tranmsission\n')]
+    dnewpairs[, cat('There are ', .N, 'pairs with score>threshold and',
+        sum(SCORE < threshold.likely.connected.pairs),
+        'pairs with only one possible direction of tranmsission\n')]
 
-    if(0)
-    {   # plot
-        filename <- file.path(out.dir, paste0('221124_study_networks_all.png'))
-        png(filename, width = 600, height = 600)
-        lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, ' recipients')]
-        p1 <- plot.chains(dnewpairs, size.threshold = 3, ttl='Before Subsetting', sbttl=lab)
-        dev.off()
-    }
+    double.merge(dnewpairs, meta[, .(AID=aid, SEX=sex)])[, table(SEX.SOURCE, SEX.RECIPIENT)]
 
-    # Remove non-RCCS participants
+    # Remove non-RCCS participants (redundant after serohistory check)
     tmp <- nrow(dnewpairs)
     rccs_ids <- meta[, unique(aid)]
     dnewpairs <- dnewpairs[ SOURCE %in% rccs_ids & RECIPIENT %in% rccs_ids ]
     cat('Excluding', tmp - nrow(dnewpairs), 'of', tmp, 'pairs outside of RCCS\n')
     cat(nrow(dnewpairs), 'pairs remaining\n')
-    if(0) # plot
+
+    if(0)
     {
-        filename <- file.path(out.dir, paste0('221124_study_networks_norccs.png'))
-        png(filename, width = 600, height = 600)
-        lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, 'recipients')]
-        p2 <- plot.chains(dnewpairs, size.threshold = 3, ttl='After removing non-RCCS', sbttl=lab)
-        dev.off()
+        idx[, .N, by=c('SOURCE', 'RECIPIENT')][, table(N)]
+
+        cols <- c('RECIPIENT', 'SOURCE', 'SCORE', 'SCORE_DIR')
+        DPAIRS <- list(nosame = idx[SEX.SOURCE != SEX.RECIPIENT], all = copy(idx) )
+        
+        # count number of unique recipients
+        lapply(DPAIRS, function(DT) DT[, list( uniqueN(RECIPIENT), .N) ] )
+        
+        # select only most likely source
+        DPAIRS <- lapply(DPAIRS, function(DT) DT[, .SD[which.max(SCORE)], by='RECIPIENT' ] )
+        
+        # study distribution of source and recipient sexes
+        lapply(DPAIRS, function(DT) DT[, table(SEX.SOURCE, SEX.RECIPIENT ) ])
+        
+        # 21 pairs of difference
+        tmp <- Reduce( function(A, B){ merge(A, B, all.x=TRUE, all.y=TRUE, by=c('RECIPIENT', 'SEX.RECIPIENT'))}, DPAIRS)
+        tmp[, SEX.SOURCE.x := NULL]
+        tmp[, SEX.SOURCE.y := NULL]
+        tmp[SOURCE.x != SOURCE.y]
+        
+        diff <- fsetdiff(DPAIRS[[1]], DPAIRS[[2]])[SEX.SOURCE != SEX.RECIPIENT, .(SOURCE,RECIPIENT) ]
+        diff
     }
 
-    # Remove homosexual pairs
-    dsex <- meta[, .(aid, sex)] |> unique()
-    idx <- merge(dnewpairs, dsex[, .(SOURCE=aid, SEX.SOURCE=sex)], all.x=T, by='SOURCE')
-    idx <- merge(idx, dsex[, .(RECIPIENT=aid, SEX.RECIPIENT=sex)], all.x=T, by='RECIPIENT')
-    # idx[, table(SEX.SOURCE,SEX.RECIPIENT, useNA = 'ifany'),]
-    dhomosexualpairs <- idx[ (SEX.SOURCE==SEX.RECIPIENT) , ]
-    dhomosexualpairs[, IDCLU:=NULL]
-    idx <- idx[!(SEX.SOURCE==SEX.RECIPIENT), .(SOURCE, RECIPIENT)]
+    # Pairs involving inland participants
+    # table.pair.in.inland(dnewpairs)
+    tmp <- double.merge(dnewpairs, dcomms[, .(AID, COMM, SEX)], by_col = 'AID')[
+        COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland']
+    tmp[, { cat(.N, '\n'); table(SEX.RECIPIENT, SEX.SOURCE) } ]
+    tmp[, sum(SCORE_DIR == 1)]
 
-    tmp <- nrow(dnewpairs) - nrow(idx)
-    cat('Excluding', tmp, 'of', nrow(dnewpairs), 'pairs of homosexual or unknown sex\n')
-    setkey(dnewpairs, SOURCE,RECIPIENT)
-    setkey(idx,SOURCE,RECIPIENT)
-    dnewpairs <- dnewpairs[idx]
-    cat(nrow(dnewpairs), 'pairs remaining\n')
-    if(0)
-        {   #plot
-        filename <- file.path(out.dir, paste0('221124_study_networks_norccs_nohomosex.png'))
-        png(filename, width = 600, height = 600)
-        lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][,
-                    paste0('Multiple source for ',sum(V1!=1), '/', .N, 'recipients')]
-        p3 <- plot.chains(dnewpairs, size.threshold = 3,
-                          ttl='After removing non-RCCS + homosexuals',
-                          sbttl=lab)
-        dev.off()
+
+    # Remove homosexual pairs
+    if(! postpone.samesex.removal)
+    {
+        dsex <- meta[, .(aid, sex)] |> unique()
+        idx <- merge(dnewpairs, dsex[, .(SOURCE=aid, SEX.SOURCE=sex)], all.x=T, by='SOURCE')
+        idx <- merge(idx, dsex[, .(RECIPIENT=aid, SEX.RECIPIENT=sex)], all.x=T, by='RECIPIENT')
+        # idx[, table(SEX.SOURCE,SEX.RECIPIENT, useNA = 'ifany'),]
+        dhomosexualpairs <- idx[ (SEX.SOURCE==SEX.RECIPIENT) , ]
+        dhomosexualpairs[, IDCLU:=NULL]
+        idx <- idx[!(SEX.SOURCE==SEX.RECIPIENT), .(SOURCE, RECIPIENT)]
+
+        tmp <- nrow(dnewpairs) - nrow(idx)
+        cat('Excluding', tmp, 'of', nrow(dnewpairs), 'pairs of homosexual or unknown sex\n')
+        setkey(dnewpairs, SOURCE,RECIPIENT)
+        setkey(idx,SOURCE,RECIPIENT)
+        dnewpairs <- dnewpairs[idx]
+        cat(nrow(dnewpairs), 'pairs remaining\n')
     }
 
     # Solve multiple sources by assigning recipient with strongest linkage support (same for homosexual pairs)
@@ -313,43 +353,45 @@ if(! build.network.from.pairs)
         list(SOURCE=SOURCE[z], SCORE=SCORE[z], SCORE_DIR=SCORE_DIR[z])
     }, by='RECIPIENT']
 
-    dhomosexualpairs <- dhomosexualpairs[ ! RECIPIENT %in% dnewpairs$RECIPIENT, {
-        z <- which.max(SCORE);
-        list(SOURCE=SOURCE[z], SCORE=SCORE[z], SCORE_DIR=SCORE_DIR[z])
-    }, by='RECIPIENT']
+    # Pairs involving at both inland participants
+    table.pairs.in.inland(dnewpairs)
 
-    # get an idea of how many can be inland
-    meta_env <- new.env()
-    load(file.path.meta, envir=meta_env)
-    cols <- c('aid', 'comm', 'round', 'sample_date')
-    dcomms <- subset(meta_env$meta_data, select=cols)
-    names(dcomms) <- toupper( names(dcomms) )
-    idx <- dcomms[!is.na(AID), .(COMM=paste0(sort(unique(COMM)), collapse='-'), uniqueN(COMM)), by='AID']
-    dnewpairs <- double.merge(dnewpairs, idx[, .(AID, COMM)])
-    dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', {
-        cat(.N);
-        print(table(COMM.SOURCE, COMM.RECIPIENT));
-        NULL
-    }]
-    dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', uniqueN(RECIPIENT)]
-    dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', table(COMM.RECIPIENT)] |> knitr::kable()
-    dnewpairs[COMM.RECIPIENT %like% 'inland', table(COMM.SOURCE)] |> knitr::kable()
-    dnewpairs[COMM.RECIPIENT %like% 'inland', uniqueN(RECIPIENT)]
-    
-    if(0)
+    # remove homosexual pairs
+    if(! postpone.samesex.removal)
     {
-        filename <- file.path(out.dir, paste0('221124_study_networks_norccs_nohomosex_sourceattr.png'))
-        png(filename, width = 600, height = 600)
-        lab <- dnewpairs[, uniqueN(SOURCE), by=RECIPIENT][, paste0('Multiple source for ',sum(V1!=1), '/', .N, ' recipients')]
-        p3a <- plot.chains(dnewpairs, size.threshold = 3, ttl='After removing non-RCCS + homosexuals + src attribution', sbttl=lab)
-        dev.off()
+        # solve multiple sources for same-sex too
+        dhomosexualpairs <- dhomosexualpairs[ ! RECIPIENT %in% dnewpairs$RECIPIENT, {
+            z <- which.max(SCORE);
+            list(SOURCE=SOURCE[z], SCORE=SCORE[z], SCORE_DIR=SCORE_DIR[z])
+        }, by='RECIPIENT']
+
+    }else{
+
+        cat("Postponing removal of same sex pairs after solving for double sources.\n")
+        dsex <- meta[, .(aid, sex)] |> unique()
+        idx <- merge(dnewpairs, dsex[, .(SOURCE=aid, SEX.SOURCE=sex)], all.x=T, by='SOURCE')
+        idx <- merge(idx, dsex[, .(RECIPIENT=aid, SEX.RECIPIENT=sex)], all.x=T, by='RECIPIENT')
+        # idx[, table(SEX.SOURCE,SEX.RECIPIENT, useNA = 'ifany'),]
+        dhomosexualpairs <- idx[ (SEX.SOURCE==SEX.RECIPIENT) , ]
+        dhomosexualpairs[, IDCLU:=NULL]
+        idx <- idx[!(SEX.SOURCE==SEX.RECIPIENT), .(SOURCE, RECIPIENT)]
+
+        tmp <- nrow(dnewpairs) - nrow(idx)
+        cat('Excluding', tmp, 'of', nrow(dnewpairs), 'pairs of homosexual or unknown sex\n')
+        setkey(dnewpairs, SOURCE,RECIPIENT)
+        setkey(idx,SOURCE,RECIPIENT)
+        dnewpairs <- dnewpairs[idx]
+        cat(nrow(dnewpairs), 'pairs remaining\n')
     }
+
 
     setcolorder(dnewpairs, c('SOURCE','RECIPIENT'))
     idclus <- dnewpairs |> graph_from_data_frame() |> components()
     idclus <- data.table(RECIPIENT=names(idclus$membership), IDCLU=unname(idclus$membership))
     dnewpairs <- merge(dnewpairs, idclus,by='RECIPIENT')
     setcolorder(dnewpairs, c('SOURCE','RECIPIENT'))
+
+    table.pairs.in.inland(dnewpairs) |> knitr::kable() |> print()
 
     if(0)
     {
@@ -385,15 +427,15 @@ if(! build.network.from.pairs)
         p5 <- plot.chains(dnewpairs, size.threshold = 2, ttl='After removing non-RCCS + homosexuals + non-inland', sbttl=lab)
         dev.off()
     }
+
 }
+
 
 if(0)
 {
     # pairs
     tmp1 <- dnewpairs[, .(SOURCE, RECIPIENT, COMM.SOURCE,COMM.RECIPIENT)]
     tmp1 <- dhomosexualpairs[, .(SOURCE, RECIPIENT, COMM.SOURCE,COMM.RECIPIENT)]
-
-
 
     # sex
     tmp2 <- meta[, .(AID=aid, SEX=sex)]
@@ -402,26 +444,6 @@ if(0)
     double.merge(tmp1, tmp2)[ COMM.SOURCE == 'fishing' & COMM.RECIPIENT=='fishing', table(SEX.SOURCE, SEX.RECIPIENT) ]
 
     
-}
-
-if(0)
-{   # compare after slight changes....
-    tmp1 <- dnewpairs[, .(SOURCE,RECIPIENT, COMM.SOURCE,COMM.RECIPIENT)]
-    path <- file.path(indir.deepsequencedata, 
-                      'RCCS_R15_R18/pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
-
-    paths <- list.files(out.dir, pattern='frompairs_seropairs', full.names=T)
-    tmp <- readRDS(paths[3])[, .(SOURCE,RECIPIENT, COMM.SOURCE,COMM.RECIPIENT)]
-    tmp <- tmp[! is.na(COMM.SOURCE) & ! is.na(COMM.RECIPIENT), .(SOURCE,RECIPIENT)]
-    tmp
-    
-    .compare <- function(DT1, DT2)
-    {
-        n1=fsetdiff(DT1[,.(SOURCE,RECIPIENT)], DT2[,.(SOURCE,RECIPIENT)]) |> nrow()
-        n2=fsetdiff(DT2[,.(SOURCE,RECIPIENT)], DT1[,.(SOURCE,RECIPIENT)]) |> nrow() 
-        stopifnot(n1==0 & n2==0)
-    }
-    .compare(tmp1, tmp)
 }
 
 # exclude non-RCCS
@@ -475,6 +497,18 @@ drange_tsi <- get.infection.range.from.tsi(file.path.tsiestimates)
 drange_tsi <- check.inconsistent.testing(drange_tsi, switch_if_no_other_src = FALSE)
 drange_tsi <- shrink.intervals(drange_tsi)
 setnames(drange_tsi, c('MIN', 'MAX'), c('TSI.MIN', 'TSI.MAX'))
+
+if(0) # Count number of removed individuals/pairs
+{
+    chain[ COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland',
+        .(SOURCE,RECIPIENT)
+    ] -> tmp
+
+    tmp[ ! (SOURCE %in% drange_tsi$AID & RECIPIENT %in% drange_tsi$AID),
+        cat('Removed in', .N, 'cases.\n') ]
+
+    tmp[, unique(c(SOURCE, RECIPIENT))] %in% drange_tsi$AID |> table()
+}
 
 # check no contradictions after shrinkning
 idx <- double.merge(chain, drange_tsi, by_col = "AID")[TSI.MAX.RECIPIENT - TSI.MIN.SOURCE < 0, unique(IDCLU)]
@@ -580,8 +614,6 @@ dclus[, { g <- GROUP;
          out <- list(IDS=out, N_IDS=N_out)
          }, by=GROUP] -> dcohords
 
-# specify pdf through infectiousness
-
 # RUN MCMC
 # ________
 
@@ -596,10 +628,17 @@ if( ! is.null(dinfectiousness))
     suffix <- paste0('_d', tmp, '_w', paste0( dinfectiousness$VALUE, collapse=''))
 if( build.network.from.pairs  )
     suffix <- paste0(suffix, '_netfrompairs')
+if( threshold.likely.connected.pairs != .5 )
+    suffix <- paste0(suffix, '_thr', gsub( '0\\.', '', threshold.likely.connected.pairs))
+if( threshold.direction != .5 )
+    suffix <- paste0(suffix, '_dir', gsub( '0\\.', '', threshold.direction))
 if( get.sero.extra.pairs )
     suffix <- paste0(suffix, '_seropairs')
 if( args$sensitivity.no.refinement)
     suffix <- paste0(suffix, '_sensnoref')
+if( postpone.samesex.removal )
+    suffix <- paste0(suffix, '_postponessrem')
+
 filename_drange <- file.path(out.dir, paste0(filename_drange, suffix,  '.rds'))
 filename_net <- file.path(out.dir, paste0(filename_net, suffix, '.rds'))
 
@@ -645,13 +684,13 @@ if(args$get.round.probabilities)
     df_round_gi[, MAX_SAMPLE_DATE := pmax(MAX_SAMPLE_DATE, shift(MIN_SAMPLE_DATE, -1), na.rm=TRUE)]
     df_round_gi
 
-
     rm(tmp_env, df_round_inland, df_round_fishing, df_round_i, df_round_f)
 }
 
-if(file.exists(filename_net) & ! args$rerun )
+if( file.exists(filename_net) & ! args$rerun )
 {
     dcohords <- readRDS(filename_net)
+
 }else{
 
     # get A LOT of Uniform Samples for MCMC
@@ -722,63 +761,82 @@ if(nrow(df_round_gi))
     saveRDS(dprobs_roundallocation, filename)
 }
 
-# prepare input for Bayesian model
-centroids <- dcohords[, CENTROIDS[[1]], by='GROUP']
-dresults <- prepare.pairs.input.for.bayesian.model(centroids)
-dresults[, table(DIRECTION, useNA='ifany')]
-dhomosexualpairs[, DIRECTION := 'phyloscanner']
-dhomosexualpairs[, `:=` (SCORE=NULL, SCORE_DIR=NULL)]
-dhomosexualpairs <-  double.merge(dhomosexualpairs,meta[, .(AID=aid, SEX=sex)])
-rbind(
-    dresults,
-    dhomosexualpairs,
-    fill=TRUE
-) -> dresults
-dresults <- get.community.type.at.infection.date(dresults)
 
-if(get.sero.extra.pairs & ! build.network.from.pairs) 
+# Final results
+filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
+
+if(  file.exists(filename) & ! args$rerun == TRUE )
 {
-    if(nrow(additional_pairs_from_serohistory))
-    {
-        setkey(dresults, SOURCE, RECIPIENT)
-        idx <- additional_pairs_from_serohistory[, .(SOURCE, RECIPIENT)]
-        dresults[idx, DIRECTION := 'serohistory']
+    dresults <- readRDS(filename)
+}else{
 
-        # 
-        idx2 <- idx[! RECIPIENT %in% dresults$RECIPIENT]
-        dadditional <- meta[, .(SOURCE=aid, SEX.SOURCE=sex, DIRECTION='serohistory')]
-        dadditional <- merge(idx2, dadditional)
-        tmp1 <- meta[, .(RECIPIENT=aid, SEX.RECIPIENT=sex)]
-        dadditional <- merge(dadditional, tmp1, by='RECIPIENT')
-        setcolorder(dadditional, c('SOURCE','RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'DIRECTION'))
-        rbind(
-            dresults,
-            dadditional,
-            fill=TRUE
-        ) -> dresults
+    # prepare input for Bayesian model
+    centroids <- dcohords[, CENTROIDS[[1]], by='GROUP']
+    dresults <- prepare.pairs.input.for.bayesian.model(centroids)
+    dresults[, table(DIRECTION, useNA='ifany')]
+    dhomosexualpairs[, DIRECTION := 'phyloscanner']
+    dhomosexualpairs[, `:=` (SCORE=NULL, SCORE_DIR=NULL)]
+    dhomosexualpairs <-  double.merge(dhomosexualpairs,meta[, .(AID=aid, SEX=sex)])
+    rbind(
+        dresults,
+        dhomosexualpairs,
+        fill=TRUE
+    ) -> dresults
+    dresults <- get.community.type.at.infection.date(dresults)
+
+    if(0)
+    {
+        dresults[ COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland' & !is.na(M), .(.N, sum(!is.na(ROUND.M))) , ]
+        dresults[ COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland' & !is.na(ROUND.M), table(SEX.SOURCE, SEX.RECIPIENT) , ]
     }
+
+    if(get.sero.extra.pairs & ! build.network.from.pairs) 
+    {
+        if(nrow(additional_pairs_from_serohistory))
+        {
+            setkey(dresults, SOURCE, RECIPIENT)
+            idx <- additional_pairs_from_serohistory[, .(SOURCE, RECIPIENT)]
+            dresults[idx, DIRECTION := 'serohistory']
+
+            # 
+            idx2 <- idx[! RECIPIENT %in% dresults$RECIPIENT]
+            dadditional <- meta[, .(SOURCE=aid, SEX.SOURCE=sex, DIRECTION='serohistory')]
+            dadditional <- merge(idx2, dadditional)
+            tmp1 <- meta[, .(RECIPIENT=aid, SEX.RECIPIENT=sex)]
+            dadditional <- merge(dadditional, tmp1, by='RECIPIENT')
+            setcolorder(dadditional, c('SOURCE','RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'DIRECTION'))
+            rbind(
+                dresults,
+                dadditional,
+                fill=TRUE
+            ) -> dresults
+        }
+    }
+
+    # get sample collection dates
+    tmp <- get.sample.collection.dates(get_first_visit=TRUE)
+    names(tmp) <- toupper(gsub('_','.',names(tmp)))
+    dresults <- double.merge(dresults, tmp)
+    if(! args$sensitivity.no.refinement)
+        stopifnot(dresults[, all(CU < DATE.COLLECTION.RECIPIENT, na.rm=TRUE)])
+
+    dresults[!is.na(M) &
+             SEX.SOURCE != SEX.RECIPIENT &
+             COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland', {
+                 cat('There are', .N, 'pairs with median DOI estimate(', sum(is.na(ROUND.M)), 'outside of range).\n'); .SD
+             } ][is.na(ROUND.M), .(SOURCE, RECIPIENT, M)] -> idx
+    idx <- double.merge(idx, meta[, .(AID=aid, DFP=date_first_positive)])
+    setkey(dprobs_roundallocation, SOURCE,RECIPIENT)
+    setkey(idx, SOURCE,RECIPIENT)
+    # dprobs_roundallocation[idx] |> knitr::kable()
+
+    saveRDS(dresults, filename)    
 }
 
-# get sample collection dates
-tmp <- get.sample.collection.dates(get_first_visit=TRUE)
-names(tmp) <- toupper(gsub('_','.',names(tmp)))
-dresults <- double.merge(dresults, tmp)
-if(! args$sensitivity.no.refinement)
-    stopifnot(dresults[, all(CU < DATE.COLLECTION.RECIPIENT, na.rm=TRUE)])
+# N estimated in inland: 
+dresults[ COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland' & ! is.na(M), 
+    .(N_inland = .N, N_inland_period = sum(!is.na(ROUND.M))) ]
 
-dresults[!is.na(M) &
-         SEX.SOURCE != SEX.RECIPIENT &
-         COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland', {
-             cat('There are', .N, 'pairs with median DOI estimate(', sum(is.na(ROUND.M)), ') outside of range.\n'); .SD
-         } ][is.na(ROUND.M), .(SOURCE, RECIPIENT, M)] -> idx
-idx <- double.merge(idx, meta[, .(AID=aid, DFP=date_first_positive)])
-setkey(dprobs_roundallocation, SOURCE,RECIPIENT)
-setkey(idx, SOURCE,RECIPIENT)
-# dprobs_roundallocation[idx] |> knitr::kable()
-
-# Save
-filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
-saveRDS(dresults, filename)    
 
 if(0)
 {
@@ -854,3 +912,60 @@ setnames(dtable, 'M', 'INFECTION_DATE')
 filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_table_toshare', suffix, '.csv'))
 # [1] "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live/RCCS_R15_R18/pairsdata_table_toshare_d1_w11_netfrompairs_seropairs.csv"
 fwrite(dtable, filename)
+
+
+
+if(0)
+{
+    # We lose one pair if we remove the useless ones...
+    idx <- dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', .(SOURCE, RECIPIENT)]
+
+    filename <- file.path(indir.deepsequencedata,
+        'RCCS_R15_R18',
+        'pairsdata_toshare_d1_w11_netfrompairs.rds')
+
+    filename2 <- file.path(indir.deepsequencedata,
+        'RCCS_R15_R18',
+        'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
+
+    comparison <- lapply(c(filename, filename2), readRDS)
+
+    readRDS(filename2)[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland', sum(SEX.RECIPIENT != SEX.SOURCE)]
+    readRDS(filename2)[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & ! is.na(M), sum(SEX.RECIPIENT != SEX.SOURCE)]
+    readRDS(filename2)[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & ! is.na(ROUND.M), sum(SEX.RECIPIENT != SEX.SOURCE)]
+    
+    # compare the distribution of source-recipient sexes -- we lose 3 pairs
+    names(comparison) <- basename(c(filename, filename2))
+    .f <- function(DT)
+        DT[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland', table(SEX.RECIPIENT, SEX.SOURCE)]
+    lapply(comparison, .f)
+
+    .f <- function(DT)
+        DT[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & ! is.na(M) , table(is.na(ROUND.M))]
+    lapply(comparison, .f)
+    .f <- function(DT)
+        DT[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & !is.na(ROUND.M), table(SEX.RECIPIENT, SEX.SOURCE)]
+    lapply(comparison, .f)
+
+
+    if(0) # Check that indeed the missing couples appear in the "serohistory" pairs.
+    {
+        names <- lapply(comparison, function(DT) DT[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & !is.na(M)])
+        names <- lapply(names, subset, select = c('SOURCE', 'RECIPIENT'))
+        names <- rbind( fsetdiff(names[[1]], names[[2]]), fsetdiff(names[[2]], names[[1]]) )
+        setkey(names, SOURCE, RECIPIENT)
+
+        sero_extra_pairs[ , SOURCE := fifelse(TYPE == '12', yes=H1, no=H2)]
+        sero_extra_pairs[ , RECIPIENT := fifelse(TYPE == '12', yes=H2, no=H1)]
+        sero_extra_pairs <- sero_extra_pairs[, .(SOURCE,RECIPIENT)]
+        setkey(sero_extra_pairs, SOURCE, RECIPIENT)
+
+        (merge(names, sero_extra_pairs) == names) |> all()
+    }
+
+    if(0) # check whether heterosex "2nd most likely" recipient appear in final pairs
+    {
+        lapply(comparison, function(DT) merge(DT, diff  , by=c('SOURCE', 'RECIPIENT'))[, table(!is.na(M), !is.na(ROUND.M)) ] )
+        lapply(comparison, function(DT) merge(DT, diff  , by=c('SOURCE', 'RECIPIENT'))[, table(COMM.SOURCE, COMM.RECIPIENT) ] )
+    }
+}
