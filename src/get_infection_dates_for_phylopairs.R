@@ -127,45 +127,6 @@ source(file.path(indir, 'functions', 'summary_functions.R'))
 # source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 find_palette_round()
 
-plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table())
-{
-    .p <- function(...) 
-    {
-        out <- paste(..., sep='.')
-        out <- gsub('^\\.', '', out)
-    }
-    .c <- function(x)
-        fcase(x=='', 'blue', x=='TSI', 'red', x=='INTERSECT','orange')
-    .s <- 'SOURCE'; .r <- 'RECIPIENT'
-
-    plot_dt <- double.merge(chain, DT)
-    setkey(plot_dt, SOURCE,RECIPIENT)
-    setkey(idx, SOURCE,RECIPIENT)
-    values[.p(values, 'MIN', .s) %in% names(DT)]
-
-    if(nrow(idx))
-        plot_dt <- plot_dt[idx]
-
-
-    add.rect <- function(pre)
-    {
-        geom_rect( aes_string(xmin=.p(pre,'MIN',.s),
-                              xmax=.p(pre,'MAX',.s),
-                              ymin=.p(pre,'MIN',.r),
-                              ymax=.p(pre,'MAX',.r)), fill=NA, color=.c(pre) )
-    }
-    
-    g <- ggplot(plot_dt)
-
-    for(v in values)
-        g <- g + add.rect(v)
-
-    g <- g + 
-        geom_abline(aes(intercept=0, slope=1), linetype='dashed', color='black')  +
-        theme_bw() + 
-        labs(x='DOI source', y='DOI recipient')
-    g
-}
 
 ################
 #     MAIN     #
@@ -206,27 +167,7 @@ if(! build.network.from.pairs)
 }else{
 
     # prepare helpers
-    get.communities.where.participated <- function()
-    {
-        # For each AID reports the community type(s) where each participant had participated
-        meta_env <- new.env()
-        load(file.path.meta, envir=meta_env)
-        cols <- c('aid', 'comm', 'round', 'sample_date', 'sex')
-        dcomms <- subset(meta_env$meta_data, select=cols)
-        names(dcomms) <- toupper( names(dcomms) )
-        dcomms <- dcomms[!is.na(AID), 
-            .(COMM=paste0(sort(unique(COMM)), collapse='-'), uniqueN(COMM), SEX=unique(SEX)), by='AID']
-        dcomms[, uniqueN(AID) == .N ]
-        dcomms
-    }
     dcomms <- get.communities.where.participated()
-
-    table.pairs.in.inland <- function(DT)
-    {
-        double.merge(DT, dcomms[, .(AID, COMM, SEX)], by_col = 'AID')[
-            COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland'][,
-            { cat(.N, '\n'); table(SEX.SOURCE,SEX.RECIPIENT) } ]
-    }
 
     # study dc instead..
     cat('\n Building Network from pairs...\n\n')
@@ -234,10 +175,9 @@ if(! build.network.from.pairs)
     # get couples and chains from run
     dpl <- setDT(chains_env$dpl)
     dc <- setDT(chains_env$dc)
+    serohistory_impact <- summarise_serohistory_impact_on_pairs(dc)
     stopifnot(dpl[, .N, by=c('H1', 'H2')][, all(N==1)])
     stopifnot(dpl[,all(H1 < H2)])
-
-    dpl[, table(SCORE == 1)]
 
     # Merge linkage and direction score and subset to linkage score > threshold
     idx <- dpl[SCORE > threshold.likely.connected.pairs, .(H1, H2, SCORE)]
@@ -285,6 +225,16 @@ if(! build.network.from.pairs)
         sum(SCORE < threshold.likely.connected.pairs),
         'pairs with only one possible direction of tranmsission\n')]
 
+    # table.pairs.in.inland(dnewpairs)
+
+    # Check in which cases direction was changed because of serohistory
+    rbind(
+        serohistory_impact[, .(SOURCE=H1, RECIPIENT=H2, CHANGED_DIR)],
+        serohistory_impact[, .(RECIPIENT=H1, SOURCE=H2, CHANGED_DIR)]  
+    ) |>
+        merge(x = dnewpairs, all.x=TRUE) |>
+        with(table(CHANGED_DIR))
+
     double.merge(dnewpairs, meta[, .(AID=aid, SEX=sex)])[, table(SEX.SOURCE, SEX.RECIPIENT)]
 
     # Remove non-RCCS participants (redundant after serohistory check)
@@ -294,32 +244,6 @@ if(! build.network.from.pairs)
     cat('Excluding', tmp - nrow(dnewpairs), 'of', tmp, 'pairs outside of RCCS\n')
     cat(nrow(dnewpairs), 'pairs remaining\n')
 
-    if(0)
-    {
-        idx[, .N, by=c('SOURCE', 'RECIPIENT')][, table(N)]
-
-        cols <- c('RECIPIENT', 'SOURCE', 'SCORE', 'SCORE_DIR')
-        DPAIRS <- list(nosame = idx[SEX.SOURCE != SEX.RECIPIENT], all = copy(idx) )
-        
-        # count number of unique recipients
-        lapply(DPAIRS, function(DT) DT[, list( uniqueN(RECIPIENT), .N) ] )
-        
-        # select only most likely source
-        DPAIRS <- lapply(DPAIRS, function(DT) DT[, .SD[which.max(SCORE)], by='RECIPIENT' ] )
-        
-        # study distribution of source and recipient sexes
-        lapply(DPAIRS, function(DT) DT[, table(SEX.SOURCE, SEX.RECIPIENT ) ])
-        
-        # 21 pairs of difference
-        tmp <- Reduce( function(A, B){ merge(A, B, all.x=TRUE, all.y=TRUE, by=c('RECIPIENT', 'SEX.RECIPIENT'))}, DPAIRS)
-        tmp[, SEX.SOURCE.x := NULL]
-        tmp[, SEX.SOURCE.y := NULL]
-        tmp[SOURCE.x != SOURCE.y]
-        
-        diff <- fsetdiff(DPAIRS[[1]], DPAIRS[[2]])[SEX.SOURCE != SEX.RECIPIENT, .(SOURCE,RECIPIENT) ]
-        diff
-    }
-
     # Pairs involving inland participants
     # table.pair.in.inland(dnewpairs)
     tmp <- double.merge(dnewpairs, dcomms[, .(AID, COMM, SEX)], by_col = 'AID')[
@@ -328,7 +252,7 @@ if(! build.network.from.pairs)
     tmp[, sum(SCORE_DIR == 1)]
 
 
-    # Remove homosexual pairs
+    # Remove same-sex pairs
     if(! postpone.samesex.removal)
     {
         dsex <- meta[, .(aid, sex)] |> unique()
@@ -430,22 +354,6 @@ if(! build.network.from.pairs)
 
 }
 
-
-if(0)
-{
-    # pairs
-    tmp1 <- dnewpairs[, .(SOURCE, RECIPIENT, COMM.SOURCE,COMM.RECIPIENT)]
-    tmp1 <- dhomosexualpairs[, .(SOURCE, RECIPIENT, COMM.SOURCE,COMM.RECIPIENT)]
-
-    # sex
-    tmp2 <- meta[, .(AID=aid, SEX=sex)]
-
-    double.merge(tmp1, tmp2)[ COMM.SOURCE == 'inland' & COMM.RECIPIENT=='inland', table(SEX.SOURCE, SEX.RECIPIENT) ]
-    double.merge(tmp1, tmp2)[ COMM.SOURCE == 'fishing' & COMM.RECIPIENT=='fishing', table(SEX.SOURCE, SEX.RECIPIENT) ]
-
-    
-}
-
 # exclude non-RCCS
 if( args$include.only.rccs & ! build.network.from.pairs )
 {
@@ -485,7 +393,9 @@ if(build.network.from.pairs)
     check[ MAX.RECIPIENT < MIN.SOURCE, stopifnot(.N==0)]
 }
 
-dancestors <- get.ancestors.from.chain(chain)
+cat('the DOI algorithm is run for a total number of pairs equal to:')
+double.merge(chain, meta[, .(AID=aid, SEX=sex)])[, table(SEX.RECIPIENT, SEX.SOURCE)] |>
+    knitr::kable() |> print()
 
 # get plausible infection ranges.
 drange <- get.infection.range.from.testing()
@@ -500,9 +410,8 @@ setnames(drange_tsi, c('MIN', 'MAX'), c('TSI.MIN', 'TSI.MAX'))
 
 if(0) # Count number of removed individuals/pairs
 {
-    chain[ COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland',
-        .(SOURCE,RECIPIENT)
-    ] -> tmp
+    tmp <- double.merge(chain, dcomms)
+    tmp <- tmp[ COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', .(SOURCE,RECIPIENT) ] 
 
     tmp[ ! (SOURCE %in% drange_tsi$AID & RECIPIENT %in% drange_tsi$AID),
         cat('Removed in', .N, 'cases.\n') ]
@@ -638,6 +547,7 @@ if( args$sensitivity.no.refinement)
     suffix <- paste0(suffix, '_sensnoref')
 if( postpone.samesex.removal )
     suffix <- paste0(suffix, '_postponessrem')
+cat('\n Chosen suffix: ', suffix, '\n')
 
 filename_drange <- file.path(out.dir, paste0(filename_drange, suffix,  '.rds'))
 filename_net <- file.path(out.dir, paste0(filename_net, suffix, '.rds'))
@@ -690,7 +600,6 @@ if(args$get.round.probabilities)
 if( file.exists(filename_net) & ! args$rerun )
 {
     dcohords <- readRDS(filename_net)
-
 }else{
 
     # get A LOT of Uniform Samples for MCMC
@@ -775,6 +684,7 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
     dresults <- prepare.pairs.input.for.bayesian.model(centroids)
     dresults[, table(DIRECTION, useNA='ifany')]
     dhomosexualpairs[, DIRECTION := 'phyloscanner']
+    table.pairs.in.inland(dhomosexualpairs[, .(SOURCE,RECIPIENT)])
     dhomosexualpairs[, `:=` (SCORE=NULL, SCORE_DIR=NULL)]
     dhomosexualpairs <-  double.merge(dhomosexualpairs,meta[, .(AID=aid, SEX=sex)])
     rbind(
@@ -784,11 +694,13 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
     ) -> dresults
     dresults <- get.community.type.at.infection.date(dresults)
 
-    if(0)
-    {
-        dresults[ COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland' & !is.na(M), .(.N, sum(!is.na(ROUND.M))) , ]
-        dresults[ COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland' & !is.na(ROUND.M), table(SEX.SOURCE, SEX.RECIPIENT) , ]
-    }
+    # denote which directions were fixed through serohistory
+    dresults <- rbind(
+        serohistory_impact[, .(SOURCE=H1, RECIPIENT=H2, CHANGED_DIR)],
+        serohistory_impact[, .(RECIPIENT=H1, SOURCE=H2, CHANGED_DIR)]  
+    ) |> merge(x = dresults, all.x=TRUE)
+    dresults[ CHANGED_DIR == TRUE, DIRECTION := 'sero-adjusted']
+    dresults[, CHANGED_DIR := NULL]
 
     if(get.sero.extra.pairs & ! build.network.from.pairs) 
     {

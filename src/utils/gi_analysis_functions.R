@@ -8,6 +8,111 @@
     diff(a) > diff(b)
 }
 
+plot.rectangles <- function(DT, values=c('', 'TSI', 'INTERSECT'), idx=data.table())
+{
+    .p <- function(...) 
+    {
+        out <- paste(..., sep='.')
+        out <- gsub('^\\.', '', out)
+    }
+    .c <- function(x)
+        fcase(x=='', 'blue', x=='TSI', 'red', x=='INTERSECT','orange')
+    .s <- 'SOURCE'; .r <- 'RECIPIENT'
+
+    plot_dt <- double.merge(chain, DT)
+    setkey(plot_dt, SOURCE,RECIPIENT)
+    setkey(idx, SOURCE,RECIPIENT)
+    values[.p(values, 'MIN', .s) %in% names(DT)]
+
+    if(nrow(idx))
+        plot_dt <- plot_dt[idx]
+
+
+    add.rect <- function(pre)
+    {
+        geom_rect( aes_string(xmin=.p(pre,'MIN',.s),
+                              xmax=.p(pre,'MAX',.s),
+                              ymin=.p(pre,'MIN',.r),
+                              ymax=.p(pre,'MAX',.r)), fill=NA, color=.c(pre) )
+    }
+    
+    g <- ggplot(plot_dt)
+
+    for(v in values)
+        g <- g + add.rect(v)
+
+    g <- g + 
+        geom_abline(aes(intercept=0, slope=1), linetype='dashed', color='black')  +
+        theme_bw() + 
+        labs(x='DOI source', y='DOI recipient')
+    g
+}
+
+get.communities.where.participated <- function()
+{
+    # For each AID reports the community type(s) where each participant had participated
+    meta_env <- new.env()
+    load(file.path.meta, envir=meta_env)
+    cols <- c('aid', 'comm', 'round', 'sample_date', 'sex')
+    dcomms <- subset(meta_env$meta_data, select=cols)
+    names(dcomms) <- toupper( names(dcomms) )
+    dcomms <- dcomms[!is.na(AID), 
+        .(COMM=paste0(sort(unique(COMM)), collapse='-'), uniqueN(COMM), SEX=unique(SEX)), by='AID']
+    dcomms[, uniqueN(AID) == .N ]
+    dcomms
+}
+
+table.pairs.in.inland <- function(DT)
+{
+    double.merge(DT, dcomms[, .(AID, COMM, SEX)], by_col = 'AID')[
+        COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland'][,
+        { cat(.N, '\n'); table(SEX.SOURCE,SEX.RECIPIENT) } ]
+}
+
+summarise_serohistory_impact_on_pairs <- function(DC, categ = 'close.and.adjacent.and.directed')
+{
+    # DC <- copy(dc); categ = 'close.and.adjacent.and.directed'
+
+    # check that both cat and cat.sero categories are available.
+    categ <- gsub( '.sero', '', categ)
+    stopifnot( DC[, unique(CATEGORISATION) %like% categ |> sum() == 2 ] ) 
+
+    # subset of interest
+    dc_cat <- DC[ CATEGORISATION %like% categ ]
+    setkey(dc_cat, H1, H2)
+    cat( "in how many cases were the scores changed?\n")
+    dc_changed <- dc_cat[, uniqueN(SCORE) > 1, by=c('H1', 'H2', 'TYPE') ]
+    dc_changed <- dc_changed[, .(CHANGED_SCORE = any(V1)) , by=c('H1', 'H2')]
+    dc_changed[, table(CHANGED_SCORE)] |> knitr::kable() |> print()
+
+    cat( "in how many cases were the directions changed?\n")
+    idx <- dc_changed[CHANGED_SCORE == TRUE, .(H1, H2)]
+    dc_changed_dir <- dc_cat[idx]
+    # dc_changed_dir[is.na(SCORE)]
+
+    # for each pair and class type, evaluate whether score in dir 1->2 is larger
+    dc_changed_dir <- dc_changed_dir[ , {
+        dir12 <- TYPE %like% '12'
+        dir21 <- TYPE %like% '21'
+        list(DIR12 = SCORE[dir12] >= SCORE[dir21])
+    } , by=c('H1', 'H2', 'CATEGORISATION') ] 
+
+    # for each pair, look whether categorisations disagree.
+    dc_changed_dir <- dc_changed_dir[, .(CHANGED_DIR = uniqueN(DIR12) == 2 ) , by=c('H1', 'H2')]
+    dc_changed_dir[, table(CHANGED_DIR)] 
+
+    # now let's output a DT with the pairs, indicating whether 
+    # - serohistory changed scores
+    # - serohistory changed directions! 
+    .f <- function(DT1, DT2) merge(DT1, DT2, all.x = TRUE, all.y=TRUE)
+    out <- list( unique(dc_cat[, .(H1, H2)]), dc_changed, dc_changed_dir) |> Reduce(f=.f)
+    out[is.na(CHANGED_DIR), CHANGED_DIR := FALSE]
+    out[, table(CHANGED_SCORE, CHANGED_DIR, useNA='ifany')]
+
+    return(out)
+}
+
+
 get.extra.pairs.from.serohistory <- function(DCHAIN, META)
 {   
     tmp <- DCHAIN[SCORE_LINKED <= threshold.likely.connected.pairs, .(H1, H2) ]
