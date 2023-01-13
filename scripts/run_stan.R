@@ -71,6 +71,7 @@ pairs_replicates.seed <- NULL
 viremic_viral_load_200ml <- F
 use_30com_inc_estimates <- F
 use_30com_pairs <- F
+use_tsi_non_refined <- F
 
 # obtained in script/ 
 file.incidence.inland	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")#central analysis
@@ -84,7 +85,8 @@ file.participation <- file.path(indir, 'data', 'RCCS_participation_221208.csv')
 file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_221116.csv')
 
 # obtained in misc/ for analysis
-file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
+file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
+file.pairs.nonrefined <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
 
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221208.csv")
 file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv")
@@ -122,7 +124,11 @@ source(file.path(indir, 'functions', 'statistics_functions.R'))
 source(file.path(indir, 'functions', 'stan_utils.R'))
 
 # load pairs
-pairs.all <- read_pairs(file.pairs)
+if(use_tsi_non_refined){
+  pairs.all <- read_pairs(file.pairs.nonrefined)
+} else{
+  pairs.all <- read_pairs(file.pairs)
+}
 
 # load round timeline
 load(file.path.round.timeline)
@@ -141,13 +147,17 @@ proportion_prevalence <- fread(file.prevalence.prop)
 if(viremic_viral_load_200ml){
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants.vl200, 
                                               file.treatment.cascade.prop.nonparticipants.vl200)
-  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
-                                                              file.treatment.cascade.prop.nonparticipants.vl200.samples)
+  if(file.exists(file.treatment.cascade.prop.participants.vl200.samples) & file.exists(file.treatment.cascade.prop.nonparticipants.vl200.samples)){
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.vl200.samples)
+  }
 }else{
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
                                               file.treatment.cascade.prop.nonparticipants)
-  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
-                                                              file.treatment.cascade.prop.nonparticipants.samples)
+  if(file.exists(file.treatment.cascade.prop.participants.samples) & file.exists(file.treatment.cascade.prop.nonparticipants.samples)){
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.samples)
+  }
 }
 
 # load incidence estimates 
@@ -326,7 +336,7 @@ stan_data <- add_offset_time(stan_data, eligible_count_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
 stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
-                                      n_knots_rows = 6, n_knots_columns = 6,
+                                      n_knots_rows = 10, n_knots_columns = 10,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_init <- add_init(stan_data)
@@ -348,8 +358,10 @@ if(1){
   
   # plot incident rates and cases over time
   plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
-  incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
-  plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
+  if(file.exists(file.incidence.samples.inland)){
+    incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
+    plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
+  }
   plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
     
   # plot offset
@@ -366,7 +378,7 @@ if(1){
   plot_pairs_all(pairs.all, outfile.figures)
   plot_transmission_events_over_time(pairs, outfile.figures)
   plot_date_collection_pairs(pairs, df_round_inland, outfile.figures)
-  save_statistics_transmission_events(pairs, outdir.table)
+  save_statistics_transmission_events(pairs, pairs.all, outdir.table)
 }
 
 

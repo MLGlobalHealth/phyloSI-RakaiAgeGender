@@ -24,13 +24,13 @@ unsuppressed <- as.data.table(read.csv(infile.unsuppressed))
 tmp <- data.table(reshape2::melt(prevalence, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
 tmp[, TYPE := 'HIV prevalence']
 tmp1 <- data.table(reshape2::melt(unsuppressed, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
-tmp1[, TYPE := 'HIV-positive with\nunsuppressed viral load']
+tmp1[, TYPE := 'HIV-positive with\nunsuppressed virus']
 tmp <- rbind(tmp, tmp1)
 tmp[, variable := stringi::stri_sub(variable,-2,-1)]
 tmp[variable == '_M', variable := 'M']
 tmp <- dcast.data.table(tmp, ROUND + COMM + SEX + AGE_GROUP + TYPE ~ variable, value.var = 'value')
 tmp[, ROUND := paste0('R0', ROUND)]
-tmp[, TYPE := factor(TYPE, levels = c('HIV prevalence', 'HIV-positive with\nunsuppressed viral load'))]
+tmp[, TYPE := factor(TYPE, levels = c('HIV prevalence', 'HIV-positive with\nunsuppressed virus'))]
 
 # round labels
 df_round <- rbind(df_round_inland, df_round_fishing)
@@ -70,8 +70,8 @@ for(i in seq_along(communities)){
     facet_grid(.~AGE_LABEL) + 
     scale_color_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
     scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
-    scale_linetype_manual(values = c('HIV prevalence' = 'dotted', 'HIV-positive with\nunsuppressed viral load' = 'solid')) + 
-    scale_shape_manual(values = c('HIV prevalence' = 24, 'HIV-positive with\nunsuppressed viral load' = 21)) + 
+    scale_linetype_manual(values = c('HIV prevalence' = 'dotted', 'HIV-positive with\nunsuppressed virus' = 'solid')) + 
+    scale_shape_manual(values = c('HIV prevalence' = 24, 'HIV-positive with\nunsuppressed virus' = 21)) + 
     theme_bw() + 
     theme(strip.background = element_rect(colour="white", fill="white"),
           strip.text = element_text(size = rel(1)), 

@@ -1,7 +1,10 @@
+<<<<<<< HEAD
 # phyloflows: phylo-SIR model for estimating shifting patterns in HIV transmission dynamics in Rakai, Uganda.
 
+# phyloSI-RakaiAgeGender
+
 ## Overview
-This repository contains the code for the phylo-SIR model to estimate shifting patterns in HIV transmission dynamics in Rakai, Uganda.
+This repository contains the code and data for the analyses presented in the paper Monod et al. Growing gender inequity in HIV infection in Africa: sources and policy implications.
 
 ## Data
 The data in ```data/``` contain
@@ -27,8 +30,8 @@ The data in ```data/``` contain
 * smooth estimates of art coverage and viral suppression in first-time participants by age, gender and round in file ```RCCS_treatment_cascade_nonparticipants_estimates_DATE.csv```
 
 ## License
-- The code in this repository is licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
-- The data ??
+- The code and data in this repository are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
+>>>>>>> f2fccf66abc313d2923143dd733cfa0bab6690b0
 
 ## Warranty
 
@@ -41,6 +44,7 @@ XXX
 
 ## Acknowledgements
 
+<<<<<<< HEAD
 XXX
 
 ## Funding
@@ -55,12 +59,13 @@ XXX
 ## Installation 
 A ```yml``` file is provided and can be used to build a conda virtual environment containing all R dependencies. Create the environment using:
 ```bash
-$ cd phyloflows
-$ conda env create -f phyloflows.yml
+$ cd phyloSI-RakaiAgeGender
+$ conda env create -f phyloSI-RakaiAgeGender.yml
 ```
 Then activate the environment for use:
 ```bash
-$ source activate phyloflows
+$ source activate phyloSI-RakaiAgeGender
+>>>>>>> f2fccf66abc313d2923143dd733cfa0bab6690b0
 ```
 
 ## Usage
@@ -79,23 +84,28 @@ The scripts in ```misc/``` read the aggregated data and fit smoothing models to 
 * Combine art coverage and viral suppression estimates to obtain treatment cascade in population with file ```get_treatment_cascade_population.R```
 
 ### Run the incidence rates analysis
-* To run the age-specific HIV incidence rates analysis, run ```scripts/run_incidence_rates_estimation.R```
+To run the age-specific HIV incidence rates analysis, run in the console 
+```bash
+INDIR="/rds/general/user/<user>/home/git/phyloSI-RakaiAgeGender"
+OUTDIR="/rds/general/user/<user>/home/projects/2021/phyloSI-RakaiAgeGender"
+Rscript scripts/run_incidence_rates_estimation.R --indir=$INDIR --outdir=$OUTDIR
+```
+where `<user>` is your username on the HPC (e.g. mm3218)
 
 ### Run the transmission flows analysis
-We provide a script that can be run on a laptop. The following modifications need to be done to the start of the bash script
+We provide a bash shell script that can be run on a laptop. The following modifications need to be done to the start of the bash script ```run_stan_laptop.sh```. First, set the the directory in which the repository is located, and the output directory where the results should be stored in lines XYZ:
 ```bash
-run_stan_laptop.sh
+INDIR="/rds/general/user/<user>/home/git/phyloSI-RakaiAgeGender"
+OUTDIR="/rds/general/user/<user>/home/projects/2021/phyloSI-RakaiAgeGender"
 ```
-First, set the the directory in which the repository is and the the output directory (where the results should be stored):
-```bash
-INDIR="/rds/general/user/mm3218/home/git/phyloflows"
-OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"
-```
-Second, set as appropriatly the virtual environment 
+where `<user>` is your username on the HPC (e.g. mm3218)
+
+Second, set as appropriatly your virtual environment in lines XYZ: 
 ```bash
 module load anaconda3/personal
 ```
-Lastly, from the repository directory, on the terminal console execute,
+
+You can then execute the bash script. Run on the terminal console from the repository directory
 ```bash
 ./run_stan_laptop.sh
 ```

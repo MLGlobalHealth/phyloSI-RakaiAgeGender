@@ -1,6 +1,6 @@
 
 
-save_statistics_transmission_events <- function(pairs, outdir){
+save_statistics_transmission_events <- function(pairs, pairs.all, outdir){
   
   stat <- list()
   
@@ -9,6 +9,12 @@ save_statistics_transmission_events <- function(pairs, outdir){
   
   # range of the infection between source and recipient
   stat[[2]] <- format(pairs[, range(DATE_INFECTION.RECIPIENT)], '%B %d, %Y')
+  
+  # number of pairs MM and FF
+  tmp <- pairs.all[COMM.RECIPIENT == "inland" & COMM.SOURCE == 'inland']
+  tmp <- tmp[COMM.SOURCE != 'neuro' & COMM.RECIPIENT != "neuro"]
+  tmp[, DIRECTION := paste0(SEX.SOURCE, SEX.RECIPIENT)]
+  stat[[3]] <- tmp[, list(N = .N), by = 'DIRECTION']
   
   print(stat)
   
@@ -79,11 +85,15 @@ save_statistics_incidence_rate_trends <- function(icrr, icr, icrrs, icrrt, medag
   inc_rel_ratio <- inc_rel_ratio[order(COMM, ROUND)]
   
   # median age at infection
-  median_age <- copy(medage[order(COMM, ROUND, SEX), ])
-  median_age[, M := round(M, 2)]
-  median_age[, CL := round(CL, 2)]
-  median_age[, CU := round(CU, 2)]
-  
+  n_digit <- 1
+  median_age <- copy(medage[order(COMM,SEX, ROUND)])
+  median_age[, M_roundn := format(round(M, n_digit), nsmall = n_digit)]
+  median_age[, CL_roundn  := format(round(CL, n_digit), nsmall = n_digit)]
+  median_age[, CU_roundn  := format(round(CU, n_digit), nsmall = n_digit)]
+  median_age[, M_round0 := round(M)]
+  median_age[, CL_round0  := round(CL)]
+  median_age[, CU_round0  := round(CU)]
+
   #save
   stats <- list()
   

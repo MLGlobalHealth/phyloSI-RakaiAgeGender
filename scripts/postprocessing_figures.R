@@ -69,13 +69,24 @@ df_direction <- get.df.direction()
 log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, df_estimated_contact_rates, 
                                              use_number_susceptible_offset, use_contact_rates_prior)
 
-# offset formula (per year)
+# log offset formula (per year)
 log_offset_formula <- 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'
 if(!use_number_susceptible_offset)
   log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'
 if(use_contact_rates_prior)
   log_offset_formula = paste0(log_offset_formula, ' + log_CONTACT_RATES')
 
+# log offset formula (per year per unsuppressed)
+log_offset_formula_perunsuppressed <- 'log_SUSCEPTIBLE'
+if(!use_number_susceptible_offset)
+  log_offset_formula_perunsuppressed = 'log_PROP_SUSCEPTIBLE'
+if(use_contact_rates_prior)
+  log_offset_formula_perunsuppressed = paste0(log_offset_formula_perunsuppressed, ' + log_CONTACT_RATES')
+
+# log offset formula (per year per susceptible)
+log_offset_formula_persusceptible <- 'log_INFECTED_NON_SUPPRESSED'
+if(use_contact_rates_prior)
+  log_offset_formula_persusceptible = paste0(log_offset_formula_persusceptible, ' + log_CONTACT_RATES')
 
 
 #
@@ -89,7 +100,6 @@ unsuppressed_share_sex_age <- prepare_unsuppressed_share(unsuppressed_share, c('
 prevalence_prop_sex<- prepare_infected_share(infected_share, 'SEX')
 reported_contact <- clean_reported_contact(df_reported_contact)
 df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age)
-
 
 #
 ## PPC
@@ -179,6 +189,13 @@ expected_contribution_age_group_source2 <- find_summary_output_by_round(samples,
 plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
 plot_median_age_source_group_all_rounds(median_age_source_group, expected_contribution_age_group_source2, outfile.figures)
 
+# by age group (other aggregation)
+df_age_aggregated <- get.age.aggregated.map(c('15-29', '30-49'))
+median_age_source_group2 <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                         transform = 'exp',
+                                                         standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                         quantile_age_source = T)
+
 # total
 median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent', 
                                                   c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
@@ -186,8 +203,35 @@ median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',
                                                   standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
                                                   quantile_age_source = T)
 
+# save
+save_median_age_source(median_age_source_group, median_age_source_group2, median_age_source, outdir.table)
+
 
 #
+# median age difference male to female
+#
+
+cat("\nPlot median age difference at transmission\n")
+
+# age group recipient
+df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+median_age_diff_group1 <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                        transform = 'exp',
+                                                        standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                        quantile_age_diff = T)
+
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
+median_age_diff_group2 <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                       transform = 'exp',
+                                                       standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                       quantile_age_diff = T)
+
+# total
+median_age_diff <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
+                                                      transform = 'exp',
+                                                      standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
+                                                      quantile_age_diff = T)
+save_median_age_diff(median_age_diff_group1, median_age_diff_group2, outdir.table)
 # Contribution to transmission
 #
 
@@ -227,7 +271,17 @@ expected_contribution_sex_source <- find_summary_output_by_round(samples, 'log_l
                                                         standardised.vars = c('INDEX_ROUND'))
 plot_contribution_sex_source(expected_contribution_sex_source, unsuppressed_share_sex, prevalence_prop_sex, outfile.figures,'Expected_contribution')
 
-# age-specific contribution to transmission among all sources by sex
+# age-specific contribution to transmission among all age by sex
+expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
+                                                                 transform = 'exp',
+                                                                 standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'))
+
+# age-specific contribution to transmission among all age source and reicpient by sex
+expected_contribution_age_source_recipient <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
+                                                                 transform = 'exp',
+                                                                 standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'))
+
+# age-specific contribution to transmission among all age and  sex
 expected_contribution_age_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
                                                                   transform = 'exp',
                                                                   standardised.vars = c('INDEX_ROUND'))
@@ -275,7 +329,18 @@ expected_contribution_age_classification_male <- find_summary_output_by_round(sa
 plot_contribution_age_classification_male(expected_contribution_age_classification_male, outfile.figures,'Expected_contribution')
 
 #
-# Make table
+# Make table 1
+# contribution aggregated by age group source and sex
+df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+expected_contribution_age_group_source_total <- find_summary_output_by_round(samples, 'log_lambda_latent',
+                                                                             c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_TRANSMISSION.SOURCE'),
+                                                                             transform = 'exp',
+                                                                             standardised.vars = c('INDEX_ROUND', 'INDEX_DIRECTION'))
+save_statistics_expected_contribution(expected_contribution_sex_source, expected_contribution_age_group_source_total, outdir.table)
+
+#
+# Make table 2
+df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
 
 # contribution aggregated by age group of recipient 
 expected_contribution_sex_age_group_recipient <- find_summary_output_by_round(samples, 'log_lambda_latent',
@@ -394,12 +459,8 @@ cat("\nPlot relative incidence infection if different groups of male are targete
 # find incidence under the factual scenario by sex and age
 incidence_factual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
+                                                  log_offset_formula = log_offset_formula_persusceptible,
                                                   log_offset_round = log_offset_round)
-
-# find age groups that contribute the most
-expected_contribution_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
-                                                                 transform = 'exp',
-                                                                 standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'))
 
 # identify the main spreaders, sources that contributes the most to incidence
 spreaders <- find_spreaders(expected_contribution_age_source, outdir.table)
@@ -430,75 +491,92 @@ plot_counterfactual_strategy(counterfactuals_a_a, incidence_factual, 'Unsuppress
 
 cat("\nPlot relative incidence infection if different number of male are treated\n")
 
-# generate counterfactual treating only men participant as much as female are diagnosed/treated/suppressed
-counterfactuals_p_f <- make_counterfactual(samples, log_offset_round, stan_data, 
-                                           eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade_samples, proportion_prevalence, participation,
-                                           only_participant = T, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
-#  generate counterfactual treating only men participant half way to as much as female are diagnosed/treated/suppressed
-counterfactuals_p_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
-                                             eligible_count_smooth, eligible_count_round, 
-                                             treatment_cascade_samples, proportion_prevalence, participation,
-                                             only_participant = T, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
-# generate counterfactual treating only men participant 95 95 95
-counterfactuals_p_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
-                                                eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade_samples, proportion_prevalence, participation,
-                                             only_participant = T, art_up_to_female = NULL, s959595 = 1, s909090 = NULL, outdir.table)
-# generate counterfactual treating only men participant 90 90 90
-counterfactuals_p_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
-                                                eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade_samples, proportion_prevalence, participation,
-                                             only_participant = T, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
+##
+## generate counterfactual treating only men participant as much as female are diagnosed/treated/suppressed
 
-# plot
-plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_p_959595, counterfactuals_p_909090, 
-                    incidence_factual, "Diagnosed unsuppressed", outfile.figures)
-
-
-# generate counterfactual treating all men as much as female are diagnosed/treated/suppressed
-counterfactuals_a_f <- make_counterfactual(samples, log_offset_round, stan_data, 
-                                           eligible_count_smooth, eligible_count_round, 
-                                           treatment_cascade_samples, proportion_prevalence, participation,
-                                           only_participant = F, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
-#  generate counterfactual treating all men half way to as much as female are diagnosed/treated/suppressed
-counterfactuals_a_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
-                                             eligible_count_smooth, eligible_count_round, 
-                                             treatment_cascade_samples, proportion_prevalence, participation,
-                                             only_participant = F, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
-# generate counterfactual treating all men 95 95 95
-counterfactuals_a_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
-                                                eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade_samples, proportion_prevalence, participation,
-                                                only_participant = F, art_up_to_female = NULL, s959595 = 1, s909090 = NULL,outdir.table)
-# generate counterfactual treating all men 90 90 90
-counterfactuals_a_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
-                                                eligible_count_smooth, eligible_count_round, 
-                                                treatment_cascade_samples, proportion_prevalence, participation,
-                                                  only_participant = F, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
-# checks
-if(0){
-  tmp <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'F' & COMM == 'inland', .(ROUND, COMM, AGEYRS, PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M)]
-  tmp1 <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, INFECTED,  PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL)]
-  tmp <- merge(tmp, tmp1, by = c('ROUND', 'COMM', 'AGEYRS'))
-  tmp[PROP_UNSUPPRESSED_PARTICIPANTS_M != PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL]
-  tmp[PROP_UNSUPPRESSED_NONPARTICIPANTS_M != PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
+if(exists("treatment_cascade_samples")){
   
-  tmp <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, TREATED)]
-  tmp[, TREATED_HALF := TREATED / 2]
-  tmp1 <- counterfactuals_a_f05$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, TREATED)]
-  tmp <- merge(select(tmp, -'TREATED'), tmp1, by = c('ROUND', 'COMM', 'AGEYRS'))
-  stopifnot(nrow(tmp[abs(TREATED - TREATED_HALF) > 1e-13]) == 0)
-
-  tmp1 <- counterfactuals_a_959595$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, INFECTED,  INFECTED_NON_SUPPRESSED)]
-  tmp1[, RATIO := INFECTED_NON_SUPPRESSED / INFECTED]
-  stopifnot(nrow(tmp1[abs(RATIO - (1-0.95*0.95*0.95)) > 1e-16]) == 0)
+  counterfactuals_p_f <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                             eligible_count_smooth, eligible_count_round, 
+                                             treatment_cascade_samples, proportion_prevalence, participation,
+                                             only_participant = T, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
+  #  generate counterfactual treating only men participant half way to as much as female are diagnosed/treated/suppressed
+  counterfactuals_p_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                               eligible_count_smooth, eligible_count_round, 
+                                               treatment_cascade_samples, proportion_prevalence, participation,
+                                               only_participant = T, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
+  # generate counterfactual treating only men participant 95 95 95
+  counterfactuals_p_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                                  eligible_count_smooth, eligible_count_round, 
+                                                  treatment_cascade_samples, proportion_prevalence, participation,
+                                                  only_participant = T, art_up_to_female = NULL, s959595 = 1, s909090 = NULL, outdir.table)
+  # generate counterfactual treating only men participant 90 90 90
+  counterfactuals_p_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                                  eligible_count_smooth, eligible_count_round, 
+                                                  treatment_cascade_samples, proportion_prevalence, participation,
+                                                  only_participant = T, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
+  
+  # plot
+  plot_counterfactual(counterfactuals_p_f, counterfactuals_p_f05, counterfactuals_p_959595, counterfactuals_p_909090, 
+                      incidence_factual, "Diagnosed unsuppressed", outfile.figures)
+  
+  # save
+  save_counterfactual_results(counterfactuals_p_f, counterfactuals_p_f05, 
+                              counterfactuals_p_959595, counterfactuals_p_909090, "Diagnosed unsuppressed", outdir.table)
+  
 }
 
-# plot
-plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_a_959595, counterfactuals_a_909090, 
-                    incidence_factual, "Unsuppressed", outfile.figures)
+##
+## generate counterfactual treating all men as much as female are diagnosed/treated/suppressed
 
+if(exists("treatment_cascade_samples")){
+  
+  counterfactuals_a_f <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                             eligible_count_smooth, eligible_count_round, 
+                                             treatment_cascade_samples, proportion_prevalence, participation,
+                                             only_participant = F, art_up_to_female = 1, s959595 = NULL, s909090 = NULL, outdir.table)
+  #  generate counterfactual treating all men half way to as much as female are diagnosed/treated/suppressed
+  counterfactuals_a_f05 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                               eligible_count_smooth, eligible_count_round, 
+                                               treatment_cascade_samples, proportion_prevalence, participation,
+                                               only_participant = F, art_up_to_female = 0.5, s959595 = NULL, s909090 = NULL, outdir.table)
+  # generate counterfactual treating all men 95 95 95
+  counterfactuals_a_959595 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                                  eligible_count_smooth, eligible_count_round, 
+                                                  treatment_cascade_samples, proportion_prevalence, participation,
+                                                  only_participant = F, art_up_to_female = NULL, s959595 = 1, s909090 = NULL,outdir.table)
+  # generate counterfactual treating all men 90 90 90
+  counterfactuals_a_909090 <- make_counterfactual(samples, log_offset_round, stan_data, 
+                                                  eligible_count_smooth, eligible_count_round, 
+                                                  treatment_cascade_samples, proportion_prevalence, participation,
+                                                  only_participant = F, art_up_to_female = NULL, s959595 = NULL, s909090 = 1, outdir.table)
+  # checks
+  if(0){
+    tmp <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'F' & COMM == 'inland', .(ROUND, COMM, AGEYRS, PROP_UNSUPPRESSED_PARTICIPANTS_M, PROP_UNSUPPRESSED_NONPARTICIPANTS_M)]
+    tmp1 <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, INFECTED,  PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL)]
+    tmp <- merge(tmp, tmp1, by = c('ROUND', 'COMM', 'AGEYRS'))
+    tmp[PROP_UNSUPPRESSED_PARTICIPANTS_M != PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL]
+    tmp[PROP_UNSUPPRESSED_NONPARTICIPANTS_M != PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL]
+    
+    tmp <- counterfactuals_a_f$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, TREATED)]
+    tmp[, TREATED_HALF := TREATED / 2]
+    tmp1 <- counterfactuals_a_f05$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, TREATED)]
+    tmp <- merge(select(tmp, -'TREATED'), tmp1, by = c('ROUND', 'COMM', 'AGEYRS'))
+    stopifnot(nrow(tmp[abs(TREATED - TREATED_HALF) > 1e-13]) == 0)
+    
+    tmp1 <- counterfactuals_a_959595$eligible_count_round.counterfactual[ROUND == 'R018' & SEX == 'M' & COMM == 'inland', .(ROUND, COMM, AGEYRS, INFECTED,  INFECTED_NON_SUPPRESSED)]
+    tmp1[, RATIO := INFECTED_NON_SUPPRESSED / INFECTED]
+    stopifnot(nrow(tmp1[abs(RATIO - (1-0.95*0.95*0.95)) > 1e-16]) == 0)
+  }
+  
+  # plot
+  plot_counterfactual(counterfactuals_a_f, counterfactuals_a_f05, counterfactuals_a_959595, counterfactuals_a_909090, 
+                      incidence_factual, "Unsuppressed", outfile.figures)
+  
+  # save
+  save_counterfactual_results(counterfactuals_a_f, counterfactuals_a_f05, 
+                              counterfactuals_a_959595, counterfactuals_a_909090, "Unsuppressed", outdir.table)
+}
 
 #
 # Find NNT
@@ -532,5 +610,3 @@ plot_NNT_group(NNT_grouped, outfile.figures)
 
 
 cat("End of postprocessing_figures.R")
-
-

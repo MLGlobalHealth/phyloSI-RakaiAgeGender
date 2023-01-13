@@ -112,7 +112,6 @@ summarise_serohistory_impact_on_pairs <- function(DC, categ = 'close.and.adjacen
     return(out)
 }
 
-
 get.extra.pairs.from.serohistory <- function(DCHAIN, META)
 {   
     tmp <- DCHAIN[SCORE_LINKED <= threshold.likely.connected.pairs, .(H1, H2) ]

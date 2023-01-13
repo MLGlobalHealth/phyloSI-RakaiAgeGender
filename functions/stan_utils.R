@@ -55,7 +55,8 @@ add_phylo_data <- function(stan_data, pairs){
       
       setkey(tmp, AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)
       
-      tmp1 <- pairs[SEX.SOURCE == .SEX.SOURCE  & DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT == df_period[ INDEX_TIME == k, BEFORE_CUTOFF]]
+      tmp1 <- pairs[SEX.SOURCE == .SEX.SOURCE  & DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT == df_period[ INDEX_TIME == k, BEFORE_CUTOFF]
+                    & AGE_INFECTION.RECIPIENT >= 15 & AGE_INFECTION.RECIPIENT < 50 & AGE_TRANSMISSION.SOURCE >= 15 & AGE_TRANSMISSION.SOURCE < 50]
       stopifnot(sum(tmp$count) == nrow(tmp1))
       
       # check the order of ages is correct

@@ -148,7 +148,7 @@ ggsave(p, file = file.path(outdir, 'population_suppression_rate_221208.pdf'), w 
 
 ####################################
 
-tab <- copy(ns[variable %in% c('PROP_SUPPRESSION_GIVEN_DIAGNOSED')])
+tab <- copy(ns[variable %in% c('PROP_SUPPRESSED')])
 tab[,SEX_LABEL := 'Men']
 tab[SEX == 'F',SEX_LABEL := 'Women']
 tab[,COMM_LABEL := 'Inland communities']
@@ -160,7 +160,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   geom_ribbon(aes(ymin = CL, ymax = CU, fill = SEX_LABEL), alpha = 0.5) + 
   geom_line(aes(y = M, col = SEX_LABEL)) + 
   theme_bw() + 
-  labs(x = 'Age', y = 'Viral suppression rate in infected\npopulation in round 18', 
+  labs(x = 'Age', y = 'Proportion of individuals with HIV\nwho have suppressed virus in round 18', 
        col = '', fill = '', shape = '', linetype= '') +
   theme(legend.position = c(0.85, 0.17), 
         strip.background = element_rect(colour="white", fill="white")) +
@@ -170,7 +170,7 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'population_suppression_rate_R18_221208.pdf'), w = 4, h = 3.2)
+ggsave(file = file.path(outdir, 'population_suppression_rate_R18_221213.pdf'), w = 4, h = 3.2)
 
 
 ####################################
@@ -209,3 +209,20 @@ ggplot(tmp, aes(x = AGEYRS)) +
          fill = guide_legend(byrow = T, nrow = 3))
 ggsave(file = file.path(outdir, 'population_suppression_rate_overtime_221208.pdf'), w = 6, h = 5)
 
+####################################
+
+# SAVE PROPORTION OF SUPPRESSED
+
+####################################
+
+n_digit <- 1
+
+tab <- ns[variable == 'PROP_SUPPRESSED']
+tab <- tab[COMM == 'inland' & ROUND == 'R018']
+tab <- tab[, .(ROUND, SEX, AGEYRS, M, CL, CU)]
+tab <- tab[, `:=` (M = format(round(M*100, n_digit), n_digit), 
+                   CL  = format(round(CL*100, n_digit), n_digit), 
+                   CU = format(round(CU*100, n_digit), n_digit))]
+tab <- tab[order(ROUND, SEX, AGEYRS)]
+
+saveRDS(tab, file = file.path(outdir, 'prop_suppressed.rds'))

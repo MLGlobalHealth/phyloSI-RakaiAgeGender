@@ -1350,17 +1350,19 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       geom_point(aes(col = ROUND_LABEL, shape = age_group, x = UNSUPPRESSION_RATE_RATIO_RATIO_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_y_continuous(limits = c(NA,2)) + 
       scale_color_manual(values = colors) + 
-      labs(x = paste0('Male-female ratio of the rate of infected\nindividuals with unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
+      labs(x = paste0('Male-female ratio of the rate of individuals\nwith HIV who have unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
            y = paste0('Female-male ratio of the\nincidence rate relative\nto round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))])) + 
       theme_bw()  +
-      theme(legend.position = c(0.25, 0.74), 
+      theme(legend.position = 'none', 
             legend.title = element_blank(), 
             legend.text=element_text(size=rel(0.5))) +
-      guides(shape='none', color = guide_legend(byrow = T, nrow = 4,override.aes = list(size = 1), 
+      guides(shape=guide_legend(override.aes = list(size = 1), 
+                                keywidth = unit(0.01, 'pt'), keyheight = unit(0.001, 'pt')), 
+             color = guide_legend(byrow = T, nrow = 4,override.aes = list(size = 1), 
                                                 keywidth = unit(0.01, 'pt'), keyheight = unit(0.001, 'pt'))) 
     
       # scale_y_log10()
-    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.pdf'), w = 3.5, h = 2.4)
+    ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.pdf'), w = 3.7, h = 2.4)
     
   }
   
@@ -1442,9 +1444,9 @@ plot_pairs <- function(pairs, outdir)
       sex <- SEX[j]
       
       tmp1 <- tmp[COMM.RECIPIENT == comm & SEX.SOURCE == sex ]
-      p[[index]] <- ggplot(tmp1, aes(x = AGE_TRANSMISSION.SOURCE, y = AGE_INFECTION.RECIPIENT)) + 
+      p[[index]] <- ggplot(tmp1, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
         geom_point(aes(col = LABEL_ROUND)) + 
-        labs(x = 'Age at transmission source', y = 'Age at infection recipient', col = '') +
+        labs(y = 'Age at transmission source', x = 'Age at infection recipient', col = '') +
         geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'grey50') + 
         theme_bw() + 
         coord_fixed() +

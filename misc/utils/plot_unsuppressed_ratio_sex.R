@@ -62,11 +62,10 @@ for(i in seq_along(communities)){
           # legend.title = element_blank(), 
           legend.spacing.y= unit(0.00001, 'cm')) + 
     scale_y_continuous( expand = expansion(mult = c(0.02, 0.1))) + 
-    labs(y = 'Male-female ratio of the rate of infected\nindividuals with unsuppressed virus\nrelative to round 10', col= 'Age', shape= 'Age', 
+    labs(y = 'Male-female ratio of the rate of individuals\nwith HIV who have unsuppressed virus\nrelative to round 10', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
     ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.png')), w = 3.8,h = 3.15)
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.pdf')), w = 4.1,h = 3.2)
-    
+    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.pdf')), w = 4.1,h = 3.4)
 }
 
 

@@ -127,7 +127,6 @@ source(file.path(indir, 'functions', 'summary_functions.R'))
 # source(file.path(indir, 'functions', 'check_potential_TNet.R'))
 find_palette_round()
 
-
 ################
 #     MAIN     #
 ################
@@ -396,6 +395,8 @@ if(build.network.from.pairs)
 cat('the DOI algorithm is run for a total number of pairs equal to:')
 double.merge(chain, meta[, .(AID=aid, SEX=sex)])[, table(SEX.RECIPIENT, SEX.SOURCE)] |>
     knitr::kable() |> print()
+
+dancestors <- get.ancestors.from.chain(chain)
 
 # get plausible infection ranges.
 drange <- get.infection.range.from.testing()
@@ -670,7 +671,6 @@ if(nrow(df_round_gi))
     saveRDS(dprobs_roundallocation, filename)
 }
 
-
 # Final results
 filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
 
@@ -824,60 +824,3 @@ setnames(dtable, 'M', 'INFECTION_DATE')
 filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_table_toshare', suffix, '.csv'))
 # [1] "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live/RCCS_R15_R18/pairsdata_table_toshare_d1_w11_netfrompairs_seropairs.csv"
 fwrite(dtable, filename)
-
-
-
-if(0)
-{
-    # We lose one pair if we remove the useless ones...
-    idx <- dnewpairs[COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', .(SOURCE, RECIPIENT)]
-
-    filename <- file.path(indir.deepsequencedata,
-        'RCCS_R15_R18',
-        'pairsdata_toshare_d1_w11_netfrompairs.rds')
-
-    filename2 <- file.path(indir.deepsequencedata,
-        'RCCS_R15_R18',
-        'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
-
-    comparison <- lapply(c(filename, filename2), readRDS)
-
-    readRDS(filename2)[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland', sum(SEX.RECIPIENT != SEX.SOURCE)]
-    readRDS(filename2)[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & ! is.na(M), sum(SEX.RECIPIENT != SEX.SOURCE)]
-    readRDS(filename2)[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & ! is.na(ROUND.M), sum(SEX.RECIPIENT != SEX.SOURCE)]
-    
-    # compare the distribution of source-recipient sexes -- we lose 3 pairs
-    names(comparison) <- basename(c(filename, filename2))
-    .f <- function(DT)
-        DT[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland', table(SEX.RECIPIENT, SEX.SOURCE)]
-    lapply(comparison, .f)
-
-    .f <- function(DT)
-        DT[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & ! is.na(M) , table(is.na(ROUND.M))]
-    lapply(comparison, .f)
-    .f <- function(DT)
-        DT[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & !is.na(ROUND.M), table(SEX.RECIPIENT, SEX.SOURCE)]
-    lapply(comparison, .f)
-
-
-    if(0) # Check that indeed the missing couples appear in the "serohistory" pairs.
-    {
-        names <- lapply(comparison, function(DT) DT[ COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland' & !is.na(M)])
-        names <- lapply(names, subset, select = c('SOURCE', 'RECIPIENT'))
-        names <- rbind( fsetdiff(names[[1]], names[[2]]), fsetdiff(names[[2]], names[[1]]) )
-        setkey(names, SOURCE, RECIPIENT)
-
-        sero_extra_pairs[ , SOURCE := fifelse(TYPE == '12', yes=H1, no=H2)]
-        sero_extra_pairs[ , RECIPIENT := fifelse(TYPE == '12', yes=H2, no=H1)]
-        sero_extra_pairs <- sero_extra_pairs[, .(SOURCE,RECIPIENT)]
-        setkey(sero_extra_pairs, SOURCE, RECIPIENT)
-
-        (merge(names, sero_extra_pairs) == names) |> all()
-    }
-
-    if(0) # check whether heterosex "2nd most likely" recipient appear in final pairs
-    {
-        lapply(comparison, function(DT) merge(DT, diff  , by=c('SOURCE', 'RECIPIENT'))[, table(!is.na(M), !is.na(ROUND.M)) ] )
-        lapply(comparison, function(DT) merge(DT, diff  , by=c('SOURCE', 'RECIPIENT'))[, table(COMM.SOURCE, COMM.RECIPIENT) ] )
-    }
-}

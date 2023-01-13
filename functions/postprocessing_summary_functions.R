@@ -220,7 +220,8 @@ find_summary_output <- function(samples, output, vars, transform = NULL, standar
 find_summary_output_by_round <- function(samples, output, vars, 
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
                                          log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_susceptible = F, posterior_samples = F, relative_baseline = F, 
-                                         invert = F, median_age_source = F, quantile_age_source = F, quantile_age_difference = F, sex_ratio = F, save_output = T, add_male_age_classification_nonsymmetric = F){
+                                         invert = F, median_age_source = F, quantile_age_source = F, quantile_age_difference = F, sex_ratio = F, save_output = T, add_male_age_classification_nonsymmetric = F, 
+                                         df_age_aggregated_new = NULL){
   
   # summarise outputs by round
   
@@ -234,6 +235,10 @@ find_summary_output_by_round <- function(samples, output, vars,
     setnames(tmp1, 2:4, c('INDEX_AGE', 'INDEX_DIRECTION', 'INDEX_ROUND'))
   }else{
     setnames(tmp1, 2:4, c('INDEX_DIRECTION', 'INDEX_ROUND', 'INDEX_AGE'))
+  }
+  
+  if(!is.null(df_age_aggregated_new)){
+    df_age_aggregated <- copy(df_age_aggregated_new)
   }
   
   if('INDEX_AGE' %in% names(tmp1)){
@@ -299,6 +304,9 @@ find_summary_output_by_round <- function(samples, output, vars,
     # take median age source
     setnames(tmp1, 'value', 'delta')
     vars <- standardised.vars
+    
+    stopifnot(all(tmp1[, list(sum_delta = sum(delta)), by = c('iterations', vars)]$sum_delta - 1 < 1e-10))
+    
     tmp1 <- tmp1[, list(value = matrixStats::weightedMedian(AGE_TRANSMISSION.SOURCE, delta ), 
                         quantile = c('C50')), by = c('iterations', vars)]
     vars = c(vars, 'quantile')
@@ -308,10 +316,33 @@ find_summary_output_by_round <- function(samples, output, vars,
     # take quantile of the age of the source
     setnames(tmp1, 'value', 'delta')
     vars <- standardised.vars
-    tmp1 <- tmp1[, list(value = Hmisc::wtd.quantile(x = AGE_TRANSMISSION.SOURCE, weight = delta,
-                                                        probs = c(0.1, 0.25, 0.5, 0.75, 0.9), normwt = TRUE),
+    
+    stopifnot(all(tmp1[, list(sum_delta = sum(delta)), by = c('iterations', vars)]$sum_delta - 1 < 1e-10))
+    
+    tmp1 <- tmp1[, list(value = wquantile(x = AGE_TRANSMISSION.SOURCE, weights = delta,
+                                                        probs = c(0.1, 0.25, 0.5, 0.75, 0.9)),
                         quantile = c('C10', 'C25', 'C50', 'C75', 'C90')), by = c('iterations', vars)]
     vars = c(vars, 'quantile')
+  }
+  
+  if(quantile_age_difference){
+    # find age male and age female
+    tmp1[INDEX_DIRECTION == 1, `:=` (AGE_INFECTION.MALE = AGE_INFECTION.RECIPIENT, 
+                                     AGE_INFECTION.FEMALE = AGE_TRANSMISSION.SOURCE)]
+    tmp1[INDEX_DIRECTION == 2, `:=` (AGE_INFECTION.MALE = AGE_TRANSMISSION.SOURCE, 
+                                     AGE_INFECTION.FEMALE = AGE_INFECTION.RECIPIENT )]
+    
+    # take quantile of the difference male age - female age
+    setnames(tmp1, 'value', 'delta')
+    vars <- standardised.vars
+    
+    stopifnot(all(tmp1[, list(sum_delta = sum(delta)), by = c('iterations', vars)]$sum_delta - 1 < 1e-10))
+    
+    tmp1 <- tmp1[, list(value = wquantile(x = (AGE_INFECTION.MALE - AGE_INFECTION.FEMALE), weights = delta,
+                                                    probs = c(0.1, 0.25, 0.5, 0.75, 0.9)),
+                        quantile = c('C10', 'C25', 'C50', 'C75', 'C90')), by = c('iterations', vars)]
+    vars = c(vars, 'quantile')
+
   }
   
   if(quantile_age_difference){
@@ -387,7 +418,8 @@ find_summary_output_by_round <- function(samples, output, vars,
   
   if(sex_ratio){
     # take ratio of the value by sex
-    tmp1 <- select(tmp1, - 'total_value')
+    if('total_value' %in% names(tmp1))
+      tmp1 <- select(tmp1, - 'total_value')
     tmp1 <- dcast(tmp1, ... ~ INDEX_DIRECTION, value.var = 'value')
     setnames(tmp1, c('1', '2'), c('value_FM', 'value_MF'))
     tmp1[, value := value_MF / value_FM]
@@ -425,6 +457,12 @@ find_summary_output_by_round <- function(samples, output, vars,
     if(quantile_age_difference){
       file = paste0(file, '_age_difference')
     }
+    if(relative_baseline){
+      file = paste0(file, '_relative_baseline')
+    }
+    if(per_susceptible){
+      file = paste0(file, '_per_susceptible')
+    }
     if(!is.null(standardised.vars)){
       file = paste0(file, 'standardisedby_', tolower(paste0(gsub('INDEX_', '', standardised.vars), collapse = '_')))
     }
@@ -435,16 +473,16 @@ find_summary_output_by_round <- function(samples, output, vars,
   return(tmp1)
 }
 
-find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual, transform = NULL){
+find_relative_incidence_counterfactual <- function(samples, output, vars, log_offset_round, log_offset_round.counterfactual, log_offset_formula = 'LOG_OFFSET', transform = NULL, df_age_aggregated_new = NULL){
   
   ps <- c(0.5, 0.025, 0.975)
   p_labs <- c('M','CL','CU')
   
   # incidence rate under original scenario
-  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, posterior_samples = T)
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T, df_age_aggregated_new = df_age_aggregated_new)
   
   # incidence rate under countefactual scenario
-  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, posterior_samples = T)
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T, df_age_aggregated_new = df_age_aggregated_new)
   setnames(tmp, 'value', 'value_counterfactual')
   
   # find relative incidence
@@ -856,11 +894,13 @@ make_counterfactual_target <- function(samples, spreaders, log_offset_round, sta
     log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual[[i]]), df_estimated_contact_rates,
                                                                 use_number_susceptible_offset, use_contact_rates_prior)
     
-    # find incidence counterfactual by age of the recipient
+    # find incidence rate counterfactual by age of the recipient
     incidence_counterfactual[[i]] <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
                                                                   transform = 'exp', 
                                                                   log_offset_round = log_offset_round.counterfactual, 
+                                                                  log_offset_formula = log_offset_formula_persusceptible,
                                                                   save_output = F)
+    
     # find relative difference incidence  by age of the recipient
     relative_incidence_counterfactual[[i]] <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                                      log_offset_round, 
@@ -1066,31 +1106,95 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   # find number of male treated under counterfactual
   budget <- eligible_count_round.counterfactual[AGEYRS == 0, .(ROUND, SEX, COMM, TREATED, TREATED_CL, TREATED_CU)]
 
+  # find number of male by age treated under counterfactual
+  budget_age <- eligible_count_round.counterfactual[grepl('-', AGEYRS), .(ROUND, SEX, AGEYRS, COMM, TREATED, TREATED_CL, TREATED_CU, PROP_TREATED, PROP_TREATED_CL, PROP_TREATED_CU)]
+  setnames(budget_age, 'AGEYRS', 'AGE_GROUP')
+  eligible_count_round.counterfactual <- eligible_count_round.counterfactual[!(grepl('-', AGEYRS) | AGEYRS == 0)]
+  eligible_count_round.counterfactual[, AGEYRS := as.numeric(AGEYRS)]
+  
   # find offset under counterfactual
   log_offset_round.counterfactual <- find_log_offset_by_round(stan_data, copy(eligible_count_round.counterfactual),df_estimated_contact_rates,
                                                               use_number_susceptible_offset, use_contact_rates_prior)
   
-  # find incidence counterfactual by age of the recipient
+  # find incidence rate counterfactual by age of the recipient
   incidence_counterfactual <- find_summary_output_by_round(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
-                                                                transform = 'exp', 
-                                                                log_offset_round = log_offset_round.counterfactual, 
-                                                                save_output = F)
+                                                           transform = 'exp', 
+                                                           log_offset_round = log_offset_round.counterfactual, 
+                                                           log_offset_formula = log_offset_formula_persusceptible,
+                                                           save_output = F)
+  
   # find relative difference incidence  by age of the recipient
   relative_incidence_counterfactual <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                                    log_offset_round, log_offset_round.counterfactual,
                                                                                    transform = 'exp')
+  # find relative difference incidence  by age group recipient
+  df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
+  relative_incidence_counterfactual_group1 <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                                  log_offset_round, log_offset_round.counterfactual,
+                                                                                  transform = 'exp', df_age_aggregated_new = df_age_aggregated)
+  # find relative difference incidence  by age group2 recipient
+  df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+  relative_incidence_counterfactual_group2 <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+                                                                                     log_offset_round, log_offset_round.counterfactual,
+                                                                                     transform = 'exp', df_age_aggregated_new = df_age_aggregated)
   
   # find relative difference incidence 
   relative_incidence_counterfactual_all <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND'),
                                                                                        log_offset_round, log_offset_round.counterfactual,
                                                                                        transform = 'exp')
   
+  #  incidence rate sex ratio by age of the recipient   
+  sex_ratio_incidence_counterfactual <- find_summary_output_by_round(samples, 'log_beta', 
+                                                                     c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), 
+                                                                     transform = 'exp', 
+                                                                     sex_ratio = T,
+                                                                     log_offset_round = log_offset_round.counterfactual, 
+                                                                     log_offset_formula = log_offset_formula_persusceptible,
+                                                                     save_output = F)
+  
+  # incidence rate sex ratio  by age group recipient
+  df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
+  sex_ratio_incidence_counterfactual_group1 <- find_summary_output_by_round(samples, 'log_beta', 
+                                                                            c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
+                                                                            transform = 'exp', 
+                                                                            sex_ratio = T,
+                                                                            log_offset_round = log_offset_round.counterfactual, 
+                                                                            log_offset_formula = log_offset_formula_persusceptible,
+                                                                            save_output = F, 
+                                                                            df_age_aggregated_new = df_age_aggregated)
+  
+  # incidence rate sex ratio  by age group2 recipient
+  df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+  sex_ratio_incidence_counterfactual_group2 <- find_summary_output_by_round(samples, 'log_beta', 
+                                                                            c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'), 
+                                                                            transform = 'exp', 
+                                                                            sex_ratio = T,
+                                                                            log_offset_round = log_offset_round.counterfactual, 
+                                                                            log_offset_formula = log_offset_formula_persusceptible,
+                                                                            save_output = F, 
+                                                                            df_age_aggregated_new = df_age_aggregated)
+  # incidence rate sex ratiototal
+  sex_ratio_incidence_counterfactual_all <- find_summary_output_by_round(samples, 'log_beta', 
+                                                                            c('INDEX_DIRECTION', 'INDEX_ROUND'), 
+                                                                            transform = 'exp', 
+                                                                            sex_ratio = T,
+                                                                            log_offset_round = log_offset_round.counterfactual, 
+                                                                            log_offset_formula = log_offset_formula_persusceptible,
+                                                                            save_output = F)
+  
   # group
-  counterfactuals <- list(incidence_counterfactual = incidence_counterfactual, 
-                          relative_incidence_counterfactual = relative_incidence_counterfactual, 
-                          eligible_count_round.counterfactual = eligible_count_round.counterfactual, 
-                          relative_incidence_counterfactual_all = relative_incidence_counterfactual_all,
-                          budget = budget)
+  counterfactuals <- list(budget = budget, 
+                          budget_age = budget_age,
+                        incidence_counterfactual = incidence_counterfactual, 
+                        relative_incidence_counterfactual = relative_incidence_counterfactual, 
+                        eligible_count_round.counterfactual = eligible_count_round.counterfactual,
+                        relative_incidence_counterfactual_group1 = relative_incidence_counterfactual_group1, 
+                        relative_incidence_counterfactual_group2 = relative_incidence_counterfactual_group2, 
+                        relative_incidence_counterfactual_all = relative_incidence_counterfactual_all,
+                        sex_ratio_incidence_counterfactual = sex_ratio_incidence_counterfactual, 
+                        sex_ratio_incidence_counterfactual_group1 = sex_ratio_incidence_counterfactual_group1, 
+                        sex_ratio_incidence_counterfactual_group2 = sex_ratio_incidence_counterfactual_group2,
+                        sex_ratio_incidence_counterfactual_all = sex_ratio_incidence_counterfactual_all)
   
   # save
   file = paste0(outdir, '-output-counterfactuals')
@@ -1279,15 +1383,33 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
                 INFECTED_NON_SUPPRESSED, INFECTED_NON_SUPPRESSED.FACTUAL, TREATED)]
   
   #
-  # find total treated across ages
+  # find variable across ages
   #
   
-  df2 <- df1[, list(TREATED = sum(TREATED)), by = c('ROUND', 'SEX', 'COMM', 'iterations')]
+  df2 <- df1[, list(TREATED = sum(TREATED), 
+                    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED), 
+                    INFECTED_NON_SUPPRESSED.FACTUAL = sum(INFECTED_NON_SUPPRESSED.FACTUAL)), by = c('ROUND', 'SEX', 'COMM', 'iterations')]
   df2[, AGEYRS := 0]
   df1 <- rbind(df1, df2,fill=TRUE)
+
+  #
+  # find variable across 5-year age band 
+  #
+  
+  tmp <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
+  tmp <- unique(tmp[, .(AGE_GROUP_TRANSMISSION.SOURCE, AGE_TRANSMISSION.SOURCE)])
+  setnames(tmp, c('AGE_GROUP_TRANSMISSION.SOURCE', 'AGE_TRANSMISSION.SOURCE'), c('AGE_GROUP', 'AGEYRS'))
+  df2 <- merge(df1, tmp, by = 'AGEYRS')
+  df2 <- df2[, list(TREATED = sum(TREATED), 
+                    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED), 
+                    INFECTED_NON_SUPPRESSED.FACTUAL = sum(INFECTED_NON_SUPPRESSED.FACTUAL)), by = c('ROUND', 'SEX', 'COMM', 'AGE_GROUP', 'iterations')]
+  setnames(df2, 'AGE_GROUP', 'AGEYRS')
+  df1 <- rbind(df1, df2,fill=TRUE)
+  df1[, PROP_TREATED := TREATED / TREATED[AGEYRS == 0], by = c('ROUND', 'SEX', 'COMM', 'iterations')]
+  
   
   #
-  # summarise
+  # summarise by 1-year age band
   #
   
   ps <- c(0.025,0.5,0.975)
@@ -1296,24 +1418,29 @@ find_counterfactual_unsuppressed_count <- function(selected_males,  eligible_cou
   df1 <- melt.data.table(df1, id.vars = c('ROUND', 'SEX', 'COMM', 'AGEYRS', 'iterations'))
   ns = df1[, list(q= quantile(value, prob=ps, na.rm = T), q_label=paste0(variable, '_', qlab)), by=c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'variable')]
   ns = as.data.table(reshape2::dcast(ns, AGEYRS + SEX + COMM + ROUND  ~ q_label, value.var = "q"))
-  ns <- merge(ns, unique(df[, .(ROUND, SEX, COMM, AGEYRS, ELIGIBLE, EMPIRICAL_PREVALENCE, PREVALENCE_CL, PREVALENCE_CU, PREVALENCE_M, 
-                                PARTICIPANT.x, INFECTED, SUSCEPTIBLE, PARTICIPANT.y, PARTICIPATION, spreader)]), 
-              by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'), all.x = T)
+  
+  # merge to all var
+  tmp <- unique(df[, .(ROUND, SEX, COMM, AGEYRS, ELIGIBLE, INFECTED, SUSCEPTIBLE, PARTICIPATION)])
+  tmp[, AGEYRS := as.character(AGEYRS)]
+  ns <- merge(ns, tmp, by = c('ROUND', 'SEX', 'COMM', 'AGEYRS'), all.x = T)
   setnames(ns, 'INFECTED_NON_SUPPRESSED_M', 'INFECTED_NON_SUPPRESSED')
   setnames(ns, 'INFECTED_NON_SUPPRESSED.FACTUAL_M', 'INFECTED_NON_SUPPRESSED.FACTUAL')
   setnames(ns, 'TREATED_M', 'TREATED')
+  setnames(ns, 'PROP_TREATED_M', 'PROP_TREATED')
   
   # subset to community
   ns <- ns[COMM %in% df_community[, unique(COMM)]]
   
   # if treeated negtive then do not do the counterfactual
-  ns[TREATED < 0, INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL]
-  ns[TREATED < 0, PROP_UNSUPPRESSED_PARTICIPANTS_M.COUNTERFACTUAL :=  PROP_UNSUPPRESSED_PARTICIPANTS_M]
-  ns[TREATED < 0, PROP_UNSUPPRESSED_NONPARTICIPANTS_M.COUNTERFACTUAL :=  PROP_UNSUPPRESSED_NONPARTICIPANTS_M]
+  ns[TREATED < 0, INFECTED_NON_SUPPRESSED := INFECTED_NON_SUPPRESSED.FACTUAL] # this is what's going to be used in the offset
+  ns[TREATED < 0, INFECTED_NON_SUPPRESSED_CL := INFECTED_NON_SUPPRESSED.FACTUAL_CL]
+  ns[TREATED < 0, INFECTED_NON_SUPPRESSED_CU := INFECTED_NON_SUPPRESSED.FACTUAL_CU]
   ns[TREATED < 0, TREATED := 0]
   ns[TREATED < 0, TREATED_CL := 0]
   ns[TREATED < 0, TREATED_CU := 0]
   
+
+  
+  
   return(ns)
 }
-
