@@ -1425,8 +1425,12 @@ plot_pairs_all <- function(pairs.all, outdir){
 plot_pairs <- function(pairs, outdir)
 {
   
+  # extend round periods to the beginning of next one.
+  df_round_extended <- copy(df_round)
+  df_round_extended[, MAX_SAMPLE_DATE := fcoalesce( shift(MIN_SAMPLE_DATE, -1), MAX_SAMPLE_DATE )]
+
   # find round of infection
-  tmp <- merge(pairs, df_round,by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian = T)
+  tmp <- merge(pairs, df_round_extended, by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian = T)
   tmp <- tmp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MAX_SAMPLE_DATE]
   
   # find direction label
