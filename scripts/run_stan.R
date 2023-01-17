@@ -28,7 +28,7 @@ if(dir.exists('/home/andrea'))
   outdir <- '~/Documents/Box/2021/phyloflows'
 
   jobname <- 'test'
-  stan_model <- 'gp_220911a'
+  stan_model <- 'gp_221201d'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -85,7 +85,7 @@ file.participation <- file.path(indir, 'data', 'RCCS_participation_221208.csv')
 file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_221116.csv')
 
 # obtained in misc/ for analysis
-file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
+file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs.rds')
 file.pairs.nonrefined <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
 
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221208.csv")

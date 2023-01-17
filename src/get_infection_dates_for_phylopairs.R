@@ -131,11 +131,15 @@ find_palette_round()
 #     MAIN     #
 ################
 
+# settings 
 threshold.likely.connected.pairs <- 0.5
 threshold.direction <- 0.5
 get.sero.extra.pairs <- FALSE
 build.network.from.pairs <- TRUE
 postpone.samesex.removal <- TRUE
+
+# initialise overleaf substitute-expressions.
+overleaf_expr <- list()
 
 # Load anon. keys
 aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
@@ -226,30 +230,29 @@ if(! build.network.from.pairs)
 
     # table.pairs.in.inland(dnewpairs)
 
-    # Check in which cases direction was changed because of serohistory
-    rbind(
-        serohistory_impact[, .(SOURCE=H1, RECIPIENT=H2, CHANGED_DIR)],
-        serohistory_impact[, .(RECIPIENT=H1, SOURCE=H2, CHANGED_DIR)]  
-    ) |>
-        merge(x = dnewpairs, all.x=TRUE) |>
-        with(table(CHANGED_DIR))
 
-    double.merge(dnewpairs, meta[, .(AID=aid, SEX=sex)])[, table(SEX.SOURCE, SEX.RECIPIENT)]
 
-    # Remove non-RCCS participants (redundant after serohistory check)
-    tmp <- nrow(dnewpairs)
-    rccs_ids <- meta[, unique(aid)]
-    dnewpairs <- dnewpairs[ SOURCE %in% rccs_ids & RECIPIENT %in% rccs_ids ]
-    cat('Excluding', tmp - nrow(dnewpairs), 'of', tmp, 'pairs outside of RCCS\n')
-    cat(nrow(dnewpairs), 'pairs remaining\n')
+    if( exists("overleaf_expr") )
+    {
+        # Pairs involving inland participants
+        # table.pair.in.inland(dnewpairs)
+        double.merge(dnewpairs, dcomms[, .(AID, COMM, SEX)], by_col = 'AID') |>
+            subset(COMM.RECIPIENT %like% 'inland' | COMM.SOURCE %like% 'inland') -> tmp_overleaf
+        tmp_overleaf[, table(COMM.SOURCE, COMM.RECIPIENT)]
+        overleaf_expr[['N_pairs_1_in_study']] <- tmp_overleaf[, .N]
 
-    # Pairs involving inland participants
-    # table.pair.in.inland(dnewpairs)
-    tmp <- double.merge(dnewpairs, dcomms[, .(AID, COMM, SEX)], by_col = 'AID')[
-        COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland']
-    tmp[, { cat(.N, '\n'); table(SEX.RECIPIENT, SEX.SOURCE) } ]
-    tmp[, sum(SCORE_DIR == 1)]
-
+        # now get how many have direction swapped
+        rbind(
+            serohistory_impact[, .(SOURCE=H1, RECIPIENT=H2, CHANGED_DIR)],
+            serohistory_impact[, .(RECIPIENT=H1, SOURCE=H2, CHANGED_DIR)]  
+        ) |>
+            merge(x = tmp_overleaf, all.x=TRUE, by=c('SOURCE', 'RECIPIENT')) |>
+            with(sum(CHANGED_DIR)) -> tmp_overleaf2
+        overleaf_expr[['N_swapped']] <- tmp_overleaf2
+        
+        # number of unique recipients
+        overleaf_expr[['N_unique_rec']] <- tmp_overleaf[, uniqueN(RECIPIENT) ]
+    }
 
     # Remove same-sex pairs
     if(! postpone.samesex.removal)
@@ -276,14 +279,22 @@ if(! build.network.from.pairs)
         list(SOURCE=SOURCE[z], SCORE=SCORE[z], SCORE_DIR=SCORE_DIR[z])
     }, by='RECIPIENT']
 
-    # Pairs involving at both inland participants
-    table.pairs.in.inland(dnewpairs)
+
+    if( exists('overleaf_expr') )
+    {
+        # Pairs involving at both inland participants
+        tmp <- table.pairs.in.inland(dnewpairs) |> as.vector()
+        names(tmp) <- c('FF', 'MF', 'FM',  'MM')
+        overleaf_expr[['N_unique_rec_participants']] <- sum(tmp)
+        overleaf_expr[['N_unique_rec_participants_hetero']] <- tmp['MF']+ tmp['FM']
+        overleaf_expr[['N_unique_rec_participants_dirs']] <- tmp
+    }
 
     # remove homosexual pairs
     if(! postpone.samesex.removal)
     {
         # solve multiple sources for same-sex too
-        dhomosexualpairs <- dhomosexualpairs[ ! RECIPIENT %in% dnewpairs$RECIPIENT, {
+        dhomosexualpairs <- dnewpairs[ ! RECIPIENT %in% dnewpairs$RECIPIENT, {
             z <- which.max(SCORE);
             list(SOURCE=SOURCE[z], SCORE=SCORE[z], SCORE_DIR=SCORE_DIR[z])
         }, by='RECIPIENT']
@@ -313,8 +324,6 @@ if(! build.network.from.pairs)
     idclus <- data.table(RECIPIENT=names(idclus$membership), IDCLU=unname(idclus$membership))
     dnewpairs <- merge(dnewpairs, idclus,by='RECIPIENT')
     setcolorder(dnewpairs, c('SOURCE','RECIPIENT'))
-
-    table.pairs.in.inland(dnewpairs) |> knitr::kable() |> print()
 
     if(0)
     {
@@ -409,15 +418,13 @@ drange_tsi <- check.inconsistent.testing(drange_tsi, switch_if_no_other_src = FA
 drange_tsi <- shrink.intervals(drange_tsi)
 setnames(drange_tsi, c('MIN', 'MAX'), c('TSI.MIN', 'TSI.MAX'))
 
-if(0) # Count number of removed individuals/pairs
+if(1) # Count number of removed individuals/pairs
 {
-    tmp <- double.merge(chain, dcomms)
-    tmp <- tmp[ COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', .(SOURCE,RECIPIENT) ] 
+    tmp <- double.merge(chain, dcomms[, .(AID, COMM, SEX)]) |>
+        subset( COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland', select = c('SOURCE','RECIPIENT')) 
 
-    tmp[ ! (SOURCE %in% drange_tsi$AID & RECIPIENT %in% drange_tsi$AID),
-        cat('Removed in', .N, 'cases.\n') ]
-
-    tmp[, unique(c(SOURCE, RECIPIENT))] %in% drange_tsi$AID |> table()
+    noprobs <- drange_tsi$AID
+    overleaf_expr[['N_noTSI']] <- tmp[ ! RECIPIENT %in% noprobs, .N ]
 }
 
 # check no contradictions after shrinkning
@@ -533,6 +540,7 @@ tmp <- gsub('\\.', '', tmp)
 
 filename_drange <- 'networks_individualDOIrange'
 filename_net <- 'networks_GICentroids'
+filename_overleaf <- 'pairsinfo_overleaf'
 suffix <- ''
 if( ! is.null(dinfectiousness))
     suffix <- paste0('_d', tmp, '_w', paste0( dinfectiousness$VALUE, collapse=''))
@@ -552,6 +560,7 @@ cat('\n Chosen suffix: ', suffix, '\n')
 
 filename_drange <- file.path(out.dir, paste0(filename_drange, suffix,  '.rds'))
 filename_net <- file.path(out.dir, paste0(filename_net, suffix, '.rds'))
+filename_overleaf <- file.path(out.dir, paste0(filename_overleaf, suffix, '.rds'))
 
 if( ! is.null(dinfectiousness) & build.network.from.pairs & get.sero.extra.pairs & ! args$sensitivity.no.refinement)
 {
@@ -562,7 +571,6 @@ if( ! is.null(dinfectiousness) & build.network.from.pairs & get.sero.extra.pairs
 
 if(args$get.round.probabilities)
 {
-    
     tmp_env <- new.env()
     load(file.path.round.timeline, envir = tmp_env)
     df_round_inland <- tmp_env$df_round_inland
@@ -672,7 +680,7 @@ if(nrow(df_round_gi))
 }
 
 # Final results
-filename <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
+filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_toshare', suffix, '.rds')) 
 
 if(  file.exists(filename) & ! args$rerun == TRUE )
 {
@@ -683,9 +691,9 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
     centroids <- dcohords[, CENTROIDS[[1]], by='GROUP']
     dresults <- prepare.pairs.input.for.bayesian.model(centroids)
     dresults[, table(DIRECTION, useNA='ifany')]
+
     dhomosexualpairs[, DIRECTION := 'phyloscanner']
-    table.pairs.in.inland(dhomosexualpairs[, .(SOURCE,RECIPIENT)])
-    dhomosexualpairs[, `:=` (SCORE=NULL, SCORE_DIR=NULL)]
+    dhomosexualpairs[, `:=` (SCORE=NULL, SCORE_DIR=NULL, SEX.SOURCE=NULL, SEX.RECIPIENT=NULL)]
     dhomosexualpairs <-  double.merge(dhomosexualpairs,meta[, .(AID=aid, SEX=sex)])
     rbind(
         dresults,
@@ -732,6 +740,17 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
     if(! args$sensitivity.no.refinement)
         stopifnot(dresults[, all(CU < DATE.COLLECTION.RECIPIENT, na.rm=TRUE)])
 
+    if(exists('overleaf_expr'))
+    {
+        overleaf_expr
+        idx_inland <- dresults[ COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland']
+        idx_inland_hetero <- idx_inland[ SEX.SOURCE != SEX.RECIPIENT ]
+        overleaf_expr[['N_final_inland']] <- idx_inland_hetero[, .N]
+
+        overleaf_expr[['N_final_inland_outstudy']] <- idx_inland_hetero[ is.na(ROUND.M), .N ]
+        overleaf_expr[['N_final']] <- idx_inland_hetero[ !is.na(ROUND.M), .N ]
+    }
+
     dresults[!is.na(M) &
              SEX.SOURCE != SEX.RECIPIENT &
              COMM.SOURCE == 'inland' & COMM.RECIPIENT == 'inland', {
@@ -740,87 +759,27 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
     idx <- double.merge(idx, meta[, .(AID=aid, DFP=date_first_positive)])
     setkey(dprobs_roundallocation, SOURCE,RECIPIENT)
     setkey(idx, SOURCE,RECIPIENT)
-    # dprobs_roundallocation[idx] |> knitr::kable()
 
+    cols <- c('SOURCE', 'RECIPIENT', 'M')
     saveRDS(dresults, filename)    
+    dresults_new <- readRDS(filename)
+
+    saveRDS(overleaf_expr, filename_overleaf)
 }
-
-# N estimated in inland: 
-dresults[ COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland' & ! is.na(M), 
-    .(N_inland = .N, N_inland_period = sum(!is.na(ROUND.M))) ]
-
-
-if(0)
-{
-    # get the household data from marco
-    file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv')
-    cols <- c('study_id', 'round', 'region', 'comm_num', 'hh_num', 'member_num')
-    flow <- fread(file.path.flow, select=cols)
-    names(flow) <- toupper(names(flow))
-    flow <- unique(flow[STUDY_ID != '',  STUDY_ID := paste0('RK-', STUDY_ID)])
-    flow <- merge(flow, aik, by.x='STUDY_ID', by.y='PT_ID')
-    flow[, COMM_ID := paste(COMM_NUM, HH_NUM, sep='_')]
-    flow <- subset(flow, select=c('AID', 'ROUND', 'COMM_ID', 'COMM_NUM', 'HH_NUM'))
-
-    # pairs F -> M  with big age differences 
-    dmother <- dresults[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M' & AGE_TRANSMISSION.SOURCE > AGE_INFECTION.RECIPIENT + 10, ]
-    tmp <- double.merge(dmother[, .(RECIPIENT, SOURCE, AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE, ROUND.M)], flow)
-    cols <- names(tmp)[names(tmp) %like% 'ROUND']
-    .f <- function(x) as.integer(gsub('R0|S', '', x))
-    tmp[, (cols):=lapply(.SD, .f) , .SDcols=cols]
-    tmp[is.na(ROUND.SOURCE)]
-    
-    tmp[, length(intersect(COMM_ID.SOURCE, COMM_ID.RECIPIENT)), by=c('SOURCE', 'RECIPIENT', 'ROUND.M')]
-    tmp[, length(intersect(COMM_NUM.RECIPIENT, COMM_NUM.SOURCE)), by=c('SOURCE', 'RECIPIENT')]
-    tmp
-}
-
-find_ff_pairs_for_Griffin <- function() 
-{   # study all FF pairs to be sent to Griffin
-    idx <- unique(dchain[, .(H1, H2)])
-    idx <- merge(idx, meta[, .(H1=aid, SEX.H1=sex)], by='H1')
-    idx <- merge(idx, meta[, .(H2=aid, SEX.H2=sex)], by='H2')
-    idx <- tmp[SEX.H1 == SEX.H2 & SEX.H1 == 'F', .(H1, H2)]
-
-    cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'ROUND.M', 'DIRECTION', 'COMM.SOURCE', 'COMM.RECIPIENT')
-    tmp12 <- merge(dresults, idx, by.x=c('SOURCE', 'RECIPIENT'), by.y=c('H1', 'H2'))
-    tmp21 <- merge(dresults, idx, by.x=c('SOURCE', 'RECIPIENT'), by.y=c('H2', 'H1'))
-    
-    tmpUN <- merge( idx, tmp12, by.x=c('H1', 'H2'), by.y=c('SOURCE', 'RECIPIENT'), all.x=TRUE)[is.na(SEX.SOURCE), .(H1, H2) ]
-    tmpUN <- merge(tmpUN, tmp21, by.x=c('H1', 'H2'), by.y=c('RECIPIENT', 'SOURCE'), all.x=TRUE)[is.na(SEX.RECIPIENT), .(H1, H2) ]
-    
-    tmpUN[, `:=`(SOURCE=H1, RECIPIENT=H2, SEX.SOURCE='F', SEX.RECIPIENT='F', ROUND.M=NA_character_, DIRECTION='phyloscanner_unclear')]
-    tmpUN[, `:=`(H1=NULL, H2=NULL)]
-    stopifnot(nrow(tmpUN) + nrow(tmp12) + nrow(tmp21) == nrow(idx))
-
-    all_ff_pairs <- rbind(tmp12, 
-                          tmp21, 
-                          tmpUN,
-                          fill=TRUE)
-
-    load(file.path.meta, envir=meta_env)
-    dcomms <- subset(meta_env$meta_data, select=c('aid', 'comm', 'round'))
-    dcomms <- unique(dcomms[!is.na(aid),])
-
-    dcomms <- dcomms[ is.na(comm), comm :='neuro']
-    dcomms <- dcomms[, list(comm=fifelse(uniqueN(comm)==1, yes=comm[1], no=NA_character_ )), by='aid']
-
-    all_ff_pairs[is.na(COMM.SOURCE), COMM.SOURCE:=dcomms[aid == SOURCE, comm], by='SOURCE']
-    all_ff_pairs[is.na(COMM.RECIPIENT), COMM.RECIPIENT:=dcomms[aid == RECIPIENT, comm], by='RECIPIENT']
-
-    filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('221117_all_ff_pairs.csv'))
-    fwrite(all_ff_pairs, filename)
-}
-
 
 # make table
 cols <- c('SOURCE', 'RECIPIENT',
           'SEX.SOURCE', 'SEX.RECIPIENT',
           'M', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT',
           'DIRECTION')
-dtable <- subset(dresults,select=cols)
-dtable[, table(SEX.SOURCE,SEX.RECIPIENT)]
+
+double.merge( dresults[, -c('COMM.SOURCE', 'COMM.RECIPIENT')], dcomms[, .(AID, COMM)]) |>
+    subset( COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland',
+        select=c('SOURCE', 'RECIPIENT')
+    ) -> idx
+
+dtable <- merge(idx, dresults, all.x=TRUE, by=c('SOURCE', 'RECIPIENT'))
+dtable <- subset(dtable,select=cols)
 setnames(dtable, 'M', 'INFECTION_DATE')
 filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('pairsdata_table_toshare', suffix, '.csv'))
-# [1] "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live/RCCS_R15_R18/pairsdata_table_toshare_d1_w11_netfrompairs_seropairs.csv"
 fwrite(dtable, filename)

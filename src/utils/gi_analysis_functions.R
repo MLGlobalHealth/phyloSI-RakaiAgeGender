@@ -1741,3 +1741,64 @@ plot.chains <- function(DPAIRS, size.threshold = 1, ttl=NA, sbttl=NA)
         ) -> p
     return(p)
 }
+
+get.household.data.marco <- function()
+{
+    file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv')
+    cols <- c('study_id', 'round', 'region', 'comm_num', 'hh_num', 'member_num')
+    flow <- fread(file.path.flow, select=cols)
+    names(flow) <- toupper(names(flow))
+    flow <- unique(flow[STUDY_ID != '',  STUDY_ID := paste0('RK-', STUDY_ID)])
+    flow <- merge(flow, aik, by.x='STUDY_ID', by.y='PT_ID')
+    flow[, COMM_ID := paste(COMM_NUM, HH_NUM, sep='_')]
+    flow <- subset(flow, select=c('AID', 'ROUND', 'COMM_ID', 'COMM_NUM', 'HH_NUM'))
+
+    # pairs F -> M  with big age differences 
+    dmother <- dresults[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M' & AGE_TRANSMISSION.SOURCE > AGE_INFECTION.RECIPIENT + 10, ]
+    tmp <- double.merge(dmother[, .(RECIPIENT, SOURCE, AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE, ROUND.M)], flow)
+    cols <- names(tmp)[names(tmp) %like% 'ROUND']
+    .f <- function(x) as.integer(gsub('R0|S', '', x))
+    tmp[, (cols):=lapply(.SD, .f) , .SDcols=cols]
+    tmp[is.na(ROUND.SOURCE)]
+    
+    tmp[, length(intersect(COMM_ID.SOURCE, COMM_ID.RECIPIENT)), by=c('SOURCE', 'RECIPIENT', 'ROUND.M')]
+    tmp[, length(intersect(COMM_NUM.RECIPIENT, COMM_NUM.SOURCE)), by=c('SOURCE', 'RECIPIENT')]
+    tmp
+}
+
+find_ff_pairs_for_Griffin <- function() 
+{   # study all FF pairs to be sent to Griffin
+    idx <- unique(dchain[, .(H1, H2)])
+    idx <- merge(idx, meta[, .(H1=aid, SEX.H1=sex)], by='H1')
+    idx <- merge(idx, meta[, .(H2=aid, SEX.H2=sex)], by='H2')
+    idx <- tmp[SEX.H1 == SEX.H2 & SEX.H1 == 'F', .(H1, H2)]
+
+    cols <- c('SOURCE', 'RECIPIENT', 'SEX.SOURCE', 'SEX.RECIPIENT', 'ROUND.M', 'DIRECTION', 'COMM.SOURCE', 'COMM.RECIPIENT')
+    tmp12 <- merge(dresults, idx, by.x=c('SOURCE', 'RECIPIENT'), by.y=c('H1', 'H2'))
+    tmp21 <- merge(dresults, idx, by.x=c('SOURCE', 'RECIPIENT'), by.y=c('H2', 'H1'))
+    
+    tmpUN <- merge( idx, tmp12, by.x=c('H1', 'H2'), by.y=c('SOURCE', 'RECIPIENT'), all.x=TRUE)[is.na(SEX.SOURCE), .(H1, H2) ]
+    tmpUN <- merge(tmpUN, tmp21, by.x=c('H1', 'H2'), by.y=c('RECIPIENT', 'SOURCE'), all.x=TRUE)[is.na(SEX.RECIPIENT), .(H1, H2) ]
+    
+    tmpUN[, `:=`(SOURCE=H1, RECIPIENT=H2, SEX.SOURCE='F', SEX.RECIPIENT='F', ROUND.M=NA_character_, DIRECTION='phyloscanner_unclear')]
+    tmpUN[, `:=`(H1=NULL, H2=NULL)]
+    stopifnot(nrow(tmpUN) + nrow(tmp12) + nrow(tmp21) == nrow(idx))
+
+    all_ff_pairs <- rbind(tmp12, 
+                          tmp21, 
+                          tmpUN,
+                          fill=TRUE)
+
+    load(file.path.meta, envir=meta_env)
+    dcomms <- subset(meta_env$meta_data, select=c('aid', 'comm', 'round'))
+    dcomms <- unique(dcomms[!is.na(aid),])
+
+    dcomms <- dcomms[ is.na(comm), comm :='neuro']
+    dcomms <- dcomms[, list(comm=fifelse(uniqueN(comm)==1, yes=comm[1], no=NA_character_ )), by='aid']
+
+    all_ff_pairs[is.na(COMM.SOURCE), COMM.SOURCE:=dcomms[aid == SOURCE, comm], by='SOURCE']
+    all_ff_pairs[is.na(COMM.RECIPIENT), COMM.RECIPIENT:=dcomms[aid == RECIPIENT, comm], by='RECIPIENT']
+
+    filename <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', paste0('221117_all_ff_pairs.csv'))
+    fwrite(all_ff_pairs, filename)
+}
