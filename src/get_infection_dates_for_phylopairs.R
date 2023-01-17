@@ -747,7 +747,8 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
         idx_inland_hetero <- idx_inland[ SEX.SOURCE != SEX.RECIPIENT ]
         overleaf_expr[['N_final_inland']] <- idx_inland_hetero[, .N]
 
-        overleaf_expr[['N_final_inland_outstudy']] <- idx_inland_hetero[ is.na(ROUND.M), .N ]
+        overleaf_expr[['N_final_inland_instudy_diff']] <- idx_inland_hetero[ is.na(ROUND.M), .N ]
+        overleaf_expr[['N_final_inland_instudy']] <- idx_inland_hetero[ ! is.na(ROUND.M), .N ]
         overleaf_expr[['N_final']] <- idx_inland_hetero[ !is.na(ROUND.M), .N ]
     }
 
