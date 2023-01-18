@@ -1342,7 +1342,7 @@ read_treatment_cascade_samples <- function(file.treatment.cascade.prop.participa
 }
 
 read_pairs <- function(file.pairs){
-  pairs.all <- as.data.table(readRDS(file.pairs))
+  pairs.all <- fread(file.pairs)
   setnames(pairs.all, 'M', 'DATE_INFECTION.RECIPIENT')
   pairs.all <- select(pairs.all, -c('CL', 'IL', 'IU', 'CU', 'ROUND.M', 'DIRECTION'))
   return(pairs.all)
