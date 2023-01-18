@@ -816,7 +816,7 @@ plot_offset <- function(stan_data, outdir)
 }
 
 
-plot_transmission_events_over_time <- function(pairs, outdir){
+plot_transmission_events_over_time <- function(pairs, outdir, nm_reqs=FALSE){
   
   # timeline
   df_timeline <- copy(df_round)
@@ -881,10 +881,14 @@ plot_transmission_events_over_time <- function(pairs, outdir){
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05)),
                          breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) + 
       scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))  
+
+    
     ggsave(p3, file =  paste0(outdir, '-data-detected_transmission_events_', communities[i], '.pdf'), w = 5.2, h = 3.5)
     
   }
   
+    if(nm_reqs){ p3 <- p3 + reqs }
+    return(p3)
 }
 
 plot_incident_cases_over_time <- function(incidence_cases_round, participation, outdir){
@@ -1371,7 +1375,7 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   save_statistics_incidence_rate_ratio_trends(ic, outdir.table)
 }
 
-plot_pairs_all <- function(pairs.all, outdir){
+plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
   
   tmp <- pairs.all[COMM.RECIPIENT == "inland" & COMM.SOURCE == 'inland']
 
@@ -1403,10 +1407,11 @@ plot_pairs_all <- function(pairs.all, outdir){
   female_to_female_color <- 'grey50'
   
   tmp <- tmp[COMM.RECIPIENT == 'inland']
+  labsize <- fifelse(nm_reqs, yes=3, no=4)
   p <- ggplot(tmp, aes(x = DIRECTION, y = COUNT, fill=DIRECTION, label=PROPORTION))+
     geom_col(width=0.6)+
     theme_bw() +
-    geom_text(nudge_y= 7,color="black",size = 4,fontface="bold") + 
+    geom_text(nudge_y= 7,color="black",size = labsize,fontface="bold") + 
     labs(y="Number of identified source-\nrecipient pairs in RCCS")+
     theme(legend.position='none', 
           axis.text.x = element_blank(), 
@@ -1418,11 +1423,14 @@ plot_pairs_all <- function(pairs.all, outdir){
     scale_fill_manual(values = c('Male to Female'=male_to_female_color,'Female to Male'=female_to_male_color, 
                                  'Female to Female'=female_to_female_color,'Male to Male'=male_to_male_color)) 
   ggsave(p, file = paste0(outdir, '-data-PairsAll.pdf'), w = 3.3, h = 2.5)
+
+    if(nm_reqs){ p <- p + reqs }
+    return(p)
   
 }
 
 
-plot_pairs <- function(pairs, outdir)
+plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 {
   
   # extend round periods to the beginning of next one.
@@ -1458,7 +1466,9 @@ plot_pairs <- function(pairs, outdir)
         scale_color_manual(values = palette_round_inland) + 
         scale_x_continuous(limits = c(15, 49))+
         scale_y_continuous(limits = c(15, 49)) +
-        geom_label(x = 18, y = 49, label = paste0(paste0(nrow(tmp1), ' pairs')), label.size = NA) +
+        geom_label(x = 18, y = 49, label = paste0(paste0(nrow(tmp1), ' pairs')), 
+                size=fifelse(nm_reqs, yes=3, no=NA_integer_),
+                label.size = NA) +
         theme(plot.title = element_text(hjust = 0.5, face = 'bold'))
       
       if(j == 2){
@@ -1471,6 +1481,8 @@ plot_pairs <- function(pairs, outdir)
           guides(color = guide_legend(byrow = T, nrow =2))
       }
       
+      if(nm_reqs){ p[[index]] <- p[[index]] + reqs }
+
       p[[index]] <- ggExtra::ggMarginal(p[[index]], type = "histogram")
       
       index=index + 1
@@ -1478,11 +1490,16 @@ plot_pairs <- function(pairs, outdir)
     }
     
     pp <- grid.arrange(grobs = p, layout_matrix = rbind(c(1,2), c(1,NA)), heights= c(0.83, 0.17))
-    ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.pdf'), w = 8.2, h = 5)
+    if(nm_reqs)
+    {
+        ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.pdf'), w = 18, h = 11, unit='cm')
+    }else{
+        ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.pdf'), w = 8.2, h = 5)
+    }
     
   }
-  
-} 
+    return(pp)
+}
 
 plot_sources_histogram <- function(pairs, outdir)
 {
