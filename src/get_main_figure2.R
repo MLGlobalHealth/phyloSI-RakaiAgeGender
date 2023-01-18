@@ -45,8 +45,8 @@ outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
 # paths
 path.to.stan.output = paste0(outfile, "-stanout_", jobname, ".rds")
-.outfile.figures <- '~/Downloads' #file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
-.outdir.table <- '~/Downloads' # file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
+.outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
+.outdir.table <-  file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
 path.to.suboutput <- '~/Downloads/subsample.rds'
 
 # load data
@@ -58,6 +58,8 @@ outdir.table <- .outdir.table
 # samples 
 if(file.exists(path.to.suboutput))
 {
+    .outfile.figures <- '~/Downloads' #file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
+    .outdir.table <- '~/Downloads' # file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
     saveRDS(samples, file=path.to.suboutput)
 }else{
     fit <- readRDS(path.to.stan.output)
