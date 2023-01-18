@@ -555,7 +555,14 @@ plot_force_infection_sex_age_recipient <- function(force_infection_age_recipient
 
 }
 
-plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_prop_sex, prevalence_prop_sex,outdir, lab = NULL){
+plot_contribution_sex_source <- function(contribution_sex_source,
+                                         unsuppressed_prop_sex,
+                                         prevalence_prop_sex,
+                                         outdir,
+                                         lab = NULL,
+                                         nm_reqs=FALSE
+                                         )
+{
   
   # y axis label
   type_cont <- 'Contribution of men\nto HIV incidence'
@@ -669,6 +676,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
     scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1))  + 
     scale_x_discrete(expand = c(0,0)) +
     coord_flip()
+  if(nm_reqs)   return(p)
   if(is.null(lab)) lab =  'Contribution'
   ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex_barplot.png'), w = 5, h = 1.1)
   
@@ -805,8 +813,15 @@ plot_contribution_age_source_unsuppressed_old <- function(contribution_age_sourc
   }
 }
 
-plot_contribution_age_source_unsuppressed <- function(contribution_age_source, unsuppressed_prop_age, median_age_source,
-                                                      df_unsuppressed_median_age, outdir, lab = NULL){
+plot_contribution_age_source_unsuppressed <- function(contribution_age_source,
+                                                      unsuppressed_prop_age,
+                                                      median_age_source,
+                                                      df_unsuppressed_median_age,
+                                                      outdir,
+                                                      lab = NULL,
+                                                      nm_reqs=FALSE
+                                                      )
+{
   
   # restricted rounds for main 
   Rounds.all <- list('inland' = paste0('R0', c(18)), 'fishing' = paste0('R0', c(18)))
@@ -923,10 +938,13 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     }
     
     # add legends
+    if(nm_reqs) {p <- p + reqs + labs(subtitle = 'c'); p_legend2 <- p_legend2 + reqs }
     pp <- ggarrange(p, legend.grob = get_legend(p_legend2), legend = 'bottom') 
+    if(nm_reqs) { return(pp) }
     
     # save
     ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.8, h = 3.6)
+
     
   }
   
@@ -986,7 +1004,13 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
 }
 
 
-plot_contribution_age_source <- function(contribution_age_source, median_age_source, outdir, lab = NULL){
+plot_contribution_age_source <- function(contribution_age_source,
+                                         median_age_source,
+                                         outdir,
+                                         lab = NULL,
+                                         nm_reqs=FALSE
+                                         )
+{
   
   # selected rounds for main
   Rounds.all <- list('inland' = paste0('R0', c(10, 12, 14,16,18)), 'fishing' = paste0('R0', c(15,18)))
@@ -1048,7 +1072,11 @@ plot_contribution_age_source <- function(contribution_age_source, median_age_sou
             strip.text = element_blank())
 
     if(is.null(lab)) lab =  'Contribution_sex'
-    
+
+    if(nm_reqs){
+            return(pp)
+    }
+            
     if(communities[i] == 'inland'){
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.pdf'), w = 7, h = 14.5)
       ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 3.5, h = 9)
@@ -1637,9 +1665,12 @@ plot_median_age_source <- function(median_age_source, outdir){
   
 }
 
-plot_median_age_source_group <- function(median_age_source_group, expected_contribution_age_group_source2, 
-                                         reported_contact, outdir){
-  
+plot_median_age_source_group <- function(median_age_source_group,
+                                         expected_contribution_age_group_source2, 
+                                         reported_contact,
+                                         outdir,
+                                         nm_reqs=FALSE)
+{
   mas <- copy(median_age_source_group)
   
   # select rounds to be plotted
@@ -1708,6 +1739,7 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
                          breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
                            max(range_age_non_extended))) + 
       guides(color = guide_legend(order = 1))
+    return(p)
     ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 6, h = 4.4)
     
   }
