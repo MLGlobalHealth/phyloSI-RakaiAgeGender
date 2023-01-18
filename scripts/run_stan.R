@@ -85,7 +85,7 @@ file.participation <- file.path(indir, 'data', 'RCCS_participation_221208.csv')
 file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_221116.csv')
 
 # obtained in misc/ for analysis
-file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs.rds')
+file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
 file.pairs.nonrefined <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
 
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221208.csv")
@@ -133,7 +133,6 @@ if(use_tsi_non_refined){
 # load round timeline
 load(file.path.round.timeline)
 df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
-
 # load census eligible ount
 eligible_count_smooth <- fread(file.eligible.count)
 

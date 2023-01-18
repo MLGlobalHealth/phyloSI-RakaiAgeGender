@@ -761,9 +761,16 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
     setkey(dprobs_roundallocation, SOURCE,RECIPIENT)
     setkey(idx, SOURCE,RECIPIENT)
 
-    cols <- c('SOURCE', 'RECIPIENT', 'M')
+    # add column statying whether source and recipient both were participants
+    dcomms[, PARTICIPATED := COMM %like% 'inland']
+    dresults <- double.merge(dresults, dcomms[, .(AID, PARTICIPATED)])
+    dresults[, `:=` (
+        BOTH_PARTICIPATED=PARTICIPATED.SOURCE & PARTICIPATED.RECIPIENT, 
+        PARTICIPATED.SOURCE=NULL, 
+        PARTICIPATED.RECIPIENT=NULL
+    )]
+
     saveRDS(dresults, filename)    
-    dresults_new <- readRDS(filename)
 
     saveRDS(overleaf_expr, filename_overleaf)
 }
