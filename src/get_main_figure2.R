@@ -60,7 +60,7 @@ if(file.exists(path.to.suboutput))
 {
     .outfile.figures <- '~/Downloads' #file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
     .outdir.table <- '~/Downloads' # file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
-    saveRDS(samples, file=path.to.suboutput)
+    samples <- readRDS( file=path.to.suboutput)
 }else{
     fit <- readRDS(path.to.stan.output)
     samples <- rstan::extract(fit)

@@ -1806,9 +1806,16 @@ plot_median_age_source_group_all_rounds <- function(median_age_source_group, exp
   }
 }
 
-plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05, 
-                                counterfactuals_p_959595, counterfactuals_p_909090, 
-                                incidence_factual, lab, outdir){
+plot_counterfactual <- function(counterfactuals_p_f,
+                                counterfactuals_p_f05,
+                                counterfactuals_p_959595,
+                                counterfactuals_p_909090,
+                                incidence_factual,
+                                lab,
+                                outdir,
+                                nm_reqs=FALSE
+                                )
+{
   
   #
   # labels
@@ -1956,8 +1963,12 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
                                                                  relative_incidence_counterfactual_all.959595, relative_incidence_counterfactual_all.909090))
   relative_incidence_counterfactual_all[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
-  incidence_counterfactual <- do.call('rbind', list(incidence_counterfactual, incidence_counterfactual.f05,
-                                                    incidence_counterfactual.959595, incidence_counterfactual.909090))
+  incidence_counterfactual <- do.call('rbind', 
+        list(incidence_counterfactual,
+            incidence_counterfactual.f05,
+            incidence_counterfactual.959595,
+            incidence_counterfactual.909090))
+
   incidence_counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
 
@@ -2003,7 +2014,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   ecf <- ecf[AGEYRS!=0] # ageyrs ==0 is the total
   
   # make labels
-  label.suppressed = 'Virally suppressed in round 18'; label.unsuppressed = 'Virally unsuppressed'; 
+  label.suppressed = 'Already virally suppressed in R18'; label.unsuppressed = 'Remaining virally unsuppressed in R18'; 
   label.new.suppressed = 'Additionally suppressed\nin intervention'
   ecf[, VARIABLE_LABEL := label.suppressed]
   ecf[variable == 'TREATED', VARIABLE_LABEL := label.new.suppressed]
@@ -2073,7 +2084,12 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 6))
     file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
-    ggsave(p, file = file, w = 3.9, h = 3.7)
+    if(nm_reqs)
+    {
+        p_4a <- p + reqs
+    }else{
+        ggsave(p, file = file, w = 3.9, h = 3.7)
+    }
     
     # reduction in unsuppressed
     p <- ggplot(ecf.c, aes(x = AGEYRS)) +
@@ -2088,7 +2104,10 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_color_manual(values = cols) + 
       guides(color = guide_legend(byrow = T, nrow = 4))
     file = paste0(outdir, '-output-counterfactual_budget_reduction_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
-    ggsave(p, file = file, w = 5, h = 6)
+    if(! nm_reqs)
+    {
+        ggsave(p, file = file, w = 5, h = 6)
+    }
     
     
     # budget regardless of age
@@ -2186,6 +2205,19 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     
     p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, 1, 1), c(2, 2, 2), c(NA,NA, 3), c(4, 4, 4)),
                       widths = c(0.007, 0.022, 0.95), heights = c(0.15, 0.15, 0.2, 0.39))
+
+
+    # if running get_main_figure4.R
+    if(nm_reqs)
+    {
+            out <- list(
+                a = p_4a,
+                b = p1 + reqs, 
+                c = p4 + reqs, 
+                d = p2 + reqs
+            ) 
+            return(out)
+    }
 
     # save
     file = paste0(outdir, '-output-counterfactual_budget_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
