@@ -1,3 +1,8 @@
+require(data.table)
+require(ggplot2)
+require(ggpubr)
+
+
 # indir repository
 indir <- '~/git/phyloflows/' # please modify accordingly
 
@@ -40,6 +45,11 @@ contribution_sexual_contact <- as.data.table(readRDS(file.path('results', 'model
 # clean
 df_contribution_sexual_contact <- clean_contribution_sexual_contact_yu(contribution_sexual_contact)
 unsuppressed_share_age <- prepare_unsuppressed_share(unsuppressed_share, c('SEX', 'AGEYRS'), 'SEX')
+
+# Andrea: add helpers to satisfy nature med requirements (from functions/plotting_functions)
+source(file.path(indir, 'functions', 'plotting_functions.R'))
+naturemed_reqs()
+reqs
 
 # plot A----
 # contribution to incidence
@@ -111,9 +121,7 @@ pA <- ggplot(pltA, aes(x = AGEYRS, y = M)) +
     # legend.margin = margin(6, 6, 6, 6),
     legend.background = element_blank()) +
   scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0, 0.08)) +
-  scale_linetype_manual(values = c(1,1, 2, 1, 1, 2)) +
-  guides(color = guide_legend(nrow = 3, byrow = F))
-
+  scale_linetype_manual(values = c(1,1, 2, 1, 1, 2)) + guides(color = guide_legend(nrow = 3, byrow = F))
 pA
 
 
@@ -130,7 +138,11 @@ pd.a[, plt.age := cont.age]
 pd.a[, cont.age := paste0('Sexual contact intensities to ', cont.sex, ' aged ', cont.age)]
 pd.a[, type := 'Contribution to sexual contacts']
 
-dta <- readRDS(file.path('scripts', 'shift', 'gp_221201d-central-output-log_lambda_latentby_direction_round_age_transmission.source_age_infection.recipientstandardisedby_direction_round.rds')) # subset to round 18
+# TODO: 
+# probably needs to be this file on HPC:
+#/ratmann_pangea_deepsequencedata/live/temporary_for_Andrea/phyloflows/results/gp_221201d-central3/tables/gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_direction_round.rds
+
+dta <- readRDS(file.path('scripts', 'shift', 'gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.source_age_infection.recipientstandardisedby_direction_round.rds')) # subset to round 18
 dta <- dta[ROUND == 'R018'] # subset to gender of the source (i.e.., Female sources or Male sources)
 setnames(dta, c('LABEL_GENDER_SOURCE', 'LABEL_GENDER_RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'), c('part.sex', 'cont.sex', 'part.age', 'cont.age'))
 dta <- dta[cont.age %in% c(15, 20, 25, 30, 35, 40)]
@@ -241,12 +253,12 @@ p2b <- ggplot(plt[grepl('35', label)], aes(x = part.age, y = M, col = factor(plt
     axis.title = element_text(size = 16) ) +
   scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))
 
-pB <- ggpubr::ggarrange(p1b, p2b, ncol = 1, common.legend = T, legend = 'bottom')
+pB <- ggarrange_nature(p1b, p2b, ncol = 1, common.legend = T, legend = 'bottom')
 pB
 
 
 # combine two plots----
-p <- ggpubr::ggarrange(pA, pB, ncol = 1, heights  = c(1.35, 2.8), labels = c('a', 'b'), font.label=list(color="black",size=16))
-p
-ggsave(file = file.path('results', 'shift', 'extended-data-fig_age-dist_0112.png'), p, width = 10.5, height = 13)
-ggsave(file = file.path('results', 'shift', 'extended-data-fig_age-dist_0112.pdf'), p, width = 10.5, height = 13)
+p <- ggarrange_nature(pA, pB, ncol = 1, heights  = c(1.35, 2.8), labels = c('a', 'b'), font.label=list(color="black",size=16))
+
+ggsave_nature(file = file.path('results', 'shift', 'extended-data-fig_age-dist_0112.png'), p, width = 10.5, height = 13)
+ggsave_nature(file = file.path('results', 'shift', 'extended-data-fig_age-dist_0112.pdf'), p, width = 10.5, height = 13)
