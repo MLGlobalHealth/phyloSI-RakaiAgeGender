@@ -174,21 +174,20 @@ p_b <- plot_median_age_source_group(median_age_source_group,
     nm_reqs=TRUE) + reqs
 
 # age-specific contribution to transmission among all sources by sex
-contribution_age_source <-  find_summary_output_by_round(samples, 'z_predict',c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
-                                                         standardised.vars = c('INDEX_ROUND'))
-# p_c <- plot_contribution_age_source_unsuppressed(
-#     contribution_age_source,
-#     unsuppressed_share_sex_age,
-#     median_age_source,
-#     df_unsuppressed_median_age,
-#     outfile.figures,
-#     nm_reqs=TRUE)
- 
-# p_a <- plot_contribution_age_source(
-#     contribution_age_source,
-#     median_age_source,
-#     outfile.figures,
-#     nm_reqs=TRUE)
+contribution_age_source <-  find_summary_output_by_round(
+    samples,
+    'z_predict',
+    c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
+    standardised.vars = c('INDEX_ROUND'))
+
+# age-specific contribution to transmission among all age and  sex
+expected_contribution_age_source2 <- find_summary_output_by_round(
+    samples,
+    'log_lambda_latent',
+    c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
+    transform = 'exp',
+                                                                  standardised.vars = c('INDEX_ROUND'))
+
 
 expected_contribution_sex_source <- find_summary_output_by_round(
     samples,
@@ -215,7 +214,8 @@ p_c2 <- plot_contribution_sex_source(
     'Expected_contribution',
     nm_reqs=TRUE) + reqs
 
-p_a <- plot_contribution_age_source(expected_contribution_age_source2,
+p_a <- plot_contribution_age_source(
+    expected_contribution_age_source2,
     median_age_source,
     outfile.figures,
     'Expected_contribution_sex',
