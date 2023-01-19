@@ -227,4 +227,4 @@ p_c <-  (p_c1 / p_c2) + plot_layout(heights=c(6,1))
 right_side <- ( (p_b + labs(subtitle = 'b')) / ( p_c  ) + plot_layout( heights = c(6, 7)) )
 p_2 <- (p_a + labs(subtitle = 'a') |  right_side) + plot_layout( widths = c(2, 4)) 
 
-ggsave_nature(p_2, filename=file.path(outfile.figures, 'MainFigure2.pdf'))
+ggsave_nature(p_2, filename=paste0(outfile.figures, 'MainFigure2.pdf'))

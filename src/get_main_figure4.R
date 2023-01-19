@@ -258,5 +258,5 @@ p_abcd <- ggarrange_nature(
 )
 
 ggsave_nature(p_abcd,
-    filename=file.path(outfile.figures, 'MainFigure4.pdf'),
+    filename=paste0(outfile.figures, 'MainFigure4.pdf'),
     w=18, h=21)
