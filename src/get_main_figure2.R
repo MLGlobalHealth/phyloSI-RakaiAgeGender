@@ -66,35 +66,6 @@ if(file.exists(path.to.suboutput))
     samples <- rstan::extract(fit)
 }
 
-if(0)
-{
-    index_array <- function(x, dim, value, drop = FALSE) { 
-      # Create list representing arguments supplied to [
-      # bquote() creates an object corresponding to a missing argument
-      indices <- rep(list(bquote()), length(dim(x)))
-      indices[[dim]] <- value
-
-      # Generate the call to [
-      call <- as.call(c(
-        list(as.name("["), quote(x)),
-        indices,
-        list(drop = drop)))
-      # Print it, just to make it easier to see what's going on
-      print(call)
-
-      # Finally, evaluate it
-      eval(call)
-    }
-
-    .f <- function(x) 
-    {
-        index_array(x, 1, 1:1000)
-    }
-
-    samples <- lapply(samples, .f)
-}
-
-
 # need to be able to get to: 
 # a Expected_contribution_sex_age_inland.pdf 
 # b MedianAgeSource_ByAgeGroupRecipient_inland.pdf 
@@ -113,26 +84,6 @@ df_direction <- get.df.direction()
 log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, df_estimated_contact_rates, 
                                              use_number_susceptible_offset, use_contact_rates_prior)
 
-# log offset formula (per year)
-log_offset_formula <- 'log_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'
-if(!use_number_susceptible_offset)
-  log_offset_formula = 'log_PROP_SUSCEPTIBLE + log_INFECTED_NON_SUPPRESSED'
-if(use_contact_rates_prior)
-  log_offset_formula = paste0(log_offset_formula, ' + log_CONTACT_RATES')
-
-# log offset formula (per year per unsuppressed)
-log_offset_formula_perunsuppressed <- 'log_SUSCEPTIBLE'
-if(!use_number_susceptible_offset)
-  log_offset_formula_perunsuppressed = 'log_PROP_SUSCEPTIBLE'
-if(use_contact_rates_prior)
-  log_offset_formula_perunsuppressed = paste0(log_offset_formula_perunsuppressed, ' + log_CONTACT_RATES')
-
-# log offset formula (per year per susceptible)
-log_offset_formula_persusceptible <- 'log_INFECTED_NON_SUPPRESSED'
-if(use_contact_rates_prior)
-  log_offset_formula_persusceptible = paste0(log_offset_formula_persusceptible, ' + log_CONTACT_RATES')
-
-
 #
 # Summarise data and merge to maps for figures
 #
@@ -145,23 +96,29 @@ prevalence_prop_sex<- prepare_infected_share(infected_share, 'SEX')
 reported_contact <- clean_reported_contact(df_reported_contact)
 df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age)
 
-median_age_source <- find_summary_output_by_round(samples,
-    'log_lambda_latent',
-    c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'),
+median_age_source <- find_summary_output_by_round(
+    samples,
+    'log_lambda_latent', 
+    c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
     transform = 'exp',
-    standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
-    median_age_source = T)
+    standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
+    quantile_age_source = T)
 
 # by age groups
 df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
-median_age_source_group <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                        transform = 'exp',
-                                                        standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                        quantile_age_source = T)
-expected_contribution_age_group_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',
-                                                                        c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                                        transform = 'exp',
-                                                                        standardised.vars = c('INDEX_ROUND'))
+
+median_age_source_group <- find_summary_output_by_round(samples,
+    'log_lambda_latent',
+    c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
+    transform = 'exp',
+    standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+    quantile_age_source = T)
+
+expected_contribution_age_group_source2 <- find_summary_output_by_round(samples,
+    'log_lambda_latent',
+    c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
+    transform = 'exp',
+    standardised.vars = c('INDEX_ROUND'))
 
 
 # load plot requirements
@@ -180,15 +137,6 @@ contribution_age_source <-  find_summary_output_by_round(
     c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
     standardised.vars = c('INDEX_ROUND'))
 
-# age-specific contribution to transmission among all age and  sex
-expected_contribution_age_source2 <- find_summary_output_by_round(
-    samples,
-    'log_lambda_latent',
-    c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
-    transform = 'exp',
-                                                                  standardised.vars = c('INDEX_ROUND'))
-
-
 expected_contribution_sex_source <- find_summary_output_by_round(
     samples,
     'log_lambda_latent',
@@ -196,6 +144,13 @@ expected_contribution_sex_source <- find_summary_output_by_round(
     transform = 'exp',
     standardised.vars = c('INDEX_ROUND'))
 
+# age-specific contribution to transmission among all age and  sex
+expected_contribution_age_source2 <- find_summary_output_by_round(
+    samples,
+    'log_lambda_latent',
+    c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE'),
+    transform = 'exp',
+    standardised.vars = c('INDEX_ROUND'))
 
 p_c1 <- plot_contribution_age_source_unsuppressed(
     expected_contribution_age_source2,
