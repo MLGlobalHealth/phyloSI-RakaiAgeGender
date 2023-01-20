@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # phyloflows: phylo-SIR model for estimating shifting patterns in HIV transmission dynamics in Rakai, Uganda.
 
 # phyloSI-RakaiAgeGender
@@ -31,7 +30,6 @@ The data in ```data/``` contain
 
 ## License
 - The code and data in this repository are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
->>>>>>> f2fccf66abc313d2923143dd733cfa0bab6690b0
 
 ## Warranty
 
@@ -44,7 +42,6 @@ XXX
 
 ## Acknowledgements
 
-<<<<<<< HEAD
 XXX
 
 ## Funding
@@ -65,7 +62,6 @@ $ conda env create -f phyloSI-RakaiAgeGender.yml
 Then activate the environment for use:
 ```bash
 $ source activate phyloSI-RakaiAgeGender
->>>>>>> f2fccf66abc313d2923143dd733cfa0bab6690b0
 ```
 
 ## Usage
