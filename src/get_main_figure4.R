@@ -77,7 +77,6 @@ g_legend <- function(a.gplot){
 } 
 
 
-
 # need to be able to get to: 
 # a -output-counterfactual_budget_age_Unsuppressed_inland.pdf
 # b -output-counterfactual_budget_incidence_panel_plot1_Unsuppressed_inland.pdf
@@ -93,12 +92,18 @@ log_offset_round <- find_log_offset_by_round(
     use_number_susceptible_offset,
     use_contact_rates_prior)
 
+
+# log offset formula (per year per susceptible)
 log_offset_formula_persusceptible <- 'log_INFECTED_NON_SUPPRESSED'
+if(use_contact_rates_prior)
+  log_offset_formula_persusceptible = paste0(log_offset_formula_persusceptible, ' + log_CONTACT_RATES')
+
 
 cat("\nPlot relative incidence infection if different groups of male are targeted\n")
 
 
 # find incidence under the factual scenario by sex and age
+# THIS SEEMS COMPLETELY WRONG? 
 incidence_factual <- find_summary_output_by_round(
     samples,
     'log_beta',
@@ -106,6 +111,15 @@ incidence_factual <- find_summary_output_by_round(
     transform = 'exp',
     log_offset_formula = log_offset_formula_persusceptible,
     log_offset_round = log_offset_round)
+
+# names(incidence_factual)
+# 
+# ggplot(incidence_factual[ROUND %like% '18', ], aes(x=AGE_INFECTION.RECIPIENT, y=M, color=LABEL_DIRECTION)) +
+#     geom_line() +
+#     facet_wrap(ROUND~.) +
+#     theme() +
+#     labs(x='age', y='inc')
+
 
 expected_contribution_age_source <- find_summary_output_by_round(samples,
     'log_lambda_latent',
@@ -129,9 +143,23 @@ counterfactuals_p_a <- make_counterfactual_target(samples,
     art_up_to_female = F,
     outdir.table)
 
+counterfactuals_a_a <- make_counterfactual_target(samples,
+    spreaders,
+    log_offset_round,
+    stan_data,
+    eligible_count_smooth,
+    eligible_count_round,
+    treatment_cascade,
+    proportion_prevalence,
+    participation,
+    only_participant = F,
+    art_up_to_female = F,
+    outdir.table)
+
 if(exists("treatment_cascade_samples"))
 {
-    counterfactuals_a_f <- make_counterfactual(samples,
+    counterfactuals_a_f <- make_counterfactual(
+        samples,
         log_offset_round,
         stan_data, 
         eligible_count_smooth,
@@ -142,10 +170,12 @@ if(exists("treatment_cascade_samples"))
         only_participant = F,
         art_up_to_female = 1,
         s959595 = NULL,
-        s909090 = NULL, outdir.table)
+        s909090 = NULL,
+        outdir.table)
 
     #  generate counterfactual treating all men half way to as much as female are diagnosed/treated/suppressed
-    counterfactuals_a_f05 <- make_counterfactual(samples,
+    counterfactuals_a_f05 <- make_counterfactual(
+        samples,
         log_offset_round,
         stan_data, 
         eligible_count_smooth,
@@ -160,7 +190,8 @@ if(exists("treatment_cascade_samples"))
         outdir.table)
 
     # generate counterfactual treating all men 95 95 95
-    counterfactuals_a_959595 <- make_counterfactual(samples,
+    counterfactuals_a_959595 <- make_counterfactual(
+        samples,
         log_offset_round,
         stan_data, 
         eligible_count_smooth,
@@ -191,7 +222,8 @@ if(exists("treatment_cascade_samples"))
 
     # plot
     naturemed_reqs()
-    fig4_list <- plot_counterfactual(counterfactuals_a_f,
+    fig4_list <- plot_counterfactual(
+        counterfactuals_a_f,
         counterfactuals_a_f05,
         counterfactuals_a_959595,
         counterfactuals_a_909090,
@@ -207,7 +239,6 @@ p_a <-fig4_list[['a']]
 p_b <-fig4_list[['b']] 
 p_c <-fig4_list[['c']]
 p_d <-fig4_list[['d']]
-
 
 # Prepare legend grabbing it from 
 cols <- c('#F1A661', '#C55300', '#749F82')
