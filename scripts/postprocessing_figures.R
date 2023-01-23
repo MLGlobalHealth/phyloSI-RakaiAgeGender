@@ -287,7 +287,6 @@ expected_contribution_age_source2 <- find_summary_output_by_round(samples, 'log_
                                                                   standardised.vars = c('INDEX_ROUND'))
 plot_contribution_age_source_unsuppressed(expected_contribution_age_source2, unsuppressed_share_sex_age, median_age_source, df_unsuppressed_median_age, outfile.figures,'Expected_contribution')
 plot_contribution_age_source(expected_contribution_age_source2, median_age_source, outfile.figures,'Expected_contribution_sex')
-save_statistics_expected_contribution(expected_contribution_sex_source, expected_contribution_age_source2, outdir.table)
 
 # age-specific sex ratio contribution to transmission
 expected_contribution_age_source_sex_ratio <- find_summary_output_by_round(samples, 'log_lambda_latent',
