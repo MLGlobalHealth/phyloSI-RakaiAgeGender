@@ -82,12 +82,16 @@ rpr[PARTICIPATION_SMOOTH > 1, PARTICIPATION_SMOOTH := 1]
 
 ################################
 
-# participation rate aggregated
+# participation rate aggregated by age and round but not by sex, comm
 tmp <- rpr[!ROUND %in% c("06", "07", "08", "09"), list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = c('SEX', 'COMM')]
 tmp1 <- rpr[!ROUND %in% c("06", "07", "08", "09") , list(MEAN = paste0(round(mean(PARTICIPATION)*100))), by = 'COMM']
 tmp1[, `:=` (SEX = 'Total')]
 tmp <- rbind(tmp, tmp1)
-saveRDS(tmp, file.path(outdir, 'Participation.rds'))
+
+# min and max participation rate aggregated by age, sex but not by comm, round
+tmp1 <- rpr[!ROUND %in% c("06", "07", "08", "09"), list(MEAN = paste0(round(mean(PARTICIPATION)*100, 1))), by = c('ROUND', 'COMM')]
+tmp1 <- tmp1[, list(MIN = min(MEAN), MAX= max(MEAN)), by = 'COMM']
+saveRDS(list(tmp, tmp1), file.path(outdir, 'Participation.rds'))
 
 # participation rate non-aggregated
 file <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
