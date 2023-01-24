@@ -1,5 +1,3 @@
-# phyloflows: phylo-SIR model for estimating shifting patterns in HIV transmission dynamics in Rakai, Uganda.
-
 # phyloSI-RakaiAgeGender
 
 ## Overview
