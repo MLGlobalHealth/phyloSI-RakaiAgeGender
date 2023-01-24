@@ -47,7 +47,7 @@ save_statistics_incidence_rate_ratio_trends <- function(ic, outdir.table){
   saveRDS(stats, paste0(outdir.table, '-data-incidence_rate_ratio_trends.rds'))
 }
 
-save_statistics_incidence_rate_trends <- function(icrr, icr, icrrs, icrrt, medage){
+save_statistics_incidence_rate_trends <- function(icrr, icr, icrrs, icrrt, medage, fmr){
   
   ps <- c(0.5, 0.2, 0.8)
   p_labs <- c('M','CL','CU')
@@ -94,6 +94,10 @@ save_statistics_incidence_rate_trends <- function(icrr, icr, icrrs, icrrt, medag
   median_age[, CL_round0  := round(CL)]
   median_age[, CU_round0  := round(CU)]
 
+  # incidence ratio total
+  fm_incidence_rate_ratio <- fmr[,.(M= round((M), 2), CL = round((CL), 2), CU = round((CU), 2)), by=c('COMM', 'ROUND')]
+  fm_incidence_rate_ratio <- fm_incidence_rate_ratio[order(COMM, ROUND)]
+  
   #save
   stats <- list()
   
@@ -103,6 +107,7 @@ save_statistics_incidence_rate_trends <- function(icrr, icr, icrrs, icrrt, medag
   stats$inc <- df_incidence[(COMM == 'inland' & ROUND %in% c('R010','R018')) | (COMM == 'fishing' & ROUND %in% c('R015','R018'))]
   stats$median_age <- median_age
   stats$inc_rel_ratio_age <- inc_rel_ratio_age
+  stats$fm_incidence_rate_ratio <- fm_incidence_rate_ratio
   
   saveRDS(stats, paste0(outdir.table, '-data-incidence_rate_trends.rds'))
   
