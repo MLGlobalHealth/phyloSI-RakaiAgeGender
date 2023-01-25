@@ -66,7 +66,6 @@ for(i in seq_along(communities)){
          x = 'Date (midpoint of survey interval)') 
     ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.png')), w = 3.8,h = 3.15)
     ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.pdf')), w = 4.1,h = 3.4)
-    
 }
 
 

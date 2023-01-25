@@ -313,4 +313,3 @@ wquantile <- function(x, probs, weights = NA) {
   })
   wquantile.generic(x, probs, cdf.gen, weights)
 }
-

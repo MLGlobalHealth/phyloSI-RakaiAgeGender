@@ -44,7 +44,7 @@ file.path.meta <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RD
 file.anonymisation.keys <- .fp('X','important_anonymisation_keys_210119.csv')
 file.path.tsiestimates <- .fp('A', 'PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T/aggregated_TSI_with_estimated_dates.csv')
 file.path.round.timeline <- .fp('D', 'RCCS_data_estimate_incidence_inland_R6_R18/220903/RCCS_round_timeline_220905.RData')
-path.network <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
+path.network <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
 path.range <-file.path(out.dir, 'networks_individualDOIrange_d1_w11_netfrompairs_seropairs.rds')
 
 file.exists(file.path.meta,
@@ -92,11 +92,36 @@ meta <- subset(meta_env$meta_data,
 meta <- unique(meta[!is.na(aid)])
 stopifnot(meta[, uniqueN(aid) == .N])
 
+dcomms <- get.communities.where.participated()
+
 # For plots, only select pairs which appear in the analysis
-dresults <- dresults[SEX.SOURCE!=SEX.RECIPIENT]
-dresults <- dresults[ COMM.SOURCE != 'neuro' & COMM.RECIPIENT != 'neuro'] 
-dresults <- dresults[COMM.RECIPIENT == 'inland' & COMM.SOURCE == 'inland', ]
-dresults <- dresults[! is.na(ROUND.M) ]
+
+if ("SEX.RECIPIENT.x" %in% names(dresults)) {
+
+    dresults[, SEX.RECIPIENT := fcoalesce(SEX.RECIPIENT, SEX.RECIPIENT.x, SEX.RECIPIENT.y )]
+    dresults[, SEX.SOURCE := fcoalesce(SEX.SOURCE, SEX.SOURCE.x, SEX.SOURCE.y )]
+
+    dresults[, `:=` (SEX.RECIPIENT.x = NULL, SEX.RECIPIENT.y = NULL, SEX.SOURCE.x = NULL, SEX.SOURCE.y = NULL  )]
+}
+
+dresults[, {cat(.N); table(COMM.SOURCE, COMM.RECIPIENT)} ]
+
+only.inland.participants <- 1
+if( only.inland.participants )
+{
+    idx_ever_inland <- double.merge( dresults[, .(SOURCE,RECIPIENT)], dcomms[, .(AID, COMM)] ) |>
+        subset(COMM.SOURCE %like% 'inland' & COMM.RECIPIENT %like% 'inland') |>
+        subset(select=c('SOURCE', 'RECIPIENT'))
+
+    dresults <- dresults[idx_ever_inland]
+}else{
+    cat("Not subsetting exclusively to participants.\n")
+}
+
+# subset to heterosexual pairs only 
+dresults <- dresults[SEX.SOURCE != SEX.RECIPIENT ]
+dresults[, .(.N, sum(!is.na(M)), sum(!is.na(ROUND.M))) ]
+
 cat(dresults[, .N], 'source-recipient pairs selected\n')
 
 if(1)
@@ -268,39 +293,36 @@ if(1)
     tsi_predictions <- copy(tmp)
     tsi_predictions <- tsi_predictions[ , .(ID=RECIPIENT, CL=MIN, M=MID, CU=MAX)]
 
-    dresults[ ! RECIPIENT %in% tsi_predictions$ID]
     dresults_tsi <- prepare.pairs.input.for.bayesian.model(tsi_predictions)
 
     plot.age.comparison <- function(part)
     {
         stopifnot(part %in% c('SOURCE', 'RECIPIENT'))
-        part_age_col <- fifelse(part=='SOURCE', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT')
 
-        part_age_col %in% names(dresults)
-        part_age_col %in% names(dresults_tsi)
+        part_age_col <- fifelse(part=='SOURCE', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT')
+        stopifnot(part_age_col %in% names(dresults) & part_age_col %in% names(dresults_tsi))
 
         cols <- c(part, part_age_col)
         .f <- function(DT) subset(DT, select=cols)
         dage_comparison <- list(.f(dresults_tsi), .f(dresults))
-        
 
-        stopifnot(part %in% names(dage_comparison[[1]]))
-        stopifnot(part %in% names(dage_comparison[[2]]))
+        stopifnot(part %in% names(dage_comparison[[1]]) & part %in% names(dage_comparison[[2]]))
 
-        dage_comparison <- merge(dage_comparison[[1]], dage_comparison[[2]], all.y=TRUE, by=part)
 
         if(part=='RECIPIENT')
         {
+            dage_comparison <- merge(dage_comparison[[1]], dage_comparison[[2]], all.y=TRUE, by=part)
             dage_comparison <- melt(dage_comparison, id.vars='RECIPIENT',
                                     value.name='AGE_INFECTION.RECIPIENT',
                                     variable.name='METHOD')
+            dage_comparison[METHOD %like% '.x$', METHOD := 'phyloTSI' ]
+            dage_comparison[METHOD %like% '.y$', METHOD := 'final' ]
         }else{
-            dage_comparison <- melt(dage_comparison, id.vars='SOURCE',
-                                    value.name='AGE_TRANSMISSION.SOURCE',
-                                    variable.name='METHOD')
+
+            dage_comparison[[1]][, METHOD := 'phyloTSI']
+            dage_comparison[[2]][, METHOD := 'final']
+            dage_comparison <- Reduce(rbind,dage_comparison)
         }
-        dage_comparison[METHOD %like% '.x$', METHOD := 'phyloTSI' ]
-        dage_comparison[METHOD %like% '.y$', METHOD := 'final' ]
 
         if(part=='RECIPIENT')
         {
@@ -330,6 +352,7 @@ if(1)
     plot_age_comparison_source <- plot.age.comparison(part='SOURCE')
     plot_age_comparison_recipient <- plot.age.comparison(part='RECIPIENT')
     force(plot_age_comparison_source)
+    force(plot_age_comparison_recipient)
 }
 
 
@@ -381,7 +404,6 @@ if(0)
               axis.line = element_line(colour = "black")) +
         theme(legend.position='bottom', axis.ticks.y=element_blank(), axis.text.y=element_blank()) +
         labs(x='Date of infection', y='Seroconverters', fill='Round', pch='median doi', color='Infection range')
-    p_tsisero
 }
 
 # Plot schema
@@ -488,7 +510,7 @@ tmp <- ggarrange_nature(plot_mae + theme(legend.spacing.x=unit(.3, 'cm')),
                         common.legend = TRUE, legend = 'bottom',
                         labels = c('b','c','d'), ncol=3)
 tmp <- ggarrange_nature(p_predictions2, tmp, ncol=1, heights = c(6,4), labels=c('a', '')) 
-filename <- file.path(out.dir, 'edf_tsis_v_v2.pdf')
+filename <- file.path(out.dir, 'edf_tsis_v_v2_230116.pdf')
 cat('Saving', filename, '...\n')
 ggsave_nature(filename, tmp, add_reqs=FALSE)
 
@@ -503,61 +525,6 @@ if(0)   # study generation intervals
 }
 
 
-if(0)   # Check whether MCMC performs well in 2d case: YES
-{
-        dcohords[ N_IDS == 2, {
-                cat(GROUP, '\n')
-                DT <- IDS[[1]]
-                out <- get.volume.genints.multid(DT, N_IDS=N_IDS, range_gi=range_gi, verbose=T)
-                list(out, NAME=c('CENTROID', 'VOLUME', 'GI'))
-        } , by=GROUP] -> tmp
-        Reduce('merge',
-                list(tmp[NAME == 'CENTROID', .(GROUP, CENTROIDS=out)],
-                     tmp[NAME == 'VOLUME', .(GROUP, VOLUME=unlist(out))],
-                     tmp[NAME == 'GI', .(GROUP, GENINTS=out)])
-        ) -> tmp
-
-        cols <- c('GROUP', 'CENTROIDS', 'VOLUME', 'GENINTS')
-        tmp0 <- subset(dcohords[ N_IDS == 2], select=cols)
-
-        dcomp <- rbind(tmp[, TYPE:='MCMC'], tmp0[, TYPE:='EXACT'])
-        # compuate volume errors
-        dcomp[, (VOLUME[TYPE=='MCMC'] - VOLUME[TYPE=='EXACT'])/VOLUME[TYPE=='EXACT'] , by=GROUP]
-        # compute GENINTS errors
-        dcomp[GROUP == 1, (GENINTS[[1]]$PR - GENINTS[[2]]$PR),  by='GROUP']
-        dcomp[, {
-                z0 <- GENINTS[[1]]$PR
-                z1 <- GENINTS[[2]]$PR
-                max((z0 - z1)/z1)
-        },  by='GROUP']
-        # compute CENTROIDS errors
-        dcomp[, {
-                z0 <- unlist(CENTROIDS[[1]])
-                z1 <- unlist(CENTROIDS[[1]])
-                norm(z0-z1, type='2')
-        }, by='GROUP']
-}
-
-if(0)   
-{   # interesting case with source RK-B110064
-    range_gi
-    tmp0 <- dcohords[ N_IDS == 6 & GROUP==129, GENINTS[[1]] ]
-    tmp0[, list(X=GI-.5, Y=diff(c(0, PR))), by=c('SOURCE','RECIPIENT')] |> 
-            ggplot(aes(X, Y, color=RECIPIENT)) +
-                    geom_line() + 
-                    theme_bw()
-
-    setkey(dpairs, SOURCE, RECIPIENT)
-    idx <- dcohords[GROUP == 129, IDS[[1]]]
-    dpairs[idx, ..cols0]
-
-    cols <- names(dpairs)[names(dpairs) %like% 'REC|date_first_positive.SOURCE']
-    cols0 <-names(dpairs)[names(dpairs) %like% '^SOURCE|^RECIPIENT|MAX|MIN']
-    dpairs[RECIPIENT %like% 'G109883' , ]
-    dpairs[SOURCE %like% 'B110064' , ..cols0]
-    dpairs[RECIPIENT %like% 'G109883', ..cols]
-    dpairs[RECIPIENT %like% 'G109883', ..cols0]
-}
 
 # sensitivity analysis
 generation.interval.sensitiviy.analysis <- function()

@@ -209,8 +209,6 @@ ggplot(tmp, aes(x = AGEYRS)) +
          fill = guide_legend(byrow = T, nrow = 3))
 ggsave(file = file.path(outdir, 'population_suppression_rate_overtime_221208.pdf'), w = 6, h = 5)
 
-
-
 ####################################
 
 # SAVE PROPORTION OF SUPPRESSED

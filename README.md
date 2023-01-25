@@ -6,11 +6,12 @@
 2. [Warrenty](#warranty)
 3. [Citation](#cite)
 4. [Acknowledgements](#acknowledgements)
-5. [Quick Start]()
+5. [Funding](#funding)
+6. [Quick Start](#quick-start)
   a. [System Requirements](#system-requirements)
   b. [Installation](#installation)
   c. [Usage](#usage)
-6. [Data Documentation](#data-documentation)
+7. [Data Documentation](#data-documentation)
   a. [Sample Data](#sample-data)
   b. [Generated Data](#generated-data)
 
@@ -47,9 +48,9 @@ This study was supported by the following organizations:
 - [President’s Emergency Plan for AIDS Relief](https://www.state.gov/pepfar/) through the Centers for Disease Control and Prevention (NU2GGH000817)
 
 
+## Funding
 
 ## Quick Start
-
 ### System Requirements
 - macOS or UNIX, the code was developed on macOS Big Sur 11.7
 - [R](https://www.r-project.org/) version >= 4.1.2

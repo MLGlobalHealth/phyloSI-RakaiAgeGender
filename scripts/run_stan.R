@@ -28,7 +28,7 @@ if(dir.exists('/home/andrea'))
   outdir <- '~/Documents/Box/2021/phyloflows'
 
   jobname <- 'test'
-  stan_model <- 'gp_220911a'
+  stan_model <- 'gp_221201d'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -85,7 +85,7 @@ file.participation <- file.path(indir, 'data', 'RCCS_participation_221208.csv')
 file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_221116.csv')
 
 # obtained in misc/ for analysis
-file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds')
+file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
 file.pairs.nonrefined <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
 
 file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221208.csv")
@@ -133,7 +133,6 @@ if(use_tsi_non_refined){
 # load round timeline
 load(file.path.round.timeline)
 df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
-
 # load census eligible ount
 eligible_count_smooth <- fread(file.eligible.count)
 
@@ -147,13 +146,17 @@ proportion_prevalence <- fread(file.prevalence.prop)
 if(viremic_viral_load_200ml){
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants.vl200, 
                                               file.treatment.cascade.prop.nonparticipants.vl200)
-  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
-                                                              file.treatment.cascade.prop.nonparticipants.vl200.samples)
+  if(file.exists(file.treatment.cascade.prop.participants.vl200.samples) & file.exists(file.treatment.cascade.prop.nonparticipants.vl200.samples)){
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.vl200.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.vl200.samples)
+  }
 }else{
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, 
                                               file.treatment.cascade.prop.nonparticipants)
-  treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
-                                                              file.treatment.cascade.prop.nonparticipants.samples)
+  if(file.exists(file.treatment.cascade.prop.participants.samples) & file.exists(file.treatment.cascade.prop.nonparticipants.samples)){
+    treatment_cascade_samples <- read_treatment_cascade_samples(file.treatment.cascade.prop.participants.samples, 
+                                                                file.treatment.cascade.prop.nonparticipants.samples)
+  }
 }
 
 # load incidence estimates 
@@ -354,8 +357,10 @@ if(1){
   
   # plot incident rates and cases over time
   plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
-  incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
-  plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
+  if(file.exists(file.incidence.samples.inland)){
+    incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
+    plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
+  }
   plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
     
   # plot offset

@@ -555,7 +555,14 @@ plot_force_infection_sex_age_recipient <- function(force_infection_age_recipient
 
 }
 
-plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_prop_sex, prevalence_prop_sex,outdir, lab = NULL){
+plot_contribution_sex_source <- function(contribution_sex_source,
+                                         unsuppressed_prop_sex,
+                                         prevalence_prop_sex,
+                                         outdir,
+                                         lab = NULL,
+                                         nm_reqs=FALSE
+                                         )
+{
   
   # y axis label
   type_cont <- 'Contribution of men\nto HIV incidence'
@@ -669,6 +676,7 @@ plot_contribution_sex_source <- function(contribution_sex_source, unsuppressed_p
     scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, 0)), limits = c(0, 1))  + 
     scale_x_discrete(expand = c(0,0)) +
     coord_flip()
+  if(nm_reqs)   return(p)
   if(is.null(lab)) lab =  'Contribution'
   ggsave(p, file = paste0(outdir, '-output-', gsub(' ', '_', lab), '_sex_barplot.png'), w = 5, h = 1.1)
   
@@ -805,8 +813,15 @@ plot_contribution_age_source_unsuppressed_old <- function(contribution_age_sourc
   }
 }
 
-plot_contribution_age_source_unsuppressed <- function(contribution_age_source, unsuppressed_prop_age, median_age_source,
-                                                      df_unsuppressed_median_age, outdir, lab = NULL){
+plot_contribution_age_source_unsuppressed <- function(contribution_age_source,
+                                                      unsuppressed_prop_age,
+                                                      median_age_source,
+                                                      df_unsuppressed_median_age,
+                                                      outdir,
+                                                      lab = NULL,
+                                                      nm_reqs=FALSE
+                                                      )
+{
   
   # restricted rounds for main 
   Rounds.all <- list('inland' = paste0('R0', c(18)), 'fishing' = paste0('R0', c(18)))
@@ -923,10 +938,13 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
     }
     
     # add legends
+    if(nm_reqs) {p <- p + reqs + labs(subtitle = 'c'); p_legend2 <- p_legend2 + reqs }
     pp <- ggarrange(p, legend.grob = get_legend(p_legend2), legend = 'bottom') 
+    if(nm_reqs) { return(pp) }
     
     # save
     ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 5.8, h = 3.6)
+
     
   }
   
@@ -986,7 +1004,13 @@ plot_contribution_age_source_unsuppressed <- function(contribution_age_source, u
 }
 
 
-plot_contribution_age_source <- function(contribution_age_source, median_age_source, outdir, lab = NULL){
+plot_contribution_age_source <- function(contribution_age_source,
+                                         median_age_source,
+                                         outdir,
+                                         lab = NULL,
+                                         nm_reqs=FALSE
+                                         )
+{
   
   # selected rounds for main
   Rounds.all <- list('inland' = paste0('R0', c(10, 12, 14,16,18)), 'fishing' = paste0('R0', c(15,18)))
@@ -1048,7 +1072,11 @@ plot_contribution_age_source <- function(contribution_age_source, median_age_sou
             strip.text = element_blank())
 
     if(is.null(lab)) lab =  'Contribution_sex'
-    
+
+    if(nm_reqs){
+            return(pp)
+    }
+            
     if(communities[i] == 'inland'){
       ggsave(pp.all, file = paste0(outdir, '-output-', lab, '_age_extended_', communities[i], '.pdf'), w = 7, h = 14.5)
       ggsave(pp, file = paste0(outdir, '-output-', lab, '_age_', communities[i], '.pdf'), w = 3.5, h = 9)
@@ -1637,9 +1665,12 @@ plot_median_age_source <- function(median_age_source, outdir){
   
 }
 
-plot_median_age_source_group <- function(median_age_source_group, expected_contribution_age_group_source2, 
-                                         reported_contact, outdir){
-  
+plot_median_age_source_group <- function(median_age_source_group,
+                                         expected_contribution_age_group_source2, 
+                                         reported_contact,
+                                         outdir,
+                                         nm_reqs=FALSE)
+{
   mas <- copy(median_age_source_group)
   
   # select rounds to be plotted
@@ -1708,6 +1739,7 @@ plot_median_age_source_group <- function(median_age_source_group, expected_contr
                          breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
                            max(range_age_non_extended))) + 
       guides(color = guide_legend(order = 1))
+    return(p)
     ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 6, h = 4.4)
     
   }
@@ -1774,9 +1806,16 @@ plot_median_age_source_group_all_rounds <- function(median_age_source_group, exp
   }
 }
 
-plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05, 
-                                counterfactuals_p_959595, counterfactuals_p_909090, 
-                                incidence_factual, lab, outdir){
+plot_counterfactual <- function(counterfactuals_p_f,
+                                counterfactuals_p_f05,
+                                counterfactuals_p_959595,
+                                counterfactuals_p_909090,
+                                incidence_factual,
+                                lab,
+                                outdir,
+                                nm_reqs=FALSE
+                                )
+{
   
   #
   # labels
@@ -1924,8 +1963,12 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
                                                                  relative_incidence_counterfactual_all.959595, relative_incidence_counterfactual_all.909090))
   relative_incidence_counterfactual_all[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
-  incidence_counterfactual <- do.call('rbind', list(incidence_counterfactual, incidence_counterfactual.f05,
-                                                    incidence_counterfactual.959595, incidence_counterfactual.909090))
+  incidence_counterfactual <- do.call('rbind', 
+        list(incidence_counterfactual,
+            incidence_counterfactual.f05,
+            incidence_counterfactual.959595,
+            incidence_counterfactual.909090))
+
   incidence_counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
   
 
@@ -1971,7 +2014,7 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
   ecf <- ecf[AGEYRS!=0] # ageyrs ==0 is the total
   
   # make labels
-  label.suppressed = 'Virally suppressed in round 18'; label.unsuppressed = 'Virally unsuppressed'; 
+  label.suppressed = 'Already virally suppressed in R18'; label.unsuppressed = 'Remaining virally unsuppressed in R18'; 
   label.new.suppressed = 'Additionally suppressed\nin intervention'
   ecf[, VARIABLE_LABEL := label.suppressed]
   ecf[variable == 'TREATED', VARIABLE_LABEL := label.new.suppressed]
@@ -2041,7 +2084,12 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_y_continuous(expand = expansion(mult = c(0, .05))) + 
       guides(fill = guide_legend(byrow = T, nrow = 6))
     file = paste0(outdir, '-output-counterfactual_budget_age_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
-    ggsave(p, file = file, w = 3.9, h = 3.7)
+    if(nm_reqs)
+    {
+        p_4a <- p + reqs
+    }else{
+        ggsave(p, file = file, w = 3.9, h = 3.7)
+    }
     
     # reduction in unsuppressed
     p <- ggplot(ecf.c, aes(x = AGEYRS)) +
@@ -2056,7 +2104,10 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
       scale_color_manual(values = cols) + 
       guides(color = guide_legend(byrow = T, nrow = 4))
     file = paste0(outdir, '-output-counterfactual_budget_reduction_age_', gsub(' ' , '', lab), '_', communities[i], '.png')
-    ggsave(p, file = file, w = 5, h = 6)
+    if(! nm_reqs)
+    {
+        ggsave(p, file = file, w = 5, h = 6)
+    }
     
     
     # budget regardless of age
@@ -2154,6 +2205,19 @@ plot_counterfactual <- function(counterfactuals_p_f, counterfactuals_p_f05,
     
     p <- grid.arrange(p1, p4, p2, p3, layout_matrix = rbind(c(NA, 1, 1), c(2, 2, 2), c(NA,NA, 3), c(4, 4, 4)),
                       widths = c(0.007, 0.022, 0.95), heights = c(0.15, 0.15, 0.2, 0.39))
+
+
+    # if running get_main_figure4.R
+    if(nm_reqs)
+    {
+            out <- list(
+                a = p_4a,
+                b = p1 + reqs, 
+                c = p4 + reqs, 
+                d = p2 + reqs
+            ) 
+            return(out)
+    }
 
     # save
     file = paste0(outdir, '-output-counterfactual_budget_incidence_panel_', gsub(' ' , '', lab), '_', communities[i], '.pdf')
@@ -2759,5 +2823,4 @@ plot_contribution_age_incidence_unsuppressed_contact <- function(expected_contri
   
   
 }
-
 

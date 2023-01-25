@@ -816,7 +816,7 @@ plot_offset <- function(stan_data, outdir)
 }
 
 
-plot_transmission_events_over_time <- function(pairs, outdir){
+plot_transmission_events_over_time <- function(pairs, outdir, nm_reqs=FALSE){
   
   # timeline
   df_timeline <- copy(df_round)
@@ -881,10 +881,14 @@ plot_transmission_events_over_time <- function(pairs, outdir){
       scale_y_continuous(limits = c(0,NA), expand = expansion(mult = c(0, 0.05)),
                          breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) + 
       scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))  
+
+    
     ggsave(p3, file =  paste0(outdir, '-data-detected_transmission_events_', communities[i], '.pdf'), w = 5.2, h = 3.5)
     
   }
   
+    if(nm_reqs){ p3 <- p3 + reqs }
+    return(p3)
 }
 
 plot_incident_cases_over_time <- function(incidence_cases_round, participation, outdir){
@@ -1105,6 +1109,19 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland.pdf'), w = 8, h = 6)
   
   #
+  # female-male incidence rate ratio
+  fmr <- merge(icr, eligible_count_round, by = c('COMM', 'ROUND', 'AGEYRS', 'SEX'))
+  fmr[, INCIDENT_CASES := SUSCEPTIBLE * INCIDENCE.DRAW]
+  fmr <- fmr[, list(INCIDENT_RATE_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'iterations')] 
+  fmr <- dcast.data.table(fmr, COMM + ROUND + iterations ~ SEX, value.var = 'INCIDENT_RATE_SUSCEPTIBLE')
+  fmr[, INCIDENCE_RATIO := `F` / `M`]
+  fmr = fmr[, list(q= quantile(INCIDENCE_RATIO, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND')]	
+  fmr = dcast(fmr, ... ~ q_label, value.var = "q")
+  fmr <- merge(fmr, df_community, by = 'COMM')
+  fmr <- merge(fmr, df_round, by = c('COMM', 'ROUND'))
+  fmr[, MIDPOINT_DATE := MIN_SAMPLE_DATE + (MAX_SAMPLE_DATE - MIN_SAMPLE_DATE)/2]
+  
+  #
   # incidence rate relative to first round per person per round by 1-year age group
 
   icr[, INCIDENCE_REL := INCIDENCE.DRAW / INCIDENCE.DRAW[ROUND == REF.ROUND], by = c('COMM', 'AGEYRS', 'SEX', 'iterations')]
@@ -1273,7 +1290,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   #
   # save statistics
   
-  save_statistics_incidence_rate_trends(icrr, icr, icrrs, icrrt, medage)
+  save_statistics_incidence_rate_trends(icrr, icr, icrrs, icrrt, medage, fmr)
     
 }
 
@@ -1371,9 +1388,10 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   save_statistics_incidence_rate_ratio_trends(ic, outdir.table)
 }
 
-plot_pairs_all <- function(pairs.all, outdir){
+plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
   
-  tmp <- pairs.all[COMM.RECIPIENT == "inland" & COMM.SOURCE == 'inland']
+  tmp <- pairs.all[BOTH_PARTICIPATED == TRUE ]
+  tmp[, {cat(sum(SEX.RECIPIENT != SEX.SOURCE)); cat(.N); table(SEX.RECIPIENT, SEX.SOURCE)/.N}]
 
   # find direction label
   tmp[, DIRECTION := 'Male to Female' ]
@@ -1386,8 +1404,8 @@ plot_pairs_all <- function(pairs.all, outdir){
                                                   'Male to Female'))]
   
   # find count and percentage
-  tmp <- tmp[, list(COUNT = .N), by = c('DIRECTION', 'COMM.RECIPIENT')]
-  tmp[, TOTAL_COUNT := sum(COUNT), by = 'COMM.RECIPIENT']
+  tmp <- tmp[, list(COUNT = .N), by = c('DIRECTION')]
+  tmp[, TOTAL_COUNT := sum(COUNT)]
   tmp[, PROPORTION := paste0(round(COUNT / TOTAL_COUNT*100, 1), '%')]
   
   # look at confidence interval
@@ -1402,11 +1420,12 @@ plot_pairs_all <- function(pairs.all, outdir){
   male_to_male_color <- 'grey70'
   female_to_female_color <- 'grey50'
   
-  tmp <- tmp[COMM.RECIPIENT == 'inland']
+  # tmp <- tmp[COMM.RECIPIENT == 'inland']
+  labsize <- fifelse(nm_reqs, yes=3, no=4)
   p <- ggplot(tmp, aes(x = DIRECTION, y = COUNT, fill=DIRECTION, label=PROPORTION))+
     geom_col(width=0.6)+
     theme_bw() +
-    geom_text(nudge_y= 7,color="black",size = 4,fontface="bold") + 
+    geom_text(nudge_y= 7,color="black",size = labsize,fontface="bold") + 
     labs(y="Number of identified source-\nrecipient pairs in RCCS")+
     theme(legend.position='none', 
           axis.text.x = element_blank(), 
@@ -1418,17 +1437,59 @@ plot_pairs_all <- function(pairs.all, outdir){
     scale_fill_manual(values = c('Male to Female'=male_to_female_color,'Female to Male'=female_to_male_color, 
                                  'Female to Female'=female_to_female_color,'Male to Male'=male_to_male_color)) 
   ggsave(p, file = paste0(outdir, '-data-PairsAll.pdf'), w = 3.3, h = 2.5)
+
+    if(nm_reqs){ p <- p + reqs }
+    return(p)
   
 }
 
-
-plot_pairs <- function(pairs, outdir)
+plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 {
-  
+    nm_reqs = TRUE
+    pairs <- copy(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE])
+    
+  # extend round periods to the beginning of next one.
+  df_round_extended <- copy(df_round)
+  df_round_extended[, MAX_SAMPLE_DATE := fcoalesce( shift(MIN_SAMPLE_DATE, -1), MAX_SAMPLE_DATE )]
+
+    inf_date_range <- range(pairs$DATE_INFECTION.RECIPIENT)
+    min_round_date <- min(df_round_extended$MIN_SAMPLE_DATE)
+    if(inf_date_range[1] <= min_round_date & nm_reqs)
+    {
+        tmp <- data.table(
+            ROUND='R000', 
+            COMM='inland',
+            MIN_SAMPLE_DATE = as.Date(-Inf),
+            MAX_SAMPLE_DATE = min_round_date - 1,
+            LABEL_ROUND = paste0('Before R10\n', 'Before ', format(min_round_date, '%b %Y'))
+        )
+        df_round_extended <- rbind( tmp,df_round_extended, fill=TRUE)
+        palette_round_inland <- unique(c( '#000000', palette_round_inland))
+    }
+
+    max_round_date <- max(df_round_extended$MAX_SAMPLE_DATE)
+    if(inf_date_range[2] >= max_round_date & nm_reqs)
+    {
+        tmp <- data.table(
+            ROUND='R111', 
+            COMM='inland',
+            MIN_SAMPLE_DATE = inf_date_range[2] + 1,
+            MAX_SAMPLE_DATE = as.Date(Inf),
+            LABEL_ROUND = paste0('After R18\n', 'After ', format(max_round_date, '%b %Y'))
+        )
+        df_round_extended <- rbind( df_round_extended, tmp, fill=TRUE)
+        unique(palette_round_inland <- c(palette_round_inland, '#FF0000'))
+
+    }
+
   # find round of infection
-  tmp <- merge(pairs, df_round,by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian = T)
-  tmp <- tmp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MAX_SAMPLE_DATE]
-  
+
+    pairs[, DUMMY := 'DUMMY']
+    df_round_extended[, DUMMY := 'DUMMY']
+    tmp <- merge(pairs, df_round_extended, by='DUMMY', allow.cartesian = T)
+    tmp <- tmp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MAX_SAMPLE_DATE]
+    tmp[, DUMMY := NULL]
+
   # find direction label
   tmp[, DIRECTION := 'Male to female' ]
   tmp[SEX.SOURCE == 'F', DIRECTION := 'Female to male' ]
@@ -1443,7 +1504,7 @@ plot_pairs <- function(pairs, outdir)
       comm <- COMMS[i]
       sex <- SEX[j]
       
-      tmp1 <- tmp[COMM.RECIPIENT == comm & SEX.SOURCE == sex ]
+      tmp1 <- tmp[ SEX.SOURCE == sex ]
       p[[index]] <- ggplot(tmp1, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
         geom_point(aes(col = LABEL_ROUND)) + 
         labs(y = 'Age at transmission source', x = 'Age at infection recipient', col = '') +
@@ -1454,7 +1515,9 @@ plot_pairs <- function(pairs, outdir)
         scale_color_manual(values = palette_round_inland) + 
         scale_x_continuous(limits = c(15, 49))+
         scale_y_continuous(limits = c(15, 49)) +
-        geom_label(x = 18, y = 49, label = paste0(paste0(nrow(tmp1), ' pairs')), label.size = NA) +
+        geom_label(x = 18, y = 49, label = paste0(paste0(nrow(tmp1), ' pairs')), 
+                size=fifelse(nm_reqs, yes=3, no=NA_integer_),
+                label.size = NA) +
         theme(plot.title = element_text(hjust = 0.5, face = 'bold'))
       
       if(j == 2){
@@ -1467,6 +1530,8 @@ plot_pairs <- function(pairs, outdir)
           guides(color = guide_legend(byrow = T, nrow =2))
       }
       
+      if(nm_reqs){ p[[index]] <- p[[index]] + reqs }
+
       p[[index]] <- ggExtra::ggMarginal(p[[index]], type = "histogram")
       
       index=index + 1
@@ -1474,11 +1539,15 @@ plot_pairs <- function(pairs, outdir)
     }
     
     pp <- grid.arrange(grobs = p, layout_matrix = rbind(c(1,2), c(1,NA)), heights= c(0.83, 0.17))
-    ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.pdf'), w = 8.2, h = 5)
+    if(nm_reqs)
+    {
+        return(pp)
+    }else{
+        ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.pdf'), w = 8.2, h = 5)
+    }
     
   }
-  
-} 
+}
 
 plot_sources_histogram <- function(pairs, outdir)
 {

@@ -577,5 +577,3 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   saveRDS(table, file)
   return(table)
 }
-
-

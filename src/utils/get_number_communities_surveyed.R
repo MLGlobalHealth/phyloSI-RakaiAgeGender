@@ -1,6 +1,5 @@
 library(data.table)
 library(ggplot2)
-
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 
@@ -41,11 +40,12 @@ numcom.unique <- length(Reduce(intersect, inlcom[, .(list(unique(comm_id))), rou
 saveRDS(list(numcom, numcom.total, numcom.unique), file.path(outdir, 'number_communities_surveyed.rds'))
 
 # plot
-df <- data.table(expand.grid(COMM_NUM = inlcom[, sort(unique(COMM_NUM))],
+df <- data.table(expand.grid(COMM_NUM = inlcom[, sort(unique(COMM_NUM))], 
                              round = inlcom[, sort(unique(round))]))
 tmp <- merge(df, inlcom, by = c('COMM_NUM', 'round'), all.x = T)
 tmp[, SURVEYED :=T]
 tmp[is.na(comm_id), SURVEYED :=F]
+
 ggplot(tmp, aes(x = round, y = as.factor(COMM_NUM))) +
   geom_raster(aes(fill = SURVEYED)) +
   theme_bw() +
@@ -73,4 +73,3 @@ set(tmp,NULL,'value',NULL)
 tmp <- dcast(tmp, comm_id~round,value.var = 'SURVEYED')
 
 saveRDS(tmp, file.path(outdir, 'communities_surveyed_by_round.rds'))
-
