@@ -1377,7 +1377,8 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
 
 plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
   
-  tmp <- pairs.all[COMM.RECIPIENT == "inland" & COMM.SOURCE == 'inland']
+  tmp <- pairs.all[BOTH_PARTICIPATED == TRUE ]
+  tmp[, {cat(sum(SEX.RECIPIENT != SEX.SOURCE)); cat(.N); table(SEX.RECIPIENT, SEX.SOURCE)/.N}]
 
   # find direction label
   tmp[, DIRECTION := 'Male to Female' ]
@@ -1390,8 +1391,8 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
                                                   'Male to Female'))]
   
   # find count and percentage
-  tmp <- tmp[, list(COUNT = .N), by = c('DIRECTION', 'COMM.RECIPIENT')]
-  tmp[, TOTAL_COUNT := sum(COUNT), by = 'COMM.RECIPIENT']
+  tmp <- tmp[, list(COUNT = .N), by = c('DIRECTION')]
+  tmp[, TOTAL_COUNT := sum(COUNT)]
   tmp[, PROPORTION := paste0(round(COUNT / TOTAL_COUNT*100, 1), '%')]
   
   # look at confidence interval
@@ -1406,7 +1407,7 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
   male_to_male_color <- 'grey70'
   female_to_female_color <- 'grey50'
   
-  tmp <- tmp[COMM.RECIPIENT == 'inland']
+  # tmp <- tmp[COMM.RECIPIENT == 'inland']
   labsize <- fifelse(nm_reqs, yes=3, no=4)
   p <- ggplot(tmp, aes(x = DIRECTION, y = COUNT, fill=DIRECTION, label=PROPORTION))+
     geom_col(width=0.6)+
@@ -1429,13 +1430,42 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
   
 }
 
-
 plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 {
   
   # extend round periods to the beginning of next one.
   df_round_extended <- copy(df_round)
   df_round_extended[, MAX_SAMPLE_DATE := fcoalesce( shift(MIN_SAMPLE_DATE, -1), MAX_SAMPLE_DATE )]
+
+    inf_date_range <- range(pairs$DATE_INFECTION.RECIPIENT)
+    min_round_date <- min(df_round_extended$MIN_SAMPLE_DATE)
+    if(inf_date_range[1] <= min_round_date & nm_reqs)
+    {
+        tmp <- data.table(
+            ROUND='R000', 
+            COMM='inland',
+            MIN_SAMPLE_DATE = as.Date(-Inf),
+            MAX_SAMPLE_DATE = min_round_date - 1,
+            LABEL_ROUND = paste0('Before R10\n', 'Before ', format(min_round_date, '%b %Y'))
+        )
+        df_round_extended <- rbind( tmp,df_round_extended, fill=TRUE)
+        palette_round_inland <- c( '#000000', palette_round_inland)
+    }
+
+    max_round_date <- max(df_round_extended$MAX_SAMPLE_DATE)
+    if(inf_date_range[2] >= max_round_date & nm_reqs)
+    {
+        tmp <- data.table(
+            ROUND='R111', 
+            COMM='inland',
+            MIN_SAMPLE_DATE = inf_date_range[2] + 1,
+            MAX_SAMPLE_DATE = as.Date(Inf),
+            LABEL_ROUND = paste0('After R18\n', 'After ', format(max_round_date, '%b %Y'))
+        )
+        df_round_extended <- rbind( df_round_extended, tmp, fill=TRUE)
+        palette_round_inland <- c(palette_round_inland, '#FF0000')
+
+    }
 
   # find round of infection
   tmp <- merge(pairs, df_round_extended, by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian = T)
@@ -1492,13 +1522,12 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
     pp <- grid.arrange(grobs = p, layout_matrix = rbind(c(1,2), c(1,NA)), heights= c(0.83, 0.17))
     if(nm_reqs)
     {
-        ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.pdf'), w = 18, h = 11, unit='cm')
+        return(pp)
     }else{
         ggsave(pp, file = paste0(outdir, '-data-Pairs_', comm, '.pdf'), w = 8.2, h = 5)
     }
     
   }
-    return(pp)
 }
 
 plot_sources_histogram <- function(pairs, outdir)

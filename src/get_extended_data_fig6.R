@@ -11,6 +11,7 @@ library(gridExtra)
 library(lognorm)
 library(ggExtra)
 library(Hmisc)
+require(ggplotify)
 
 # laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
@@ -173,26 +174,25 @@ if(!is.null(pairs_replicates.seed)){
   stopifnot(any(duplicated(pairs) == T))
 }
 
-
-
 outfile.figures <- '~/Downloads/EDF5/inkscape'
 
+naturemed_reqs()
 find_palette_round()
-p <- plot_pairs(pairs, outfile.figures, nm_reqs = TRUE)
-p1 <- plot_pairs_all(pairs.all, outfile.figures, nm_reqs=TRUE)
-p2 <- plot_transmission_events_over_time(pairs, outfile.figures, nm_reqs=TRUE)
+
+p <- plot_pairs(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE], outfile.figures, nm_reqs = TRUE)
+p1 <- plot_pairs_all(pairs.all[BOTH_PARTICIPATED==TRUE], outfile.figures, nm_reqs=TRUE)
+p2 <- plot_transmission_events_over_time(pairs.all[BOTH_PARTICIPATED==TRUE], outfile.figures, nm_reqs=TRUE)
 
 # extract legend
 legend <- cowplot::get_legend(p2)
 p2 <- p2 + theme(legend.position = 'none')
 
+require(patchwork)
 top <- (p1 + p2 + plot_layout(widths = c(1.2,3))) / 
     legend + 
     plot_layout( heights = c(100,1)) + 
     plot_annotation(tag_levels='a') & theme(plot.tag = element_text(size=8, face='bold', family='sans'))
 
-all <- ggarrange_nature(top, p , heights=c(2,3), ncol=1)
-all
+all <- ggarrange_nature(top, as.ggplot(p) , heights=c(1.8,3), ncol=1)
 
-ggsave_nature('~/Downloads/EDF5/extended_data_figure_pairs.pdf',all, w=18, h=21)
-ggsave_nature
+ggsave_nature('~/Downloads/EDF5/extended_data_figure_pairs.pdf',all, w=18, h=19)
