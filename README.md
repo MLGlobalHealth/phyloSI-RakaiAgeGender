@@ -60,7 +60,7 @@ $ source activate phyloSI-RakaiAgeGender
 
 ## Usage
 ### The files in ```src/```
-The scripts in ```src/``` read the identifiable individual-level data, de-identifiable and aggregate them, and save them in ```data/```. 
+The scripts in ```src/``` read the identifiable individual-level data, de-identify and aggregate them, and save them in ```data/```. 
 
 ### The files in ```misc/```
 The scripts in ```misc/``` read the aggregated data and fit smoothing models to obtain hiv prevalence, art coverage and viral suppression for participants and first-time participants by age, gender and round.
@@ -83,21 +83,20 @@ Rscript scripts/run_incidence_rates_estimation.R --indir=$INDIR --outdir=$OUTDIR
 where `<user>` is your username on the HPC (e.g. mm3218)
 
 ### Run the transmission flows analysis
-We provide a bash shell script that can be run on a laptop. The following modifications need to be done to the start of the bash script ```run_stan_laptop.sh```. First, set the the directory in which the repository is located, and the output directory where the results should be stored in lines XYZ:
+We provide a bash shell script that can be run on a laptop. The following modifications need to be done to the start of the bash script ```run_stan_laptop.sh```. First, set <ins>absolute path</ins> to the repository is located, and the <ins>absolute path</ins> output directory where the results should be stored in lines XYZ:
 ```bash
-INDIR="/rds/general/user/<user>/home/git/phyloSI-RakaiAgeGender"
-OUTDIR="/rds/general/user/<user>/home/projects/2021/phyloSI-RakaiAgeGender"
+INDIR="/path/to/phyloSI-RakaiAgeGender"
+OUTDIR="/path/to/output/directory"
 ```
-where `<user>` is your username on the HPC (e.g. mm3218)
 
-Second, set as appropriatly your virtual environment in lines XYZ: 
+Second, activate your virtual environment: 
 ```bash
-module load anaconda3/personal
+$ source activate phyloSI-RakaiAgeGender
 ```
 
 You can then execute the bash script. Run on the terminal console from the repository directory
 ```bash
-./run_stan_laptop.sh
+$ run_stan_laptop.sh
 ```
 This generates in the output directory two bash scripts. One for running the model and one for processing the results. Execute these bash scripts one after the other.
 
