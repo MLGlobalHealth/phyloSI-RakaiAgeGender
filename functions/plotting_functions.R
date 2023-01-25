@@ -1109,6 +1109,19 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   ggsave(paste0(outdir, '-data-incidence_rate_round_sex_inland.pdf'), w = 8, h = 6)
   
   #
+  # female-male incidence rate ratio
+  fmr <- merge(icr, eligible_count_round, by = c('COMM', 'ROUND', 'AGEYRS', 'SEX'))
+  fmr[, INCIDENT_CASES := SUSCEPTIBLE * INCIDENCE.DRAW]
+  fmr <- fmr[, list(INCIDENT_RATE_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'iterations')] 
+  fmr <- dcast.data.table(fmr, COMM + ROUND + iterations ~ SEX, value.var = 'INCIDENT_RATE_SUSCEPTIBLE')
+  fmr[, INCIDENCE_RATIO := `F` / `M`]
+  fmr = fmr[, list(q= quantile(INCIDENCE_RATIO, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND')]	
+  fmr = dcast(fmr, ... ~ q_label, value.var = "q")
+  fmr <- merge(fmr, df_community, by = 'COMM')
+  fmr <- merge(fmr, df_round, by = c('COMM', 'ROUND'))
+  fmr[, MIDPOINT_DATE := MIN_SAMPLE_DATE + (MAX_SAMPLE_DATE - MIN_SAMPLE_DATE)/2]
+  
+  #
   # incidence rate relative to first round per person per round by 1-year age group
 
   icr[, INCIDENCE_REL := INCIDENCE.DRAW / INCIDENCE.DRAW[ROUND == REF.ROUND], by = c('COMM', 'AGEYRS', 'SEX', 'iterations')]
@@ -1277,7 +1290,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   #
   # save statistics
   
-  save_statistics_incidence_rate_trends(icrr, icr, icrrs, icrrt, medage)
+  save_statistics_incidence_rate_trends(icrr, icr, icrrs, icrrt, medage, fmr)
     
 }
 
