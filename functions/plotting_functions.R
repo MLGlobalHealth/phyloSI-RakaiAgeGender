@@ -1445,7 +1445,9 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
 
 plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 {
-  
+    nm_reqs = TRUE
+    pairs <- copy(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE])
+    
   # extend round periods to the beginning of next one.
   df_round_extended <- copy(df_round)
   df_round_extended[, MAX_SAMPLE_DATE := fcoalesce( shift(MIN_SAMPLE_DATE, -1), MAX_SAMPLE_DATE )]
@@ -1462,7 +1464,7 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
             LABEL_ROUND = paste0('Before R10\n', 'Before ', format(min_round_date, '%b %Y'))
         )
         df_round_extended <- rbind( tmp,df_round_extended, fill=TRUE)
-        palette_round_inland <- c( '#000000', palette_round_inland)
+        palette_round_inland <- unique(c( '#000000', palette_round_inland))
     }
 
     max_round_date <- max(df_round_extended$MAX_SAMPLE_DATE)
@@ -1476,14 +1478,18 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
             LABEL_ROUND = paste0('After R18\n', 'After ', format(max_round_date, '%b %Y'))
         )
         df_round_extended <- rbind( df_round_extended, tmp, fill=TRUE)
-        palette_round_inland <- c(palette_round_inland, '#FF0000')
+        unique(palette_round_inland <- c(palette_round_inland, '#FF0000'))
 
     }
 
   # find round of infection
-  tmp <- merge(pairs, df_round_extended, by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian = T)
-  tmp <- tmp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MAX_SAMPLE_DATE]
-  
+
+    pairs[, DUMMY := 'DUMMY']
+    df_round_extended[, DUMMY := 'DUMMY']
+    tmp <- merge(pairs, df_round_extended, by='DUMMY', allow.cartesian = T)
+    tmp <- tmp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MAX_SAMPLE_DATE]
+    tmp[, DUMMY := NULL]
+
   # find direction label
   tmp[, DIRECTION := 'Male to female' ]
   tmp[SEX.SOURCE == 'F', DIRECTION := 'Female to male' ]
@@ -1498,7 +1504,7 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
       comm <- COMMS[i]
       sex <- SEX[j]
       
-      tmp1 <- tmp[COMM.RECIPIENT == comm & SEX.SOURCE == sex ]
+      tmp1 <- tmp[ SEX.SOURCE == sex ]
       p[[index]] <- ggplot(tmp1, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
         geom_point(aes(col = LABEL_ROUND)) + 
         labs(y = 'Age at transmission source', x = 'Age at infection recipient', col = '') +
