@@ -3,18 +3,18 @@
 
 **Welcome!** This repository contains the code and data for the analyses presented in the paper *Growing gender inequity in HIV infection in Africa: sources and policy implications* by Monod et al.
 
-1. [License](#license)
-2. [Warrenty](#warranty)
-3. [Citation](#cite)
-4. [Acknowledgements](#acknowledgements)
-5. [Funding](#funding)
-6. [Quick Start](#quick-start)
-  a. [System Requirements](#system-requirements)
-  b. [Installation](#installation)
-  c. [Usage](#usage)
-7. [Data Documentation](#data-documentation)
-  a. [Sample Data](#sample-data)
-  b. [Generated Data](#generated-data)
+- [License](#license)
+- [Warrenty](#warranty)
+- [Citation](#cite)
+- [Acknowledgements](#acknowledgements)
+- [Funding](#funding)
+- [Quick Start](#quick-start)
+  - [System Requirements](#system-requirements)
+  - [Installation](#installation)
+  - [Usage](#usage)
+- [Data Documentation](#data-documentation)
+  - [Sample Data](#sample-data)
+  - [Generated Data](#generated-data)
 
 ## License
 The code and data in this repository are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
