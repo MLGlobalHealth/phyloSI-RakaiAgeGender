@@ -1367,7 +1367,7 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       geom_point(aes(col = ROUND_LABEL, shape = age_group, x = UNSUPPRESSION_RATE_RATIO_RATIO_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_y_continuous(limits = c(NA,2)) + 
       scale_color_manual(values = colors) + 
-      labs(x = paste0('Male-female ratio of the rate of individuals\nwith HIV who have unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
+      labs(x = paste0('Male-female ratio of the proportion of individuals\nwith HIV who have unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
            y = paste0('Female-male ratio of the\nincidence rate relative\nto round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))])) + 
       theme_bw()  +
       theme(legend.position = 'none', 
