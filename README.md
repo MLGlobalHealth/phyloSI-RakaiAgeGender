@@ -128,7 +128,7 @@ The second script, `bash_gp_220108-cutoff_2014-postprocessing.pbs`, runs `postpr
 The table below lists the data files within `/data` and a brief description of its contents
 | File name | Description |
 |---|---|
-| ```pairsdata_toshare_d1_w11_netfrompairs_seropairs.rds``` | HIV source-recipient pairs |
+| ```pairsdata_toshare_d1_w11_netfrompairs_postponessrm.rds``` | HIV source-recipient pairs |
 | ```RCCS_census_eligible_individuals_221116.csv``` | Count of census eligible population by age, gender and round |
 | ```RCCS_participation_221208.csv``` | Participation rates to the RCCS survey by age, gender and round |
 | ```aggregated_count_hiv_positive.csv``` | Count of participants by hiv status, age, gender and round used in ```misc/get_estimates_prevalence.R``` to estimate smooth proportion of hiv prevalence among population. |
