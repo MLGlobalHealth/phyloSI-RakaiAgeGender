@@ -380,12 +380,20 @@ p_1d <- make_subplot(data_1d, M='M', IL='IL', IU='IU',
 library(patchwork)
 naturemed_reqs()
 
+reqs2 <- theme(
+    axis.text = element_text(size=9, family='sans'),
+    text=element_text(size=12,family='sans'),
+    legend.text=element_text(size=12, family='sans'),
+    strip.text = element_text(size = 9),
+    axis.title = element_text(size = 12)
+)
+
 p_c <- plot_incident_rates_over_time_2(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
 
-p_1cd <- (p_c + reqs + theme(axis.title.x=element_blank()))/(p_1d + theme(strip.background = element_blank(), strip.text = element_blank()) + reqs) 
+p_1cd <- (p_c + reqs2 + theme(axis.title.x=element_blank()))/(p_1d + reqs2 + theme(strip.background = element_blank(), strip.text = element_blank()) ) 
 
-p_1cd
-ggsave('~/Downloads/MainFigure1cd.pdf',p_1cd, w=8.2, h=5.3)
+# 900, 680 = 23.81, 18
+ggsave('~/Downloads/MainFigure1cd.pdf',p_1cd, w=23.8 , h=18, units='cm')
 
 
 #########################################
@@ -418,5 +426,5 @@ data_edf5 <- data_edf5[, {
 p_edf5 <- make_subplot(data_1d, M='M', IL='IL', IU='IU', 
     y_lab = "Contribution to incident cases")
 
-ggsave_nature('~/Downloads/incidence_cases_contribution.pdf',p_edf5+reqs , w=16, h=8)
-ggsave_nature('~/Downloads/incidence_cases_contribution.png',p_edf5+reqs , w=16, h=8)
+ggsave('~/Downloads/incidence_cases_contribution.pdf',p_edf5+reqs2 , w=20, h=10, units='cm')
+ggsave('~/Downloads/incidence_cases_contribution.png',p_edf5+reqs2 , w=20, h=10, units='cm')
