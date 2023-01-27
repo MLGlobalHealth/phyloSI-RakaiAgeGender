@@ -1,7 +1,13 @@
 naturemed_reqs <- function() 
 {
     # call this before doing your plots
-    reqs <<- theme(axis.text = element_text(size=5, family='sans'), text=element_text(size=7,family='sans'), legend.text=element_text(size=7, family='sans'))
+    reqs <<- theme(
+        axis.text = element_text(size=5, family='sans'),
+        text=element_text(size=7,family='sans'),
+        legend.text=element_text(size=7, family='sans'),
+        strip.text = element_text(size = 5),
+        axis.title = element_text(size = 7)
+    )
 }
 
 ggarrange_nature <- function(
@@ -616,7 +622,7 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
   ggplot(subset(proportion_prevalence, ROUND !='15S'), aes(x = AGEYRS)) +
     geom_point(aes(y =EMPIRICAL_PREVALENCE, col = SEX)) +
     geom_line(aes(y =PREVALENCE_M, col = SEX)) +
-    geom_ribbon(aes(ymin =PREVALENCE_CL, ymax = PREVALENCE_CU, fill = SEX), alpha = 0.5) +
+    geom_ribbon(aes(ymin =PREVALENCE_CL, ymax = PREVALENCE_CU, fill = SEX), alpha = 0.4) +
     labs(y = 'Prevlence among participant', x = 'Age') +
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
@@ -708,7 +714,7 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
   # proportion of unsuppressed among participants
   ggplot(treatment_cascade, aes(x = AGEYRS)) +
     geom_line(aes(y = PROP_UNSUPPRESSED_PARTICIPANTS_M , col = SEX)) +
-    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_PARTICIPANTS_CL , ymax = PROP_UNSUPPRESSED_PARTICIPANTS_CU , fill = SEX), alpha = 0.5) +
+    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_PARTICIPANTS_CL , ymax = PROP_UNSUPPRESSED_PARTICIPANTS_CU , fill = SEX), alpha = 0.4) +
     labs(y = 'Proportion of unsupressed', x = 'Age') +
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
@@ -717,7 +723,7 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
   
   ggplot(treatment_cascade, aes(x = AGEYRS)) +
     geom_line(aes(y = PROP_UNSUPPRESSED_PARTICIPANTS_M , col = ROUND)) +
-    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_PARTICIPANTS_CL , ymax = PROP_UNSUPPRESSED_PARTICIPANTS_CU , fill = ROUND), alpha = 0.5) +
+    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_PARTICIPANTS_CL , ymax = PROP_UNSUPPRESSED_PARTICIPANTS_CU , fill = ROUND), alpha = 0.4) +
     labs(y = 'Proportion of unsupressed', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
@@ -729,7 +735,7 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
   # proportion of unsuppressed among non-participants
   ggplot(treatment_cascade, aes(x = AGEYRS)) +
     geom_line(aes(y = PROP_UNSUPPRESSED_NONPARTICIPANTS_M , col = SEX)) +
-    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_NONPARTICIPANTS_CL , ymax = PROP_UNSUPPRESSED_NONPARTICIPANTS_CU , fill = SEX), alpha = 0.5) +
+    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_NONPARTICIPANTS_CL , ymax = PROP_UNSUPPRESSED_NONPARTICIPANTS_CU , fill = SEX), alpha = 0.4) +
     labs(y = 'Proportion of unsupressed', x = 'Age') +
     facet_grid(ROUND~COMM, label = 'label_both') +
     theme_bw() +
@@ -738,7 +744,7 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
   
   ggplot(treatment_cascade, aes(x = AGEYRS)) +
     geom_line(aes(y = PROP_UNSUPPRESSED_NONPARTICIPANTS_M , col = ROUND)) +
-    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_NONPARTICIPANTS_CL , ymax = PROP_UNSUPPRESSED_NONPARTICIPANTS_CU , fill = ROUND), alpha = 0.5) +
+    geom_ribbon(aes(ymin = PROP_UNSUPPRESSED_NONPARTICIPANTS_CL , ymax = PROP_UNSUPPRESSED_NONPARTICIPANTS_CU , fill = ROUND), alpha = 0.4) +
     labs(y = 'Proportion of unsupressed', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
@@ -754,7 +760,7 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
   tmp[, ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1', ROUND))]
   ggplot(tmp, aes(x = AGEYRS)) +
     geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = SEX_LABEL)) +
-    geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX_LABEL), alpha = 0.5) +
+    geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = SEX_LABEL), alpha = 0.4) +
     labs(y = 'Number of HIV+ unsupressed census eligible', x = 'Age') +
     facet_wrap(~ROUND_LABEL, ncol = 2) +
     scale_fill_manual(values = c('Men'='lightblue3','Women'='lightpink1')) + 
@@ -767,7 +773,7 @@ plot_data_by_round <- function(eligible_count_round, treatment_cascade, proporti
   
   ggplot(eligible_count_round, aes(x = AGEYRS)) +
     geom_line(aes(y = INFECTED_NON_SUPPRESSED , col = ROUND)) +
-    # geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = ROUND), alpha = 0.5) +
+    # geom_ribbon(aes(ymin = INFECTED_NON_SUPPRESSED_CL, ymax = INFECTED_NON_SUPPRESSED_CU , fill = ROUND), alpha = 0.4) +
     labs(y = 'Number of HIV+ unsupressed census eligible', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
@@ -782,7 +788,7 @@ plot_data_by_period <- function(incidence_cases, outdir)
   # incidence cases
   ggplot(incidence_cases, aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENT_CASES , col = PERIOD)) +
-    # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.5) +
+    # geom_ribbon(aes(ymin = INCIDENT_CASES_LB , ymax = INCIDENT_CASES_UB , fill = SEX), alpha = 0.4) +
     labs(y = 'Number of incident cases', x = 'Age') +
     facet_grid(SEX~COMM, label = 'label_both') +
     theme_bw() +
@@ -1022,8 +1028,8 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   tmp[, SEX_LABEL := 'Women']
   tmp[SEX== 'M', SEX_LABEL := 'Men']
   ggplot(tmp, aes(x = AGEYRS)) +
-    geom_line(aes(y = INCIDENCE*100, col = LABEL_ROUND2)) +
     geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = LABEL_ROUND2),  alpha = 0.1) +
+    geom_line(aes(y = INCIDENCE*100, col = LABEL_ROUND2)) +
     labs(y = 'Incidence rate per 100 person-years', x = 'Age', fill = '', col = '') +
     facet_grid(LABEL_COMMUNITY~SEX_LABEL,  scale = 'free_y') +
     theme_bw() +
@@ -1046,7 +1052,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   
   ggplot(tmp[COMM == 'inland' & round %in% c(10, 12, 14, 16, 18)]) +
     geom_line(aes(x = AGEYRS, y = INCIDENCE*100, col = SEX_LABEL)) +
-    geom_ribbon(aes(x = AGEYRS, ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
+    geom_ribbon(aes(x = AGEYRS, ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.4) +
     # geom_errorbarh(data = tmp1[SEX_LABEL=='Men' ], aes(y = 0.01, xmin = CL, xmax = CU, col = SEX_LABEL), size =1.5) +
     # geom_errorbarh(data = tmp1[SEX_LABEL=='Men' & ROUND == 'R018'], aes(y = 0.025, xmin = CL, xmax = CU, col = SEX_LABEL), size =1.5) +
     geom_point(data = tmp1[SEX_LABEL=='Men' ], aes(y = 0.08, x = M, fill = SEX_LABEL,  col = SEX_LABEL), shape = 25, size =3,  alpha = 0.5) +
@@ -1072,8 +1078,8 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   tmp[, WEIGHTED_INCIDENCE := INCIDENCE / sum(INCIDENCE), by = c('COMM', 'ROUND', 'SEX')]
   median_age <- tmp[, list(MEDIAN_AGEYRS =matrixStats::weightedMedian(AGEYRS, WEIGHTED_INCIDENCE ) ), by = c('COMM', 'LABEL_ROUND', 'SEX_LABEL', 'ROUND', 'round')]
   ggplot(tmp[COMM == 'inland' & round %in% c(10, 12, 14, 16, 18)], aes(x = AGEYRS)) +
+    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.4) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
-    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
     geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Men' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
     geom_point(data = median_age[COMM == 'inland' & SEX_LABEL=='Women' & round %in% c(10, 12, 14, 16, 18)], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
     labs(y = 'Incidence rates\nper 100 person-years', x = 'Age') +
@@ -1093,7 +1099,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   
   ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
     geom_line(aes(y = INCIDENCE*100, col = SEX_LABEL)) +
-    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.5) +
+    geom_ribbon(aes(ymin = LB *100, ymax = UB* 100, fill = SEX_LABEL),  alpha = 0.4) +
     # geom_point(data = median_age[COMM == 'inland'], aes(y = 0.08, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
     labs(y = 'Incidence rate per 100 person-years\nin inland communities', x = 'Age') +
     facet_wrap(.~LABEL_ROUND, nrow = 2) +
