@@ -10,24 +10,19 @@ outdir <- here::here()
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
-# outdir.table <- file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
-if(!dir.exists((outfile.figures))) dir.create((outfile.figures))
+if (!dir.exists((outfile.figures))) dir.create((outfile.figures))
 
 # paths to data
 file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221208.csv')) # please modify accordingly
 file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData') # please modify accordingly
 file.expected_contribution_age_source <- file.path(indir, 'data', paste0(stan_model, '-', jobname, '-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_direction_round.rds')) # please modify accordingly
-file.contribution.sexual.contacts <- file.path(indir, 'data', 'NegBin_HSGP-M-20-c-1.5-kernel-matern52-area-inland-R015_age-dist_ma_cntct_area_1549.rds')
+file.contribution.sexual.contacts <- file.path(indir, 'data', 'inland-R015_age-dist_ma_cntct_area_1549.rds')
 # load functions
 source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_utils_functions.R'))
 source(file.path(indir, 'functions', 'postprocessing_statistics_functions.R'))
 source(file.path(indir, 'functions', 'summary_functions.R'))
-
-# file.unsuppressed.share <- file.path( 'scripts', 'shift', paste0('RCCS_unsuppressed_share_sex_221208.csv')) # please modify accordingly
-# file.path.round.timeline <- file.path('scripts', 'shift', 'RCCS_round_timeline_220905.RData') # please modify accordingly
-# file.expected_contribution_age_source <- file.path('scripts', 'shift', paste0(stan_model, '-', jobname, '-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_direction_round.rds')) # please modify accordingly
 
 # get fig A ----
 # map direction
@@ -98,14 +93,10 @@ pA <- ggplot(pltA, aes(x = AGEYRS, y = M)) +
   scale_fill_manual(values = c("#fa9fb5",'grey70','#ec7014',"lightblue3",'grey50', '#78c679' )) +
   scale_x_continuous(breaks = seq(15, 50, 5)) +
   theme_bw() +
-  labs(x = 'Female age                                                                           Male age',
+  labs(x = 'Female age                                                                                                           Male age',
        y = 'Percent') +
   theme(
-    # strip.background = element_blank(),
-    # strip.text = element_text(size = 16),
-    # legend.text = element_text(size = 9),
-    # axis.text = element_text(size = 14),
-    # axis.title = element_text(size = 16)
+    panel.grid.major = element_line(size = 0.3),
 
     panel.grid.minor = element_blank(),
     panel.border = element_rect(fill = NA, colour = "black", size = 0.3),
@@ -122,14 +113,13 @@ pA <- ggplot(pltA, aes(x = AGEYRS, y = M)) +
     legend.position = c(0.69, 1.05),
     legend.justification = c("right", "top"),
     legend.box.just = "right",
-    # legend.margin = margin(6, 6, 6, 6),
     legend.background = element_blank()) +
   scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0, 0.08)) +
   scale_linetype_manual(values = c(1,1, 2, 1, 1, 2)) +
   guides(color = guide_legend(nrow = 3, byrow = F))
 
 # conditional contact intensities----
-pd.a <- as.data.table(readRDS(file.path(indir, 'data', 'NegBin_HSGP-M-20-c-1.5-kernel-matern52-area-inland-R015_age-dist_cntct_area_1549.rds')))
+pd.a <- as.data.table(readRDS(file.path(indir, 'data', 'inland-R015_age-dist_cntct_area_1549.rds')))
 
 pd.a <- pd.a[cont.age %in% c(15, 20, 25, 30, 35, 40)]
 pd.a$part.sex <- ifelse(pd.a$part.sex == 'F', 'Women', 'Men')
@@ -153,11 +143,8 @@ dta[, plt.bar := (part.age - cont.age) %in% c( -9, -4, 1,  6,  16)]
 dta[, type := 'Contribution to transmitting partners ']
 dta <- dta[, cont.age := ifelse(cont.age %in% c(15, 20, 25), paste0('Sources trainsmitting to ', cont.sex, ' aged ', cont.age), paste0('Sources trainsmitting to ', cont.sex, ' aged ', cont.age))]
 
-# dta$cont.age <- as.character(dta$cont.age)
 plt <- rbind(pd.a[, list(part.age,cont.age,CL,CU,M,part.sex,cont.sex,label, plt.bar, plt.age,type)],
              dta[, list(part.age,cont.age,CL,CU,M,part.sex,cont.sex,label, plt.bar, plt.age,type)]
-             # pd.a[label == '30, 35, 40', list(part.age,cont.age,CL,CU,M,part.sex,cont.sex,label)],
-             # dta[label == '30, 35, 40', list(part.age,cont.age,CL,CU,M,part.sex,cont.sex,label)]
              , use.names = TRUE, fill = TRUE)
 plt <- plt[order(label)]
 unique(plt$cont.age)
@@ -169,8 +156,6 @@ plt[,label := paste0(cont.sex, ' aged ', label)]
 # if part.sex is Men, then change women's age 15 -> 30 etc
 plt[cont.sex == 'Men', plt.age := ifelse(plt.age %in% c(15, 20, 25), plt.age + 15, plt.age)]
 # if part.sex is Women, then change men's age 30 -> 15 etc
-# plt[cont.sex == 'Women', plt.age := ifelse(plt.age %in% c(30, 35, 40), plt.age - 15, plt.age)]
-# plt$plt.age <- as.factor(plt)
 plt.xaxis <- ifelse(plt$part.sex == 'Men', 'Male', 'Female')
 p1b <- ggplot(plt[grepl('15', label)], aes(x = part.age, y = M, col = factor(plt.age, levels = unique(plt.age)), linetype = type)) +
   geom_line(data =  plt[grepl('15', label)], aes(x = part.age, y = M)) +
@@ -183,7 +168,6 @@ p1b <- ggplot(plt[grepl('15', label)], aes(x = part.age, y = M, col = factor(plt
   scale_color_manual(values = c(
     '#f46d43',
     '#3288bd',
-    # '#5e4fa2',
     '#88419d',
     '#f46d43',
     '#3288bd',
@@ -191,32 +175,17 @@ p1b <- ggplot(plt[grepl('15', label)], aes(x = part.age, y = M, col = factor(plt
   )) +
 
   scale_linetype_manual(values = c(2,1)) +
-  labs(x = 'Female age                                                                           Male age',
+  labs(x = 'Female age                                                                                                           Male age',
        y = paste0('Percent'),
        col = 'Age of contact',
-       # fill = 'Age of contact',
        linetype = 'type of contact'
   ) +
   guides(color = guide_legend(nrow = 1)) +
   theme_bw() +
   theme(
-    # strip.background = element_rect(colour="white", fill="white"),
     legend.position = 'bottom',
-    # legend.title = element_blank(),
-    # panel.grid.minor.y = element_blank(),
-    # # panel.background = element_blank(),
-    # panel.background = element_rect('white'),
-    # panel.border = element_rect(color = "black",
-    #                             fill = NA),
-    # axis.line = element_line(colour = "black"),
-    # strip.text = element_text(size = 16),
-    # legend.text = element_text(size = 9),
-    # axis.text = element_text(size = 14),
-    # axis.title = element_text(size = 16)
-
     panel.grid.minor = element_blank(),
-
-    # panel.grid.major = element_blank(),
+    panel.grid.major = element_line(size = 0.3),
     panel.border = element_rect(fill = NA, colour = "black", size = 0.3),
     axis.ticks = element_line(size = 0.2),
     strip.background = element_blank(),
@@ -226,23 +195,18 @@ p1b <- ggplot(plt[grepl('15', label)], aes(x = part.age, y = M, col = factor(plt
     legend.title = element_blank(),
     axis.line = element_line(colour = 'black', size = 0.2),
     axis.title = element_text(size = 7, family = 'sans')
-
-
   ) +
   scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))
 
 p2b <- ggplot(plt[grepl('35', label)], aes(x = part.age, y = M, col = factor(plt.age, levels = unique(plt.age)), linetype = type)) +
   geom_line(data =  plt[grepl('35', label)], aes(x = part.age, y = M)) +
-  #
   geom_pointrange(data = plt[grepl('35', label) &  (plt.bar == TRUE )],
                   aes(ymin = CL, ymax = CU), linetype = 1, size = .5, fatten = 2) +
-
   facet_grid(.~paste0(label)) +
   scale_x_continuous(breaks = seq(15, 70, 5)) +
   scale_color_manual(values = c(
     '#f46d43',
     '#3288bd',
-    # '#5e4fa2',
     '#88419d',
     '#f46d43',
     '#3288bd',
@@ -250,10 +214,9 @@ p2b <- ggplot(plt[grepl('35', label)], aes(x = part.age, y = M, col = factor(plt
   )) +
 
   scale_linetype_manual(values = c(2,1)) +
-  labs(x = 'Female age                                                                           Male age',
+  labs(x = 'Female age                                                                                                           Male age',
        y = paste0('Percent'),
        col = 'Age of contact',
-       # fill = 'Age of contact',
        linetype = 'type of contact'
   ) +
   guides(color = guide_legend(nrow = 1)) +
@@ -262,13 +225,7 @@ p2b <- ggplot(plt[grepl('35', label)], aes(x = part.age, y = M, col = factor(plt
     legend.position = 'bottom',
     panel.grid.minor = element_blank(),
     panel.background = element_rect('white'),
-
-    # strip.text = element_text(size = 16),
-    # legend.text = element_text(size = 9),
-    # axis.text = element_text(size = 14),
-    # axis.title = element_text(size = 16)
-
-    # panel.grid.major = element_blank(),
+    panel.grid.major = element_line(size = 0.3),
     panel.border = element_rect(fill = NA, colour = "black", size = 0.3),
     axis.ticks = element_line(size = 0.2),
     strip.background = element_blank(),
@@ -278,17 +235,11 @@ p2b <- ggplot(plt[grepl('35', label)], aes(x = part.age, y = M, col = factor(plt
     legend.title = element_blank(),
     axis.line = element_line(colour = 'black', size = 0.2),
     axis.title = element_text(size = 7, family = 'sans')
-
   ) +
   scale_y_continuous(labels = scales::percent, expand = expansion(mult = c(0, .05)), limits = c(0,NA))
 
 pB <- ggpubr::ggarrange(p1b, p2b, ncol = 1, common.legend = T, legend = 'bottom')
 
 # combine two plots----
-p <- ggpubr::ggarrange(pA, pB, ncol = 1, heights  = c(1.35, 2.8), labels = c('a', 'b'), font.label=list(color="black",size=8))
-
-p
+p <- ggpubr::ggarrange(pA, pB, ncol = 1, heights  = c(1.35, 2.8), labels = c('a', 'b'), font.label = list(color = "black", size = 8))
 ggsave(file = file.path(outfile.figures, 'extended-data-fig_age-dist_0125.pdf'), p, width = 18, height = 20, units = 'cm', dpi = 310, limitsize = FALSE)
-# ggsave(file = file.path(outfile.figures, 'extended-data-fig_age-dist_0125.png'), p, width = 10.5, height = 13)
-# ggsave(file = file.path(outfile.figures, 'extended-data-fig_age-dist_0125.pdf'), p, width = 10.5, height = 13)
-#
