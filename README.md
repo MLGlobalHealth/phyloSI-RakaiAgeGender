@@ -67,9 +67,23 @@ Then activate the environment for use:
 ```bash
 $ source activate phyloSI-RakaiAgeGender
 ```
+The code reposistory contains the following directories and functions:
+| Directory | Content |
+| --- | --- |
+| `src/` | TODO |
+
 
 ### Usage
-In accordance to data ethic rules, no identifiable individual-level data is saved in this reposity. Instead, the code in `src/` de-identify and aggregate the sensitive data and save them in `data/`.  
+
+#### Pre-process data
+
+We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout.
+
+Our main analysis functions on estimating incidence dynamics and transmission flows depend on estimates of population sizes, prevalence, virus suppression. Please run the following once:
+
+TODO
+
+the code in `src/` de-identify and aggregate the sensitive data and save them in `data/`.  
 
 The scripts in ```misc/``` read the aggregated data and fit smoothing models to obtain HIV prevalence, ART coverage, and viral suppression for participants and first-time participants by age, gender and round.
 
