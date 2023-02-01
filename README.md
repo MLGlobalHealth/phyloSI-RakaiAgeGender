@@ -83,60 +83,40 @@ Our main analysis functions on estimating incidence dynamics and transmission fl
 
 TODO
 
-the code in `src/` de-identify and aggregate the sensitive data and save them in `data/`.  
-
-The scripts in ```misc/``` read the aggregated data and fit smoothing models to obtain HIV prevalence, ART coverage, and viral suppression for participants and first-time participants by age, gender and round.
-
-The following table list the actions performed by each file within `misc/`:
-| Action | File |
-| --- | --- |
-| Obtain smooth HIV prevalence by age, gender, and round | `get_estimates_prevalence.R` |
-| Obtain smooth ART coverage in participants by age, gender, and round | `get_estimates_art_coverage_participants.R` |
-| Obtain smooth ART coverage in first-time participants by age, gender, and round | `get_estimates_art_coverage_non_participants.R` |
-| Obtain smooth viral suppression in participants by age, gender, and round | `get_estimates_unsuppressed_proportion_participants.R` |
-| Obtain smooth viral suppression in first-time participants by age, gender, and round | `get_estimates_unsuppressed_proportion_non_participants.R` |
-| Combine ART coverage and viral suppression estimates to obtain treatment cascade in participants | `get_treatment_cascade_participants.R` |
-| Combine ART coverage and viral suppression estimates to obtain treatment cascade in first-time participants | `get_treatment_cascade_non_participants.R` |
-| Combine ART coverage and viral suppression estimates to obtain treatment cascade in population | `get_treatment_cascade_population.R` |
-
-
 #### Age-specific HIV incidence rates
-To run the age-specific HIV incidence rates analysis, open up command line tools and specify the absolute path to the git repository as well as the output directory in which to save the results.  
+To run the age-specific HIV incidence rates analysis, open up command line tools. Then cd into the repository, and specify the absolute path to the git repository as well as the output directory in which to save the results. 
+
+Then run: 
 ```bash
 $ INDIR="absolute/path/to/phyloSI-RakaiAgeGender"
 $ OUTDIR="absolute/path/to/output/directory"
-```
-
-Navigate into the repository and execute the following command.
-```bash
 $ Rscript scripts/run_incidence_rates_estimation.R --indir=$INDIR --outdir=$OUTDIR
 ```
 
 #### Transmission flows analysis
-For the transmission flows analysis, we provide a bash shell script that can be run on a laptop.
+For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. 
 
 Set the **absolute path** to the output directory where the results should be stored in **line 7** of `run_stan_laptop.sh`: 
 ```bash
 OUTDIR="absolute/path/to/output/directory"
 ```
 
-Make sure the git repository is your working directory, and activate the virtual environment
+Open up command line tools, cd into the repository, and run:
 ```bash
 $ source activate phyloSI-RakaiAgeGender
-```
-
-Finally, execute
-```bash
 $ bash run_stan_laptop.sh
 ```
 
-This script will create two shell scripts, `bash_gp_220108-cutoff_2014.sh` and `bash_gp_220108-cutoff_2014-postprocessing.sh`, in the directory specified by `OUTDIR`. 
+This script will create two shell scripts, `bash_gp_220108-cutoff_2014.sh` and `bash_gp_220108-cutoff_2014-postprocessing.sh`, in the directory specified by `OUTDIR`. The first script, `bash_gp_220108-cutoff_2014.sh`, fits the age- and gender-specific phyloSI model to the Rakai data with Stan. The second script, `bash_gp_220108-cutoff_2014-postprocessing.sh`, performs diagnostic checks on the fitted model, creates posterior summaries, and generates figures. You will need to execute both scripts one after the other:
+```bash
+$ source activate phyloSI-RakaiAgeGender
+$ cd $OUTDIR
+$ bash bash_gp_220108-cutoff_2014.sh
+$ bash bash_gp_220108-cutoff_2014-postprocessing.sh
+```
 
-The first script, `bash_gp_220108-cutoff_2014.sh`, runs `run_stan.R` which executes Stan.
 
-The second script, `bash_gp_220108-cutoff_2014-postprocessing.pbs`, runs `postprocessing_assess_mixing.R` and `postprocessing_figures.R`, which performs diagnostic checks on the fitted model, creates posterior summaries, and generates figures.
-
-## Data Documentation
+## Data and script reference
 
 ### Sample Data
 The table below lists the data files within `/data` and a brief description of its contents
@@ -161,4 +141,19 @@ The table below lists the data files within `/data` and a brief description of i
 | ```RCCS_treatment_cascade_population_estimates_DATE.csv``` | Smooth estimates of art coverage and viral suppression in population by age, gender and round |
 | ```RCCS_treatment_cascade_participants_estimates_DATE.csv``` | Smooth estimates of art coverage and viral suppression in participants by age, gender and round |
 | ```RCCS_treatment_cascade_nonparticipants_estimates_DATE.csv``` | Smooth estimates of art coverage and viral suppression in first-time participants by age, gender and round in file  |
+
+## Scripts
+
+The following table list the actions performed by each of the available scripts:
+| Action | Script |
+| --- | --- |
+| Obtain smooth HIV prevalence by age, gender, and round | `misc/get_estimates_prevalence.R` |
+| Obtain smooth ART coverage in participants by age, gender, and round | `misc/get_estimates_art_coverage_participants.R` |
+| Obtain smooth ART coverage in first-time participants by age, gender, and round | `misc/get_estimates_art_coverage_non_participants.R` |
+| Obtain smooth viral suppression in participants by age, gender, and round | `misc/get_estimates_unsuppressed_proportion_participants.R` |
+| Obtain smooth viral suppression in first-time participants by age, gender, and round | `misc/get_estimates_unsuppressed_proportion_non_participants.R` |
+| Combine ART coverage and viral suppression estimates to obtain treatment cascade in participants | `misc/get_treatment_cascade_participants.R` |
+| Combine ART coverage and viral suppression estimates to obtain treatment cascade in first-time participants | `misc/get_treatment_cascade_non_participants.R` |
+| Combine ART coverage and viral suppression estimates to obtain treatment cascade in population | `misc/get_treatment_cascade_population.R` |
+
  
