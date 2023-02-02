@@ -4,20 +4,30 @@ library(ggplot2)
 library(scales)
 library(ggpubr)
 
+# EXTENDED DATA FIGURE XXX
+
 # directory repository
 indir.repository <- '~/git/phyloflows'
 
-# directory to save the figure
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+usr <- Sys.info()[['user']]
+
+if(usr=='andrea')
+{
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    outdir <- "~/Downloads/"
+}else{
+    # directory to save the figure
+    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+    outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+}
 
 # files
 eligible <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
 participation <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
 
 # load
-ncen <- as.data.table(read.csv(eligible))
-rinc <- as.data.table(read.csv(participation))
+ncen <- fread(eligible)
+rinc <- fread(participation)
 
 #  plot census eligible 
 tmp <- copy(ncen)
