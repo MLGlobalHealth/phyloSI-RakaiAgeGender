@@ -1,7 +1,15 @@
 library(data.table)
 library(ggplot2)
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+
+usr <- Sys.info()[['user']]
+if(usr!='andrea')
+{
+    indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+}else{
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+}
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
@@ -10,9 +18,9 @@ file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_inciden
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
 
 # load files
-community.keys <- as.data.table(read.csv(file.community.keys))
-quest <- as.data.table(read.csv(file.path.quest))
-community.aggregated <- as.data.table(read.csv(file.community.keys.aggregated))
+community.keys <- fread(file.community.keys)
+quest <- fread(file.path.quest)
+community.aggregated <- fread(file.community.keys.aggregated)
 
 # find community location
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
@@ -30,14 +38,26 @@ community.aggregated[grepl('i-', comm_id)][, table(comm_id)]
 community.aggregated[comm_id=='i-20']
 inlcom <- merge(inlcom, community.aggregated, by.x = 'COMM_NUM', by.y = 'comm_num')
 community.aggregated[!comm_num %in% inlcom[, COMM_NUM]]
+community.aggregated
+
+inlcom[, list(N_COMM = uniqueN())]
 
 # find number of community by round
-numcom <- inlcom[, list(N_COMM = length(unique(comm_id))), by = 'round'][order(round)]
+# do merge close communities
+numcom <- inlcom[, list(N_COMM = uniqueN(comm_id)), by = 'round'][order(round)]
 numcom.total <- inlcom[, list(N_COMM = length(unique(comm_id)))]
 numcom.unique <- length(Reduce(intersect, inlcom[, .(list(unique(comm_id))), round]$V1))
-
 # save
 saveRDS(list(numcom, numcom.total, numcom.unique), file.path(outdir, 'number_communities_surveyed.rds'))
+
+# Do not merge close communities
+numcom2 <- inlcom[, list(N_COMM = uniqueN(COMM_NUM)), by = 'round'][order(round)]
+numcom.total2 <- inlcom[, list(N_COMM = uniqueN(COMM_NUM))]
+numcom.unique2 <- length(Reduce(intersect, inlcom[, .(list(unique(COMM_NUM))), round]$V1))
+# save
+saveRDS(list(numcom2, numcom.total2, numcom.unique2), file.path(outdir, 'number_communities_surveyed_nomerging.rds'))
+
+
 
 # plot
 df <- data.table(expand.grid(COMM_NUM = inlcom[, sort(unique(COMM_NUM))], 
