@@ -7,16 +7,18 @@ library(rstan)
 library("haven")
 
 # directory to repository
-indir.repository <- "~/git/phyloflows"
+indir.repository <- getwd()
 
 usr <- Sys.info()[['user']]
-if(usr=='andrea'){
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-    outdir <- file.path(indir.deepsequence_analyses, 'rakaiagegender_gpfit')
-}else{
-    # outdir to save stan fit
-    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-    outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+if (usr == 'andrea') {
+  indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+  outdir <- file.path(indir.deepsequence_analyses, 'rakaiagegender_gpfit')
+} else if (usr == 'ratmann') {
+  # outdir to save stan fit
+  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+} else {
+  outdir <- file.path(indir.repository, 'outputs')
 }
 
 # files

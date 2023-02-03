@@ -4,11 +4,17 @@ require(lubridate)
 library(dplyr)
 
 # directory to repository
-indir.repository <- "~/git/phyloflows"
+indir.repository <- getwd()
 
 # outdir to save figures
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+if(dir.exists(indir.deepsequence_analyses)) {
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+} else {
+  outdir <- 'outputs'
+  if(!dir.exists(outdir)) dir.create(outdir);
+}
+ 
 
 # posterior samples
 file.unsuppressedviralload <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))

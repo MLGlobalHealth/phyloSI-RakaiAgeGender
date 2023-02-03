@@ -4,7 +4,7 @@ require(lubridate)
 library(dplyr)
 
 # directory to repository
-indir.repository <- "~/git/phyloflows"
+indir.repository <- getwd()
 
 # outdir to save figures
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'

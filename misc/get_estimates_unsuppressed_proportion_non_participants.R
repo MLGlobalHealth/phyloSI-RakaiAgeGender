@@ -4,11 +4,17 @@ library(Hmisc)
 library(rstan)
 
 # directory of the repository
-indir.repository <-'~/git/phyloflows'
+indir.repository <- getwd()
 
 # outdir directory for stan fit
-indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
-outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
+if (dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/live')) {
+  indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
+  outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
+} else {
+  outdir <- 'outputs'
+  if (!dir.exists(outdir)) dir.create(outdir);
+}
+
 
 # files
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
@@ -25,27 +31,46 @@ vla <- as.data.table( read.csv(path.data) )
 ##########
 
 if(1){
-  tmp <- vla[, .(ROUND, LOC_LABEL, SEX_LABEL, AGE_LABEL, HIV_N, VLNS_N)]
-  tmp[, `Non viremic` := HIV_N - VLNS_N] 
-  setnames(tmp, 'VLNS_N', 'Viremic')
-  tmp <- melt.data.table(tmp, id.vars = c('ROUND', 'LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'HIV_N'))
-  tmp[, variable := factor(variable, levels= c('Non viremic', 'Viremic'))]
-  setnames(tmp, 'LOC_LABEL', 'COMM')
-  setnames(tmp, 'SEX_LABEL', 'SEX')
-  tmp[, ROUND := as.character(ROUND)]
-  tmp[ROUND == '15.5', ROUND := '15S']
-  tmp <- tmp[ROUND != '15S']
-  tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
-  tmp <- tmp[!(ROUND == '15S')]
-  # tmp <- tmp[!(ROUND == '15')]
-  tmp[, SEX_LABEL := 'Women']
-  tmp[SEX== 'M', SEX_LABEL := 'Men']
-  tmp[, COMM_LABEL := 'Fishing\n communities']
-  tmp[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
-  tmp <- tmp[AGE_LABEL > 14 & AGE_LABEL < 50]
+  # Select columns of interest and rename
+  vla_subset <- vla[, .(ROUND, LOC_LABEL, SEX_LABEL, AGE_LABEL, HIV_N, VLNS_N)]
+  vla_subset[, `Non viremic` := HIV_N - VLNS_N] 
+  setnames(vla_subset, 'VLNS_N', 'Viremic')
+
+  # Melt the data.table
+  melted_vla <- melt.data.table(vla_subset, 
+                                id.vars = c('ROUND', 'LOC_LABEL', 'SEX_LABEL', 'AGE_LABEL', 'HIV_N'))
+
+  # Reorder levels of the variable column
+  melted_vla[, variable := factor(variable, levels= c('Non viremic', 'Viremic'))]
+
+  # Rename columns for readability
+  setnames(melted_vla, 'LOC_LABEL', 'COMM')
+  setnames(melted_vla, 'SEX_LABEL', 'SEX')
+
+  # Convert ROUND to character and rename 15.5 to 15S
+  melted_vla[, ROUND := as.character(ROUND)]
+  melted_vla[ROUND == '15.5', ROUND := '15S']
+
+  # Exclude rows with ROUND = 15S
+  filtered_vla <- melted_vla[ROUND != '15S']
+
+  # Add a label for ROUND
+  filtered_vla[, ROUND_LABEL := paste0('Round ', ROUND)]
+
+  # Add labels for SEX
+  filtered_vla[, SEX_LABEL := 'Women']
+  filtered_vla[SEX== 'M', SEX_LABEL := 'Men']
+
+  # Add labels for COMM
+  filtered_vla[, COMM_LABEL := 'Fishing\n communities']
+  filtered_vla[COMM == 'inland', COMM_LABEL := 'Inland\n communities']
+
+  # Filter by age
+  final_vla <- filtered_vla[AGE_LABEL > 14 & AGE_LABEL < 50]
+
   
   # plot
-  p <- ggplot(tmp[COMM == 'inland'], aes(x = AGE_LABEL, y = value)) +
+  p <- ggplot(final_vla[COMM == 'inland'], aes(x = AGE_LABEL, y = value)) +
     geom_bar(aes(fill = variable), stat = 'identity') + 
     labs(x = 'Age', y = 'Count newly registered HIV-positive participants', fill = '') +
     facet_grid(ROUND_LABEL~SEX_LABEL) +
