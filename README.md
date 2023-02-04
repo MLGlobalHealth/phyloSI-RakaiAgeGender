@@ -158,45 +158,48 @@ The flow chart below illustrates how the data is processed based the [medallion 
 ```mermaid
   flowchart LR
     subgraph data
-      d1[(aggregated_count_hiv_positive.csv)]
+      d1[(aggregated_participants_count_art_coverage_vl200.csv)]
       d2[(aggregated_newlyregistered_count_unsuppressed_vl200.csv)]
-      d3[(sensitivity_specificity_art_vl200.csv)]
+      d3[(aggregated_participants_count_unsuppressed_vl200.csv)]
+      d4[(sensitivity_specificity_art_vl200.csv)]
     end
     style d1 fill:#CD7F32
     style d2 fill:#CD7F32
     style d3 fill:#CD7F32
+    style d4 fill:#CD7F32
     style data fill:#F5F5F5
 
     subgraph misc
       r1(get_estimates_art_coverage_participants_vl200.R)
-      r2(get_estimates_unsuppressed_proportion_non_participants_vl200.R)
-      r3(get_treatment_cascade_participants_vl200.R)
-      r4(get_estimates_art_coverage_non_participants_vl200.R)
-      r5(get_treatment_cascade_non_participants_vl200.R)
+      r2(get_estimates_art_coverage_non_participants_vl200.R)
+      r3(get_estimates_unsuppressed_proportion_participants_vl200.R)
+      r4(get_estimates_unsuppressed_proportion_non_participants_vl200.R)
+      r5(get_treatment_cascade_participants_vl200.R)
+      r6(get_treatment_cascade_non_participants_vl200.R)
     end
     style misc fill:#F5F5F5
 
     subgraph fit
       f1[(RCCS_art_posterior_samples_vl200_221208.rds)]
-      f2[(RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_221121.rds)]
+      f2[(RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds)]
+      f3[(RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds)]
+      f4[(RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_221121.rds)]
 
-      f3[(RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds)]
+      f5[(RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds)]
+      f6[(RCCS_treatment_cascade_participants_estimates_vl200_221208.csv)]
 
-      f4[(RCCS_treatment_cascade_participants_estimates_vl200_221208.csv)]
-
-      f5[(RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds)]
-
-      f6[(RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds)]
-      f7[(RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv)]
+      f7[(RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds)]
+      f8[(RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv)]
     end
     style f1 fill:#C0C0C0
     style f2 fill:#C0C0C0
-    style f5 fill:#C0C0C0
-
-    style f3 fill:#FFD700
-    style f4 fill:#FFD700
+    style f3 fill:#C0C0C0
+    style f4 fill:#C0C0C0
+    
+    style f5 fill:#FFD700
     style f6 fill:#FFD700
     style f7 fill:#FFD700
+    style f8 fill:#FFD700
     style fit fill:#F5F5F5
     
     d1 -- load --> r1
@@ -205,20 +208,23 @@ The flow chart below illustrates how the data is processed based the [medallion 
     d2 -- load --> r2
     r2 -- create --> f2
 
-    d3 -- load ---> r3
-    f1 -- load --> r3
-    f2 -- load --> r3
+    d3 -- load --> r3
     r3 -- create --> f3
-    r3 -- create --> f4
 
     d2 -- load --> r4
-    r4 -- create --> f5
+    r4 -- create --> f4
 
-    d3 -- load --> r5
-    f5 -- load --> r5
-    f2 -- load --> r5
+    d4 -- load --> r5
+    f1 -- load --> r5
+    f3 -- load --> r5
+    r5 -- create --> f5
     r5 -- create --> f6
-    r5 -- create --> f7
+
+    d4 -- load --> r6
+    f2 -- load --> r6
+    f4 -- load --> r6
+    r6 -- create --> f7
+    r6 -- create --> f8
 ```
 
 ##### Part 3
