@@ -26,7 +26,3 @@ mkdir -p "$OUTDIR/${STAN_MODEL}-${JOBNAME}/tables"
 Rscript "$INDIR/scripts/postprocessing_assess_mixing.R" --indir "$INDIR" --outdir "$OUTDIR/${STAN_MODEL}-${JOBNAME}" --stan_model "$STAN_MODEL" --jobname "$JOBNAME"
 Rscript "$INDIR/scripts/postprocessing_figures.R" --indir "$INDIR" --outdir "$OUTDIR/${STAN_MODEL}-${JOBNAME}" --stan_model "$STAN_MODEL" --jobname "$JOBNAME"
 EOF
-
-# Execute the generated scripts in order
-bash "$OUTDIR/bash_${STAN_MODEL}-${JOBNAME}.sh" && bash "$OUTDIR/bash_${STAN_MODEL}-${JOBNAME}-postprocessing.sh"
-
