@@ -85,88 +85,96 @@ $ bash preprocess.sh
 ```
 
 The flow chart below illustrates how the data is processed based the [medallion architecture](https://www.databricks.com/glossary/medallion-architecture).
-##### Part 1
+##### Stage 1
 ```mermaid
   flowchart LR
     subgraph data
-      d1[(aggregated_newlyregistered_count_art_coverage.csv)]
-      d4[(aggregated_participants_count_unsuppressed.csv)]
-      d2[(aggregated_newlyregistered_count_unsuppressed.csv)]
-      d3[(sensitivity_specificity_art.csv)]
+      d1[(aggregated_participants_count_art_coverage.csv)]
+      d2[(aggregated_newlyregistered_count_art_coverage.csv)]
+      d3[(aggregated_participants_count_unsuppressed.csv)]
+      d4[(aggregated_newlyregistered_count_unsuppressed.csv)]
+      d5[(sensitivity_specificity_art.csv)]
     end
     style d1 fill:#CD7F32
     style d2 fill:#CD7F32
     style d3 fill:#CD7F32
     style d4 fill:#CD7F32
+    style d5 fill:#CD7F32
     style data fill:#F5F5F5
 
     subgraph misc
-      r1(get_estimate_art_coverage_non_participants.R)
-      r5(get_estimates_unsuppressed_proportion_participants.R)
-      r2(get_estimates_unsuppressed_proportion_non_participants.R)
-      r4(get_treatment_cascade_participants.R)
-      r3(get_treatment_cascade_non_participants.R)
+      r1(get_estimate_art_coverage_participants.R)
+      r2(get_estimate_art_coverage_non_participants.R)
+      r3(get_estimates_unsuppressed_proportion_participants.R)
+      r4(get_estimates_unsuppressed_proportion_non_participants.R)
+      r5(get_treatment_cascade_participants.R)
+      r6(get_treatment_cascade_non_participants.R)
     end
     style misc fill:#F5F5F5
 
     subgraph fit
-      f1[(RCCS_art_posterior_samples_newlyregistered_221208.rds)] 
-
-      f7[(RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds)]
-
-      f2[(RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds)]
-
-      f3[(RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds)]
-      f4[(RCCS_treatment_cascade_nonparticipants_estimates_221208.csv)]
+      f1[(RCCS_art_posterior_samples_221208.rds)]
+      f2[(RCCS_art_posterior_samples_newlyregistered_221208.rds)] 
+      f3[(RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds)]
+      f4[(RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds)]
 
       f5[(RCCS_treatment_cascade_participants_posterior_samples_221208.rds)]
       f6[(RCCS_treatment_cascade_participants_estimates_221208.csv)]
+
+      f7[(RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds)]
+      f8[(RCCS_treatment_cascade_nonparticipants_estimates_221208.csv)]      
     end
     style f1 fill:#C0C0C0
     style f2 fill:#C0C0C0
-    style f7 fill:#C0C0C0
+    style f3 fill:#C0C0C0
+    style f4 fill:#C0C0C0
 
-    style f3 fill:#FFD700
-    style f4 fill:#FFD700
     style f5 fill:#FFD700
     style f6 fill:#FFD700
+    style f7 fill:#FFD700
+    style f8 fill:#FFD700
     style fit fill:#F5F5F5
-  
+
     d1 -- load --> r1
     r1 -- create --> f1
 
-    d4 -- load --> r5
-    r5 -- create --> f7
-
     d2 -- load --> r2
     r2 -- create --> f2
-    
-    d3 -- load --> r3
-    f1 -- load --> r3
-    f2 -- load --> r3
-    r3 -- create --> f3
-    r3 -- create --> f4
 
-    d3 -- load --> r4
-    f7 -- load --> r4
-    f2 -- load --> r4
-    r4 -- create --> f5
-    r4 -- create --> f6
+    d3 -- load --> r3
+    r3 -- create --> f3
+
+    d4 -- load --> r4
+    r4 -- create --> f4
+
+    d5 -- load --> r5
+    f1 -- load --> r5
+    f3 -- load --> r5
+    r5 -- create --> f5
+    r5 -- create --> f6
+
+    d5 -- load --> r6
+    f2 -- load --> r6
+    f4 -- load --> r6
+    r6 -- create --> f7
+    r6 -- create --> f8
 ```
 
-##### Part 2
+#### Stage 2
 ```mermaid
   flowchart LR
     subgraph data
       d1[(aggregated_participants_count_art_coverage_vl200.csv)]
       d2[(aggregated_newlyregistered_count_unsuppressed_vl200.csv)]
-      d3[(aggregated_participants_count_unsuppressed_vl200.csv)]
-      d4[(sensitivity_specificity_art_vl200.csv)]
+      d3[(aggregated_newlyregistered_count_art_coverage_vl200.csv)]
+      d4[(aggregated_participants_count_unsuppressed_vl200.csv)]
+      d5[(sensitivity_specificity_art_vl200.csv)]
     end
     style d1 fill:#CD7F32
     style d2 fill:#CD7F32
     style d3 fill:#CD7F32
     style d4 fill:#CD7F32
+    style d5 fill:#CD7F32
     style data fill:#F5F5F5
 
     subgraph misc
@@ -211,16 +219,16 @@ The flow chart below illustrates how the data is processed based the [medallion 
     d3 -- load --> r3
     r3 -- create --> f3
 
-    d2 -- load --> r4
+    d4 -- load --> r4
     r4 -- create --> f4
 
-    d4 -- load --> r5
+    d5 -- load --> r5
     f1 -- load --> r5
     f3 -- load --> r5
     r5 -- create --> f5
     r5 -- create --> f6
 
-    d4 -- load --> r6
+    d5 -- load --> r6
     f2 -- load --> r6
     f4 -- load --> r6
     r6 -- create --> f7
