@@ -11,8 +11,10 @@
 - [Quick Start](#quick-start)
   - [System Requirements](#system-requirements)
   - [Installation](#installation)
-  - [Usage](#usage)
-- [Data Documentation](#data-documentation)
+  - [Data preprocessing](#data-preprocessing)
+  - [Age-specific HIV incidence rates](#age-specific-hiv-incidence-rates)
+  - [Transmission flows analysis](#transmission-flows-analysis)
+- [Data and Script Reference](#data-and-script-reference)
   - [Sample Data](#sample-data)
   - [Generated Data](#generated-data)
 
