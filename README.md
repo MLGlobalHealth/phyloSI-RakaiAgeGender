@@ -72,19 +72,25 @@ The code reposistory contains the following directories and functions:
 | --- | --- |
 | `src/` | TODO |
 
-
-### Usage
-
-#### Pre-process data
+### Data preprocessing
 
 We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout.
 
-Our main analysis functions on estimating incidence dynamics and transmission flows depend on estimates of population sizes, prevalence, virus suppression. Please run the following once:
-```shell
-$ bash preprocess.sh
-```
+Our main analysis functions on estimating incidence dynamics and transmission flows depend on estimates of population sizes, prevalence, virus suppression.
 
-The flow chart below illustrates how the data is processed based the [medallion architecture](https://www.databricks.com/glossary/medallion-architecture).
+To perform the data preprocessing required to run downstream models, navigate to the root directory of the repository and run the following shell script.
+```shell
+$ bash preproc.sh
+```
+`preproc.sh` will generate three new shell scripts: `preproc-s1.sh`, `preproc-s2.sh`, and `preproc-s3.sh`. Each script will invoke the required R scripts for each stage of the data preprocessing process. They must be executed in order:
+```shell
+$ bash preproc-s1.sh # stage 1
+$ bash preproc-s2.sh # stage 2
+$ bash preproc-s3.sh # stage 3
+```
+> :exclamation: Note that some preprocessing scripts will generate figures which is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`.
+
+The flowchart below illustrates in detail how the data is consumed and processed by various R scripts at each stage. The coloured silos, rounded boxes, and grey boxes, represent data, R scripts, and directories respectively. The data is coloured according to the [medallion architecture](https://www.databricks.com/glossary/medallion-architecture), where bronze represents raw data, silver represents cleansed and processed data, and gold represents data which are consumption ready (i.e. directly used within statistical models).
 #### Stage 1
 ```mermaid
   flowchart LR
@@ -330,15 +336,16 @@ The flow chart below illustrates how the data is processed based the [medallion 
     r6 -- create --> f12
 ```
 
-#### Age-specific HIV incidence rates
-To run the age-specific HIV incidence rates analysis, open up command line tools. Then cd into the repository, and specify the absolute path to the git repository as well as the output directory in which to save the results. 
-
-Then run: 
-```bash
-$ INDIR="absolute/path/to/phyloSI-RakaiAgeGender"
-$ OUTDIR="absolute/path/to/output/directory"
-$ Rscript scripts/run_incidence_rates_estimation.R --indir=$INDIR --outdir=$OUTDIR
+### Age-specific HIV incidence rates
+To run the age-specific HIV incidence rates analysis, navigate to the root directory of the repository. 
+```shell
+cd phyloSI-RakaiAgeGender
 ```
+Then run the following R script: 
+```shell
+$ Rscript scripts/run_incidence_rates_estimation.R
+```
+ > :exclamation: The output will be save in a seperate directory outside the repository under the name `phyloSI-RakaiAgeGender-outputs`.
 
 #### Transmission flows analysis
 For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. 
