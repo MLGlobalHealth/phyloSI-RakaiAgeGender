@@ -18,14 +18,18 @@ library("lubridate")
 library(ggpubr)
 
 # set to directory
-indir <- '~/git/phyloflows'
+indir <- getwd()
 
 # set up path to data
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-
-# set path to save results
-outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'incidence_rate_inland')
+if (dir.exists(indir.deepsequence.analyses)){
+  # set path to save results
+  outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'incidence_rate_inland')
+} else {
+  outdir <- '../phyloSI-RakaiAgeGender/run_incidence_rates_estimation'
+  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
+}
 
 # sero conversion cohort status (all communities)
 file.path.seroconverter_cohort <- file.path(indir, 'data', 'seroconverter_cohort_R6R19.rds')
@@ -361,8 +365,6 @@ plot_comparison_loess_gam(modelpreds.loess.age.1218, modelpreds.age.1218,
 file.name <- file.path(outdir, 'list_long_results_221109.RData')
 save(modelpreds.age.1218.list, seroconverter_cohort.list, modelaics.age.list, file = file.name)
 
-#
-
 file.name	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
 tmp <- select(modelpreds.age.1218[model == 'model_1'], c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
 write.csv(tmp, file = file.name, row.names = F)
@@ -380,20 +382,23 @@ tmp <- modelpreds.loess.age.1218.all[, .(Sex, round_label, age, iterations, INC_
 setnames(tmp, 'INC_CRUDE_SMOOTH', 'inc')
 write.csv(tmp, file = file.name, row.names = F)
 
-#
-
-file.name	<- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', "Rakai_inc_model_fit_inland_221107.csv")
+if (dir.exists(indir.deepsequencedata)) {
+  file.name	<- file.path(indir.deepsequencedata, 
+                        "RCCS_data_estimate_incidence_inland_R6_R18/220903/", 
+                        "Rakai_inc_model_fit_inland_221107.csv")
+} else {
+  out.path <- file.path(outdir, "RCCS_data_estimate_incidence_inland_R6_R18/220903/")
+  dir.create(out.path, recursive = TRUE)
+  file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
+}
 write.csv(model_pred, file = file.name, row.names = F)
 
-
-#
+# For paper
 file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
 saveRDS(stats, file.name)
-# stats <- readRDS(file.name)
 
 file.name <- file.path(outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
 saveRDS(stats_prediction, file.name)
-
 
 file.name <- file.path(outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
 saveRDS(stats_prediction_loess, file.name)
