@@ -4,7 +4,7 @@ require(lubridate)
 library(dplyr)
 
 # directory to reposity
-indir.repository <- '~/git/phyloflows'
+indir.repository <- getwd()
 
 # files
 file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
@@ -32,7 +32,6 @@ df <- merge(eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c(
 
 # find infected
 df[, INFECTED := ELIGIBLE * PREVALENCE_POSTERIOR_SAMPLE]
-
 
 #########################################
 
@@ -96,5 +95,5 @@ ggplot(sing, aes(x = ROUND)) +
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
 
 file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_share_sex_221116.csv'))
-write.csv(tmp, file = file.name, row.names = F)
+write.csv(tmp, file = file.name, row.names = FALSE)
 

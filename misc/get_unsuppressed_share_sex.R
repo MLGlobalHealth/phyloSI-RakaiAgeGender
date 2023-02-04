@@ -4,7 +4,10 @@ require(lubridate)
 library(dplyr)
 
 # directory to repository
-indir.repository <- '~/git/phyloflows'
+indir.repository <- getwd()
+
+outdir <- '../phyloSI-RakaiAgeGender-outputs/get_unsuppressed_share_sex'
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
 
 # files
 file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))

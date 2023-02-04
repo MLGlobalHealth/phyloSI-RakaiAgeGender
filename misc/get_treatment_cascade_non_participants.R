@@ -11,7 +11,7 @@ indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 if(dir.exists(indir.deepsequence_analyses)) {
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 } else {
-  outdir <- 'outputs'
+  outdir <- '../phyloSI-RakaiAgeGender-outputs/get_treatment_cascade_non_participants'
   if(!dir.exists(outdir)) dir.create(outdir);
 }
  

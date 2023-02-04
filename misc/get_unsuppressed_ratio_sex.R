@@ -4,7 +4,7 @@ require(lubridate)
 library(dplyr)
 
 # directory to repository
-indir.repository <- '~/git/phyloflows'
+indir.repository <- getwd()
 
 # files
 file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))

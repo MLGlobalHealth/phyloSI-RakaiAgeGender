@@ -18,7 +18,8 @@ if (usr == 'andrea') {
   indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 } else {
-  outdir <- file.path(indir.repository, 'outputs')
+  outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_prevalence'
+  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
 }
 
 # files
