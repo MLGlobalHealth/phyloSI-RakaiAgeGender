@@ -11,8 +11,10 @@
 - [Quick Start](#quick-start)
   - [System Requirements](#system-requirements)
   - [Installation](#installation)
-  - [Usage](#usage)
-- [Data Documentation](#data-documentation)
+  - [Data preprocessing](#data-preprocessing)
+  - [Age-specific HIV incidence rates](#age-specific-hiv-incidence-rates)
+  - [Transmission flows analysis](#transmission-flows-analysis)
+- [Data and Script Reference](#data-and-script-reference)
   - [Sample Data](#sample-data)
   - [Generated Data](#generated-data)
 
@@ -375,7 +377,7 @@ $ Rscript scripts/run_incidence_rates_estimation.R
 ```
  > :exclamation: The output will be save in a seperate directory outside the repository under the name `phyloSI-RakaiAgeGender-outputs`.
 
-#### Transmission flows analysis
+### Transmission flows analysis
 For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. 
 
 Set the **absolute path** to the output directory where the results should be stored in **line 7** of `run_stan_laptop.sh`: 
