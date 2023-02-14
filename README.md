@@ -67,10 +67,6 @@ Then activate the environment for use:
 ```bash
 $ source activate phyloSI-RakaiAgeGender
 ```
-The code reposistory contains the following directories and functions:
-| Directory | Content |
-| --- | --- |
-| `src/` | TODO |
 
 ### Data preprocessing
 
@@ -78,7 +74,39 @@ We provide all pathogen genomic and epidemiologic input data to reproduce our an
 
 Our main analysis functions on estimating incidence dynamics and transmission flows depend on estimates of population sizes, prevalence, virus suppression.
 
-To perform the data preprocessing required to run downstream models, navigate to the root directory of the repository and run the following shell script.
+To perform the data preprocessing required to run downstream models, navigate to the root directory of the repository and execute the following commands
+
+#### Stage 1
+```shell
+Rscript "./misc/get_estimates_art_coverage_participants.R"
+Rscript "./misc/get_estimates_unsuppressed_proportion_participants.R"
+Rscript "./misc/get_estimates_art_coverage_non_participants.R"
+Rscript "./misc/get_estimates_unsuppressed_proportion_non_participants.R"
+Rscript "./misc/get_treatment_cascade_non_participants.R"
+Rscript "./misc/get_treatment_cascade_participants.R"
+```
+
+#### Stage 2
+```shell
+Rscript "./misc/get_estimates_art_coverage_participants_vl200.R"
+Rscript "./misc/get_estimates_unsuppressed_proportion_participants.R"
+Rscript "./misc/get_estimates_art_coverage_non_participants.R"
+Rscript "./misc/get_estimates_unsuppressed_proportion_non_participants.R"
+Rscript "./misc/get_treatment_cascade_non_participants.R"
+Rscript "./misc/get_treatment_cascade_participants.R"
+```
+
+#### Stage 3
+```shell
+Rscript "./misc/get_treatment_cascade_population.R"
+Rscript "./misc/get_estimates_prevalence.R"
+Rscript "./misc/get_unsuppressed_median_age.R"
+Rscript "./misc/get_unsuppressed_share_sex.R"
+Rscript "./misc/get_unsuppressed_ratio_sex.R"
+Rscript "./misc/get_unsuppressed_prevalence_share_sex.R"
+```
+
+Alternatively, you can run the following shell script for convenience.
 ```shell
 $ bash preproc.sh
 ```
@@ -374,40 +402,146 @@ $ bash bash_gp_220108-cutoff_2014-postprocessing.sh
 
 ### Sample Data
 The table below lists the data files within `/data` and a brief description of its contents
-| File name | Description |
-|---|---|
-| ```pairsdata_toshare_d1_w11_netfrompairs_postponessrm.rds``` | HIV source-recipient pairs |
-| ```RCCS_census_eligible_individuals_221116.csv``` | Count of census eligible population by age, gender and round |
-| ```RCCS_participation_221208.csv``` | Participation rates to the RCCS survey by age, gender and round |
-| ```aggregated_count_hiv_positive.csv``` | Count of participants by hiv status, age, gender and round used in ```misc/get_estimates_prevalence.R``` to estimate smooth proportion of hiv prevalence among population. |
-| ```aggregated_participants_count_art_coverage.csv``` | count of participants by self-reported art use, age, gender and round, used in ```misc/get_estimates_art_coverage_participants.R``` to estimate smooth proportion of art coverage among participants. |
-| ```aggregated_participants_count_unsuppressed.csv``` |count of participants by viremic viral loads, age, gender and round, used in ```misc/get_estimates_unsuppressed_proportion_participants.R``` to estimate smooth proportion of viral suppression among participants. |
-| ```aggregated_newlyregistered_count_art_coverage.csv``` | count of first-time participants by self-reported art use, age, gender and round, used in ```misc/get_estimates_art_coverage_non_participants.R``` to estimate smooth proportion of art coverage among first-time participants. |
-|```aggregated_newlyregistered_count_unsuppressed.csv```|count of first-time participants by viremic viral loads, age, gender and round, used in ```misc/get_estimates_unsuppressed_proportion_non_participants.R``` to estimate smooth proportion of viral suppression among first-time participants.|
-| ```seroconverter_cohort_R6R19.rds``` | Individual-level seroconvert cohort data with information on rounds of enrollment, age, sex, hiv status | 
-| ```Rakai_incpredictions_inland_221107.csv``` |HIV incidence rates estimates by age, gender and round | 
-| ```inland_R015_cntcts_rate_1130b.rds``` | Sexual contact rate estimates by age and gender for round 15 |
 
-## Generated Data
-| File name | Description |
-| --- | --- |
-| ```RCCS_prevalence_estimates_DATE.csv``` | Smooth proportion of hiv prevalence in population by age, gender and round |
-| ```RCCS_treatment_cascade_population_estimates_DATE.csv``` | Smooth estimates of art coverage and viral suppression in population by age, gender and round |
-| ```RCCS_treatment_cascade_participants_estimates_DATE.csv``` | Smooth estimates of art coverage and viral suppression in participants by age, gender and round |
-| ```RCCS_treatment_cascade_nonparticipants_estimates_DATE.csv``` | Smooth estimates of art coverage and viral suppression in first-time participants by age, gender and round in file  |
+<details>
+<summary><b>Click to show table</b></summary>
+  <table>
+    <thead>
+      <tr>
+        <th>File name</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+  <tbody>
+    <tr>
+      <td><code>pairsdata_toshare_d1_w11_netfrompairs_postponessrm.rds</code></td>
+      <td>HIV source-recipient pairs</td>
+    </tr>
+    <tr>
+      <td><code>RCCS_census_eligible_individuals_221116.csv</code></td>
+      <td>Count of census eligible population by age, gender and round</td>
+    </tr>
+      <tr>
+      <td><code>RCCS_participation_221208.csv</code></td>
+      <td>Participation rates to the RCCS survey by age, gender and round</td>
+      </tr>
+    <tr>
+      <td><code>aggregated_count_hiv_positive.csv</code></td>
+      <td>Count of participants by hiv status, age, gender and round used in <code>misc/get_estimates_prevalence.R</code> to estimate smooth proportion of hiv prevalence among population.</td>
+    </tr>
+    <tr>
+      <td><code>aggregated_participants_count_art_coverage.csv</code></td>
+      <td>count of participants by self-reported art use, age, gender and round, used in <code>misc/get_estimates_art_coverage_participants.R</code> to estimate smooth proportion of art coverage among participants.</td>
+    </tr>
+    <tr>
+      <td><code>aggregated_participants_count_unsuppressed.csv</code></td>
+      <td>count of participants by viremic viral loads, age, gender and round, used in <code>misc/get_estimates_unsuppressed_proportion_participants.R</code> to estimate smooth proportion of viral suppression among participants.</td>
+    </tr>
+    <tr>
+      <td><code>aggregated_newlyregistered_count_art_coverage.csv</code></td>
+      <td>count of first-time participants by self-reported art use, age, gender and round, used in <code>misc/get_estimates_art_coverage_non_participants.R</code> to estimate smooth proportion of art coverage among first-time participants.</td>
+    </tr>
+    <tr>
+      <td><code>aggregated_newlyregistered_count_unsuppressed.csv</code></td>
+      <td>count of first-time participants by viremic viral loads, age, gender and round, used in <code>misc/get_estimates_unsuppressed_proportion_non_participants.R</code> to estimate smooth proportion of viral suppression among first-time participants.</td>
+    </tr>
+    <tr>
+      <td><code>seroconverter_cohort_R6R19.rds</code></td>
+      <td>Individual-level seroconvert cohort data with information on rounds of enrollment, age, sex, hiv status</td>
+      </tr>
+      <tr>
+      <td><code>Rakai_incpredictions_inland_221107.csv</code></td>
+      <td>HIV incidence rates estimates by age, gender and round</td>
+    </tr>
+    <tr>
+      <td><code>inland_R015_cntcts_rate_1130b.rds</code></td>
+      <td>Sexual contact rate estimates by age and gender for round 15</td>
+    </tr>
+    </tbody>
+  </table>
+</details>
 
-## Scripts
+### Generated Data
+<details>
+<summary><b>Click to show table</b></summary>
+<table>
+  <thead>
+    <tr>
+      <th>File name</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>RCCS_prevalence_estimates_DATE.csv</code></td>
+      <td>Smooth proportion of HIV prevalence in population by age, gender and round</td>
+    </tr>
+    <tr>
+      <td><code>RCCS_treatment_cascade_population_estimates_DATE.csv</code></td>
+      <td>Smooth estimates of ART coverage and viral suppression in population by age, gender and round</td>
+    </tr>
+    <tr>
+      <td><code>RCCS_treatment_cascade_participants_estimates_DATE.csv</code></td>
+      <td>Smooth estimates of ART coverage and viral suppression in participants by age, gender and round</td>
+    </tr>
+    <tr>
+      <td><code>RCCS_treatment_cascade_nonparticipants_estimates_DATE.csv</code></td>
+      <td>Smooth estimates of ART coverage and viral suppression in first-time participants by age, gender and round</td>
+    </tr>
+  </tbody>
+</table>
+</details>
+
+### Scripts
 
 The following table list the actions performed by each of the available scripts:
-| Action | Script |
-| --- | --- |
-| Obtain smooth HIV prevalence by age, gender, and round | `misc/get_estimates_prevalence.R` |
-| Obtain smooth ART coverage in participants by age, gender, and round | `misc/get_estimates_art_coverage_participants.R` |
-| Obtain smooth ART coverage in first-time participants by age, gender, and round | `misc/get_estimates_art_coverage_non_participants.R` |
-| Obtain smooth viral suppression in participants by age, gender, and round | `misc/get_estimates_unsuppressed_proportion_participants.R` |
-| Obtain smooth viral suppression in first-time participants by age, gender, and round | `misc/get_estimates_unsuppressed_proportion_non_participants.R` |
-| Combine ART coverage and viral suppression estimates to obtain treatment cascade in participants | `misc/get_treatment_cascade_participants.R` |
-| Combine ART coverage and viral suppression estimates to obtain treatment cascade in first-time participants | `misc/get_treatment_cascade_non_participants.R` |
-| Combine ART coverage and viral suppression estimates to obtain treatment cascade in population | `misc/get_treatment_cascade_population.R` |
+<details>
+  <summary><b>Click to show table</b></summary>
+  <table>
+    <thead>
+      <tr>
+        <th>Action</th>
+        <th>Script</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Obtain smooth HIV prevalence by age, gender, and round</td>
+        <td><code>misc/get_estimates_prevalence.R</code></td>
+      </tr>
+      <tr>
+        <td>Obtain smooth ART coverage in participants by age, gender, and round</td>
+        <td><code>misc/get_estimates_art_coverage_participants.R</code></td>
+      </tr>
+      <tr>
+        <td>Obtain smooth ART coverage in first-time participants by age, gender, and round</td>
+        <td><code>misc/get_estimates_art_coverage_non_participants.R</code></td>
+      </tr>
+      <tr>
+        <td>Obtain smooth viral suppression in participants by age, gender, and round</td>
+        <td><code>misc/get_estimates_unsuppressed_proportion_participants.R</code></td>
+      </tr>
+      <tr>
+        <td>Obtain smooth viral suppression in first-time participants by age, gender, and round</td>
+        <td><code>misc/get_estimates_unsuppressed_proportion_non_participants.R</code></td>
+      </tr>
+      <tr>
+        <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in participants</td>
+        <td><code>misc/get_treatment_cascade_participants.R</code></td>
+      </tr>
+      <tr>
+        <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in first-time participants</td>
+        <td><code>misc/get_treatment_cascade_non_participants.R</code></td>
+      </tr>
+      <tr>
+        <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in population</td>
+        <td><code>misc/get_treatment_cascade_population.R</code></td>
+      </tr>
+    </tbody>
+  </table>
+</details>
 
- 
+The code reposistory contains the following directories and functions:
+| Directory | Content |
+| --- | --- |
+| `src/` | TODO |
