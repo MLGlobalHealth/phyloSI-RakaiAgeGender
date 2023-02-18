@@ -45,6 +45,43 @@ read_hiv_data <- function(file.path.hiv.614, file.path.hiv.1518, file.path.hiv.1
   return(hivstatus_vlcopies_1)
 }
 
+read_hiv_data_230218 <- function(file.path.hiv.68, file.path.hiv.914, file.path.hiv.1518, file.path.hiv.19){
+  
+  # round 6 to 8
+  hivstatus_vlcopies_1 <- as.data.table(read_dta(file.path.hiv.68))
+  
+  # round 9 to 14
+  hivstatus_vlcopies_1.914 <- as.data.table(read.csv(file.path.hiv.914))
+  
+  # round 15 to 18
+  hivstatus_vlcopies_1.1518<-as.data.table(read.csv(file.path.hiv.1518))
+  
+  # round 19
+  hivstatus_vlcopies_1.19<-as.data.table(read.csv(file.path.hiv.19))
+  
+  # clean round 6 to 8
+  setnames(hivstatus_vlcopies_1,  'intdate','hivdate')
+  hivstatus_vlcopies_1[, hivdate := as.character(hivdate)]
+  hivstatus_vlcopies_1 <- hivstatus_vlcopies_1[round %in% rounds_group_0]
+  hivstatus_vlcopies_1 <- select(hivstatus_vlcopies_1, c('study_id', 'round', 'hivdate', 'hiv'))
+  
+  # clean round 9 to 14 and combine to round 6 to 8
+  hivstatus_vlcopies_1.914[, hivdate := as.character(hivdate)]
+  hivstatus_vlcopies_1.914 <- hivstatus_vlcopies_1.914[!round %in% rounds_group_2]
+  hivstatus_vlcopies_1.914 <- select(hivstatus_vlcopies_1.914, c('study_id', 'round', 'hivdate', 'hiv'))
+  hivstatus_vlcopies_1 <- rbind(hivstatus_vlcopies_1, hivstatus_vlcopies_1.914)
+  
+  # combine round 15 to 19
+  hivstatus_vlcopies_1.1519 <- rbind(hivstatus_vlcopies_1.1518, hivstatus_vlcopies_1.19)
+  hivstatus_vlcopies_1.1519 <- select(hivstatus_vlcopies_1.1519, c('study_id', 'round', 'hivdate', 'hiv'))
+  
+  # combine all
+  hivstatus_vlcopies_1 <- rbind(hivstatus_vlcopies_1, hivstatus_vlcopies_1.1519)
+  hivstatus_vlcopies_1[, round := gsub(' ', '', round)] # remove space after string
+  
+  return(hivstatus_vlcopies_1)
+}
+
 read_flow_data <- function(file.path.flow.614, file.path.flow.1518, file.path.flow.19){
   
   # round 6 to 14
@@ -74,6 +111,56 @@ read_flow_data <- function(file.path.flow.614, file.path.flow.1518, file.path.fl
   verif_1.1519 <- select(verif_1.1519, c('study_id', 'round', 'loc_date', 'locdate1', 'birthdat', 'sex', 
                                          'comm_num', 'ageyrs', 'resident'))
 
+  # combine all
+  verif_1 <- rbind(verif_1, verif_1.1519)
+  
+  return(verif_1)
+}
+
+read_flow_data_230218 <- function(file.path.flow.68, file.path.flow.914, file.path.flow.1518, file.path.flow.19){
+  
+  # round 6 to 8
+  verif_1<-as.data.table(read_dta(file.path.flow.68))
+  
+  # round 9 to 14
+  verif_1.914<-as.data.table(read.csv(file.path.flow.914))
+  
+  # round 15 to 18
+  verif_1.1518<-as.data.table(read.csv(file.path.flow.1518))
+  
+  # round 19
+  verif_1.19<-as.data.table(read.csv(file.path.flow.19))
+  
+  # clean round 6 to 8
+  verif_1[, locdate := as.character(locdate)]
+  verif_1[, birthdat := as.character(birthdat)]
+  verif_1 <- verif_1[round %in% rounds_group_0]
+  setnames(verif_1, 'locdate', 'loc_date')
+  verif_1 <- select(verif_1, c('study_id', 'round', 'loc_date', 'locdate1', 'birthdat', 'sex', 
+                               'comm_num', 'ageyrs', 'resident'))
+  
+  # clean round 9 to 14
+  verif_1.914[, locdate := as.character(locdate)]
+  verif_1.914[, birthdat := NA_character_]
+  setnames(verif_1.914, 'comm', 'comm_num')
+  verif_1.914 <- verif_1.914[!round %in% rounds_group_2]
+  setnames(verif_1.914, 'locdate', 'loc_date')
+  verif_1.914 <- select(verif_1.914, c('study_id', 'round', 'loc_date', 'locdate1', 'birthdat', 'sex', 
+                               'comm_num', 'ageyrs', 'resident'))
+  
+  # combine round 6 to 14
+  verif_1 <- rbind(verif_1, verif_1.914)
+  
+  # clean round 15 to 18
+  verif_1.1518 <- select(verif_1.1518,-'X_merge')
+  
+  # combine  and clean round 15 to 19
+  verif_1.1519 <- rbind(verif_1.1518, verif_1.19)
+  verif_1.1519[, loc_date := as.character(loc_date)]
+  verif_1.1519[, birthdat := as.character(birthdat)]
+  verif_1.1519 <- select(verif_1.1519, c('study_id', 'round', 'loc_date', 'locdate1', 'birthdat', 'sex', 
+                                         'comm_num', 'ageyrs', 'resident'))
+  
   # combine all
   verif_1 <- rbind(verif_1, verif_1.1519)
   

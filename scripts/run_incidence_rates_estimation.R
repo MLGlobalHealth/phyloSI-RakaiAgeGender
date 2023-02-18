@@ -27,11 +27,14 @@ indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 # set path to save results
 outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'incidence_rate_inland')
 
-# sero conversion cohort status (all communities)
+# Main analysis: sero conversion cohort status (all communities)
 file.path.seroconverter_cohort <- file.path(indir, 'data', 'seroconverter_cohort_R6R19.rds')
 
-# sero conversion cohort status (continuously surveyed communities)
+# Sensitivity analysis: sero conversion cohort status (continuously surveyed communities)
 # file.path.seroconverter_cohort <- file.path(indir, 'data', 'seroconverter_cohort_30comm_R6R19.rds')
+
+# Sensitivity analysis: ero conversion cohort status (continuously surveyed communities < round 9 and all communities afterwards)
+# file.path.seroconverter_cohort <- file.path(indir.deepsequencedata, 'RCCS_R9_R14/RCCS_data_estimate_incidence_inland_R6_R18_230218', 'seroconverter_cohort.rds')
 
 # function
 source(file.path(indir, 'functions', 'incidence_rate_estimation_functions.R'))
