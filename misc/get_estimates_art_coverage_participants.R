@@ -7,11 +7,17 @@ library(rstan)
 library("haven")
 
 # directory of the repository
-indir.repository <- '~/git/phyloflows'
+indir.repository <- getwd()
 
 # outdir directory for stan fit
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
+if (dir.exists(indir.deepsequence_analyses)) {
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
+} else {
+  outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_art_coverage_participants'
+  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
+}
+
 
 # files
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')

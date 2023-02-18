@@ -2141,7 +2141,7 @@ plot_counterfactual <- function(counterfactuals_p_f,
       # geom_ribbon(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, linetype = SEX_LABEL), alpha = 0.2) +
       geom_line(data = icf.c, aes(x = AGE_INFECTION.RECIPIENT, y = M*100, linetype = SEX_LABEL), col = 'black') +
       geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M*100, col = label)) + 
-      labs(x = 'Age', y = 'Incidence rates\nper 100 person-years', linetype = 'No intervention', fill = 'Intervention', color = 'Intervention') + 
+     labs(x = 'Age', y = 'Incidence rates\nper 100 person-years', linetype = 'No intervention', fill = 'Intervention', color = 'Intervention') + 
       theme_bw() +
       theme(strip.background = element_rect(colour="white", fill="white"),
             strip.text = element_blank(), 
@@ -2455,8 +2455,8 @@ plot_counterfactual_one <- function(counterfactuals_p_a, incidence_factual, lab,
     
     # reduction infection by age
     p3 <- ggplot(ric.c, aes(x = AGEYRS)) + 
-      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
       geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
+      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
       labs(x = 'Age', y = '% reduction in\nincidence in women', 
            fill = '', col = '') + 
       theme_bw() +
@@ -2683,8 +2683,8 @@ plot_counterfactual_strategy <- function(counterfactuals_a_a, incidence_factual,
     
     # reduction infection cases by age
     p3 <- ggplot(ric.c, aes(x = AGEYRS)) + 
-      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
       geom_ribbon(aes(x = AGE_INFECTION.RECIPIENT, ymin= CL, ymax = CU, group = interaction(LABEL_TARGET), fill = LABEL_TARGET), alpha = 0.25) + 
+      geom_line(aes(x = AGE_INFECTION.RECIPIENT, y = M, col = LABEL_TARGET)) + 
       labs(x = 'Age', y = '% reduction in\nincidence in women', 
            fill = '', col = '') + 
       theme_bw() +

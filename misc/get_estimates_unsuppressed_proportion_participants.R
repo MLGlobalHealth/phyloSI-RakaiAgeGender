@@ -4,11 +4,16 @@ library(Hmisc)
 library(rstan)
 
 # directory of the repository
-indir.repository <-'~/git/phyloflows'
+indir.repository <- getwd()
 
 # outdir directory for stan fit
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
-outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
+if (dir.exists(indir.deepsequence.analyses)) {
+  outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
+} else {
+  outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_unsuppressed_proportion_participants'
+  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
+}
 
 # file
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
@@ -16,7 +21,6 @@ path.data <- file.path(indir.repository, 'data', 'aggregated_participants_count_
 
 # Load count of participants with unsuppressed viral loads
 vla <- as.data.table( read.csv(path.data) )
-
 
 ##########################################
 
@@ -37,7 +41,6 @@ if(1){
   tmp <- tmp[ROUND != '15S']
   tmp[, ROUND_LABEL := paste0('Round ', ROUND)]
   tmp <- tmp[!(ROUND == '15S')]
-  # tmp <- tmp[!(ROUND == '15')]
   tmp[, SEX_LABEL := 'Women']
   tmp[SEX== 'M', SEX_LABEL := 'Men']
   tmp[, COMM_LABEL := 'Fishing\n communities']

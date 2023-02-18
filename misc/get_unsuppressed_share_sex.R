@@ -4,7 +4,10 @@ require(lubridate)
 library(dplyr)
 
 # directory to repository
-indir.repository <- '~/git/phyloflows'
+indir.repository <- getwd()
+
+outdir <- '../phyloSI-RakaiAgeGender-outputs/get_unsuppressed_share_sex'
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
 
 # files
 file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
@@ -139,13 +142,9 @@ ggplot(sing.age[COMM == 'inland'], aes(x = AGEYRS)) +
 
 #########################################
 
-<<<<<<< HEAD
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
 file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_share_sex_221208.csv'))
 write.csv(tmp, file = file.name, row.names = F)
-=======
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_share_sex_221208.csv'))
-write.csv(sing, file = file.name, row.names = F)
 
 
 

@@ -278,7 +278,7 @@ p_bcd <- ggarrange_nature(
 p_a_with_legend <- ggarrange_nature(
     p_a , legends,
     ncol = 1,
-    heights = c(9, 2),
+    heights = c(4, 2),
     labels = c('a', '')
 )
 
@@ -290,4 +290,4 @@ p_abcd <- ggarrange_nature(
 
 ggsave_nature(p_abcd,
     filename=paste0(outfile.figures, 'MainFigure4.pdf'),
-    w=18, h=21)
+    w=18, h=15)

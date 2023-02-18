@@ -7,19 +7,31 @@ library(rstan)
 library("haven")
 
 # directory to repository
-indir.repository <- "~/git/phyloflows"
+indir.repository <- getwd()
 
-# outdir to save stan fit
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+usr <- Sys.info()[['user']]
+if (usr == 'andrea') {
+  indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+  outdir <- file.path(indir.deepsequence_analyses, 'rakaiagegender_gpfit')
+} else if (usr == 'ratmann') {
+  # outdir to save stan fit
+  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+} else {
+  outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_prevalence'
+  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
+}
 
 # files
 path.data <- file.path(indir.repository, 'data', 'aggregated_count_hiv_positive.csv')
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
 # Load count of participants by hiv status
-rprev <- as.data.table( read.csv(path.data) )
+rprev <- fread(path.data)
 
+# Load nature med requirements
+source(file.path(indir.repository, 'functions', 'plotting_functions.R'))
+naturemed_reqs()
 
 #################################
 
@@ -27,8 +39,8 @@ rprev <- as.data.table( read.csv(path.data) )
 
 #################################
 
-if(1){
-  
+if(1)
+{
   # tmp <- merge(rprev, df_round[, .(ROUND, LABEL_ROUND, COMM)], by = c('ROUND', 'COMM'))
   tmp <- copy(rprev)
   tmp[, Negative := TOTAL_COUNT - COUNT] 
@@ -53,7 +65,10 @@ if(1){
           strip.text = element_text(size = rel(1))) + 
     scale_y_continuous(expand = expansion(mult = c(0, .1)))
   p
-  ggsave(p, file=file.path(outdir, paste0('count_participants_by_gender_loc_age.png')), w=8, h=10)
+  if(usr!='andrea')
+  { 
+      ggsave(p, file=file.path(outdir, paste0('count_participants_by_gender_loc_age.png')), w=8, h=10)
+  }
   
 }
 
@@ -125,12 +140,12 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R016", "R017", "
   stan.data$rho_hyper_par_11 <- diff(range(stan.data$x_predict))/3
   
   # load stan model
-  stan.model <- stan_model(path.stan, model_name='gp_all')	
+  stan.model <- stan_model(path.stan, model_name='gp_all')
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
   filename <- paste0('hivprevalence_gp_stanfit_round',gsub('R0', '', round),'_221116.rds')
-  saveRDS(fit, file=file.path(outdir,filename))
+  # saveRDS(fit, file=file.path(outdir,filename))
   # fit <- readRDS(file.path(outdir,filename))
   
 }
@@ -141,8 +156,8 @@ nsinf <- vector(mode = 'list', length = length(rounds))
 nspred <- vector(mode = 'list', length = length(rounds))
 nsinf.samples <- vector(mode = 'list', length = length(rounds))
 convergence.list <- vector(mode = 'list', length = length(rounds))
-for(i in seq_along(rounds)){
-  
+for(i in seq_along(rounds))
+{
   round <- rounds[i]
   DT <- copy(rprev[ROUND == paste0('R0', round)] )
   
@@ -290,11 +305,14 @@ ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
         panel.spacing.y = unit(0.7, "lines")) + 
   labs(x = 'Age', y = 'HIV prevalence in RCCS participants', col = '', fill= '', 
        shape = '', linetype = '')+ 
-  scale_y_continuous(labels = scales::percent, limits= c(0,1), expand = c(0,0)) +
+  scale_y_continuous(labels = scales::percent, limits= c(0,.5), expand = c(0,0)) +
   scale_x_continuous( expand = c(0,0)) +
   guides(shape = guide_legend(order=1), linetype = guide_legend(order=2), 
-         color = guide_legend(order=3), fill = guide_legend(order=3))
-ggsave(file=file.path(outdir, paste0('smooth_predicted_prevalence_221116.png')),  w = 5, h = 10)
+         color = guide_legend(order=3), fill = guide_legend(order=3)) + 
+    NULL
+if(usr!='ab1820'){
+    ggsave(file=file.path(outdir, paste0('smooth_predicted_prevalence_221116.png')),  w = 5, h = 10)
+}
 
 
 # ESTIMATED PREVALENCE
@@ -321,11 +339,15 @@ ggplot(tmp[COMM == 'inland'], aes(x = AGEYRS)) +
         panel.spacing.y = unit(0.7, "lines")) + 
   labs(x = 'Age', y = 'HIV prevalence in RCCS participants', col = '', fill= '', 
        shape = '', linetype = '')+ 
-  scale_y_continuous(labels = scales::percent, limits= c(0,1), expand = c(0,0)) +
+  scale_y_continuous(labels = scales::percent, limits= c(0,.5), expand = c(0,0)) +
   scale_x_continuous( expand = c(0,0))+ 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
-         color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file=file.path(outdir, paste0('smooth_estimated_prevalence_221116.pdf')),  w = 7, h = 7)
+         color = guide_legend(order = 3),fill = guide_legend(order = 3)) + reqs
+if(usr!='ab1820'){
+    ggsave(file=file.path(outdir, paste0('smooth_estimated_prevalence_221116.pdf')),  w = 7, h = 7)
+}else{
+    ggsave(file=file.path("~/Downloads", paste0('smooth_estimated_prevalence_221116.pdf')),  w = 6, h = 6)
+}
 
 
 ###########################
@@ -351,12 +373,15 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
+if(0)
+{
+    file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_estimates_221116.csv'))
+    write.csv(nsinf, file = file.name, row.names = F)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_estimates_221116.csv'))
-write.csv(nsinf, file = file.name, row.names = F)
+    file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
+    saveRDS(nsinf.samples, file = file.name)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
-saveRDS(nsinf.samples, file = file.name)
+    file.name <- file.path(outdir, paste0('RCCS_prevalence_model_fit_convergence_221116.RDS'))
+    saveRDS(stats, file = file.name)
+}
 
-file.name <- file.path(outdir, paste0('RCCS_prevalence_model_fit_convergence_221116.RDS'))
-saveRDS(stats, file = file.name)

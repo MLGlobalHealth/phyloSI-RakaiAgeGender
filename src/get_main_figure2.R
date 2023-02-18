@@ -1,5 +1,6 @@
 cat("Start of get_main_figure2.R")
 
+
 library(rstan)
 library(data.table)
 library(ggplot2)
@@ -102,7 +103,8 @@ median_age_source <- find_summary_output_by_round(
     c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
     transform = 'exp',
     standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
-    quantile_age_source = T)
+    quantile_age_source = T, 
+    save_output = FALSE)
 
 # by age groups
 df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
@@ -112,13 +114,15 @@ median_age_source_group <- find_summary_output_by_round(samples,
     c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
     transform = 'exp',
     standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
-    quantile_age_source = T)
+    quantile_age_source = T, save_output = FALSE ) 
+
 
 expected_contribution_age_group_source2 <- find_summary_output_by_round(samples,
     'log_lambda_latent',
     c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
     transform = 'exp',
-    standardised.vars = c('INDEX_ROUND'))
+    standardised.vars = c('INDEX_ROUND'),
+    save_output = FALSE)
 
 
 # load plot requirements
@@ -129,6 +133,8 @@ p_b <- plot_median_age_source_group(median_age_source_group,
     reported_contact,
     outfile.figures,
     nm_reqs=TRUE) + reqs
+
+# ggsave('~/Downloads/tmp.pdf', p_b, w=12.5, h=11, unit='cm')
 
 # age-specific contribution to transmission among all sources by sex
 contribution_age_source <-  find_summary_output_by_round(
