@@ -193,7 +193,7 @@ for(i in 1:N){
 ################
 
 # anonimized id
-file <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/','anonimized_id_for_incidence_estimate.csv')
+file <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/','anonymized_id_for_incidence_estimate_221129.csv')
 write.csv(anonimized_id, file = file, row.names = F)
 
 # statistics
