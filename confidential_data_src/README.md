@@ -17,7 +17,7 @@ The script `get_sample_collection_dates_and_randomize.R` extracts the dates of c
 As the these data may be confidential, two versions are generated. The summary of the original data is stored in `confidential_data/sequences_collection_dates.rds`. A randomized version is instead stored in `data/sequences_collection_dates_randomized.rds`. Here, the visit dates are modified adding
 a random number of days between -365 and 365.
 
-The script `get_tsi_predictions.R` removes `visit_dt` and the `PANGEA_ID` columns, as well as estimates on the dates of infection. Instead, these are re-computed as needed when necessary, and true dates are only used in confidential execution.
+The script `get_tsi_predictions.R` removes `visit_dt` and the `PANGEA_ID` columns, as well as estimates on the dates of infection. Instead, these are re-computed as needed when necessary, and true dates are only used in confidential execution. Results are stored in `data/TSI_estimates.csv`
 
 The script `find_chains_from_phylogenetics.R` summarises the results from the phylogenetic analyses, extracting pairwise relationships from all the inferred phylogenies. Additionally, it loads metadata on hosts' serohistories to change phylogenetically inferred directions of transmission whenever these are inconsistent with the serohistory.
 The results are then stored in `data/Rakai_phscnetworks_ruleo_sero.rda`.
