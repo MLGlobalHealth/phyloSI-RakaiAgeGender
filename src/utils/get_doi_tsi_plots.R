@@ -60,7 +60,7 @@ threshold.likely.connected.pairs <- 0.5
 ################
 
 source(file.path(indir, 'functions', 'utils.R'))
-source(file.path(indir, 'src/utils', 'gi_analysis_functions.R'))
+source(file.path(indir, 'confidential_data_src/utils', 'functions_tsi_attribution.R'))
 source(file.path(indir, 'functions', 'plotting_functions.R'))
 source(file.path(indir, 'functions', 'summary_functions.R'))
 # source(file.path(indir, 'functions', 'statistics_functions.R'))

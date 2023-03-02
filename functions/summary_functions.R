@@ -1350,6 +1350,33 @@ read_pairs <- function(file.pairs){
 
 get.sample.collection.dates <- function(select_aid=NULL, get_first_visit=FALSE)
 {
+    # condition on whether we are using randomized or not.
+    stopifnot("
+        file.path.sequence.dates does not exist. 
+        Make sure you are defining the variable in the script" = 
+        file.exists(file.path.sequence.dates)
+    )
+
+    is_randomized <- basename(file.path.sequence.dates) %like% 'randomized'
+    msg <- fifelse(is_randomized, 
+        yes="Using randomized data",
+        no="CARE Using confidential data")
+
+    cat('\n(get.sample.collection.dates:', msg, ')\n')
+
+    ddates <- readRDS(file.path.sequence.dates)
+
+    if(!is.null(select_aid))
+        ddates <- ddates[aid %in% select_aid]
+
+    if(get_first_visit)
+        ddates <- ddates[, .(date_collection=min(visit_dt)),by='aid']
+
+    return(ddates)
+}
+
+get.sample.collection.dates.deprecated <- function(select_aid=NULL, get_first_visit=FALSE)
+{
     # get collection dates 
     path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS','200316_pangea_db_sharing_extract_rakai.csv')
     path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
