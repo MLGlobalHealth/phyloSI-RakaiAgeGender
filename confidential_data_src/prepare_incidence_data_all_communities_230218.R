@@ -1,9 +1,7 @@
-#################################################################################################
 # Rakai data analysis for EMOD inputs
 # August 12, 2022
 # Adam Akullian/Kate Grabowski/Melodie Monod;
 # Shozen Dan (Minor edits, March 4, 2023);
-#################################################################################################
 
 library(tidyverse)
 library(data.table)
