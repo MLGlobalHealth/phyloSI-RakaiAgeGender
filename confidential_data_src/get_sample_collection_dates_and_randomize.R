@@ -14,7 +14,7 @@ if(usr == 'andrea')
     indir.deepanalyses_xiaoyue <- '/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
 }
 
-# outdir is actually in the git repository
+# TODO: better on HPC, as anyways do not push this
 outdir.confidential <- file.path(indir, 'confidential_data')
 outdir.data <- file.path(indir, 'data')
 
@@ -68,8 +68,8 @@ catn("Save the original in encrypted data folder")
 filename <- file.path(outdir.confidential, 'sequences_collection_dates.rds')
 saveRDS(ddates, file=filename)
 
-catn("Perturb dates in (-1, 1) years")
-ddates[, visit_dt_perturbed := perturb_dates(visit_dt) ]
+catn("Perturb dates in (-3, 3) months")
+ddates[, visit_dt_perturbed := perturb_dates(visit_dt, -.25, .25) ]
 ddates_perturbed <- ddates[, .(
     aid = aid, 
     rename_id = rename_id,
@@ -79,4 +79,3 @@ ddates_perturbed <- ddates[, .(
 catn("Save the perturbed dates in the encrypted data folder")
 filename <- file.path(outdir.data, 'sequences_collection_dates_randomized.rds')
 saveRDS(ddates_perturbed, file=filename)
-

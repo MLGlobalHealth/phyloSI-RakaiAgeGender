@@ -211,6 +211,14 @@ The table below lists the data files within `/data` and a brief description of i
       <td><code>inland_R015_cntcts_rate_1130b.rds</code></td>
       <td>Sexual contact rate estimates by age and gender for round 15</td>
     </tr>
+       <tr>
+      <td><code>Rakai_Pangea2_RCCS_Metadata_randomized.RData  data/sequences_collection_dates_randomized.rds</code></td>
+      <td>Individual-level meta data containing Anonymised IDs, round sex, community type, and randomized visit dates,  birthdays, and test dates  </td>
+    </tr>
+         <tr>
+      <td><code>sequences_collection_dates_randomized.rds</code></td>
+      <td> Blood samples collection dates randomized within 6 months. </td>
+    </tr>
     </tbody>
   </table>
 </details>

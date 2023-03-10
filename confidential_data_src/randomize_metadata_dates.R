@@ -74,17 +74,17 @@ stopifnot(check.visits.in.different.rounds.are.successive)
 meta_randomized[, round_i := NULL]
 
 # 
-cat("-- shifts date of birth uniformly by [-2.5, 2.5] years --\n")
+cat("-- shifts date of birth and serohistory uniformly by [-6, 6] months --\n")
 variable_cols <- c('aid', 'date_birth', 'date_first_positive', 'date_last_negative')
 ddates <- subset(meta,select=variable_cols) |> unique()
 stopifnot(ddates[, uniqueN(aid) == .N ])
 add_dob_noise <- function(N, min=-2.5, max=2.5)
     as.integer(runif( n=N, min=min*365, max=max*365))
-ddates[, date_birth := date_birth + add_dob_noise(.N)]
+ddates[, date_birth := date_birth + add_dob_noise(.N, min=.25, max=.25)]
 
 cat("-- do the same for dates first positive and dates of last negative test --\n")
-ddates[, date_first_positive  := date_first_positive + add_dob_noise(.N)]
-ddates[, date_last_negative  := date_last_negative + add_dob_noise(.N)]
+ddates[, date_first_positive  := date_first_positive + add_dob_noise(.N, min=.25)]
+ddates[, date_last_negative  := date_last_negative + add_dob_noise(.N, max=.25)]
 
 # check consistency
 while(ddates[date_first_positive < date_last_negative, .N ])

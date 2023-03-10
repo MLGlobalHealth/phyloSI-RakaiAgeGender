@@ -23,7 +23,8 @@ option_list <- list(
         help = "path to the directory containing outputs of phylogenetic analyses",
         dest = 'phylo_dir'
     ),
-    optparse::make_option( "--confidential",
+    optparse::make_option( 
+        "--confidential",
         type = "logical",
         default = FALSE,
         help = "Flag on whether to use the confidential data (if access is granted) [Defaults to TRUE]", 

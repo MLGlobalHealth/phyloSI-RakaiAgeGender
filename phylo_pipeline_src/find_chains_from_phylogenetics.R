@@ -16,6 +16,13 @@ library(here)
 # Define input arguments that can be changed by users
 #
 option_list <- list(
+optparse::make_option( 
+    "--confidential",
+    type = "logical",
+    default = FALSE,
+    help = "Flag on whether to use the confidential data (if access is granted) [Defaults to TRUE]", 
+    dest = 'confidential'
+),
   optparse::make_option(
     "--classification_rule",
     type = "character",
@@ -39,13 +46,6 @@ option_list <- list(
     default = '/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI/211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd',
     help = "Absolute file path to base directory where the phyloscanner outputs are stored [default]",
     dest = 'phylo.dir'
-  ),
-  optparse::make_option(
-    "--meta_data",
-    type = "character",
-    default = '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live/RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20220329.RData',
-    help = "Absolute file path to meta.data containing serohistory + demographic information [default]",
-    dest = 'meta.data'
   ),
   optparse::make_option(
     "--date",
@@ -80,20 +80,22 @@ if(usr=='andrea')
 
 catn <- function(x) cat('\n----', x ,'----\n')
 
+
 get.sample.collection.dates <- function(select_aid=NULL, get_first_visit=FALSE)
 {
-    # get collection dates 
-    path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS','200316_pangea_db_sharing_extract_rakai.csv')
-    path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
+    # # get collection dates 
+    # path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS','200316_pangea_db_sharing_extract_rakai.csv')
+    # path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
 
-    files <- c(path.sdates.rccs, path.sdates.mrc)
-    cols <- c('pt_id', 'pangea_id', 'visit_dt')
-    ddates <- rbindlist(lapply(files, fread, select=cols))
-    ddates <- unique(ddates)
-    ddates <- merge(ddates, aik, by.x='pt_id', by.y='PT_ID')
-    ddates[, pt_id := NULL]
-    stopifnot(ddates[, uniqueN(pangea_id)==.N])
-    setnames(ddates, 'AID', 'aid')
+    # files <- c(path.sdates.rccs, path.sdates.mrc)
+    # cols <- c('pt_id', 'pangea_id', 'visit_dt')
+    # ddates <- rbindlist(lapply(files, fread, select=cols))
+    # ddates <- unique(ddates)
+    # ddates <- merge(ddates, aik, by.x='pt_id', by.y='PT_ID')
+    # ddates[, pt_id := NULL]
+    # stopifnot(ddates[, uniqueN(pangea_id)==.N])
+    # setnames(ddates, 'AID', 'aid')
+    ddates <- dseqdates
 
     if(!is.null(select_aid))
         ddates <- ddates[aid %in% select_aid]
@@ -258,8 +260,21 @@ update.category.counts <- function(DEXCLUDE, DCA)
 # test
 #
 
+if(args$confidential)
+{
+    # paths that should not be available to everyone, but were used for the analysis
+    path.meta.data <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
+    path.sequence.dates <- file.path(indir.confidential, "sequences_collection_dates.rds")
+}else{
+    # randomized version of the paths used for the analysis
+    path.meta.data <- file.path(indir, 'data',"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
+    path.sequence.dates <- file.path(indir.data, "sequences_collection_dates_randomized.rds")
+}
+
+dseqdates <- readRDS(path.sequence.dates)
+
 stopifnot("args$phylo.dir does not exist: make sure you specify the correct path"=file.exists(args$phylo.dir))
-stopifnot("args$meta.data does not exist: make sure you specify the correct path"=file.exists(args$meta.data))
+stopifnot("path.meta.data does not exist: make sure you specify the correct path"=file.exists(path.meta.data))
 
 catn('Load phyloscanner outputs')
 stopifnot(dir.exists(args$phylo.dir))
@@ -296,21 +311,22 @@ idx <- idx[ ,
 setcolorder(idx, c('PTY_RUN','host.1', 'host.2'))
 dca <- merge(idx, dca)
 dwina <- merge(idx, dwina)
+meta_data
 
 # 
-if( file.exists(args$meta.data) )
+if( file.exists(path.meta.data) )
 {   # Now, whenever a pairwise transmission is not supported by the serohistory, we need to "switch" the counts supporting that direction.
     cat('Using serohistory + demographic data to reweight evidence of direction\n')
     
     # Load anon. keys
-    file.anonymisation.keys <- file.path(indir.deepanalyses.xiaoyue, 'PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv')
-    aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
+    # file.anonymisation.keys <- file.path(indir.deepanalyses.xiaoyue, 'PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv')
+    # aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
 
     # load meta data on infection times
     meta_env <- new.env()
-    load(args$meta.data, envir=meta_env)
+    load(path.meta.data, envir=meta_env)
     meta <- subset(meta_env$meta_data,
-                   select=c('aid', 'study_id', 'sex', 'date_birth', 'date_first_positive', 'date_last_negative'))
+                   select=c('aid', 'sex', 'date_birth', 'date_first_positive', 'date_last_negative'))
     meta <- unique(meta[!is.na(aid)])
     # idx <- meta[, uniqueN(comm) == 2, by=aid][V1==TRUE, aid]
     stopifnot(meta[, uniqueN(aid) == .N])
@@ -348,6 +364,7 @@ if( file.exists(args$meta.data) )
 if(0)
 {
     # checking that redistribution of count has beem done in the correct direction
+    drange
     tmp <- dca_sero_only[type %in% c('12', '21') & categorisation %like% 'sero', .(host.1, host.2, type, score)]
     tmp <- merge(tmp, drange[, .(host.1=AID, MIN.1=MIN, MAX.1=MAX)], by='host.1')
     tmp <- merge(tmp, drange[, .(host.2=AID, MIN.2=MIN, MAX.2=MAX)], by='host.2')
@@ -413,7 +430,12 @@ if(args$classif_rule=='o'|args$classif_rule=='b')
     tmp <- find.networks(dc, control=control, verbose=TRUE)
     dnet <- copy(tmp$transmission.networks)
     dchain <- copy(tmp$most.likely.transmission.chains)
-    filename <- file.path(indir.data, 'Rakai_phscnetworks_ruleo_sero.rda')
+
+    suff <- ''
+    if(args$confidential == FALSE)
+        suff <- 'randomized'
+    filename <- paste0('Rakai_phscnetworks_ruleo_sero_randomized.rda')
+    filename <- file.path(indir.data, filename)
     if(! file.exists(filename) )
     {
         catn("saving Rakai_phscnetworks_ruleo_sero.rda")
