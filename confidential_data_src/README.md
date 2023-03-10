@@ -10,33 +10,31 @@ Scripts that load in sensitive data can be separated into two types:
 * scripts that produce outputs stored in the repository's `data` folder. (some of these also store outputs on the HPC).
 * scripts that process the original data and output sensitive summaries, stored on the HPC.
 
-### Scripts outputing sensitive data.
+### 
 
-| name                                             | outputs in `data`                                            | outputs on HPC                          |
-| ------------------------------------------------ | ------------------------------------------------------------ | --------------------------------------- |
-| `get_art_coverage_non_participant_count`         | `aggregated_newlyregistered_count_art_coverage.csv`          | NA                                      |
-| `get_art_coverage_non_participant_count_vl200.R` | `aggregated_newlyregistered_count_art_coverage_vl200.csv`    | NA                                      |
-| `get_art_coverage_participants_count.R`          | `aggregated_participants_count_art_coverage.csv`, `sensitivity_specificity_art.csv` | `table_sensitivity_specificity_art.rds` |
-|                                                  |                                                              |                                         |
+## Scripts outputing in the `data` folder
 
-### Scripts outputing in the `data` folder
+| name                                                         | outputs in `data`                                            | outputs on HPC                          |
+| ------------------------------------------------------------ | ------------------------------------------------------------ | --------------------------------------- |
+| `find_chains_from_phylogenetics.R`                           | `Rakai_phscnetworks_ruleo_sero.rda`                          |                                         |
+| `get_art_coverage_non_participant_count`                     | `aggregated_newlyregistered_count_art_coverage.csv`          | NA                                      |
+| `get_art_coverage_non_participant_count_vl200.R`             | `aggregated_newlyregistered_count_art_coverage_vl200.csv`    | NA                                      |
+| `get_art_coverage_participants_count.R`                      | `aggregated_participants_count_art_coverage.csv`, `sensitivity_specificity_art.csv` | `table_sensitivity_specificity_art.rds` |
+| `get_art_coverage_participants_count_vl200.R`                | `aggregated_participants_count_art_coverage_vl200.csv`, `sensitivity_specificity_art_vl200.csv` |                                         |
+| `get_unsuppressed_proportion_non_participants_count.R`       | `aggregated_newlyregistered_count_unsuppressed.csv`          |                                         |
+| `get_unsuppressed_proportion_non_participants_count_vl200.R  ` | `aggregated_newlyregistered_count_unsuppressed_vl200.csv`    |                                         |
+| `get_hiv_status_count.R`                                     | `aggregated_count_hiv_positive.csv`                          |                                         |
 
-| name                        | outputs                                            |
-| --------------------------- | -------------------------------------------------- |
-| `create_hiv_dataset_R914.R` | `HIV_R09_R14.csv`                                  |
-| `clean_quest_hiv.R`         | `HIV_R6_R18_221129.csv`, `Quest_R6_R18_221208.csv` |
+### Scripts outputing sensitive data in `$DEEPDATA`
 
-
-(Do I want to summarise the original data? Probably not)
-| file                  | code  | description                         |
-|-----------------------|-------|-------------------------------------|
-| `community_names.csv` | comm  | Questionnaire for rounds R09 to R14 |
-| `quest_R09_R14.csv`   | q0914 | Questionnaire for rounds R09 to R14 |
-| `HIV_`                | q0914 | Questionnaire for rounds R09 to R14 |
-
-
-
-
+| name                          | outputs                                            |
+| ----------------------------- | -------------------------------------------------- |
+| `create_hiv_dataset_R914.R`   | `HIV_R09_R14.csv`                                  |
+| `clean_quest_hiv.R`           | `HIV_R6_R18_221129.csv`, `Quest_R6_R18_221208.csv` |
+| `get_df_round.R`              | `RCCS_round_timeline_220905.RData`                 |
+| `get_census_eligible_count.R` | `RCCS_census_eligible_individuals_221116.csv`      |
+| `get_participant_count.R`     | `RCCS_participation_221208.csv`                    |
+| `write_updated_serohistory.R` | `221128_requested_updated_serohistory.csv`         |
 
 
 
