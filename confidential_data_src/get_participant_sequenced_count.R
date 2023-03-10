@@ -2,8 +2,16 @@ library(data.table)
 library(seqinr)
 library(dplyr)
 
+usr <- Sys.info()[['user']]
+
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+
+if(usr=="andrea")
+{
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+}
 
 infile.sequence <- file.path(indir.deepsequencedata,"200422_PANGEA2_RCCSMRC_alignment.fasta")
 infile.ind.rccs <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
@@ -18,9 +26,12 @@ file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_U
 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
+if(! dir.exists(outdir))
+    dir.create(outdir)
+
 # load files
-community.keys <- as.data.table(read.csv(file.community.keys))
-community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
+community.keys <- fread(file.community.keys)
+community.keys[, comm := fifelse(COMM_NUM_A %like% 'f', 'fishing', 'inland')]
 
 # rounds of interest
 df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
@@ -36,7 +47,7 @@ df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
 # Meta data
 #
 
-meta_data <- as.data.table(read.csv(file.path.metadata)) #additional meta_data
+meta_data <- fread(file.path.metadata) #additional meta_data
 
 # find age
 meta_data[, date_birth := as.Date(paste0(birthyr, '-', birthmo, '-', '01'), format = '%Y-%m-%d')]

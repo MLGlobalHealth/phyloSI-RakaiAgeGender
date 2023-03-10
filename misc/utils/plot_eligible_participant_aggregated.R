@@ -9,9 +9,22 @@ library(ggpattern)
 # repository directory
 indir.repository <- '~/git/phyloflows'
 
+usr <- Sys.info()[['user']]
+
+if(usr=='andrea')
+{
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+}else{
+    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+}
+
 # directory to save the figure
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+
+if(! dir.exists(outdir))
+    dir.create(outdir)
+
+
 
 # files
 participants <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
@@ -19,8 +32,8 @@ eligible <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individual
 file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
 
 # load
-rinc <- as.data.table(read.csv(participants))
-ncen <- as.data.table(read.csv(eligible))
+rinc <- fread(participants)
+ncen <- fread(eligible)
 load(file.path.round.timeline)
 
 # merge

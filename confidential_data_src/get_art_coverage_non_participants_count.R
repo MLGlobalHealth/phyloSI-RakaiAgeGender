@@ -5,19 +5,20 @@ library(scales)
 library(lubridate)
 library(rstan)
 library("haven")
+library(here)
 
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-indir.repository <- '~/git/phyloflows'
-
-if(Sys.info()['user'] == 'andrea')
+usr <- Sys.info()[['user']]
+if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
+{
+    indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+}else if(usr == 'andrea')
 {
     indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
     indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-    indir.repository <- '~/git/phyloflows'
 }
 
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
+indir.repository <- here()
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
@@ -25,13 +26,15 @@ file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 
+c(  file.community.keys,
+    file.path.hiv,
+    file.path.quest,
+    path.tests) |> file.exists() |> all() |> stopifnot()
+
 # load files
 community.keys <- fread(file.community.keys)
 quest <- fread(file.path.quest)
 hiv <- fread(file.path.hiv)
-
-# load helpers
-source(file.path(indir.repository, 'src/functions/sensitivity_specificity_art.R'))
 
 
 #################################
@@ -49,6 +52,10 @@ rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
 
 # to upper
 colnames(rinc) <- toupper(colnames(rinc))
+
+# find index of round
+rinc <- rinc[order(STUDY_ID, ROUND)]
+rinc[, INDEX_ROUND := 1:length(ROUND), by = 'STUDY_ID']
 
 # restric age
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
@@ -86,7 +93,7 @@ VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 
 # Load data: exclude round 20 as incomplete
 dall <- fread(path.tests)
-dall <- dall[ROUND %in% c(15:18)]
+dall <- dall[ROUND %in% c(15:18, 15.5)]
 
 # rename variables according to Oli's old script + remove 1 unknown sex
 setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
@@ -119,7 +126,7 @@ set(DT, DT[, which(HIV_AND_VL==1 & VLU==1)], 'VLC', 0)
 setkey(DT, ROUND, FC, SEX, AGEYRS)
 
 # keep within census eligible age
-DT <- subset(DT, AGEYRS > 14 & AGEYRS < 50)
+DT <- subset(DT, AGEYRS <= 50)
 
 # keep infected
 DT <- DT[HIV_STATUS ==1]
@@ -134,10 +141,6 @@ rprev <- merge(rprev, tmp, by.x = c('STUDY_ID', 'ROUND', 'SEX', 'COMM'), by.y = 
 rprev[!is.na(AGEYRS2), AGEYRS := AGEYRS2]
 set(rprev, NULL, 'AGEYRS2', NULL)
 
-# find sensitivity and specificity of self-reported art use
-sensitivity_specificity_art <- find_sensitivity_specificity_art(rprev, quest)
-table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev, quest, break.lines=FALSE)
-
 # set art to true if viremic viral load
 rprev[VLNS == 0, ART := T]
 rprev <- rprev[!is.na(ART)]
@@ -148,16 +151,31 @@ nrow(rprev[ROUND == 'R017' & is.na(VLNS)]) / nrow(rprev[ROUND == 'R017' & !is.na
 nrow(rprev[ROUND == 'R018' & is.na(VLNS)]) / nrow(rprev[ROUND == 'R018' & !is.na(VLNS)])
 rprev <- rprev[!(ROUND %in% c('R016', 'R017', 'R018') & is.na(VLNS))]
 
+
+#################################
+
+# KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
+# THAT ARE THE CLOSEST TO NON-PARTICIPANTS
+
+#################################
+
+# get proportion of participants seen for the first time 
+newpart <- rprev[HIV == 'P' & COMM == 'inland', round(sum(INDEX_ROUND == 1) / length(INDEX_ROUND) * 100, 2), by = 'ROUND']
+newpart <- newpart[!ROUND %in% c('R006', 'R007', 'R008', 'R009')]
+print(newpart[V1 == min(V1)])
+print(newpart[V1 == max(V1)])
+
+#KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
+rprev <- rprev[INDEX_ROUND == 1]
+
+
 #################################
 
 # SET ROUND 15S IN INLAND AS 15
 
 #################################
 
-# find participants of round 15s and not round 15
-rprev[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'STUDY_ID']
-rprev[ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, ROUND := 'R015']
-rprev <- rprev[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
+rprev[ROUND == 'R015S' & COMM == 'inland', ROUND := 'R015']
 
 
 #################################
@@ -169,23 +187,18 @@ rprev <- rprev[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO1
 # find self reported under art for participant
 rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
 
+
 #################################
 
 # SAVE DE-IDENTIFIED DATA  #
 
 #################################
 
-write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv'), row.names = F)
-
-#################################
-
-# SAVE SENSITIVITY /SPECIFICITY ART  #
-
-#################################
-
-file = file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
-write.csv(sensitivity_specificity_art, file = file, row.names = F)
-
-file = file.path(outdir, 'table_sensitivity_specificity_art.rds')
-saveRDS(table_sensitivity_specificity_art , file)
-
+file.name=file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage.csv')
+if( !file.exists(file.name))
+{
+    cat('\n Saving', file.name,'...\n')
+    write.csv(rart, file =file.name , row.names = F)
+}else{
+    cat('\n Output file', file.name,'already exists.\n')
+}

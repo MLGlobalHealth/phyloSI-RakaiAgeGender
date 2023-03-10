@@ -5,37 +5,48 @@ library(scales)
 library(lubridate)
 library(rstan)
 library("haven")
+library(here)
 
-if(Sys.info()['user'] == 'andrea')
+usr <- Sys.info()['user']
+if(usr == 'andrea')
 {
     indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
     indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-    indir.repository <- '~/git/phyloflows'
-    # indir.deepsequence_analyses <- '/home/andrea/Documents/Box/ratmann_deepseq_analyses/live'
-    # indir.deepsequencedata <- '/home/andrea/Documents/Box/ratmann_pangea_deepsequencedata'
 }
 
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
+indir.repository <- here::here()
+indir.deepsequencedata.r151r18 <- file.path(indir.deepsequencedata, "RCCS_R15_R18")
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
 
 # round 15 to 18 
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
+file.path.hiv <- file.path(indir.deepsequencedata.r151r18, 'HIV_R15_R18_VOIs_220129.csv')
 
 # round 15 to 18 without 16
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
+file.path.quest <- file.path(indir.deepsequencedata.r151r18, 'quest_R15_R18_VoIs_220129.csv')
 
 # round 16
-file.path.quest.16 <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R19_VoIs_Dec072022.csv')
+file.path.quest.16 <- file.path(indir.deepsequencedata.r151r18, 'quest_R15_R19_VoIs_Dec072022.csv')
 
 # round < 14
 file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
 file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
 
 # Latest update from Joseph concerning dates of infection
-file.path.update.first.positive <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', '221128_requested_updated_serohistory.csv')
+file.path.update.first.positive <- file.path(indir.deepsequencedata.r151r18, '221128_requested_updated_serohistory.csv')
+
+file.exists(c(
+    indir.deepsequencedata.r151r18,
+    file.community.keys ,
+    path.stan ,
+    file.path.hiv ,
+    file.path.quest ,
+    file.path.quest.16 ,
+    file.path.hiv.614 ,
+    file.path.quest.614 ,
+    file.path.update.first.positive))  |> all() |> stopifnot()
 
 # load files
 community.keys <- fread(file.community.keys)
@@ -49,8 +60,8 @@ community.keys <- fread(file.community.keys)
 
 
 # load datasets ROUND 15 TO 18 without 16
-quest <- as.data.table(read.csv(file.path.quest))
-quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate, birthdat, arvmed, cuarvmed)]
+cols <- c('round', 'study_id', 'ageyrs', 'sex', 'comm_num', 'intdate', 'birthdat', 'arvmed', 'cuarvmed')
+quest <- fread(file.path.quest, select=cols)
 quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
 
 # load datasets rond 16 and combine
@@ -119,5 +130,11 @@ hiv[study_id %in% hiv.update[, gsub('RK-(.+)', '\\1', study_id)], hiv := 'P'] # 
 
 # `save
 file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
-write.csv(hiv, file = file.name, row.names = F)
-
+if(! file.exists(file.name))
+{
+    cat("\n Saving output file", file.name, "\n")
+    fwrite(hiv, file = file.name, row.names = F)
+}else{
+    cat("\n Output file", file.name, "already exists\n")
+}
+cat("\n Done \n")

@@ -5,11 +5,20 @@ library(scales)
 library(lubridate)
 library(rstan)
 library("haven")
+library(here)
+
+usr <- Sys.info()['user'] 
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-indir.repository <- '~/git/phyloflows'
 
+if(usr == 'andrea')
+{
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+}
+
+indir.repository <- here()
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
@@ -18,13 +27,20 @@ file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 
+c(  outdir,
+    file.community.keys,
+    file.path.hiv, 
+    file.path.quest,
+    path.tests) |> file.exists() |> all() |> stopifnot()
+
 # load files
-community.keys <- as.data.table(read.csv(file.community.keys))
-quest <- as.data.table(read.csv(file.path.quest))
-hiv <- as.data.table(read.csv(file.path.hiv))
+community.keys <- fread(file.community.keys)
+quest <- fread(file.path.quest)
+hiv <- fread(file.path.hiv)
 
 # load helpers
-source(file.path(indir.repository, 'src/functions/sensitivity_specificity_art.R'))
+source(file.path(indir.repository, 'src/utils/sensitivity_specificity_art.R'))
+
 
 #################################
 
@@ -73,8 +89,8 @@ rprev[, table(ROUND)]
 # for round with suppressed set art to true if indiv is suppressed
 
 # tuning
-VL_DETECTABLE = 0
-VIREMIC_VIRAL_LOAD = 200 # WHO standards
+VL_DETECTABLE = 400
+VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 
 # Load data: exclude round 20 as incomplete
 dall <- fread(path.tests)
@@ -128,7 +144,7 @@ set(rprev, NULL, 'AGEYRS2', NULL)
 
 # find sensitivity and specificity of self-reported art use
 sensitivity_specificity_art <- find_sensitivity_specificity_art(rprev, quest)
-table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev, quest)
+table_sensitivity_specificity_art <- make_table_sensitivity_specificity_art(rprev, quest, break.lines=FALSE)
 
 # set art to true if viremic viral load
 rprev[VLNS == 0, ART := T]
@@ -167,8 +183,14 @@ rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('
 
 #################################
 
-write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage_vl200.csv'), row.names = F)
-
+file = file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv')
+if(! file.exists(file))
+{
+    cat("\n Saving", file, "...\n")
+    write.csv(rart, file = file , row.names = F)
+}else{
+    cat("\n Output file", file, "already exists\n")
+}
 
 #################################
 
@@ -176,10 +198,20 @@ write.csv(rart, file = file.path(indir.repository, 'data', 'aggregated_participa
 
 #################################
 
-file = file.path(indir.repository, 'data', 'sensitivity_specificity_art_vl200.csv')
-write.csv(sensitivity_specificity_art, file = file, row.names = F)
+file = file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
+if(! file.exists(file))
+{
+    cat("\n Saving", file, "...\n")
+    write.csv(sensitivity_specificity_art, file = file, row.names = F)
+}else{
+    cat("\n Output file", file, "already exists\n")
+}
 
-file = file.path(outdir, 'table_sensitivity_specificity_art_vl200.rds')
-saveRDS(table_sensitivity_specificity_art , file)
-
-
+file = file.path(outdir, 'table_sensitivity_specificity_art.rds')
+if(! file.exists(file))
+{
+    cat("\n Saving", file, "...\n")
+    saveRDS(table_sensitivity_specificity_art , file)
+}else{
+    cat("\n Output file", file, "already exists\n")
+}

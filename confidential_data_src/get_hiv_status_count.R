@@ -3,20 +3,31 @@ library(dplyr)
 library(scales)
 library(lubridate)
 library("haven")
+library(here)
 
+usr <- Sys.info()[['user']]
+indir.repository <- here()
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-indir.repository <- '~/git/phyloflows'
+
+if(usr=="andrea")
+{
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+}
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
 file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
 file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
 
+c(  file.community.keys,
+    file.path.hiv,
+    file.path.quest) |> file.exists() |> all() |> stopifnot()
+
 # load files
-community.keys <- as.data.table(read.csv(file.community.keys))
-quest <- as.data.table(read.csv(file.path.quest))
-hiv <- as.data.table(read.csv(file.path.hiv))
+community.keys <- fread(file.community.keys)
+quest <- fread(file.path.quest)
+hiv <- fread(file.path.hiv)
 
 
 #################################
@@ -25,7 +36,8 @@ hiv <- as.data.table(read.csv(file.path.hiv))
 
 #################################
 
-if(0){ # check percentage with hiv tests
+if(0)
+{ # check percentage with hiv tests
   
   for(Round in hiv[, sort(unique(round))]){
     hiv_n <- hiv[round == Round, length(unique(study_id))]
@@ -74,4 +86,11 @@ rprev <- hivs[, list(COUNT = sum(HIV == 'P'),
 
 #########
 
-write.csv(rprev, file.path(indir.repository, "data", "aggregated_count_hiv_positive.csv"), row.names = F)
+filename = file.path(indir.repository, "data", "aggregated_count_hiv_positive.csv")
+if(! file.exists(filename))
+{
+    cat("\n Saving", filename, "...\n")
+    write.csv(rprev, filename, row.names = F)
+}else{
+    cat("\n Output file", filename, "already exists\n")
+}

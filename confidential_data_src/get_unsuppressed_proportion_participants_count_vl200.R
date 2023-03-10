@@ -1,18 +1,25 @@
 library(data.table)
+library(here)
 
-# paths
-indir.repository <-'~/git/phyloflows'
+usr <- Sys.info()[['user']]
+indir.repository <- here()
 
 indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
-outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
+if(usr=="andrea")
+{
+    indir.deepsequence.data <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequence.analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+}
 
-# file
+# paths
 path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
 
+path.tests |> file.exists() |> all() |> stopifnot()
+
 # tuning
-VL_DETECTABLE = 400
-VIREMIC_VIRAL_LOAD = 1000 # WHO standards
+VL_DETECTABLE = 0
+VIREMIC_VIRAL_LOAD = 200 
 
 
 #################
@@ -105,6 +112,11 @@ vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsu
 
 ##########################################
 
-write.csv(vla, file.path(indir.repository, 'data', 'aggregated_participants_count_unsuppressed.csv'), row.names = F)
-
-
+file <- file.path(indir.repository, 'data', 'aggregated_participants_count_unsuppressed_vl200.csv')
+if(! file.exists(file))
+{
+    cat("\n Saving", file, "...\n")
+    write.csv(vla, file, row.names = F)
+}else{
+    cat("\n Output file", file, "already exists\n")
+}

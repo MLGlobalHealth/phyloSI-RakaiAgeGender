@@ -4,12 +4,22 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library("haven")
+library(here)
+
+usr <- Sys.info()[['user']]
+indir.repository <- here()
 
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-indir.repository <- '~/git/phyloflows'
 
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
+if(usr=="andrea")
+{
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+}
+
+
+# outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
 file.community.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
 # round 14
@@ -18,11 +28,14 @@ file.path.flow.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_inci
 # round 15 to 18
 file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_221118.csv')
 
+c(  file.community.keys,
+    file.path.flow.614,
+    file.path.flow) |> file.exists() |> all() |> stopifnot()
 
 # load files
-flow <- as.data.table(read.csv(file.path.flow))
+flow <- fread(file.path.flow)
 flow.14<-as.data.table(read_dta(file.path.flow.614))
-community.keys <- as.data.table(read.csv(file.community.keys))
+community.keys <- fread(file.community.keys)
 
 
 #
@@ -172,5 +185,12 @@ ncen[, ELIGIBLE := ELIGIBLE_SMOOTH]
 ncen <- select(ncen, -'ELIGIBLE_SMOOTH')
 
 # save
-write.csv(ncen, file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv'), row.names = F)
+file <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
+if(! file.exists(file))
+{
+    cat("\n Saving", file, "...\n")
+    write.csv(ncen, file , row.names = F)
+}else{
+    cat("\n Output file", file, "already exists\n")
+}
 

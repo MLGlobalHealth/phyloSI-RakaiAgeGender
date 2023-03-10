@@ -4,12 +4,19 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library("haven")
+library(here)
 
+usr <- Sys.info()[['user']]
+
+indir.repository <- here()
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-indir.repository <- '~/git/phyloflows'
 
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+if(usr == 'andrea')
+{
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+}
 
 file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
 
@@ -21,8 +28,14 @@ file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_
 file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
 file.path.flow.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'verif_1.dta')
 
+c(  file.community.keys,
+    file.path.hiv,
+    file.path.quest ,
+    file.path.hiv.614 ,
+    file.path.flow.614 ) |> file.exists() |> all() |> stopifnot()
+
 # load files
-community.keys <- as.data.table(read.csv(file.community.keys))
+community.keys <- fread(file.community.keys)
 
 ################################
 
@@ -105,6 +118,11 @@ if(0){
 # SAVE ROUND TIMELINE
 #
 
-save(df_round_inland, df_round_fishing, file = file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData'), row.names = F)
-
-
+filename=file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
+if(! file.exists(filename))
+{
+    cat("\n Saving", filename, "...\n")
+    save(df_round_inland, df_round_fishing, file=filename, row.names=F)
+}else{
+    cat("\n Output file", filename, "already exists\n")
+}

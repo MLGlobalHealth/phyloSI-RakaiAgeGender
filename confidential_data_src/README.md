@@ -4,6 +4,41 @@ This directory contains scripts for processing confidential data.
 The directory will be removed from the repository prior to making it a public repository.
 Scripts to run experiments or analysis should not depend on the code in this directory.
 
+## Processing RCCS files
+
+Scripts that load in sensitive data can be separated into two types:
+* scripts that produce outputs stored in the repository's `data` folder. (some of these also store outputs on the HPC).
+* scripts that process the original data and output sensitive summaries, stored on the HPC.
+
+### Scripts outputing sensitive data.
+
+| name                                             | outputs in `data`                                            | outputs on HPC                          |
+| ------------------------------------------------ | ------------------------------------------------------------ | --------------------------------------- |
+| `get_art_coverage_non_participant_count`         | `aggregated_newlyregistered_count_art_coverage.csv`          | NA                                      |
+| `get_art_coverage_non_participant_count_vl200.R` | `aggregated_newlyregistered_count_art_coverage_vl200.csv`    | NA                                      |
+| `get_art_coverage_participants_count.R`          | `aggregated_participants_count_art_coverage.csv`, `sensitivity_specificity_art.csv` | `table_sensitivity_specificity_art.rds` |
+|                                                  |                                                              |                                         |
+
+### Scripts outputing in the `data` folder
+
+| name                        | outputs                                            |
+| --------------------------- | -------------------------------------------------- |
+| `create_hiv_dataset_R914.R` | `HIV_R09_R14.csv`                                  |
+| `clean_quest_hiv.R`         | `HIV_R6_R18_221129.csv`, `Quest_R6_R18_221208.csv` |
+
+
+(Do I want to summarise the original data? Probably not)
+| file                  | code  | description                         |
+|-----------------------|-------|-------------------------------------|
+| `community_names.csv` | comm  | Questionnaire for rounds R09 to R14 |
+| `quest_R09_R14.csv`   | q0914 | Questionnaire for rounds R09 to R14 |
+| `HIV_`                | q0914 | Questionnaire for rounds R09 to R14 |
+
+
+
+
+
+
 
 ## Documentation
 
