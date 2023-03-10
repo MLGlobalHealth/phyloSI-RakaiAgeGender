@@ -20,8 +20,7 @@ Scripts that load in sensitive data can be separated into two types:
 | `get_art_coverage_non_participant_count`                     | `aggregated_newlyregistered_count_art_coverage.csv`          | NA                                      |
 | `get_art_coverage_non_participant_count_vl200.R`             | `aggregated_newlyregistered_count_art_coverage_vl200.csv`    | NA                                      |
 | `get_art_coverage_participants_count.R`                      | `aggregated_participants_count_art_coverage.csv`, `sensitivity_specificity_art.csv` | `table_sensitivity_specificity_art.rds` |
-| `get_art_coverage_participants_count_vl200.R`                | `aggregated_participants_count_art_coverage_vl200.csv`, `sensitivity_specificity_art_vl200.csv` |                                         |
-| `get_unsuppressed_proportion_non_participants_count.R`       | `aggregated_newlyregistered_count_unsuppressed.csv`          |                                         |
+| `get_art_coverage_participants_count_vl200.R`                | `aggregated_participants_count_art_coverage_vl200.csv`, `sensitivity_specificity_art_vl200.csv` |                                         | | `get_unsuppressed_proportion_non_participants_count.R`       | `aggregated_newlyregistered_count_unsuppressed.csv`          |                                         |
 | `get_unsuppressed_proportion_non_participants_count_vl200.R  ` | `aggregated_newlyregistered_count_unsuppressed_vl200.csv`    |                                         |
 | `get_hiv_status_count.R`                                     | `aggregated_count_hiv_positive.csv`                          |                                         |
 
@@ -40,20 +39,16 @@ Scripts that load in sensitive data can be separated into two types:
 
 ## Documentation
 
+
 **Feel free to change the output directory for the below files. If not confidential, I decided to push stuff on the data subfolder**
 
 The script `randomize_metadata_dates.R` loads the file `Rakai_Pangea2_RCCS_Metadata_20221128.RData` in the deepsequence data repositor, produces a randomized version: `Rakai_Pangea2_RCCS_Metadata_randomized.RData`, and stores it in the repository's data folder.
-In particular, sex, community type are kept constant for each individual, visit dates are shuffled among participants of the same round, while dates of birth, dates of first positive and last negative tests are modified by adding a random number of days from -2.5*365 to 2.5*365. 
+In particular, sex, community type are kept constant for each individual, visit dates are shuffled among participants of the same round, while dates of birth, dates of first positive and last negative tests are modified by adding a random number of days from $-2.5*365$ to $2.5*365$. 
 Additional operations guarantee that the date of first positive is successive to the date of last negative.
 
 The script `get_sample_collection_dates_and_randomize.R` extracts the dates of collection for each sequenced blood sample. 
 As the these data may be confidential, two versions are generated. The summary of the original data is stored in `confidential_data/sequences_collection_dates.rds`. A randomized version is instead stored in `data/sequences_collection_dates_randomized.rds`. Here, the visit dates are modified adding
-a random number of days between -365 and 365.
-
-The script `get_tsi_predictions.R` removes `visit_dt` and the `PANGEA_ID` columns, as well as estimates on the dates of infection. Instead, these are re-computed as needed when necessary, and true dates are only used in confidential execution. Results are stored in `data/TSI_estimates.csv`
-
-The script `find_chains_from_phylogenetics.R` summarises the results from the phylogenetic analyses, extracting pairwise relationships from all the inferred phylogenies. Additionally, it loads metadata on hosts' serohistories to change phylogenetically inferred directions of transmission whenever these are inconsistent with the serohistory.
-The results are then stored in `data/Rakai_phscnetworks_ruleo_sero.rda`.
+a random number of days between -$365$ and $365$.
 
 The script `get_infection_dates_for_phylopairs.R` loads the pairwise relationships obtained above, builds the transmission network and uses these as well as the serohistory and HIV-phylo-TSI's estimate to obtain an estimate of the date of infection through an importance sampling algorithm.
 
@@ -64,6 +59,5 @@ Each of the above script can be run from the command line, after checking that t
 ```{bash}
 Rscript confidential_data_src/randomize_metadata_dates.R
 Rscript confidential_data_src/get_sample_collection_dates_and_randomize.R
-Rscript confidential_data_src/get_tsi_predictions.R
 ```
 or with an adequate substitute on Windows.

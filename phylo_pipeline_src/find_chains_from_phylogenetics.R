@@ -111,11 +111,9 @@ get.infection.range.from.testing <- function()
     tmp <- meta[, get.sample.collection.dates(aid, get_first_visit = TRUE)]
     meta <- merge(meta, tmp, by='aid', all.x=TRUE)
 
-    # get 15th birthdate and check whether anyone was 100% infected previously
+    # check whether anybody tested positive before 15yo
     meta[, date15th := date_birth + as.integer(365.25*15)]
     stopifnot(meta[date15th > date_first_positive, .N == 0])
-    # don't min date more than 15 years prior first positive
-    # meta[, mean(lowb15lastneg > date_last_negative), ]
 
     contradict_firstpos_datecoll <<- meta[date_collection < date_first_positive]
     drange <- meta[, .(AID=aid, 
@@ -125,42 +123,16 @@ get.infection.range.from.testing <- function()
     drange[  lowb15lastneg > MIN, MIN:=lowb15lastneg ]
     drange[, lowb15lastneg := NULL]
     drange
-
 }
 
 
-#
-# test
-#
-
-stopifnot("args$phylo.dir does not exist: make sure you specify the correct path"=file.exists(args$phylo.dir))
-stopifnot("args$meta.data does not exist: make sure you specify the correct path"=file.exists(args$meta.data))
-
-catn('Load phyloscanner outputs')
-stopifnot(dir.exists(args$phylo.dir))
-infiles	<- data.table(F=list.files(args$phylo.dir, pattern='*workspace.rda$', full.names=TRUE))
-infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
-setkey(infiles, PTY_RUN)
-
-# 'dwin' : pairwise relationships between the host in each tree
-# 'dc' :  summarises pairwise relationships between hosts across ALL trees. 
-# 'a' suffix stands for aggregated
-dca <-   infiles[, { cat(PTY_RUN,'\n'); load(F); dc }, by='PTY_RUN']
-dwina <- infiles[, { cat(PTY_RUN,'\n'); load(F); dwin }, by='PTY_RUN']
-DCA1 <- copy(dca)
-DWINA <- copy(dwina)
-
-# Change the format
 .format.controls <- function(DT)
 {
         DT[, `:=` (CNTRL1=FALSE, CNTRL2=FALSE)]
         DT[ host.1 %like% 'CNTRL-', `:=` (CNTRL1=TRUE, host.1=gsub('CNTRL-', '', host.1))]
         DT[ host.2 %like% 'CNTRL-', `:=` (CNTRL2=TRUE, host.2=gsub('CNTRL-', '', host.2))]
 }
-.format.controls(dca)
-.format.controls(dwina)
 
-# Sort, so host.1 < host.2 
 .reorder.host.labels <- function(DT)
 {
         tmp <- subset(DT, host.1 > host.2)
@@ -186,6 +158,128 @@ DWINA <- copy(dwina)
         DT <- rbind(DT[!(host.1>host.2)], tmp)
         return(DT)
 }
+
+fill.in.missing.reverse.direction <- function(DCA)
+{
+
+    # the all.x and all.y options allow us to know which entries weren't previously in DCA
+    cols <- c('PTY_RUN', 'host.1', 'host.2', 'categorisation', 'categorical.distance', 'CNTRL1', 'CNTRL2')
+    merge(
+        DCA[type == '12', ..cols],
+        DCA[type == '21', ..cols],
+        by=cols, all.x=TRUE, all.y=TRUE
+    ) -> tmp
+    tmp.12 <- merge(tmp, DCA[type == '12'], by=cols, all.x=TRUE)
+    tmp.12[is.na(type), type := '12']
+    tmp.21 <- merge(tmp, DCA[type == '21'], by=cols, all.x=TRUE)
+    tmp.21[is.na(type), type := '21']
+    tmp <- rbind(tmp.12, tmp.21)
+
+    # check
+    idx <- tmp[!is.na(n),uniqueN(n), by=cols][ V1 > 1, ..cols]
+    stopifnot(nrow(idx)==0)
+
+    # and update: for each "by" group, n & n_eff should be constant.
+    # some scores will still be NA
+    tmp[, n:=na.omit(n)[1], by=cols] 
+    tmp[, n.eff:=na.omit(n.eff)[1], by=cols] 
+    tmp[, score:= k.eff/n.eff]
+    
+    out <- rbind(DCA[! type %in% c('12', '21')], tmp)
+    setkey(out, PTY_RUN, host.1, host.2, categorisation, categorical.distance, type)
+    out
+}
+
+update.category.counts <- function(DEXCLUDE, DCA)
+{
+    # DEXCLUDE <- copy(dexclude); DCA <- copy(DCA1)
+    idx.12 <- DEXCLUDE[EXCLUDE == '12', .(host.1, host.2)]
+    idx.21 <- DEXCLUDE[EXCLUDE == '21', .(host.1, host.2)]
+    setkey(DCA, host.1, host.2); setkey(dwina, host.1, host.2);
+    setkey(idx.12, host.1, host.2);setkey(idx.21, host.1, host.2);
+    tmp.12 <- merge(DCA, idx.12, by=c('host.1', 'host.2'))
+    tmp.21 <- merge(DCA, idx.21, by=c('host.1', 'host.2'))
+
+    update.category.counts.by.unsupported.direction <- function(ctg, DT, dir)
+    {
+        .update <- function(TMP)
+        {
+            with(TMP,{
+                # Find values associated with 'impossible' label
+                # cat(unique(host.1), unique(host.2),'\n')
+                new.dir <- setdiff(c('12', '21'), dir)
+                which.dir <- type == dir
+                which.new.dir <- type == new.dir
+
+                TMP$k[which.new.dir] <- k1 <- sum(TMP$k)
+                TMP$k.eff[which.new.dir] <- k1.eff <- sum(TMP$k.eff)
+                TMP$k[!which.new.dir] <- 0
+                TMP$k.eff[!which.new.dir] <- 0
+                TMP$score <- TMP$k.eff / TMP$n.eff
+
+                if(! any(which.new.dir))
+                {
+                    tmp_row <- TMP[1, ]
+                    tmp_row$type <- new.dir
+                    tmp_row$k <- k1
+                    tmp_row$k.eff <- k1.eff
+                    tmp_row$score <- tmp_row$k.eff / tmp_row$n.eff
+                    TMP <- rbind(tmp_row, TMP)
+                    return(TMP)
+                }
+
+                return(TMP)
+            })
+        }
+        cols <- setdiff(names(DT),'categorisation')
+        out <- DT[categorisation == ctg, .update(.SD) , by=c('host.1', 'host.2', 'PTY_RUN', 'categorisation'), .SDcols=cols]
+        return(out)
+    }
+    
+    
+    dca.update.12 <- lapply(categories.to.update, update.category.counts.by.unsupported.direction, tmp.12, '12')
+    dca.update.21 <- lapply(categories.to.update, update.category.counts.by.unsupported.direction, tmp.21, '21')
+    dca.update <- rbind(rbindlist(dca.update.12), rbindlist(dca.update.21))
+    # for some reason some cols are duplicated
+    dca.update <- subset(dca.update, select=!duplicated(names(dca.update)))
+    setcolorder(dca.update,names(dca))
+    dca.update[! k %in% c('12', '21'), sum(k)]
+
+    # lapply(dca.update.12, function(DT) DT[type=='21', sum(k)])
+    # lapply(dca.update.21, function(DT) DT[type=='21', sum(k)])
+
+    setkey(dca.update, host.1, host.2, PTY_RUN, categorisation)
+    setkey(DCA, host.1, host.2, PTY_RUN, categorisation)
+    DCA <- rbind(DCA[!dca.update], dca.update)
+}
+
+
+#
+# test
+#
+
+stopifnot("args$phylo.dir does not exist: make sure you specify the correct path"=file.exists(args$phylo.dir))
+stopifnot("args$meta.data does not exist: make sure you specify the correct path"=file.exists(args$meta.data))
+
+catn('Load phyloscanner outputs')
+stopifnot(dir.exists(args$phylo.dir))
+infiles	<- data.table(F=list.files(args$phylo.dir, pattern='*workspace.rda$', full.names=TRUE))
+infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
+setkey(infiles, PTY_RUN)
+
+# 'dwin' : pairwise relationships between the host in each tree
+# 'dc' :  summarises pairwise relationships between hosts across ALL trees. 
+# 'a' suffix stands for aggregated
+
+# there must be a slightly faster way to avoid double loading, but nvm
+dca <-   infiles[, { cat(PTY_RUN,'\n'); load(F); dc }, by='PTY_RUN']
+dwina <- infiles[, { cat(PTY_RUN,'\n'); load(F); dwin }, by='PTY_RUN']
+
+# Change the format
+.format.controls(dca)
+.format.controls(dwina)
+
+# Sort, so host.1 < host.2 
 dca   <- .reorder.host.labels(dca)
 dwina <- .reorder.host.labels(dwina)
 setkey(dwina, PTY_RUN, host.1, host.2)
@@ -233,36 +327,6 @@ if( file.exists(args$meta.data) )
     dexclude[, table(EXCLUDE, useNA = 'always' )/.N * 100 ]
 
     # check that for each '12' entry, there is a '21' entry in the count data.table
-    fill.in.missing.reverse.direction <- function(DCA)
-    {
-
-        # the all.x and all.y options allow us to know which entries weren't previously in DCA
-        cols <- c('PTY_RUN', 'host.1', 'host.2', 'categorisation', 'categorical.distance', 'CNTRL1', 'CNTRL2')
-        merge(
-            DCA[type == '12', ..cols],
-            DCA[type == '21', ..cols],
-            by=cols, all.x=TRUE, all.y=TRUE
-        ) -> tmp
-        tmp.12 <- merge(tmp, DCA[type == '12'], by=cols, all.x=TRUE)
-        tmp.12[is.na(type), type := '12']
-        tmp.21 <- merge(tmp, DCA[type == '21'], by=cols, all.x=TRUE)
-        tmp.21[is.na(type), type := '21']
-        tmp <- rbind(tmp.12, tmp.21)
-
-        # check
-        idx <- tmp[!is.na(n),uniqueN(n), by=cols][ V1 > 1, ..cols]
-        stopifnot(nrow(idx)==0)
-
-        # and update: for each "by" group, n & n_eff should be constant.
-        # some scores will still be NA
-        tmp[, n:=na.omit(n)[1], by=cols] 
-        tmp[, n.eff:=na.omit(n.eff)[1], by=cols] 
-        tmp[, score:= k.eff/n.eff]
-        
-        out <- rbind(DCA[! type %in% c('12', '21')], tmp)
-        setkey(out, PTY_RUN, host.1, host.2, categorisation, categorical.distance, type)
-        out
-    }
     dca <- fill.in.missing.reverse.direction(dca)
 
     # Now, modify dca and dwina accordingly, by removing the counts supporting that direction
@@ -272,69 +336,6 @@ if( file.exists(args$meta.data) )
 
     # label.to.update <- function(ctg)
     #   fcase(ctg %like% 'directed', NA_character_, ctg %like% 'ancestry.cat', 'complex.or.no.ancestry')
-    update.category.counts <- function(DEXCLUDE, DCA)
-    {
-        # DEXCLUDE <- copy(dexclude); DCA <- copy(DCA1)
-        idx.12 <- DEXCLUDE[EXCLUDE == '12', .(host.1, host.2)]
-        idx.21 <- DEXCLUDE[EXCLUDE == '21', .(host.1, host.2)]
-        setkey(DCA, host.1, host.2); setkey(dwina, host.1, host.2);
-        setkey(idx.12, host.1, host.2);setkey(idx.21, host.1, host.2);
-        tmp.12 <- merge(DCA, idx.12, by=c('host.1', 'host.2'))
-        tmp.21 <- merge(DCA, idx.21, by=c('host.1', 'host.2'))
-
-        update.category.counts.by.unsupported.direction <- function(ctg, DT, dir)
-        {
-            .update <- function(TMP)
-            {
-                with(TMP,{
-                    # Find values associated with 'impossible' label
-                    # cat(unique(host.1), unique(host.2),'\n')
-                    new.dir <- setdiff(c('12', '21'), dir)
-                    which.dir <- type == dir
-                    which.new.dir <- type == new.dir
-
-                    TMP$k[which.new.dir] <- k1 <- sum(TMP$k)
-                    TMP$k.eff[which.new.dir] <- k1.eff <- sum(TMP$k.eff)
-                    TMP$k[!which.new.dir] <- 0
-                    TMP$k.eff[!which.new.dir] <- 0
-                    TMP$score <- TMP$k.eff / TMP$n.eff
-
-                    if(! any(which.new.dir))
-                    {
-                        tmp_row <- TMP[1, ]
-                        tmp_row$type <- new.dir
-                        tmp_row$k <- k1
-                        tmp_row$k.eff <- k1.eff
-                        tmp_row$score <- tmp_row$k.eff / tmp_row$n.eff
-                        TMP <- rbind(tmp_row, TMP)
-                        return(TMP)
-                    }
-
-                    return(TMP)
-                })
-            }
-            cols <- setdiff(names(DT),'categorisation')
-            out <- DT[categorisation == ctg, .update(.SD) , by=c('host.1', 'host.2', 'PTY_RUN', 'categorisation'), .SDcols=cols]
-            return(out)
-        }
-        
-        
-        dca.update.12 <- lapply(categories.to.update, update.category.counts.by.unsupported.direction, tmp.12, '12')
-        dca.update.21 <- lapply(categories.to.update, update.category.counts.by.unsupported.direction, tmp.21, '21')
-        dca.update <- rbind(rbindlist(dca.update.12), rbindlist(dca.update.21))
-        # for some reason some cols are duplicated
-        dca.update <- subset(dca.update, select=!duplicated(names(dca.update)))
-        setcolorder(dca.update,names(dca))
-        dca.update[! k %in% c('12', '21'), sum(k)]
-
-        # lapply(dca.update.12, function(DT) DT[type=='21', sum(k)])
-        # lapply(dca.update.21, function(DT) DT[type=='21', sum(k)])
-
-        setkey(dca.update, host.1, host.2, PTY_RUN, categorisation)
-        setkey(DCA, host.1, host.2, PTY_RUN, categorisation)
-        DCA <- rbind(DCA[!dca.update], dca.update)
-    }
-
     dca_sero_only <- update.category.counts(dexclude, dca_sero_only)
     dca_sero_only[, categorisation:=paste0(categorisation, '.sero')]
     dca <- rbind(dca, dca_sero_only)
@@ -382,8 +383,6 @@ if(0)
 
 # find pairs according to classification rule and thresholds.
 # classification rule o: Oliver Ratmann's
-# classification rule m: Matthew Hall's
-# classification rule b: both
 
 if(args$classif_rule=='o'|args$classif_rule=='b')
 {
@@ -404,49 +403,6 @@ if(args$classif_rule=='o'|args$classif_rule=='b')
     dc <- copy(tmp$relationship.counts)
     dw <- copy(tmp$windows)
 
-    # To remove
-    summarise_serohistory_impact_on_pairs <- function(DC, categ = 'close.and.adjacent.and.directed')
-    {
-        # DC <- copy(dc); categ = 'close.and.adjacent.and.directed'
-
-        # check that both cat and cat.sero categories are available.
-        categ <- gsub( '.sero', '', categ)
-        stopifnot( DC[, unique(CATEGORISATION) %like% categ |> sum() == 2 ] ) 
-
-        # subset of interest
-        dc_cat <- DC[ CATEGORISATION %like% categ ]
-        cat( "in how many cases were the scores changed?\n")
-        dc_changed <- dc_cat[, uniqueN(SCORE) > 1, by=c('H1', 'H2', 'TYPE') ]
-        dc_changed <- dc_changed[, .(CHANGED_SCORE = any(V1)) , by=c('H1', 'H2')]
-        dc_changed[, table(CHANGED_SCORE)] |> knitr::kable() |> print()
-
-        cat( "in how many cases were the directions changed?\n")
-        idx <- dc_changed[CHANGED_SCORE == TRUE, .(H1, H2)]
-        dc_changed_dir <- dc_cat[idx]
-        # dc_changed_dir[is.na(SCORE)]
-
-        # for each pair and class type, evaluate whether score in dir 1->2 is larger
-        dc_changed_dir <- dc_changed_dir[ , {
-            dir12 <- TYPE %like% '12'
-            dir21 <- TYPE %like% '21'
-            list(DIR12 = SCORE[dir12] >= SCORE[dir21])
-        } , by=c('H1', 'H2', 'CATEGORISATION') ] 
-
-        # for each pair, look whether categorisations disagree.
-        dc_changed_dir <- dc_changed_dir[, .(CHANGED_DIR = uniqueN(DIR12) == 2 ) , by=c('H1', 'H2')]
-        dc_changed_dir[, table(CHANGED_DIR)] 
-
-        # now let's output a DT with the pairs, indicating whether 
-        # - serohistory changed scores
-        # - serohistory changed directions! 
-        .f <- function(DT1, DT2) merge(DT1, DT2, all.x = TRUE, all.y=TRUE)
-        out <- list( unique(dc_cat[, .(H1, H2)]), dc_changed, dc_changed_dir) |> Reduce(f=.f)
-        out[is.na(CHANGED_DIR), CHANGED_DIR := FALSE]
-        out[, table(CHANGED_SCORE, CHANGED_DIR, useNA='ifany')]
-
-        return(out)
-    }
-
     # filename <- file.path(args$phylo.dir, paste0('Rakai_phscnetworks_allpairs_ruleo_sero.rda'))
     # if(! file.exists(filename))
     # {
@@ -458,9 +414,11 @@ if(args$classif_rule=='o'|args$classif_rule=='b')
     dnet <- copy(tmp$transmission.networks)
     dchain <- copy(tmp$most.likely.transmission.chains)
     filename <- file.path(indir.data, 'Rakai_phscnetworks_ruleo_sero.rda')
-    if(! file.exists(filename ))
+    if(! file.exists(filename) )
     {
-        catn("saving Rakai_phscnetworks_ruleo_sero")
+        catn("saving Rakai_phscnetworks_ruleo_sero.rda")
         save(dpl, dc, dw, dnet, dchain, file=filename)
+    }else{
+        catn("File Rakai_phscnetworks_ruleo_sero.rda already exists")
     }
 }

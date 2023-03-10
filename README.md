@@ -17,6 +17,7 @@
 - [Data and Script Reference](#data-and-script-reference)
   - [Sample Data](#sample-data)
   - [Generated Data](#generated-data)
+- [Phylogenetic analyses](#phylogenetic-analyses)
 
 ## License
 The code and data in this repository are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
@@ -293,3 +294,13 @@ The following table list the actions performed by each of the available scripts:
     </tbody>
   </table>
 </details>
+
+
+## Phylogenetic analyses
+
+The statistical models present in this repository are built on top of outputs from phylogenetic analyses.
+In particular, the same phylogenies as in [Xi et al.](https://doi.org/10.1111/rssc.12544), are used to obtain potential source-recipient pairs, and these can be found at TODO.
+Separate phylogenetic analyses were also performed to obtain individual-level estimates of time since infection using the [HIV-phylo-TSI algorithm](https://github.com/BDI-pathogens/HIV-phyloTSI) described in [Golubchik et al.](https://doi.org/10.1101/2022.05.15.22275117). 
+The scripts to perform this analysis can be found in the subdirectory `phylo_pipeline_src`
+After the analyses were over, we were able to data transmission events as per the script `confidential_data_src/get_infection_dates_for_phylopairs.R`
+

@@ -261,15 +261,6 @@ filename_drange <- file.path(out.dir, paste0(filename_drange, suffix,  '.rds'))
 filename_net <- file.path(out.dir, paste0(filename_net, suffix, '.rds'))
 filename_overleaf <- file.path(out.dir, paste0(filename_overleaf, suffix, '.rds'))
 
-# is there a point to the below????
-# if( ! is.null(dinfectiousness) &  get.sero.extra.pairs & ! args$sensitivity.no.refinement)
-# {
-#     out <- list(drange, chain)
-#     cat('Saving', filename_drange, '...\n')
-#     saveRDS(out, filename_drange)
-# }
-
-
 if(args$get.round.probabilities)
     df_round_gi <- get.round.dates(file.path.round.timeline)
 
