@@ -47,6 +47,10 @@ if(length(args_line) > 0)
   jobname <- args_line[[8]]
 }
 
+indir.data <- file.path(indir, 'data')
+indir.fit <- file.path(indir, 'fit')
+indir.functions <- file.path(indir, 'functions')
+
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
 outdir.table <- file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
@@ -79,49 +83,49 @@ file.incidence.30com.inland	<- file.path(indir, 'data', "Rakai_incpredictions_in
 file.incidence.loess.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")#sensitivity analysis using estimates obtained with loess regresssion
 
 # obtained in src/ for analysis
-file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData')
-file.eligible.count <- file.path(indir, 'data', 'RCCS_census_eligible_individuals_221116.csv')
-file.participation <- file.path(indir, 'data', 'RCCS_participation_221208.csv')
-file.prevalence.prop <- file.path(indir, 'fit', 'RCCS_prevalence_estimates_221116.csv')
+file.path.round.timeline <- file.path(indir.data, 'RCCS_round_timeline_220905.RData')
+file.eligible.count <- file.path(indir.data, 'RCCS_census_eligible_individuals_221116.csv')
+file.participation <- file.path(indir.data, 'RCCS_participation_221208.csv')
+file.prevalence.prop <- file.path(indir.fit, 'RCCS_prevalence_estimates_221116.csv')
 
 # obtained in misc/ for analysis
-file.pairs <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
-file.pairs.nonrefined <- file.path(indir, 'data', 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
+file.pairs <- file.path(indir.data, 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
+file.pairs.nonrefined <- file.path(indir.data, 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
 
-file.treatment.cascade.prop.participants <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_221208.csv")
-file.treatment.cascade.prop.nonparticipants <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv")
-file.treatment.cascade.prop.participants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_221208.rds'))
-file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds'))
+file.treatment.cascade.prop.participants <- file.path(indir.fit, "RCCS_treatment_cascade_participants_estimates_221208.csv")
+file.treatment.cascade.prop.nonparticipants <- file.path(indir.fit, "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv")
+file.treatment.cascade.prop.participants.samples <- file.path(indir.fit, 'RCCS_treatment_cascade_participants_posterior_samples_221208.rds')
+file.treatment.cascade.prop.nonparticipants.samples <- file.path(indir.fit, 'RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds')
 
-file.treatment.cascade.prop.participants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_participants_estimates_vl200_221208.csv")
-file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(indir, 'fit', "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv")
-file.treatment.cascade.prop.participants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds')) 
-file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(indir, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds')) 
+file.treatment.cascade.prop.participants.vl200 <- file.path(indir.fit, "RCCS_treatment_cascade_participants_estimates_vl200_221208.csv")
+file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(indir.fit, "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv")
+file.treatment.cascade.prop.participants.vl200.samples <- file.path(indir.fit, 'RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds')
+file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(indir.fit, 'RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds')
 
 # obtained in misc/ for plots
-file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221208.csv'))
-file.unsuppressed_rate_ratio <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221208.csv'))
-file.prevalence.share <- file.path(indir, 'fit', paste0('RCCS_prevalence_share_sex_221116.csv'))
-file.unsuppressed_median_age <-file.path(indir, 'fit', paste0('RCCS_unsuppressed_median_age_221208.csv'))
+file.unsuppressed.share <- file.path(indir.fit, 'RCCS_unsuppressed_share_sex_221208.csv')
+file.unsuppressed_rate_ratio <- file.path(indir.fit, 'RCCS_unsuppressed_ratio_sex_221208.csv')
+file.prevalence.share <- file.path(indir.fit, 'RCCS_prevalence_share_sex_221116.csv')
+file.unsuppressed_median_age <-file.path(indir.fit, 'RCCS_unsuppressed_median_age_221208.csv')
 
 # sexual partnerships  rates
-file.number.sexual.partnerships <- file.path(indir, 'data', paste0('age-age-group-est-cntcts-r15.rds'))
-file.sexual.partnerships.rates <- file.path(indir, 'data', paste0('inland_R015_cntcts_rate_1130b.rds'))
+file.number.sexual.partnerships <- file.path(indir.data, 'age-age-group-est-cntcts-r15.rds')
+file.sexual.partnerships.rates <- file.path(indir.data, 'inland_R015_cntcts_rate_1130b.rds')
 
 # obtained in script/ for plots
-file.incidence.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
-file.incidence.30com.samples.inland <- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221119.csv")
-file.incidence.loess.samples.inland	<- file.path(indir, 'data', "Rakai_incpredictions_loess_samples_inland_221116.csv")
+file.incidence.samples.inland <- file.path(indir.data, "Rakai_incpredictions_samples_inland_221107.csv")
+file.incidence.30com.samples.inland <- file.path(indir.data, "Rakai_incpredictions_samples_inland_221119.csv")
+file.incidence.loess.samples.inland	<- file.path(indir.data, "Rakai_incpredictions_loess_samples_inland_221116.csv")
 
 # stan model
 path.to.stan.model <- file.path(indir, 'stan_models', paste0(stan_model, '.stan'))
 
 # load functions
-source(file.path(indir, 'functions', 'utils.R'))
-source(file.path(indir, 'functions', 'summary_functions.R'))
-source(file.path(indir, 'functions', 'plotting_functions.R'))
-source(file.path(indir, 'functions', 'statistics_functions.R'))
-source(file.path(indir, 'functions', 'stan_utils.R'))
+source(file.path(indir.functions, 'utils.R'))
+source(file.path(indir.functions, 'summary_functions.R'))
+source(file.path(indir.functions, 'plotting_functions.R'))
+source(file.path(indir.functions, 'statistics_functions.R'))
+source(file.path(indir.functions, 'stan_utils.R'))
 
 # load pairs
 if(use_tsi_non_refined){
