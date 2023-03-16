@@ -75,7 +75,7 @@ Our main analyses depend on estimates of population sizes, HIV prevalence, and H
 
 To perform the data preprocessing steps, navigate to the root directory of the repository and execute the following commands
 
-#### Stage 1
+#### Stage 1 (pre-processing of surveillance data)
 ```shell
 Rscript "./misc/get_estimates_art_coverage_participants.R"
 Rscript "./misc/get_estimates_unsuppressed_proportion_participants.R"
@@ -85,7 +85,7 @@ Rscript "./misc/get_treatment_cascade_non_participants.R"
 Rscript "./misc/get_treatment_cascade_participants.R"
 ```
 
-#### Stage 2
+#### Stage 2 (pre-processing of surveillance data)
 ```shell
 Rscript "./misc/get_estimates_art_coverage_participants_vl200.R"
 Rscript "./misc/get_estimates_unsuppressed_proportion_participants.R"
@@ -95,7 +95,7 @@ Rscript "./misc/get_treatment_cascade_non_participants.R"
 Rscript "./misc/get_treatment_cascade_participants.R"
 ```
 
-#### Stage 3
+#### Stage 3 (pre-processing of surveillance data)
 ```shell
 Rscript "./misc/get_treatment_cascade_population.R"
 Rscript "./misc/get_estimates_prevalence.R"
@@ -105,53 +105,29 @@ Rscript "./misc/get_unsuppressed_ratio_sex.R"
 Rscript "./misc/get_unsuppressed_prevalence_share_sex.R"
 ```
 
-#### Stage 4
+#### Stage 4 (pre-processing of phylogenetic data)
 
-Scripts in Stage 4 were run with confidential information which we cannot share. As such, we directly provide the outputs within the `data` directory.  
+The deep-sequence phylogenetic time since infection estimates were refined using exact patient meta-data that we do not share, and instead we provide the outputs in the `data` directory.  
 
-For the curious reader interested in testing our code, we also share randomized versions of the data, suffixed by `randomized`.
-It is further necessary to Download the necessary outputs of the phylogenetic analyses and substitute the two bash variable `$TSI_OUTPUTS` and `$PAIRS_OUTPUTS` with the relevant paths.
-
+To reproduce our analyses in part, we share randomized versions of the data that are suffixed by `randomized`. Use these as shown below in combination with the deep-sequence phylogenetic data from the Zenodo repository:
 ```shell
-TSI_OUTPUTS= "" #TODO: TSI_outputs in our Zenodo data
-PAIRS_OUTPUTS= "" #"TODO": PAIRS_outputs in our Zenodo data
+DATA_DIR_TSI= "" #TODO: TSI_outputs in our Zenodo data
+DATA_DIR_PHYLOSCANNER= "" #"TODO": PAIRS_outputs in our Zenodo data
 
-# phylogenetic outputs processing:
-
-# get individual level time since infection
-Rscript "./phylo_pipeline_src/TSI_estimate_dates.R --confidential FALSE --tsi_out_dir $TSI_OUTPUTS"
-
-# get posterior probabilities of linkage and direction
-Rscript "./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $PAIRS_OUTPUTS"
-
-# combine both and estimate date of infection for pairs
+# get individual level time since infection estimates
+Rscript "./phylo_pipeline_src/TSI_estimate_dates.R --confidential FALSE --tsi_out_dir $DATA_DIR_TSI"
+# get linkage and direction scores
+Rscript "./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER"
+# refine time since infection estimates for source-recipient pairs
 Rscript "./scripts_for_confidential_data/get_infection_dates_for_phylopairs --confidential FALSE"
 ```
-By default, the third script will call our outputs of the first two scripts (obtained with the confidential data). Any other outputs can be given by specifying the flags `--path-chains` and `--path-tsiestimates`.
 
-
-Alternatively, you can run the following shell script for convenience.
-```shell
-$ bash phyloSI-RakaiAgeGender-preprocessing.sh
-```
-This script will generate four new shell scripts: `preproc-s{1 .. 4}.sh`. Each script will invoke the required R scripts for each stage of the data preprocessing process. They must be executed in order:
-```shell
-$ bash preproc-s1.sh # stage 1
-$ bash preproc-s2.sh # stage 2
-$ bash preproc-s3.sh # stage 3
-$ bash preproc-s4.sh # stage 4
-```
-Note that some preprocessing scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`.
-
-Detailed flowcharts of how data read and written by each R script within each preprecessing stage can be found in `docs/README.md`.
+Note that some preprocessing scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`. Detailed flowcharts of how data read and written by each R script within each preprecessing stage can be found in `docs/README.md`.
 
 ### Age-specific HIV incidence rates
-To run the age-specific HIV incidence rates analysis, navigate to the root directory of the repository. 
+To run the age-specific HIV incidence rates analysis, run: 
 ```shell
 cd phyloSI-RakaiAgeGender
-```
-Then run the following R script: 
-```shell
 $ Rscript scripts/run_incidence_rates_estimation.R
 ```
 The output will be saved in a seperate directory outside the repository under the name `phyloSI-RakaiAgeGender-outputs`.
