@@ -17,7 +17,8 @@ These features will be passed as input to the [HIV-phylo-TSI algorithm](https://
 As mentioned above, the source-recipient pairs were obtained through analysis of the same phylogenetic pipeline as in [Xi et al.]( https://doi.org/10.1111/rssc.12544)
 Here, we modify the procedure to estimate transition networks, as per the script `find_chains_from_phylogenetics.R`.
 This summarises the results from the phylogenetic analyses, extracting pairwise relationships from all the inferred phylogenies. 
-In our analyses, it loads confidential metadata on hosts' serohistories to change phylogenetically inferred directions of transmission whenever these are inconsistent with the serohistory. The results are then stored in `data/Rakai_phscnetworks_ruleo_sero.rda`.
+In our analyses, it loads confidential metadata on hosts' serohistories to change phylogenetically inferred directions of transmission whenever these are inconsistent with the serohistory. 
+The results are then stored in `data/Rakai_phscnetworks_ruleo_sero.rda`.
 
 
 ## Time Since Infection pipeline

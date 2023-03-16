@@ -24,28 +24,11 @@ optparse::make_option(
     dest = 'confidential'
 ),
   optparse::make_option(
-    "--classification_rule",
-    type = "character",
-    default = 'o',
-    help = "Rules for classifying linked and directed pairs. It takes values o or m. 
-    o: a pair is linked if the linkage score > 0.6, and directed if the ancestral / (ancestral + descedant) > 0.6.
-    m: a pair is linked if the linkage score > 0.5, and directed if the ancestral / all > 0.33. 
-    b: both [default]",
-    dest = 'classif_rule'
-  ),
-  optparse::make_option(
-    "--out_dir_base",
-    type = "character",
-    default = NA_character_,
-    help = "Absolute file path to base directory where all the tree outputs are stored [default]",
-    dest = 'out.dir'
-  ),
-  optparse::make_option(
-    "--phylo_dir",
+    "--phylo-pairs-dir",
     type = "character",
     default = '/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI/211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd',
     help = "Absolute file path to base directory where the phyloscanner outputs are stored [default]",
-    dest = 'phylo.dir'
+    dest = 'phylo.pairs.dir'
   ),
   optparse::make_option(
     "--date",
@@ -264,7 +247,7 @@ if(args$confidential)
 {
     # paths that should not be available to everyone, but were used for the analysis
     path.meta.data <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
-    path.sequence.dates <- file.path(indir.confidential, "sequences_collection_dates.rds")
+    path.sequence.dates <- .fp('D', "RCCS_R15_R18/sequences_collection_dates.rds")
 }else{
     # randomized version of the paths used for the analysis
     path.meta.data <- file.path(indir, 'data',"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
@@ -273,7 +256,7 @@ if(args$confidential)
 
 dseqdates <- readRDS(path.sequence.dates)
 
-stopifnot("args$phylo.dir does not exist: make sure you specify the correct path"=file.exists(args$phylo.dir))
+stopifnot("args$phylo.pairs.dir does not exist: make sure you specify the correct path"=file.exists(args$phylo.pairs.dir))
 stopifnot("path.meta.data does not exist: make sure you specify the correct path"=file.exists(path.meta.data))
 
 catn('Load phyloscanner outputs')
@@ -318,10 +301,6 @@ if( file.exists(path.meta.data) )
 {   # Now, whenever a pairwise transmission is not supported by the serohistory, we need to "switch" the counts supporting that direction.
     cat('Using serohistory + demographic data to reweight evidence of direction\n')
     
-    # Load anon. keys
-    # file.anonymisation.keys <- file.path(indir.deepanalyses.xiaoyue, 'PANGEA2_RCCS1519_UVRI/important_anonymisation_keys_210119.csv')
-    # aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
-
     # load meta data on infection times
     meta_env <- new.env()
     load(path.meta.data, envir=meta_env)
@@ -419,12 +398,6 @@ if(args$classif_rule=='o'|args$classif_rule=='b')
     dpl <- copy(tmp$network.pairs)
     dc <- copy(tmp$relationship.counts)
     dw <- copy(tmp$windows)
-
-    # filename <- file.path(args$phylo.dir, paste0('Rakai_phscnetworks_allpairs_ruleo_sero.rda'))
-    # if(! file.exists(filename))
-    # {
-    #     save(dpl, dc, dw, file=filename)
-    # }
 
     # Find chains
     tmp <- find.networks(dc, control=control, verbose=TRUE)

@@ -15,7 +15,6 @@ if (usr == "andrea") {
 }
 
 # outdir is actually in the git repository
-outdir.confidential <- file.path(indir, "confidential_data")
 outdir.data <- file.path(indir, "data")
 
 file.path.tsiestimates <- file.path(

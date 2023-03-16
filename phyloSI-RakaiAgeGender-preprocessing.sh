@@ -38,3 +38,22 @@ Rscript "./misc/get_unsuppressed_share_sex.R"
 Rscript "./misc/get_unsuppressed_ratio_sex.R"
 Rscript "./misc/get_unsuppressed_prevalence_share_sex.R"
 EOF
+
+cat > "preproc-s4.sh" <<EOF
+#!/bin/bash
+
+TSI_OUTPUTS= "" #TOFILL: TSI_outputs in our Zenodo data
+PAIRS_OUTPUTS= "" #"TOFILL": PAIRS_outputs in our Zenodo data
+
+# phylogenetic outputs processing:
+
+# get individual level time since infection
+Rscript "./phylo_pipeline_src/TSI_estimate_dates.R --confidential FALSE --tsi_out_dir $TSI_OUTPUTS"
+#
+# get posterior probabilities of linkage and direction
+Rscript "./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $PAIRS_OUTPUTS"
+
+# combine both and estimate date of infection for pairs
+Rscript "./scripts_for_confidential_data/get_infection_dates_for_phylopairs --confidential FALSE"
+
+EOF

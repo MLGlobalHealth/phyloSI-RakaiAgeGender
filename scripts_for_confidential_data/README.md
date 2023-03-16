@@ -17,7 +17,6 @@ Scripts that load in sensitive data can be separated into two types:
 
 | name                                                         | outputs in `data`                                            | outputs on HPC                          |
 | ------------------------------------------------------------ | ------------------------------------------------------------ | --------------------------------------- |
-| `find_chains_from_phylogenetics.R`                           | `Rakai_phscnetworks_ruleo_sero.rda`                          |                                         |
 | `get_art_coverage_non_participant_count`                     | `aggregated_newlyregistered_count_art_coverage.csv`          | NA                                      |
 | `get_art_coverage_non_participant_count_vl200.R`             | `aggregated_newlyregistered_count_art_coverage_vl200.csv`    | NA                                      |
 | `get_art_coverage_participants_count.R`                      | `aggregated_participants_count_art_coverage.csv`, `sensitivity_specificity_art.csv` | `table_sensitivity_specificity_art.rds` |
@@ -47,7 +46,7 @@ In particular, sex, community type are kept constant for each individual, visit 
 Additional operations guarantee that the date of first positive is successive to the date of last negative.
 
 The script `get_sample_collection_dates_and_randomize.R` extracts the dates of collection for each sequenced blood sample. 
-As the these data may be confidential, two versions are generated. The summary of the original data is stored in `confidential_data/sequences_collection_dates.rds`. A randomized version is instead stored in `data/sequences_collection_dates_randomized.rds`. Here, the visit dates are modified adding a random number of days between -$.25*365$ and $.25*365$.
+As the these data may be confidential, two versions are generated. The summary of the original data is stored on the HPC at `sequences_collection_dates.rds`. A randomized version is instead stored in `data/sequences_collection_dates_randomized.rds`. Here, the visit dates are modified adding a random number of days between -$.25*365$ and $.25*365$.
 
 ### Execution
 
@@ -56,4 +55,4 @@ Each of the above script can be run from the command line, after checking that t
 Rscript confidential_data_src/randomize_metadata_dates.R
 Rscript confidential_data_src/get_sample_collection_dates_and_randomize.R
 ```
-or with an adequate substitute on Windows.
+or with an adequate substitute on indows.

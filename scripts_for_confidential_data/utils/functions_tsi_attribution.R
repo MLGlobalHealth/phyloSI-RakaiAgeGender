@@ -81,7 +81,7 @@ check.range.consistency <- function(drange)
 get.communities.where.participated <- function() {
     # For each AID reports the community type(s) where each participant had participated
     meta_env <- new.env()
-    load(file.path.meta, envir = meta_env)
+    load(path.meta, envir = meta_env)
     cols <- c("aid", "comm", "round", "sample_date", "sex")
     dcomms <- subset(meta_env$meta_data, select = cols)
     names(dcomms) <- toupper(names(dcomms))
@@ -102,7 +102,7 @@ table.pairs.in.inland <- function(DT) {
     }]
 }
 
-build.phylo.network.from.pairs <- function(path.chains = file.path.chains.data) {
+build.phylo.network.from.pairs <- function(path.chains = path.chains.data) {
     # prepare helpers
     dcomms <<- get.communities.where.participated()
 
@@ -368,7 +368,7 @@ get.extra.pairs.from.serohistory <- function(DCHAIN, META) {
 
 update.ranges.with.tsi.estimates <- function() {
     cols <- c("RENAME_ID", "pred_doi_min", "pred_doi_mid", "pred_doi_max", "visit_dt")
-    dtsi <- fread(file.path.tsiestimates, select = cols)
+    dtsi <- fread(path.tsiestimates, select = cols)
     dtsi[, `:=`(AID = gsub("-fq[0-9]", "", RENAME_ID), RENAME_ID = NULL)]
 
     # extend short TSI ranges to the left so that they are 1 yr wide
@@ -464,19 +464,19 @@ get.infection.range.from.testing <- function()
     drange
 }
 
-get.infection.range.from.tsi <- function(path, file.path.sequence.dates, chain_subset = TRUE) 
+get.infection.range.from.tsi <- function(path, path.sequence.dates, chain_subset = TRUE) 
 {
-    seqdates <- readRDS(file.path.sequence.dates)
+    seqdates <- readRDS(path.sequence.dates)
     names(seqdates) <- toupper(names(seqdates)) 
 
-    dtsi <- fread(file.path.tsiestimates) |>
+    dtsi <- fread(path.tsiestimates) |>
         merge(seqdates, by=c('AID','RENAME_ID'))
 
     drange_tsi <- dtsi[, .(
         AID=AID,
         RENAME_ID=RENAME_ID,
-        MIN=VISIT_DT - RF_pred_max_linear,
-        MAX=VISIT_DT - RF_pred_min_linear
+        MIN=VISIT_DT - as.integer(365.25*RF_pred_max_linear),
+        MAX=VISIT_DT - as.integer(365.25*RF_pred_min_linear)
     )]
 
     if (chain_subset) {
@@ -757,7 +757,7 @@ set.mcmc.outputs.suffix <- function()
     return(suffix)
 }
 
-get.round.dates <- function(path=file.path.round.timeline)
+get.round.dates <- function(path=path.round.timeline)
 {
     round_env <- new.env()
     load(path, envir = round_env)
@@ -1547,7 +1547,7 @@ check.if.anticlockwise <- function(COHORDS) {
 
 load.rounds <- function() {
     rounds_env <- new.env()
-    load(file.path.round.timeline, envir = rounds_env)
+    load(path.round.timeline, envir = rounds_env)
     rbind(
         rounds_env$df_round_fishing,
         rounds_env$df_round_inland
@@ -1917,7 +1917,7 @@ prepare.pairs.input.for.bayesian.model <- function(DT) {
 get.community.type.at.infection.date <- function(DT, comm_number = TRUE) {
     # DT <- copy(dresults); comm_number=TRUE
     meta_env <- new.env()
-    load(file.path.meta, envir = meta_env)
+    load(path.meta, envir = meta_env)
 
     cols <- c("aid", "comm", "round", "sample_date")
     dcomms <- subset(meta_env$meta_data, select = cols)
@@ -2015,7 +2015,7 @@ count.number.intersecting.ranges.tsi.sero.wrt.chain <- function(CHAIN, DCOMPARE)
     return(NULL)
 }
 
-get.round.dates <- function(file = file.path.round.timeline) {
+get.round.dates <- function(file = path.round.timeline) {
     tmp_env <- new.env()
     load(file, envir = tmp_env)
     df_round_inland <- tmp_env$df_round_inland
@@ -2093,9 +2093,9 @@ load.meta.data <- function(path)
 
 
 get.household.data.marco <- function() {
-    file.path.flow <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "FlowR15_R18_VoIs_220129.csv")
+    path.flow <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "FlowR15_R18_VoIs_220129.csv")
     cols <- c("study_id", "round", "region", "comm_num", "hh_num", "member_num")
-    flow <- fread(file.path.flow, select = cols)
+    flow <- fread(path.flow, select = cols)
     names(flow) <- toupper(names(flow))
     flow <- unique(flow[STUDY_ID != "", STUDY_ID := paste0("RK-", STUDY_ID)])
     flow <- merge(flow, aik, by.x = "STUDY_ID", by.y = "PT_ID")
@@ -2138,7 +2138,7 @@ find_ff_pairs_for_Griffin <- function() { # study all FF pairs to be sent to Gri
         fill = TRUE
     )
 
-    load(file.path.meta, envir = meta_env)
+    load(path.meta, envir = meta_env)
     dcomms <- subset(meta_env$meta_data, select = c("aid", "comm", "round"))
     dcomms <- unique(dcomms[!is.na(aid), ])
 

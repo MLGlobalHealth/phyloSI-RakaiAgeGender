@@ -15,7 +15,7 @@ if(usr == 'andrea')
 }
 
 # TODO: better on HPC, as anyways do not push this
-outdir.confidential <- file.path(indir, 'confidential_data')
+outdir.confidential <- file.path(indir.deepsequencedata, 'RCCS_R15_R18')
 outdir.data <- file.path(indir, 'data')
 
 # path from phylo analyses

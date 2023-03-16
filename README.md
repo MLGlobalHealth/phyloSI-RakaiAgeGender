@@ -49,7 +49,7 @@ This study was supported by the following organizations:
 - [President’s Emergency Plan for AIDS Relief](https://www.state.gov/pepfar/) through the Centers for Disease Control and Prevention (NU2GGH000817)
 
 
-## Quick Start
+[##](##) Quick Start
 ### System Requirements
 - macOS or UNIX, the code was developed on macOS Big Sur 11.7
 - [R](https://www.r-project.org/) version >= 4.1.2
@@ -71,7 +71,7 @@ $ source activate phyloSI-RakaiAgeGender
 
 We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout.
 
-Our main analyses depend on estimates of population sizes, HIV prevalence, and HIV suppression. 
+Our main analyses depend on estimates of population sizes, HIV prevalence, and HIV suppression, as well as outputs from two phylogenetic analyses: one to estimate the 'time since infection', and the other to detect source-recipient pairs.
 
 To perform the data preprocessing steps, navigate to the root directory of the repository and execute the following commands
 
@@ -105,15 +105,41 @@ Rscript "./misc/get_unsuppressed_ratio_sex.R"
 Rscript "./misc/get_unsuppressed_prevalence_share_sex.R"
 ```
 
+#### Stage 4
+
+Scripts in Stage 4 were run with confidential information which we cannot share. As such, we directly provide the outputs within the `data` directory.  
+
+For the curious reader interested in testing our code, we also share randomized versions of the data, suffixed by `randomized`.
+It is further necessary to Download the necessary outputs of the phylogenetic analyses and substitute the two bash variable `$TSI_OUTPUTS` and `$PAIRS_OUTPUTS` with the relevant paths.
+
+```shell
+TSI_OUTPUTS= "" #TODO: TSI_outputs in our Zenodo data
+PAIRS_OUTPUTS= "" #"TODO": PAIRS_outputs in our Zenodo data
+
+# phylogenetic outputs processing:
+
+# get individual level time since infection
+Rscript "./phylo_pipeline_src/TSI_estimate_dates.R --confidential FALSE --tsi_out_dir $TSI_OUTPUTS"
+
+# get posterior probabilities of linkage and direction
+Rscript "./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $PAIRS_OUTPUTS"
+
+# combine both and estimate date of infection for pairs
+Rscript "./scripts_for_confidential_data/get_infection_dates_for_phylopairs --confidential FALSE"
+```
+By default, the third script will call our outputs of the first two scripts (obtained with the confidential data). Any other outputs can be given by specifying the flags `--path-chains` and `--path-tsiestimates`.
+
+
 Alternatively, you can run the following shell script for convenience.
 ```shell
 $ bash phyloSI-RakaiAgeGender-preprocessing.sh
 ```
-This script will generate three new shell scripts: `preproc-s1.sh`, `preproc-s2.sh`, and `preproc-s3.sh`. Each script will invoke the required R scripts for each stage of the data preprocessing process. They must be executed in order:
+This script will generate four new shell scripts: `preproc-s{1 .. 4}.sh`. Each script will invoke the required R scripts for each stage of the data preprocessing process. They must be executed in order:
 ```shell
 $ bash preproc-s1.sh # stage 1
 $ bash preproc-s2.sh # stage 2
 $ bash preproc-s3.sh # stage 3
+$ bash preproc-s4.sh # stage 4
 ```
 Note that some preprocessing scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`.
 

@@ -17,11 +17,18 @@ library(igraph)
 
 option_list <- list(
     optparse::make_option(
-        "--phylo-dir",
+        "--path-chains",
         type = "character",
-        default = NA_character_,
-        help = "path to the directory containing outputs of phylogenetic analyses",
-        dest = 'phylo_dir'
+        default = NULL,
+        help = "path to main output of source recipients pairs analyses",
+        dest = 'path.chains.data'
+    ),
+    optparse::make_option(
+        "--path-tsi",
+        type = "character",
+        default = NULL,
+        help = "path to main output of time since infection analyses",
+        dest = 'path.tsiestimates'
     ),
     optparse::make_option( 
         "--confidential",
@@ -38,26 +45,13 @@ option_list <- list(
         dest = 'rerun'
     ),
     optparse::make_option(
-        "--only-hetero",
-        type = "logical",
-        default = TRUE,
-        help = "Excludes heterosexual couples from transmission network", 
-        dest = 'include.only.heterosexual.pairs'
-    ),
-    optparse::make_option(
         "--get-round-probabilities",
         type = "logical",
         default = TRUE,
         help = "Computes probability of infection occurring in different rounds", 
         dest = 'get.round.probabilities'
     ),
-    optparse::make_option(
-        "--only-rccs",
-        type = "logical",
-        default = TRUE,
-        help = "Excludes non-participants of the RCCS", 
-        dest = 'include.only.rccs'
-    ), optparse::make_option( "--RH-infectiousness",
+    optparse::make_option( "--RH-infectiousness",
         type = "numeric",
         default = 1,
         help = "Relative Hazard of transmission during the acute versus chronic infection phase [Defaults to 5]", 
@@ -91,25 +85,18 @@ usr <- Sys.info()[['user']]
 
 indir <- here::here()
 
-if(is.na(args$phylo_dir))
+if( args$confidential)
 {
     if(usr == 'andrea')
     {
         args$phylo_dir <- '/home/andrea/HPC/project'
         out.dir<- '/home/andrea/HPC/ab1820/home/projects/2022/genintervals'
-        indir <- '/home/andrea/git/phyloflows'
+        indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
     }
 }
 
 # git data directory
 indir.data <- file.path(indir, 'data')
-indir.confidential <- file.path(indir, 'confidential_data')
-
-indir.deepsequence_xiaoyue   <- file.path(args$phylo_dir, 'ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI')
-# TODO: indir.deepsequencedata could be substituted with an outdir if it weren't for the 
-# sensitive data: file.path.meta
-indir.deepsequencedata <- file.path(args$phylo_dir, 'ratmann_pangea_deepsequencedata/live')
-indir.deepsequence_analyses   <- file.path(args$phylo_dir, 'ratmann_deepseq_analyses/live')
 
 if(! exists('out.dir'))
 {
@@ -117,39 +104,37 @@ if(! exists('out.dir'))
     warning("output directory for intermediary results not set.\n Setting a temporary directory through `tempdir()`")
 }
 
-.fp <- function(C, x)
-{
-    indir <- fcase(
-        C == 'X',indir.deepsequence_xiaoyue,
-        C == 'A',indir.deepsequence_analyses,
-        C == 'D',indir.deepsequencedata,
-        default=NULL)
-    file.path(indir, x)
-}
-
 if(args$confidential)
 {
     # paths that should not be available to everyone, but were used for the analysis
-    file.path.meta <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
-    file.path.sequence.dates <- file.path(indir.confidential, "sequences_collection_dates.rds")
+    path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
+    path.sequence.dates <- .fp(indir.deepsequencedata, "RCCS_R15_R18/sequences_collection_dates.rds")
 }else{
     # randomized version of the paths used for the analysis
-    file.path.meta <- file.path(indir, 'data',"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
-    file.path.sequence.dates <- file.path(indir.data, "sequences_collection_dates_randomized.rds")
+    path.meta <- file.path(indir, 'data',"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
+    path.sequence.dates <- file.path(indir.data, "sequences_collection_dates_randomized.rds")
 }
 
 # next one should really be changed with phylodir.
-file.path.chains.data <- file.path(indir, 'data', 'Rakai_phscnetworks_ruleo_sero.rda')
-file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData' )
-# file.anonymisation.keys <- .fp('X','important_anonymisation_keys_210119.csv')
-file.path.tsiestimates <- file.path(indir.data, 'TSI_estimates.csv')
+path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData' )
+path.chains.data <- fifelse(
+    is.null(args$path.chains.data),
+    yes=file.path(indir.data, 'Rakai_phscnetworks_ruleo_sero.rda'),
+    no=args$path.chains.data
+)
+path.tsiestimates <- fifelse(
+    is.null(args$path.tsiestimates),
+    file.path(indir.data, 'TSI_estimates.csv'),
+    no=args$path.tsiestimates
+)
 
-file.exists(file.path.meta,
-            file.path.sequence.dates,
-            file.path.chains.data,
-            file.path.round.timeline,
-            # file.anonymisation.keys,
-            file.path.tsiestimates) |> all() |> stopifnot()
+file.exists(
+    path.meta,
+    path.sequence.dates,
+    path.chains.data,
+    path.round.timeline,
+    # file.anonymisation.keys,
+    path.tsiestimates) |> all() |> stopifnot()
 
 
 ################
@@ -157,7 +142,7 @@ file.exists(file.path.meta,
 ################
 
 source(file.path(indir, 'functions', 'utils.R'))
-source(file.path(indir, 'confidential_data_src/utils', 'functions_tsi_attribution.R'))
+source(file.path(indir, 'scripts_for_confidential_data/utils', 'functions_tsi_attribution.R'))
 source(file.path(indir, 'functions', 'plotting_functions.R'))
 source(file.path(indir, 'functions', 'summary_functions.R'))
 find_palette_round()
@@ -172,7 +157,7 @@ threshold.direction <- 0.5
 get.sero.extra.pairs <- FALSE
 build.network.from.pairs <- TRUE
 postpone.samesex.removal <- TRUE
-is.metadata.randomized <- file.path.meta %like% 'randomized'
+is.metadata.randomized <- path.meta %like% 'randomized'
 stopifnot(is.metadata.randomized==!args$confidential)
 
 # initialise overleaf substitute-expressions.
@@ -181,17 +166,16 @@ overleaf_expr <- list()
 # Load anon. keys
 # aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
 
-meta <- load.meta.data(file.path.meta)
-chain <- build.phylo.network.from.pairs(file.path.chains.data)
+meta <- load.meta.data(path.meta)
+chain <- build.phylo.network.from.pairs(path.chains.data)
 aids_of_interest <- chain[, unique(c(SOURCE,RECIPIENT))]
 meta <- meta[aid %in% aids_of_interest]
 
 drange <- get.infection.range.from.testing() |> 
     check.range.consistency()
 
-cat('the DOI algorithm is run for a total number of pairs equal to:')
 double.merge(chain, meta[, .(AID=aid, SEX=sex)])[, table(SEX.RECIPIENT, SEX.SOURCE)] |>
-    knitr::kable() |> print()
+    knitr::kable(caption="DOI algorithm is run for a total number of pairs equal to:") |> print()
 
 dancestors <- get.ancestors.from.chain(chain)
 
@@ -200,7 +184,7 @@ chain <- check.inconsistent.testing(drange, switch_if_no_other_src = TRUE)
 drange <- shrink.intervals(drange)
 
 # update using TSI estimates
-drange_tsi <- get.infection.range.from.tsi(file.path.tsiestimates, file.path.sequence.dates )
+drange_tsi <- get.infection.range.from.tsi(path.tsiestimates, path.sequence.dates )
 drange_tsi <- check.inconsistent.testing(drange_tsi, switch_if_no_other_src = FALSE)
 drange_tsi <- shrink.intervals(drange_tsi)
 setnames(drange_tsi, c('MIN', 'MAX'), c('TSI.MIN', 'TSI.MAX'))
@@ -233,13 +217,14 @@ dpairs[MAX.RECIPIENT - MIN.SOURCE < 0, stopifnot(.N == 0)]
 dclus <- get.transmission.cluster.ids(dpairs, check=FALSE)
 
 # initialise data.table summarising geometric properties
-dclus[, { g <- GROUP;
-         out <- dclus[GROUP==g, .(SOURCE=SOURCE, RECIPIENT=RECIPIENT)]
-         out <- unique(out)
-         N_out <- out[, uniqueN(c(SOURCE,RECIPIENT))]
-         out <- list(out)
-         out <- list(IDS=out, N_IDS=N_out)
-         }, by=GROUP] -> dcohords
+dclus[, { 
+    g <- GROUP;
+    out <- dclus[GROUP==g, .(SOURCE=SOURCE, RECIPIENT=RECIPIENT)]
+    out <- unique(out)
+    N_out <- out[, uniqueN(c(SOURCE,RECIPIENT))]
+    out <- list(out)
+    out <- list(IDS=out, N_IDS=N_out)
+}, by=GROUP] -> dcohords
 
 catn('specifying relative infectiousness as a function of time since infection')
 dinfectiousness <- specify.relative.infectiousness(args)
@@ -263,7 +248,7 @@ filename_net <- file.path(out.dir, paste0(filename_net, suffix, '.rds'))
 filename_overleaf <- file.path(out.dir, paste0(filename_overleaf, suffix, '.rds'))
 
 if(args$get.round.probabilities)
-    df_round_gi <- get.round.dates(file.path.round.timeline)
+    df_round_gi <- get.round.dates(path.round.timeline)
 
 if( file.exists(filename_net) & ! args$rerun )
 {
@@ -340,7 +325,7 @@ if( nrow(df_round_gi) )
     saveRDS(dprobs_roundallocation, filename)
 }
 
-# Final results: now store on github? Should be anonymised enough?
+# Final results
 filename <- file.path(indir.data, paste0('pairsdata_toshare', suffix, '.rds')) 
 
 if(  file.exists(filename) & ! args$rerun == TRUE )
@@ -353,6 +338,7 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
     dresults <- prepare.pairs.input.for.bayesian.model(centroids)
     dresults[, table(DIRECTION, useNA='ifany')]
 
+    # add homosexual pairs to results
     dhomosexualpairs[, DIRECTION := 'phyloscanner']
     dhomosexualpairs[, `:=` (SCORE=NULL, SCORE_DIR=NULL, SEX.SOURCE=NULL, SEX.RECIPIENT=NULL)]
     dhomosexualpairs <-  double.merge(dhomosexualpairs,meta[, .(AID=aid, SEX=sex)])
