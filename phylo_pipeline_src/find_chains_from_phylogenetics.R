@@ -433,14 +433,14 @@ if(args$classif_rule=='o'|args$classif_rule=='b')
 
     suff <- ''
     if(args$confidential == FALSE)
-        suff <- 'randomized'
-    filename <- paste0('Rakai_phscnetworks_ruleo_sero_randomized.rda')
+        suff <- '_randomized'
+    filename <- paste0('Rakai_phscnetworks_ruleo_sero',suff,'.rda')
     filename <- file.path(indir.data, filename)
     if(! file.exists(filename) )
     {
-        catn("saving Rakai_phscnetworks_ruleo_sero.rda")
+        catn(paste0("saving ", filename))
         save(dpl, dc, dw, dnet, dchain, file=filename)
     }else{
-        catn("File Rakai_phscnetworks_ruleo_sero.rda already exists")
+        catn(paste0("File ", filename, " already exists"))
     }
 }
