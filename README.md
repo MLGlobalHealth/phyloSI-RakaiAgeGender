@@ -56,13 +56,14 @@ This study was supported by the following organizations:
 
 
 ### Installation 
-A ```yml``` file is provided and can be used to build a conda virtual environment containing all R dependencies. Create the environment using:
-```bash
+Please use the following ```bash``` script to build a conda virtual environment and install all R dependencies:
+```shell
+$ git clone https://github.com/MLGlobalHealth/phyloSI-RakaiAgeGender.git
 $ cd phyloSI-RakaiAgeGender
-$ conda env create -f phyloSI-RakaiAgeGender.yml
+$ bash phyloSI-RakaiAgeGender-install.sh
 ```
-Then activate the environment for use:
-```bash
+If not activated, activate the environment for use:
+```shell
 $ source activate phyloSI-RakaiAgeGender
 ```
 
@@ -70,9 +71,9 @@ $ source activate phyloSI-RakaiAgeGender
 
 We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout.
 
-Our main analysis functions on estimating incidence dynamics and transmission flows depend on estimates of population sizes, prevalence, virus suppression.
+Our main analyses depend on estimates of population sizes, HIV prevalence, and HIV suppression. 
 
-To perform the data preprocessing required to run downstream models, navigate to the root directory of the repository and execute the following commands
+To perform the data preprocessing steps, navigate to the root directory of the repository and execute the following commands
 
 #### Stage 1
 ```shell
@@ -106,15 +107,15 @@ Rscript "./misc/get_unsuppressed_prevalence_share_sex.R"
 
 Alternatively, you can run the following shell script for convenience.
 ```shell
-$ bash preproc.sh
+$ bash phyloSI-RakaiAgeGender-preprocessing.sh
 ```
-`preproc.sh` will generate three new shell scripts: `preproc-s1.sh`, `preproc-s2.sh`, and `preproc-s3.sh`. Each script will invoke the required R scripts for each stage of the data preprocessing process. They must be executed in order:
+This script will generate three new shell scripts: `preproc-s1.sh`, `preproc-s2.sh`, and `preproc-s3.sh`. Each script will invoke the required R scripts for each stage of the data preprocessing process. They must be executed in order:
 ```shell
 $ bash preproc-s1.sh # stage 1
 $ bash preproc-s2.sh # stage 2
 $ bash preproc-s3.sh # stage 3
 ```
-> :exclamation: Note that some preprocessing scripts will generate figures which is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`.
+Note that some preprocessing scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`.
 
 Detailed flowcharts of how data read and written by each R script within each preprecessing stage can be found in `docs/README.md`.
 
@@ -127,12 +128,12 @@ Then run the following R script:
 ```shell
 $ Rscript scripts/run_incidence_rates_estimation.R
 ```
- > :exclamation: The output will be save in a seperate directory outside the repository under the name `phyloSI-RakaiAgeGender-outputs`.
+The output will be saved in a seperate directory outside the repository under the name `phyloSI-RakaiAgeGender-outputs`.
 
 ### Transmission flows analysis
 For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. 
 
-Set the **absolute path** to the output directory where the results should be stored in **line 7** of `run_stan_laptop.sh`: 
+Set the **absolute path** to the output directory where the results should be stored in **line 7** of `phyloSI-RakaiAgeGender-run_phyloflows-laptop.sh`: 
 ```bash
 OUTDIR="absolute/path/to/output/directory"
 ```
@@ -140,7 +141,7 @@ OUTDIR="absolute/path/to/output/directory"
 Open up command line tools, cd into the repository, and run:
 ```bash
 $ source activate phyloSI-RakaiAgeGender
-$ bash run_stan_laptop.sh
+$ bash phyloSI-RakaiAgeGender-run_phyloflows-laptop.sh
 ```
 
 This script will create two shell scripts, `bash_gp_220108-cutoff_2014.sh` and `bash_gp_220108-cutoff_2014-postprocessing.sh`, in the directory specified by `OUTDIR`. The first script, `bash_gp_220108-cutoff_2014.sh`, fits the age- and gender-specific phyloSI model to the Rakai data with Stan. The second script, `bash_gp_220108-cutoff_2014-postprocessing.sh`, performs diagnostic checks on the fitted model, creates posterior summaries, and generates figures. You will need to execute both scripts one after the other:
