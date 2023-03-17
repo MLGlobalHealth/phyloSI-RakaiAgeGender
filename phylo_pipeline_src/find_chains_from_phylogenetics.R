@@ -1,16 +1,17 @@
 # The phyloscanner run - find transmission networks 
+cat("\n===== find_chains_from_phylogenetics.R =====\n")
 
 # Preamble This script aims to find transmission networks and the most likely transmission chains using the phyloscanner outputs.
 
 # Load the required packages
-library(data.table)
-library(tidyverse)
-library(dplyr)
-library(glue)
-library(igraph)
-library(RBGL)
-library(phyloscannerR)
-library(here)
+library(data.table) |> suppressPackageStartupMessages()
+library(tidyverse) |> suppressPackageStartupMessages()
+library(dplyr) |> suppressPackageStartupMessages()
+library(glue) |> suppressPackageStartupMessages()
+library(igraph) |> suppressPackageStartupMessages()
+library(RBGL) |> suppressPackageStartupMessages()
+library(phyloscannerR) |> suppressPackageStartupMessages()
+library(here) |> suppressPackageStartupMessages()
 
 #
 # Define input arguments that can be changed by users
@@ -41,6 +42,7 @@ optparse::make_option(
 )
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
+args$phylo.pairs.dir <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/deep_sequence_phylogenies_primary/pairs_analysis/outputs"
 
 #
 # Paths
@@ -63,21 +65,8 @@ if(usr=='andrea')
 
 catn <- function(x) cat('\n----', x ,'----\n')
 
-
 get.sample.collection.dates <- function(select_aid=NULL, get_first_visit=FALSE)
 {
-    # # get collection dates 
-    # path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS','200316_pangea_db_sharing_extract_rakai.csv')
-    # path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
-
-    # files <- c(path.sdates.rccs, path.sdates.mrc)
-    # cols <- c('pt_id', 'pangea_id', 'visit_dt')
-    # ddates <- rbindlist(lapply(files, fread, select=cols))
-    # ddates <- unique(ddates)
-    # ddates <- merge(ddates, aik, by.x='pt_id', by.y='PT_ID')
-    # ddates[, pt_id := NULL]
-    # stopifnot(ddates[, uniqueN(pangea_id)==.N])
-    # setnames(ddates, 'AID', 'aid')
     ddates <- dseqdates
 
     if(!is.null(select_aid))
@@ -246,8 +235,8 @@ update.category.counts <- function(DEXCLUDE, DCA)
 if(args$confidential)
 {
     # paths that should not be available to everyone, but were used for the analysis
-    path.meta.data <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
-    path.sequence.dates <- .fp('D', "RCCS_R15_R18/sequences_collection_dates.rds")
+    path.meta.data <- file.path(indir.deepsequencedata, 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
+    path.sequence.dates <- file.path(indir.deepsequencedata, "RCCS_R15_R18/sequences_collection_dates.rds")
 }else{
     # randomized version of the paths used for the analysis
     path.meta.data <- file.path(indir, 'data',"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
@@ -260,8 +249,8 @@ stopifnot("args$phylo.pairs.dir does not exist: make sure you specify the correc
 stopifnot("path.meta.data does not exist: make sure you specify the correct path"=file.exists(path.meta.data))
 
 catn('Load phyloscanner outputs')
-stopifnot(dir.exists(args$phylo.dir))
-infiles	<- data.table(F=list.files(args$phylo.dir, pattern='*workspace.rda$', full.names=TRUE))
+stopifnot(dir.exists(args$phylo.pairs.dir))
+infiles	<- data.table(F=list.files(args$phylo.pairs.dir, pattern='*workspace.rda$', full.names=TRUE))
 infiles[, PTY_RUN:= as.integer(gsub('^ptyr([0-9]+)_.*','\\1',basename(F)))]
 setkey(infiles, PTY_RUN)
 
@@ -294,7 +283,6 @@ idx <- idx[ ,
 setcolorder(idx, c('PTY_RUN','host.1', 'host.2'))
 dca <- merge(idx, dca)
 dwina <- merge(idx, dwina)
-meta_data
 
 # 
 if( file.exists(path.meta.data) )
@@ -379,41 +367,37 @@ if(0)
 
 # find pairs according to classification rule and thresholds.
 # classification rule o: Oliver Ratmann's
+dir_group <- dca[categorisation %like% 'close.and.adjacent.and.directed.cat', unique(categorisation)]
+idx <- dir_group %like% 'sero'
+dir_group <- ifelse(any(idx), dir_group[idx], dir_group[1])
 
-if(args$classif_rule=='o'|args$classif_rule=='b')
+control <- list(linked.group='close.and.adjacent.cat',
+                linked.no='not.close.or.nonadjacent',
+                linked.yes='close.and.adjacent', 
+                dir.group = dir_group,
+                conf.cut=0.6, 
+                neff.cut=3,
+                weight.complex.or.no.ancestry=0.5)
+# Find pairs
+tmp <- find.pairs.in.networks(dwina, dca, control=control, verbose=TRUE)
+dpl <- copy(tmp$network.pairs)
+dc <- copy(tmp$relationship.counts)
+dw <- copy(tmp$windows)
+
+# Find chains
+tmp <- find.networks(dc, control=control, verbose=TRUE)
+dnet <- copy(tmp$transmission.networks)
+dchain <- copy(tmp$most.likely.transmission.chains)
+
+suff <- ''
+if(args$confidential == FALSE)
+    suff <- '_randomized'
+filename <- paste0('Rakai_phscnetworks_ruleo_sero',suff,'.rda')
+filename <- file.path(indir.data, filename)
+if(! file.exists(filename) )
 {
-    dir_group <- dca[categorisation %like% 'close.and.adjacent.and.directed.cat', unique(categorisation)]
-    idx <- dir_group %like% 'sero'
-    dir_group <- ifelse(any(idx), dir_group[idx], dir_group[1])
-
-    control <- list(linked.group='close.and.adjacent.cat',
-                    linked.no='not.close.or.nonadjacent',
-                    linked.yes='close.and.adjacent', 
-                    dir.group = dir_group,
-                    conf.cut=0.6, 
-                    neff.cut=3,
-                    weight.complex.or.no.ancestry=0.5)
-    # Find pairs
-    tmp <- find.pairs.in.networks(dwina, dca, control=control, verbose=TRUE)
-    dpl <- copy(tmp$network.pairs)
-    dc <- copy(tmp$relationship.counts)
-    dw <- copy(tmp$windows)
-
-    # Find chains
-    tmp <- find.networks(dc, control=control, verbose=TRUE)
-    dnet <- copy(tmp$transmission.networks)
-    dchain <- copy(tmp$most.likely.transmission.chains)
-
-    suff <- ''
-    if(args$confidential == FALSE)
-        suff <- '_randomized'
-    filename <- paste0('Rakai_phscnetworks_ruleo_sero',suff,'.rda')
-    filename <- file.path(indir.data, filename)
-    if(! file.exists(filename) )
-    {
-        catn(paste0("saving ", filename))
-        save(dpl, dc, dw, dnet, dchain, file=filename)
-    }else{
-        catn(paste0("File ", filename, " already exists"))
-    }
+    catn(paste0("saving ", filename))
+    save(dpl, dc, dw, dnet, dchain, file=filename)
+}else{
+    catn(paste0("File ", filename, " already exists"))
 }

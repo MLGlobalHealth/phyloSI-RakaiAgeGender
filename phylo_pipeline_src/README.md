@@ -31,15 +31,15 @@ The bash script `runall_TSI_pairs2.sh` describes the order in which the scripts 
 The primary inputs are two: `\*bam` files and base frequency files `\*BaseFreqs_WithHXB2.csv` for each NGS sequence.
 The second is only necessary to compute Minor Allele Frequencies necessary for the HIV-phylo-TSI algorithm.
 
-| code | script                            | role                    | output                                |
-| ---- | --------------------------------- | ----------------------- | ------------------------------------- |
-| net  | `TSI_initialise.R`                | group sequences         | `clusters.rds`; `phscinput_runs_*rds` |
-| ali  | `make_deep_sequence_alignments.R` | queue alignment jobs    | `readali*.sh`                         |
-| btr  | `make_trees.R`                    | queue iqtree jobs       | `srx*job.sh`                          |
-| ctr  | `check_trees.R`                   | check and re-queue btr  | `srx*job.sh`                          |
-| atr  | `analyse_trees.R`                 | queue trees analyses    | `phsc_tsi*.sh`                        |
-| tsi  | `TSI_run_predictions.R`           | run HIV-phylo-TSI       | `tsi*sh`                              |
-| dti  | `TSI_estimate_dates.R`            | aggregate TSI estimates | `aggregated_TSI*.csv`                 |
+| code | script                            | role                       | output                                |
+| ---- | --------------------------------- | -----------------------    | ------------------------------------- |
+| net  | `TSI_initialise.R`                | group sequences            | `clusters.rds`; `phscinput_runs_*rds` |
+| ali  | `make_deep_sequence_alignments.R` | queue alignment jobs       | `readali*.sh`                         |
+| btr  | `make_trees.R`                    | queue iqtree jobs          | `srx*job.sh`                          |
+| ctr  | `check_trees.R`                   | check and re-queue btr     | `srx*job.sh`                          |
+| atr  | `analyse_trees.R`                 | queue trees analyses       | `phsc_tsi*.sh`                        |
+| tsi  | `TSI_run_predictions.R`           | run HIV-phylo-TSI          | `tsi*sh`                              |
+| dti  | `TSI_estimate_dates.R`            | group & write dates of inf | `TSI_estimates*.csv`                  |
 
 Details on the shell jobs is summarised below:
 
