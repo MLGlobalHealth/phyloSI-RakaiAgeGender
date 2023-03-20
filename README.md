@@ -1,7 +1,7 @@
 # phyloSI-RakaiAgeGender
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
 
-**Welcome!** This repository contains the code and data for the analyses presented in the paper *Growing gender inequity in HIV infection in Africa: sources and policy implications* by M Monod, A Brizzi, R Galiwango, R Ssekubugu, Y Chen, X Xi et al.
+**Welcome!** This repository contains the code and data for the analyses presented in the paper [*Growing gender inequity in HIV infection in Africa: sources and policy implications* by M Monod, A Brizzi, R Galiwango, R Ssekubugu, Y Chen, X Xi et al.](https://doi.org/10.1101/2023.03.16.23287351).
 
 - [License](#license)
 - [Warrenty](#warranty)
@@ -27,6 +27,9 @@ The code and data in this repository are licensed under [CC-BY-4.0](https://crea
 Imperial makes no representation or warranty about the accuracy or completeness of the data nor that the results will not constitute in infringement of third-party rights. Imperial accepts no liability or responsibility for any use which may be made of any results, for the results, nor for any reliance which may be placed on any such work or results.
 
 ## Citation
+Please cite this work as 
+
+Mélodie Monod, Andrea Brizzi, Ronald M Galiwango, Robert Ssekubugu, Yu Chen, Xiaoyue Xi, Edward Nelson Kankaka, Victor Ssempijja, Lucie Abeler-Dörner, Adam Akullian, Alexandra Blenkinsop, David Bonsall, Larry William Chang, Shozen Dan, Christophe Fraser, Tanya Golubchik, Ronald H Gray, Matthew Hall, Jade C. Jackson, Godfrey Kigozi, Oliver Laeyendecker, Lisa A Mills, Thomas Quinn, Steven J Reynolds, John Santelli, Nelson Sewankambo, Simon EF Spencer, Joseph Ssekasanvu, Laura Thomson, Maria Wawer, David Serwadda, Peter Godfrey-Faussett, Joseph Kagaayi, M Kate Grabowski, Oliver Ratmann, Rakai Health Sciences Program, PANGEA-HIV consortium; Growing gender disparity in HIV infection in Africa: sources and policy implications; medRxiv 2023.03.16.23287351; doi: https://doi.org/10.1101/2023.03.16.23287351; 2023
 
 ## Acknowledgements
 We thank all contributors, program staff and participants to the Rakai Community Cohort Study; all members of the PANGEA-HIV consortium, the [Rakai Health Sciences Program](https://www.rhsp.org/index.php), and CDC Uganda for comments on an earlier version of the manuscript.
