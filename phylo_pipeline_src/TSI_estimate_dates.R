@@ -53,10 +53,18 @@ stopifnot("Path to TSI-output-directory does not exist"=dir.exists(args$rel.dir)
 # stopifnot(dir.exists(args$out.dir))
 
 # aggregate outputs from HIV_phylo_tsi and prettify
-dfiles <- list.files(args$rel.dir, pattern='_tsi.csv$', full.names = TRUE)
-dpreds <- lapply(dfiles, fread)
+dfiles.csv <- list.files(args$rel.dir, pattern='_tsi.csv$', full.names = TRUE)
+dfiles.rds <- list.files(args$rel.dir, pattern='_tsi.rds$', full.names = TRUE)
+
 .gs <- function(x) gsub('[A-z]|_|\\.', '', basename(x) )
-names(dpreds) <- .gs(dfiles)
+if( length(dfiles.csv) )
+{
+    dpreds <- lapply(dfiles.csv, fread)
+    names(dpreds) <- .gs(dfiles.csv)
+}else{
+    dpreds <- lapply(dfiles.rds, readRDS)
+    names(dpreds) <- .gs(dfiles.rds)
+}
 cols <- grep('host.id|^RF', colnames(dpreds[[1]]), value=T)
 dpreds <- lapply(dpreds, function(DT) subset(DT, select=cols) )
 dpreds <- rbindlist(dpreds, idcol = 'PTY')
