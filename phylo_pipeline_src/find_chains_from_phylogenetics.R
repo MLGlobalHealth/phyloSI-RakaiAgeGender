@@ -27,29 +27,32 @@ optparse::make_option(
   optparse::make_option(
     "--phylo-pairs-dir",
     type = "character",
-    default = '/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI/211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd',
+    default = "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/deep_sequence_phylogenies_primary/data_for_likely_transmission_pairs/phyloscanner-results",
     help = "Absolute file path to base directory where the phyloscanner outputs are stored [default]",
     dest = 'phylo.pairs.dir'
   ),
   optparse::make_option(
-    "--date",
-    type = 'character',
-    default = '2022-02-04',
-    metavar = '"YYYY-MM-DD"',
-    help = 'As of date to extract data from.  Defaults to today.',
-    dest = 'date'
+    "--outdir",
+    type = "character",
+    default = NULL,
+    help = "Absolute file path to output directory to save the scripts outputs in", 
+    dest = 'outdir'
   )
 )
 
 args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
-args$phylo.pairs.dir <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/deep_sequence_phylogenies_primary/pairs_analysis/outputs"
 
 #
 # Paths
 #
 
-indir <- here()
-indir.data <- file.path(indir, 'data')
+gitdir <- here()
+gitdir.data <- file.path(gitdir, 'data')
+
+# if output directory is null, set it to gitdir.data
+if( is.null(args$outdir) )
+    args$outdir <- gitdir.data
+
 
 usr <- Sys.info()[['user']]
 if(usr=='andrea')
@@ -98,7 +101,6 @@ get.infection.range.from.testing <- function()
     drange[, lowb15lastneg := NULL]
     drange
 }
-
 
 .format.controls <- function(DT)
 {
@@ -239,12 +241,11 @@ if(args$confidential)
     path.sequence.dates <- file.path(indir.deepsequencedata, "RCCS_R15_R18/sequences_collection_dates.rds")
 }else{
     # randomized version of the paths used for the analysis
-    path.meta.data <- file.path(indir, 'data',"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
-    path.sequence.dates <- file.path(indir.data, "sequences_collection_dates_randomized.rds")
+    path.meta.data <- file.path(gitdir.data,"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
+    path.sequence.dates <- file.path(gitdir.data, "sequences_collection_dates_randomized.rds")
 }
 
 dseqdates <- readRDS(path.sequence.dates)
-
 stopifnot("args$phylo.pairs.dir does not exist: make sure you specify the correct path"=file.exists(args$phylo.pairs.dir))
 stopifnot("path.meta.data does not exist: make sure you specify the correct path"=file.exists(path.meta.data))
 
@@ -385,15 +386,19 @@ dc <- copy(tmp$relationship.counts)
 dw <- copy(tmp$windows)
 
 # Find chains
+dc[, unique(CATEGORISATION)]
+
 tmp <- find.networks(dc, control=control, verbose=TRUE)
 dnet <- copy(tmp$transmission.networks)
 dchain <- copy(tmp$most.likely.transmission.chains)
 
+
+cat("\n---- Save in output directory (default:gitdir.data) ----\n")
 suff <- ''
 if(args$confidential == FALSE)
     suff <- '_randomized'
 filename <- paste0('Rakai_phscnetworks_ruleo_sero',suff,'.rda')
-filename <- file.path(indir.data, filename)
+filename <- file.path(args$outdir, filename)
 if(! file.exists(filename) )
 {
     catn(paste0("saving ", filename))
@@ -401,3 +406,4 @@ if(! file.exists(filename) )
 }else{
     catn(paste0("File ", filename, " already exists"))
 }
+cat('\n\n=====  end of script =====\n\n')

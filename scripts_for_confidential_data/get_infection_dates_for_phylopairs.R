@@ -69,6 +69,20 @@ option_list <- list(
         default = FALSE,
         help = "Relative Hazard of transmission during the acute versus chronic infection phase [Defaults to 5]", 
         dest = 'sensitivity.no.refinement'
+    ),
+    optparse::make_option(
+        "--intermediate",
+        type = "logical",
+        default = FALSE,
+        help = "Save intermediate outputs to outdir.", 
+        dest = 'save.intermediate'
+    ),
+    optparse::make_option(
+        "--outdir",
+        type = "character",
+        default = NULL,
+        help = "Absolute file path to output directory to save the scripts outputs in", 
+        dest = 'outdir'
     )
 )
 
@@ -83,48 +97,50 @@ catn <- function(x) cat("\n----", x, "----\n")
 
 usr <- Sys.info()[['user']]
 
-indir <- here::here()
+gitdir <- here::here()
+gitdir.data <- file.path(gitdir, 'data')
+
+# if output directory is null, set it to gitdir.data
+if( is.null(args$outdir) )
+    args$outdir <- gitdir.data
+
+# randomized version of the paths used for the analysis
+path.meta <- file.path(gitdir.data,"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
+path.sequence.dates <- file.path(gitdir.data, "sequences_collection_dates_randomized.rds")
 
 if( args$confidential)
 {
     if(usr == 'andrea')
     {
         args$phylo_dir <- '/home/andrea/HPC/project'
-        out.dir<- '/home/andrea/HPC/ab1820/home/projects/2022/genintervals'
+        intermed.out.dir<- '/home/andrea/HPC/ab1820/home/projects/2022/genintervals'
         indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
     }
+
+    # paths that should not be available to everyone, but were used for the analysis
+    path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
+    path.sequence.dates <- file.path(indir.deepsequencedata, "RCCS_R15_R18/sequences_collection_dates.rds")
+
 }
 
-# git data directory
-indir.data <- file.path(indir, 'data')
-
-if(! exists('out.dir'))
+# intermediate output directory:
+if( args$save.intermediate )
 {
-    out.dir <- tempdir()
+    intermed.out.dir <- args$outdir
+}else{
+    intermed.out.dir <- tempdir()
     warning("output directory for intermediary results not set.\n Setting a temporary directory through `tempdir()`")
 }
 
-if(args$confidential)
-{
-    # paths that should not be available to everyone, but were used for the analysis
-    path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
-    path.sequence.dates <- .fp(indir.deepsequencedata, "RCCS_R15_R18/sequences_collection_dates.rds")
-}else{
-    # randomized version of the paths used for the analysis
-    path.meta <- file.path(indir, 'data',"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
-    path.sequence.dates <- file.path(indir.data, "sequences_collection_dates_randomized.rds")
-}
-
-# next one should really be changed with phylodir.
-path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData' )
+path.round.timeline <- file.path(gitdir.data, 'RCCS_round_timeline_220905.RData' )
 path.chains.data <- fifelse(
     is.null(args$path.chains.data),
-    yes=file.path(indir.data, 'Rakai_phscnetworks_ruleo_sero.rda'),
+    yes=file.path(gitdir.data, 'Rakai_phscnetworks_ruleo_sero.rda'),
     no=args$path.chains.data
 )
 path.tsiestimates <- fifelse(
     is.null(args$path.tsiestimates),
-    file.path(indir.data, 'TSI_estimates.csv'),
+    file.path(gitdir.data, 'TSI_estimates.csv'),
     no=args$path.tsiestimates
 )
 
@@ -141,10 +157,10 @@ file.exists(
 #    HELPERS   #
 ################
 
-source(file.path(indir, 'functions', 'utils.R'))
-source(file.path(indir, 'scripts_for_confidential_data/utils', 'functions_tsi_attribution.R'))
-source(file.path(indir, 'functions', 'plotting_functions.R'))
-source(file.path(indir, 'functions', 'summary_functions.R'))
+source(file.path(gitdir, 'functions', 'utils.R'))
+source(file.path(gitdir, 'scripts_for_confidential_data/utils', 'functions_tsi_attribution.R'))
+source(file.path(gitdir, 'functions', 'plotting_functions.R'))
+source(file.path(gitdir, 'functions', 'summary_functions.R'))
 find_palette_round()
 
 ################
@@ -243,9 +259,9 @@ filename_overleaf <- 'pairsinfo_overleaf'
 
 suffix <- set.mcmc.outputs.suffix()
 
-filename_drange <- file.path(out.dir, paste0(filename_drange, suffix,  '.rds'))
-filename_net <- file.path(out.dir, paste0(filename_net, suffix, '.rds'))
-filename_overleaf <- file.path(out.dir, paste0(filename_overleaf, suffix, '.rds'))
+filename_drange <- file.path(intermed.out.dir, paste0(filename_drange, suffix,  '.rds'))
+filename_net <- file.path(intermed.out.dir, paste0(filename_net, suffix, '.rds'))
+filename_overleaf <- file.path(intermed.out.dir, paste0(filename_overleaf, suffix, '.rds'))
 
 if(args$get.round.probabilities)
     df_round_gi <- get.round.dates(path.round.timeline)
@@ -321,12 +337,12 @@ if( nrow(df_round_gi) )
     cols <- c('BeforeR10', 'R10_R15', 'R16_18')
     dprobs_roundallocation[, (cols) := lapply(.SD, function(x){x[is.na(x)] <- 0; x} ) , .SDcols=cols]
     
-    filename <- file.path(out.dir, paste0('probs_roundallocations', suffix, '.rds'))
+    filename <- file.path(intermed.out.dir, paste0('probs_roundallocations', suffix, '.rds'))
     saveRDS(dprobs_roundallocation, filename)
 }
 
 # Final results
-filename <- file.path(indir.data, paste0('pairsdata_toshare', suffix, '.rds')) 
+filename <- file.path(args$outdir, paste0('pairsdata_toshare', suffix, '.rds')) 
 
 if(  file.exists(filename) & ! args$rerun == TRUE )
 {

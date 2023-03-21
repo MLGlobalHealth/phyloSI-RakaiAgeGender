@@ -11,7 +11,7 @@ option_list <- list(
   optparse::make_option(
     "--tsi_out_dir",
     type = "character",
-    default = "/home/andrea/HPC/project/ratmann_deepseq_analyses/live/PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T",
+    default = "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/deep_sequence_phylogenies_primary/data_for_time_since_infection/phyloscanner-results",
     help = "Absolute file path to directory containing phylo-TSI results", 
     dest = 'rel.dir'
   ),
@@ -21,6 +21,13 @@ option_list <- list(
     default = TRUE, 
     help = "Whether using the confidential sample collection dates or not",
     dest = 'confidential'
+  ),
+  optparse::make_option(
+    "--outdir",
+    type = "character",
+    default = NULL,
+    help = "Absolute file path to output directory to save the scripts outputs in", 
+    dest = 'outdir'
   )
 )
 
@@ -38,11 +45,17 @@ if(user != 'andrea')
 }
 
 gitdir <- here()
+gitdir.data <- file.path(gitdir, 'data')
+
+# if output directory is null, set it to gitdir.data
+if( is.null(args$outdir) )
+    args$outdir <- gitdir.data
 
 path.collection.dates <- fifelse(args$confidential, 
     yes=file.path(indir.deepseqdata, 'RCCS_R15_R18', 'sequences_collection_dates.rds'),
     no=file.path(gitdir, 'data', 'sequences_collection_dates_randomized.rds'),
 )
+
 
 
 ################
@@ -59,11 +72,15 @@ dfiles.rds <- list.files(args$rel.dir, pattern='_tsi.rds$', full.names = TRUE)
 .gs <- function(x) gsub('[A-z]|_|\\.', '', basename(x) )
 if( length(dfiles.csv) )
 {
+    cat('extracting',length(dfiles.csv),'.csv files\n')
     dpreds <- lapply(dfiles.csv, fread)
     names(dpreds) <- .gs(dfiles.csv)
-}else{
+}else if( length(dfiles.rds) ){
+    cat('extracting',length(dfiles.rds),'.rds files\n')
     dpreds <- lapply(dfiles.rds, readRDS)
     names(dpreds) <- .gs(dfiles.rds)
+}else{
+    stop('no `*tsi.csv` or `tsi.rds` files found in args$rel.dir .\n')
 }
 cols <- grep('host.id|^RF', colnames(dpreds[[1]]), value=T)
 dpreds <- lapply(dpreds, function(DT) subset(DT, select=cols) )
@@ -112,12 +129,12 @@ cols <- c( "AID", "RENAME_ID",
 dpreds  <- subset(dpreds, select=cols) 
 
 
-cat("\n---- Save in gitdir.data ----\n")
+cat("\n---- Save in outdir (default:gitdir.data) ----\n")
 suffix <- ''
 if(is.randomized)
     suffix <- '_randomized'
 filename <- paste0("TSI_estimates", suffix,".csv")
-filename <- file.path(gitdir, 'data', filename)
+filename <- file.path(args$outdir, filename)
 
 if(! file.exists(filename))
 {
