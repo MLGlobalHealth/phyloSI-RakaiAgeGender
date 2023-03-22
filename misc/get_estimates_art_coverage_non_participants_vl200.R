@@ -7,10 +7,26 @@ library(rstan)
 library("haven")
 
 # directory of the repository
-indir.repository <- getwd()
+gitdir <- getwd()
+
+# TODO: shozen: do you think this would be helpful? 
+# library(optparse)
+# option_list <- list(
+#     make_option(
+#         "--outdir",
+#         type = "",
+#         default = ,
+#         help = "",
+#         dest= ""
+#     ),
+# )
+# args <- parse_args(OptionParser(option_list = option_list))
+
+
+# load file paths
+source(file.path(gitdir, 'paths.R'))
 
 # outdir directory for stan fit
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 if (dir.exists(indir.deepsequence_analyses)) {
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
 } else {
@@ -19,12 +35,11 @@ if (dir.exists(indir.deepsequence_analyses)) {
 }
 
 
-# files
-data.path <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage_vl200.csv')
-path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
+# stan model
+path.stan <- file.path(gitdir, 'misc', 'stan_models', 'binomial_gp.stan')
 
 # find count of newly registered participants who reported art use
-rart <- as.data.table( read.csv(data.path) )
+rart <- fread(path.newly.registered.art.vl200)
 
 
 #################################
@@ -308,7 +323,7 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds'))
+file.name <- file.path(gitdir, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds'))
 saveRDS(nsinf.samples, file = file.name)
 
 file.name <- file.path(outdir, paste0('RCCS_art_model_fit_newlyregistered_vl200_221208.RDS'))

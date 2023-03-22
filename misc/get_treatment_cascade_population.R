@@ -3,11 +3,27 @@ library(ggplot2)
 require(lubridate)
 library(dplyr)
 
-# directory to repository
-indir.repository <- getwd()
+library(here)
+
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "paths.R"))
+
+# TODO: shozen: do you think this would be helpful? 
+# library(optparse)
+# option_list <- list(
+#     make_option(
+#         "--outdir",
+#         type = "",
+#         default = ,
+#         help = "",
+#         dest= ""
+#     ),
+# )
+# args <- parse_args(OptionParser(option_list = option_list))
+
 
 # outdir to save figures
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 if (dir.exists(indir.deepsequence_analyses)) {
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 } else {
@@ -16,18 +32,12 @@ if (dir.exists(indir.deepsequence_analyses)) {
 }
 
 # posterior samples participants
-file.unsuppressedviralload <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_221208.rds'))
-
-# posterior samples non-participants
-file.unsuppressedviralload.np <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
-file.selfreportedart.np <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221208.rds'))
-
-# participation rate
-file.participation <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
-
-# specificity and sensitivity art reporting
-file.spec.sens.art = file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
+file.exists(file.unsuppressedviralload) |> stopifnot()
+file.exists(file.selfreportedart) |> stopifnot()
+file.exists(file.unsuppressedviralload.np) |> stopifnot()
+file.exists(file.selfreportedart.np) |> stopifnot()
+file.exists(file.participation) |> stopifnot()
+file.exists(file.spec.sens.art) |> stopifnot()
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
@@ -257,9 +267,22 @@ stopifnot(nrow(df[COMM == 'fishing']) == df[, length(unique(AGEYRS))] * df[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
-saveRDS(df, file = file.name)
+# file.name <- file.path(gitdir.fit, paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
+file.name <- file.treatment.cascade 
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(df, file = file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221208.csv'))
-write.csv(ns, file = file.name, row.names = F)
+file.name <- file.path(gitdir.fit, paste0('RCCS_treatment_cascade_population_estimates_221208.csv'))
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    write.csv(ns, file = file.name, row.names = F)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 

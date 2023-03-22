@@ -16,13 +16,30 @@ library("remotes")
 library("metR")
 library("lubridate")
 library(ggpubr)
+library(here)
+library(optparse)
 
 # set to directory
-indir <- getwd()
+gitdir <- here()
+
+library(optparse)
+
+option_list <- list(
+    make_option(
+        "--outdir",
+        type = "character",
+        default = NULL,
+        help = "Output directory []",
+        dest= "outdir"
+    ),
+)
+
+args <- parse_args(OptionParser(option_list = option_list))
 
 # set up path to data
 indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+
 if (dir.exists(indir.deepsequence.analyses)){
   # set path to save results
   outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'incidence_rate_inland')
@@ -31,17 +48,14 @@ if (dir.exists(indir.deepsequence.analyses)){
   if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
 }
 
-# Main analysis: sero conversion cohort status (all communities)
-file.path.seroconverter_cohort <- file.path(indir, 'data', 'seroconverter_cohort_R6R19.rds')
+# source paths 
+source(gitdir, "paths.R")
 
-# Sensitivity analysis: sero conversion cohort status (continuously surveyed communities)
-# file.path.seroconverter_cohort <- file.path(indir, 'data', 'seroconverter_cohort_30comm_R6R19.rds')
+# # function
+source(file.path(gitdir, 'functions', 'incidence_rate_estimation_functions.R'))
 
-# Sensitivity analysis: ero conversion cohort status (continuously surveyed communities < round 9 and all communities afterwards)
-# file.path.seroconverter_cohort <- file.path(indir.deepsequencedata, 'RCCS_R9_R14/RCCS_data_estimate_incidence_inland_R6_R18_230218', 'seroconverter_cohort.rds')
-
-# function
-source(file.path(indir, 'functions', 'incidence_rate_estimation_functions.R'))
+stopifnot("Outdir could not be found"=file.exists(args$outdir))
+stopifnot("Seroconverter_cohort file not found"=file.exists(file.path.seroconverter_cohort))
 
 # utils
 rounds_group_1 <- c("R006","R007", "R008", "R009", "R010", "R011", "R012", "R013", "R014")
@@ -306,14 +320,14 @@ stats <- save_statistics_estimates(df_round,
 # DATA
 # 
 
-plot_data(seroconverter_cohort, outdir)
+plot_data(seroconverter_cohort, args$outdir)
 
 
 #
 # ESTIMATES
 # 
 
-plot_model_fit(modelpreds, modelpreds.age.1218, outdir)
+plot_model_fit(modelpreds, modelpreds.age.1218, args$outdir)
 
 
 #
@@ -327,11 +341,11 @@ model_pred <- find_prediction_1y(modelpreds.age.1218.all, seroconverter_cohort_i
 stats_prediction <- find_statistics_prediction(model_pred)
 
 # plot for all iterations
-plot_predicted_incidence_events(model_pred, outdir)
-plot_estimate_incidence_rates(model_pred, outdir)
+plot_predicted_incidence_events(model_pred, args$outdir)
+plot_estimate_incidence_rates(model_pred, args$outdir)
 
 # plot summary across iterations
-plot_estimate_incidence_rates_summary(modelpreds.age.1218, seroconverter_cohort_crude, outdir)
+plot_estimate_incidence_rates_summary(modelpreds.age.1218, seroconverter_cohort_crude, args$outdir)
 
 
 ###########################
@@ -355,8 +369,11 @@ modelpreds.loess.age.1218 = dcast(modelpreds.loess.age.1218, Sex + round_label +
 setnames(modelpreds.loess.age.1218, c('M_inc', 'CL_inc', 'CU_inc'), c('incidence', 'lb', 'ub'))
 
 # plot comparison smooth incidence rate using loess and gam
-plot_comparison_loess_gam(modelpreds.loess.age.1218, modelpreds.age.1218, 
-                                      seroconverter_cohort_imputation, outdir)
+plot_comparison_loess_gam(
+    modelpreds.loess.age.1218,
+    modelpreds.age.1218, 
+    seroconverter_cohort_imputation,
+    args$outdir)
 
 
 #################
@@ -365,44 +382,44 @@ plot_comparison_loess_gam(modelpreds.loess.age.1218, modelpreds.age.1218,
 
 #################
 
-file.name <- file.path(outdir, 'list_long_results_221109.RData')
+file.name <- file.path(args$outdir, 'list_long_results_221109.RData')
 save(modelpreds.age.1218.list, seroconverter_cohort.list, modelaics.age.list, file = file.name)
 
-file.name	<- file.path(indir, 'data', "Rakai_incpredictions_inland_221107.csv")
+file.name	<- file.path(gitdir, 'data', "Rakai_incpredictions_inland_221107.csv")
 tmp <- select(modelpreds.age.1218[model == 'model_1'], c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
 write.csv(tmp, file = file.name, row.names = F)
 
-file.name	<- file.path(indir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
+file.name	<- file.path(gitdir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
 tmp <- modelpreds.age.1218.all[model == 'model_1', .(Sex, round_label, age, iterations, fit, inc, iterations_within)]
 write.csv(tmp, file = file.name, row.names = F)
 
-file.name	<- file.path(indir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")
+file.name	<- file.path(gitdir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")
 tmp <- select(modelpreds.loess.age.1218, c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
 write.csv(tmp, file = file.name, row.names = F)
 
-file.name	<- file.path(indir, 'data', "Rakai_incpredictions_loess_samples_inland_221116.csv")
+file.name	<- file.path(gitdir, 'data', "Rakai_incpredictions_loess_samples_inland_221116.csv")
 tmp <- modelpreds.loess.age.1218.all[, .(Sex, round_label, age, iterations, INC_CRUDE_SMOOTH)]
 setnames(tmp, 'INC_CRUDE_SMOOTH', 'inc')
 write.csv(tmp, file = file.name, row.names = F)
 
 if (dir.exists(indir.deepsequencedata)) {
   file.name	<- file.path(indir.deepsequencedata, 
-                        "RCCS_data_estimate_incidence_inland_R6_R18/220903/", 
-                        "Rakai_inc_model_fit_inland_221107.csv")
+        "RCCS_data_estimate_incidence_inland_R6_R18/220903/", 
+        "Rakai_inc_model_fit_inland_221107.csv")
 } else {
-  out.path <- file.path(outdir, "RCCS_data_estimate_incidence_inland_R6_R18/220903/")
+  out.path <- file.path(args$outdir, "RCCS_data_estimate_incidence_inland_R6_R18/220903/")
   dir.create(out.path, recursive = TRUE)
   file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
 }
 write.csv(model_pred, file = file.name, row.names = F)
 
 # For paper
-file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
+file.name <- file.path(args$outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
 saveRDS(stats, file.name)
 
-file.name <- file.path(outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
+file.name <- file.path(args$outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
 saveRDS(stats_prediction, file.name)
 
-file.name <- file.path(outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
+file.name <- file.path(args$outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
 saveRDS(stats_prediction_loess, file.name)
 

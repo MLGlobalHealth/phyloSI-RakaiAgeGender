@@ -2,17 +2,19 @@ library(data.table)
 library(ggplot2)
 require(lubridate)
 library(dplyr)
+library(here)
 
-# directory to repository
-indir.repository <- getwd()
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "paths.R"))
 
 # files
-file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
-file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
-file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
+file.exists(file.treatment.cascade) |> stopifnot()
+file.exists(file.prevalence) |> stopifnot()
+file.exists(file.eligible.count) |> stopifnot()
 
 # load census eligible ount
-eligible_count <- as.data.table(read.csv(file.eligible.count))
+eligible_count <- fread(file.eligible.count)
 
 # load proportion prevalence
 proportion_prevalence <- as.data.table(readRDS(file.prevalence))
@@ -68,5 +70,12 @@ sing = as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
 
 #########################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_median_age_221208.csv'))
-write.csv(sing, file = file.name, row.names = F)
+# file.name <- file.path(gitdir.fit,'RCCS_unsuppressed_median_age_221208.csv')
+file.name <- file.unsuppressed_median_age  
+if(! file.exists(fil.name))
+{
+    cat("Saving file:", file.name, '\n')
+    write.csv(sing, file = file.name, row.names = F)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}

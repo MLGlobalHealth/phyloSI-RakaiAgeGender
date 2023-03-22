@@ -7,19 +7,11 @@ library(rstan)
 library("haven")
 library(here)
 
-usr <- Sys.info()['user']
-if(usr == 'andrea')
-{
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}
+gitdir <- here()
+source(file.path(gitdir, "paths.R"))
 
-indir.repository <- here::here()
-indir.deepsequencedata.r151r18 <- file.path(indir.deepsequencedata, "RCCS_R15_R18")
 
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
-path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
+path.stan <- file.path(gitdir.misc, 'stan_models', 'binomial_gp.stan')
 
 # round 15 to 18 
 file.path.hiv <- file.path(indir.deepsequencedata.r151r18, 'HIV_R15_R18_VOIs_220129.csv')

@@ -2,9 +2,6 @@ library(data.table)
 library(ggplot2)
 library(gridExtra)
 
-indir <- '~/git/phyloflows'
-# indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
-# indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 outdir.all <- "/rds/general/user/mm3218/home/projects/2021/phyloflows/"
 # outdir.all <- "~/Box\ Sync/2021/phyloflows/"
 

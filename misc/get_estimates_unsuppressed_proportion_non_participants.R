@@ -2,13 +2,28 @@ library(data.table)
 library(ggplot2)
 library(Hmisc)
 library(rstan)
+library(here)
 
 # directory of the repository
-indir.repository <- getwd()
+gitdir <- here()
+source(file.path(gitdir, "paths.R"))
+
+# TODO: shozen: do you think this would be helpful? 
+# library(optparse)
+# option_list <- list(
+#     make_option(
+#         "--outdir",
+#         type = "",
+#         default = ,
+#         help = "",
+#         dest= ""
+#     ),
+# )
+# args <- parse_args(OptionParser(option_list = option_list))
 
 # outdir directory for stan fit
-if (dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/live')) {
-  indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
+if(dir.exists(indir.deepsequence_analyses))
+{
   outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
 } else {
   outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_unsuppressed_proportion_non_participants'
@@ -16,12 +31,11 @@ if (dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/live')) {
 }
 
 
-# files
-path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
-path.data <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_unsuppressed.csv')
+# path to stan model
+path.stan <- file.path(gitdir.misc, 'stan_models', 'binomial_gp.stan')
 
 # Load count of newly registered participants with unsuppressed viral loads
-vla <- as.data.table( read.csv(path.data) )
+vla <- fread(path.count.newly.unsupp)
 
 
 ##########
@@ -293,8 +307,15 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
-saveRDS(nsinf.samples, file = file.name)
+# file.name <- file.path(gitdir.fit, 'RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds')
+file.name <- file.unsuppressedviralload.newly 
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(nsinf.samples, file = file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
-file.name <- file.path(outdir, paste0('RCCS_nonsuppressed_proportion_model_fit_newlyregistered_221101.RDS'))
+file.name <- file.path(outdir, 'RCCS_nonsuppressed_proportion_model_fit_newlyregistered_221101.RDS')
 saveRDS(stats, file = file.name)

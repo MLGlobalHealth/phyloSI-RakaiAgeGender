@@ -2,14 +2,19 @@ library(data.table)
 library(ggplot2)
 library(loo)
 
-indir <- '~/git/phyloflows'
-# indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI/'
-# indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
 outdir.all <- "/rds/general/user/mm3218/home/projects/2021/phyloflows/"
 
 # models
 jobname <- c('central')
-stan_model <- c( 'gp_221201d', 'gp_221208c', 'gp_221208d', 'gp_221208e', 'gp_221208f', 'gp_221208a', 'gp_221208b')
+stan_model <- c( 
+    'gp_221201d',
+    'gp_221208c',
+    'gp_221208d',
+    'gp_221208e',
+    'gp_221208f',
+    'gp_221208a',
+    'gp_221208b'
+)
 # stan_model <- c( 'gp_221201d', 'gp_221208c', 'gp_221208d', 'gp_221208e', 'gp_221208a', 'gp_221208b')
 
 outdir.here <- file.path(outdir.all, paste0(stan_model, '-', jobname))

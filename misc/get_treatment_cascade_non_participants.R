@@ -2,30 +2,42 @@ library(data.table)
 library(ggplot2)
 require(lubridate)
 library(dplyr)
+library(here)
 
-# directory to repository
-indir.repository <- getwd()
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "paths.R"))
+
+# TODO: shozen: do you think this would be helpful? 
+# library(optparse)
+# option_list <- list(
+#     make_option(
+#         "--outdir",
+#         type = "",
+#         default = ,
+#         help = "",
+#         dest= ""
+#     ),
+# )
+# args <- parse_args(OptionParser(option_list = option_list))
 
 # outdir to save figures
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 if(dir.exists(indir.deepsequence_analyses)) {
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 } else {
   outdir <- '../phyloSI-RakaiAgeGender-outputs/get_treatment_cascade_non_participants'
   if(!dir.exists(outdir)) dir.create(outdir);
 }
- 
-
-# posterior samples
-file.unsuppressedviralload <- file.path(indir.repository, 'fit', paste0('RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds'))
-file.selfreportedart <- file.path(indir.repository, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221208.rds'))
 
 # specificity and sensitivity art reporting
-file.spec.sens.art = file.path(indir.repository, 'data', 'sensitivity_specificity_art.csv')
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
 
+# check files exist
+file.exists(file.unsuppressedviralload.newly)|> stopifnot()
+file.exists(file.selfreportedart.newly)|> stopifnot()
+file.exists(file.spec.sens.art)|> stopifnot()
 
 ###########################
 
@@ -34,10 +46,10 @@ qlab <- c('CL','M','CU')
 ###########################
 
 # load proportion unsuppressed viral load
-uns <- as.data.table(readRDS(file.unsuppressedviralload))
+uns <- as.data.table(readRDS(file.unsuppressedviralload.newly))
 
 # load proportion art
-sre <- as.data.table(readRDS(file.selfreportedart))
+sre <- as.data.table(readRDS(file.selfreportedart.newly))
 
 # merge (fyi for round < 15, we do not have viral load info)
 df <- merge(uns, sre, by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations'), all.y = T)
@@ -106,7 +118,7 @@ if(1){
   #
   
   # load file
-  sensitivity_specificity_art <- as.data.table(read.csv(file.spec.sens.art))
+  sensitivity_specificity_art <- fread(file.spec.sens.art)
   
   # use specificity and sensitivity from round 15 
   spa <- sensitivity_specificity_art[ROUND == 'R015' ]
@@ -180,9 +192,20 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds')) # 221208b withotu adjusting for sens/suc
-saveRDS(df, file = file.name)
+file.name <- file.treatment.cascade.prop.nonparticipants.samples 
+if(file.exists(file.name))
+{
+    cat("file:", file.name, "already exists.\n")
+}else{
+    cat("saving file:", file.name, "....\n")
+    saveRDS(df, file = file.name)
+}
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221208.csv')) # 221208b withotu adjusting for sens/suc
-write.csv(ns, file = file.name, row.names = F)
-
+file.name <- file.treatment.cascade.prop.nonparticipants 
+if(file.exists(file.name))
+{
+    cat("file:", file.name, "already exists.\n")
+}else{
+    cat("saving file:", file.name, "....\n")
+    write.csv(ns, file = file.name, row.names = F)
+}

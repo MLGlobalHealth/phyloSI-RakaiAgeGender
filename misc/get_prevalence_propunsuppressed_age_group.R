@@ -2,17 +2,33 @@ library(data.table)
 library(ggplot2)
 require(lubridate)
 library(dplyr)
+library(here)
 
-# directory repository
-indir.repository <- '~/git/phyloflows'
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "paths.R"))
 
-# files
-file.treatment.cascade <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
-file.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
-file.eligible.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
+# TODO: shozen: do you think this would be helpful? 
+# library(optparse)
+# option_list <- list(
+#     make_option(
+#         "--outdir",
+#         type = "",
+#         default = ,
+#         help = "",
+#         dest= ""
+#     ),
+# )
+# args <- parse_args(OptionParser(option_list = option_list))
+
+file.exists(eligible_count) |> stopifnot()
+file.exists(proportion_prevalence) |> stopifnot()
+file.exists(treatment_cascade) |> stopifnot()
+
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
 # load census eligible ount
-eligible_count <- as.data.table(read.csv(file.eligible.count))
+eligible_count <- fread(file.eligible.count)
 
 # load proportion prevalence
 proportion_prevalence <- as.data.table(readRDS(file.prevalence))
@@ -96,10 +112,10 @@ ggplot(sinf.age, aes(x = AGE_GROUP, group = SEX)) +
 
 #########################################
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221208.csv'))
+file.name <- file.path(gitdir, 'fit', paste0('RCCS_propunsuppressed_age_group_221208.csv'))
 write.csv(sing.age, file = file.name, row.names = F)
 
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_age_group_221116.csv'))
+file.name <- file.path(gitdir, 'fit', paste0('RCCS_prevalence_age_group_221116.csv'))
 write.csv(sinf.age, file = file.name, row.names = F)
 
 
@@ -241,7 +257,7 @@ tmp[, `:=` (PROP_UNSUPPRESSED_AGE_GROUP_CL = format(round(PROP_UNSUPPRESSED_AGE_
 tmp[, PROP_UNSUPPRESSED_AGE_GROUP_CL := gsub(' ', '', PROP_UNSUPPRESSED_AGE_GROUP_CL)]
 tmp[, PROP_UNSUPPRESSED_AGE_GROUP_CU := gsub(' ', '', PROP_UNSUPPRESSED_AGE_GROUP_CU)]
 tmp[, PROP_UNSUPPRESSED_AGE_GROUP_M := gsub(' ', '', PROP_UNSUPPRESSED_AGE_GROUP_M)]
-file.name <- file.path(outdir, paste0('RCCS_propunsuppressed_total_R18_221215.rds'))
+file.name <- file.path(outdir, 'RCCS_propunsuppressed_total_R18_221215.rds')
 saveRDS(tmp, file = file.name)
 
 tmp <- sinf.t[ROUND == '18' & COMM == 'inland']
@@ -251,7 +267,7 @@ tmp[, `:=` (PREVALENCE_AGE_GROUP_CL = format(round(PREVALENCE_AGE_GROUP_CL*100, 
 tmp[, PREVALENCE_AGE_GROUP_CL := gsub(' ', '', PREVALENCE_AGE_GROUP_CL)]
 tmp[, PREVALENCE_AGE_GROUP_CU := gsub(' ', '', PREVALENCE_AGE_GROUP_CU)]
 tmp[, PREVALENCE_AGE_GROUP_M := gsub(' ', '', PREVALENCE_AGE_GROUP_M)]
-file.name <- file.path(outdir, paste0('RCCS_prevalence_total_R18_221215.rds'))
+file.name <- file.path(outdir, 'RCCS_prevalence_total_R18_221215.rds')
 saveRDS(tmp, file = file.name)
 
 tmp <- sind.t[ROUND == '18' & COMM == 'inland']
@@ -261,6 +277,6 @@ tmp[, `:=` (DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL = format(round(DIFF_PROP_UNSUPPR
 tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL := gsub(' ', '', DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL)]
 tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CU := gsub(' ', '', DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CU)]
 tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M := gsub(' ', '', DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M)]
-file.name <- file.path(outdir, paste0('RCCS_diffpropunsuppressed_total_R18_221215.rds'))
+file.name <- file.path(outdir, 'RCCS_diffpropunsuppressed_total_R18_221215.rds')
 saveRDS(tmp, file = file.name)
 

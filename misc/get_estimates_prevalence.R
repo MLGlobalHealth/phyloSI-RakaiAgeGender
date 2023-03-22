@@ -5,32 +5,46 @@ library(scales)
 library(lubridate)
 library(rstan)
 library("haven")
+library(here)
 
 # directory to repository
-indir.repository <- getwd()
+gitdir <- here()
 
-usr <- Sys.info()[['user']]
+# load paths
+source(gitdir, "paths.R")
+
+# TODO: shozen: do you think this would be helpful? 
+# library(optparse)
+# option_list <- list(
+#     make_option(
+#         "--outdir",
+#         type = "",
+#         default = ,
+#         help = "",
+#         dest= ""
+#     ),
+# )
+# args <- parse_args(OptionParser(option_list = option_list))
+
+
 if (usr == 'andrea') {
-  indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
   outdir <- file.path(indir.deepsequence_analyses, 'rakaiagegender_gpfit')
 } else if (usr == 'ratmann') {
   # outdir to save stan fit
-  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 } else {
   outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_prevalence'
   if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
 }
 
-# files
-path.data <- file.path(indir.repository, 'data', 'aggregated_count_hiv_positive.csv')
-path.stan <- file.path(indir.repository, 'misc', 'stan_models', 'binomial_gp.stan')
+# Path to stan model
+path.stan <- file.path(gitdir, 'misc', 'stan_models', 'binomial_gp.stan')
 
 # Load count of participants by hiv status
-rprev <- fread(path.data)
+rprev <- fread(path.count.hivpositive)
 
 # Load nature med requirements
-source(file.path(indir.repository, 'functions', 'plotting_functions.R'))
+source(file.path(gitdir.functions, 'plotting_functions.R'))
 naturemed_reqs()
 
 #################################
@@ -375,13 +389,27 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 if(0)
 {
-    file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_estimates_221116.csv'))
-    write.csv(nsinf, file = file.name, row.names = F)
+    # file.name <- file.path(gitdir.fit,'RCCS_prevalence_estimates_221116.csv')
+    file.name <- file.prevalence.prop
+    if(! file.exists(file.name))
+    {
+        cat("Saving file:", file.name, '\n')
+        write.csv(nsinf, file = file.name, row.names = F)
+    }else{
+        cat("File:", file.name, "already exists...\n")
+    }
 
-    file.name <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_posterior_sample_221116.rds'))
-    saveRDS(nsinf.samples, file = file.name)
+    # file.name <- file.path(gitdir.fit, 'RCCS_prevalence_posterior_sample_221116.rds')
+    file.name <- file.prevalence
+    if(! file.exists(file.name))
+    {
+        cat("Saving file:", file.name, '\n')
+        saveRDS(nsinf.samples, file = file.name)
+    }else{
+        cat("File:", file.name, "already exists...\n")
+    }
 
-    file.name <- file.path(outdir, paste0('RCCS_prevalence_model_fit_convergence_221116.RDS'))
+    file.name <- file.path(outdir,'RCCS_prevalence_model_fit_convergence_221116.RDS')
     saveRDS(stats, file = file.name)
 }
 
