@@ -27,10 +27,10 @@ source(gitdir, "paths.R")
 # args <- parse_args(OptionParser(option_list = option_list))
 
 
+# outdir to save stan fit
 if (usr == 'andrea') {
   outdir <- file.path(indir.deepsequence_analyses, 'rakaiagegender_gpfit')
 } else if (usr == 'ratmann') {
-  # outdir to save stan fit
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 } else {
   outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_prevalence'
@@ -38,7 +38,7 @@ if (usr == 'andrea') {
 }
 
 # Path to stan model
-path.stan <- file.path(gitdir, 'misc', 'stan_models', 'binomial_gp.stan')
+path.stan <- file.path(gitdir.misc, 'stan_models', 'binomial_gp.stan')
 
 # Load count of participants by hiv status
 rprev <- fread(path.count.hivpositive)

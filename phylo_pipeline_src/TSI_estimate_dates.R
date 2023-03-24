@@ -9,9 +9,9 @@ library(here) |> suppressPackageStartupMessages()
 
 option_list <- list(
   optparse::make_option(
-    "--tsi_out_dir",
+    "--tsi-indir",
     type = "character",
-    default = "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/deep_sequence_phylogenies_primary/data_for_time_since_infection/phyloscanner-results",
+    default = NA_character_,
     help = "Absolute file path to directory containing phylo-TSI results", 
     dest = 'rel.dir'
   ),
@@ -39,23 +39,21 @@ is.randomized <- ! args$confidential
 
 if(user != 'andrea')
 {
-    indir.deepseqdata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
+    indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
 }else{
-    indir.deepseqdata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
+    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
 }
 
 gitdir <- here()
-gitdir.data <- file.path(gitdir, 'data')
+source(file.path(gitdir, 'paths.R'))
 
 # if output directory is null, set it to gitdir.data
 if( is.null(args$outdir) )
     args$outdir <- gitdir.data
 
 path.collection.dates <- fifelse(args$confidential, 
-    yes=file.path(indir.deepseqdata, 'RCCS_R15_R18', 'sequences_collection_dates.rds'),
-    no=file.path(gitdir, 'data', 'sequences_collection_dates_randomized.rds'),
-)
-
+    yes=path.collection.dates.confidential,
+    no=path.collection.dates.randomized)
 
 
 ################
@@ -63,7 +61,6 @@ path.collection.dates <- fifelse(args$confidential,
 ################
 
 stopifnot("Path to TSI-output-directory does not exist"=dir.exists(args$rel.dir))
-# stopifnot(dir.exists(args$out.dir))
 
 # aggregate outputs from HIV_phylo_tsi and prettify
 dfiles.csv <- list.files(args$rel.dir, pattern='_tsi.csv$', full.names = TRUE)

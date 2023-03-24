@@ -51,11 +51,11 @@ qlab <- c('CL','M','CU')
 
 # load proportion unsuppressed viral load 
 uns.p <- as.data.table(readRDS(file.unsuppressedviralload))
-uns.np <- as.data.table(readRDS(file.unsuppressedviralload.np))
+uns.np <- as.data.table(readRDS(file.unsuppressedviralload.newly))
 
 # load proportion art
 sre.p <- as.data.table(readRDS(file.selfreportedart))
-sre.np <- as.data.table(readRDS(file.selfreportedart.np))
+sre.np <- as.data.table(readRDS(file.selfreportedart.newly))
 
 # add label
 setnames(uns.p, 'PROP_UNSUPPRESSED_POSTERIOR_SAMPLE', 'PROP_UNSUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE')

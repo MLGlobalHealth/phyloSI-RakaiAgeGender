@@ -469,14 +469,19 @@ get.infection.range.from.tsi <- function(path, path.sequence.dates, chain_subset
     seqdates <- readRDS(path.sequence.dates)
     names(seqdates) <- toupper(names(seqdates)) 
 
-    dtsi <- fread(path.tsiestimates) |>
-        merge(seqdates, by=c('AID','RENAME_ID'))
+    if(path.tsiestimates %like% 'csv$'){
+        dtsi <- fread(path.tsiestimates) 
+        names(dtsi) <- toupper(names(dtsi))
+    }else if(path.tsiestimates %like% 'rds$'){
+        dtsi <- readRDS(path.tsiestimates)
+    }
+    dtsi <- merge(dtsi, seqdates, by=c('AID','RENAME_ID'))
 
     drange_tsi <- dtsi[, .(
         AID=AID,
         RENAME_ID=RENAME_ID,
-        MIN=VISIT_DT - as.integer(365.25*RF_pred_max_linear),
-        MAX=VISIT_DT - as.integer(365.25*RF_pred_min_linear)
+        MIN=VISIT_DT - as.integer(365.25*RF_PRED_MAX_LINEAR),
+        MAX=VISIT_DT - as.integer(365.25*RF_PRED_MIN_LINEAR)
     )]
 
     if (chain_subset) {

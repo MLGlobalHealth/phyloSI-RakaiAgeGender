@@ -10,6 +10,9 @@ library(here)
 # directory of the repository
 gitdir <- here()
 
+# load paths
+source(file.path(gitdir, "paths.R"))
+
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
 # option_list <- list(

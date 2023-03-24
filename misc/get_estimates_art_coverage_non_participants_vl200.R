@@ -323,8 +323,21 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-file.name <- file.path(gitdir, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds'))
-saveRDS(nsinf.samples, file = file.name)
+# file.name <- file.path(gitdir, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds'))
+file.name <- file.selfreportedart.newly.vl200 
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(nsinf.samples, file = file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
-file.name <- file.path(outdir, paste0('RCCS_art_model_fit_newlyregistered_vl200_221208.RDS'))
-saveRDS(stats, file = file.name)
+file.name <- file.path(outdir, 'RCCS_art_model_fit_newlyregistered_vl200_221208.RDS')
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(stats, file = file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}

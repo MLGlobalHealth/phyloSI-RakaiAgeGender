@@ -27,7 +27,8 @@ optparse::make_option(
   optparse::make_option(
     "--phylo-pairs-dir",
     type = "character",
-    default = "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/deep_sequence_phylogenies_primary/data_for_likely_transmission_pairs/phyloscanner-results",
+    # default = "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/deep_sequence_phylogenies_primary/data_for_likely_transmission_pairs/phyloscanner-results",
+    default = NA_character_,
     help = "Absolute file path to base directory where the phyloscanner outputs are stored [default]",
     dest = 'phylo.pairs.dir'
   ),
@@ -48,19 +49,29 @@ args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 gitdir <- here()
 gitdir.data <- file.path(gitdir, 'data')
+source(file.path(gitdir, 'paths.R'))
 
-# if output directory is null, set it to gitdir.data
+# if output directory is null, set it to proc
 if( is.null(args$outdir) )
-    args$outdir <- gitdir.data
+    args$outdir <- dir.zenodo.phyloproc
 
-
-usr <- Sys.info()[['user']]
-if(usr=='andrea')
+# Chose confidential or randomized files:
+if(args$confidential)
 {
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepanalyses.xiaoyue <- '/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live'
+    path.meta.data  <-  path.meta.confidential
+    path.sequence.dates <- path.collection.dates.confidential 
+}else{
+    path.meta.data  <- path.meta.randomized
+    path.sequence.dates <-  path.collection.dates.randomized
 }
 
+if(is.na(args$phylo.pairs.dir))
+{
+    args$phylo.pairs.dir <- dir.zenodo.pairs.phsc
+}
+
+dir.exists(args$phylo.pairs.dir) |> stopifnot()
+file.exists(path.meta.data) |> stopifnot()
 
 #
 # Helpers
@@ -68,6 +79,24 @@ if(usr=='andrea')
 
 catn <- function(x) cat('\n----', x ,'----\n')
 
+read.infiles <- function(DT)
+{
+    with(DT,{
+        dca <- data.table()
+        dwina <- data.table()
+        for(pty in unique(PTY_RUN) )
+        {
+            cat(pty, '\n')
+            load(F[PTY_RUN == pty])
+            dc[, PTY_RUN := pty]
+            dwin[, PTY_RUN := pty]
+            rbind(dca, dc)
+            rbind(dwina, dwin)
+        }
+        list(dca, dwina)
+    }) -> out
+    out
+}
 get.sample.collection.dates <- function(select_aid=NULL, get_first_visit=FALSE)
 {
     ddates <- dseqdates
@@ -230,24 +259,11 @@ update.category.counts <- function(DEXCLUDE, DCA)
 }
 
 
-#
-# test
-#
-
-if(args$confidential)
-{
-    # paths that should not be available to everyone, but were used for the analysis
-    path.meta.data <- file.path(indir.deepsequencedata, 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
-    path.sequence.dates <- file.path(indir.deepsequencedata, "RCCS_R15_R18/sequences_collection_dates.rds")
-}else{
-    # randomized version of the paths used for the analysis
-    path.meta.data <- file.path(gitdir.data,"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
-    path.sequence.dates <- file.path(gitdir.data, "sequences_collection_dates_randomized.rds")
-}
+########
+# Main #
+########
 
 dseqdates <- readRDS(path.sequence.dates)
-stopifnot("args$phylo.pairs.dir does not exist: make sure you specify the correct path"=file.exists(args$phylo.pairs.dir))
-stopifnot("path.meta.data does not exist: make sure you specify the correct path"=file.exists(path.meta.data))
 
 catn('Load phyloscanner outputs')
 stopifnot(dir.exists(args$phylo.pairs.dir))
@@ -259,9 +275,10 @@ setkey(infiles, PTY_RUN)
 # 'dc' :  summarises pairwise relationships between hosts across ALL trees. 
 # 'a' suffix stands for aggregated
 
-# there must be a slightly faster way to avoid double loading, but nvm
-dca <-   infiles[, { cat(PTY_RUN,'\n'); load(F); dc }, by='PTY_RUN']
-dwina <- infiles[, { cat(PTY_RUN,'\n'); load(F); dwin }, by='PTY_RUN']
+# current solution only loads F once, instead of twice
+out <- read.infiles(DT=infiles) 
+dca   <- out[['dca']]
+dwina <- out[['dwina']]
 
 # Change the format
 .format.controls(dca)
@@ -299,8 +316,6 @@ if( file.exists(path.meta.data) )
     # idx <- meta[, uniqueN(comm) == 2, by=aid][V1==TRUE, aid]
     stopifnot(meta[, uniqueN(aid) == .N])
 
-    # IFNEEDED save ids herefor which we do not have a first positive date, so we can ask Joseph.
-
     # get pairs for which one direction of transmission is unsupported according to demographic and serohistory data.
     drange <- get.infection.range.from.testing()
     dexclude <- dca[, .(host.1, host.2)] |> unique()
@@ -314,8 +329,11 @@ if( file.exists(path.meta.data) )
     dca <- fill.in.missing.reverse.direction(dca)
 
     # Now, modify dca and dwina accordingly, by removing the counts supporting that direction
-    categories.to.update <- c("close.and.adjacent.and.ancestry.cat", "close.and.adjacent.and.directed.cat",
-                              "close.and.contiguous.and.ancestry.cat", "close.and.contiguous.and.directed.cat")
+    categories.to.update <- c(
+        "close.and.adjacent.and.ancestry.cat",
+        "close.and.adjacent.and.directed.cat",
+        "close.and.contiguous.and.ancestry.cat",
+        "close.and.contiguous.and.directed.cat")
     dca_sero_only <- dca[categorisation %in% categories.to.update, ]
 
     # label.to.update <- function(ctg)
@@ -324,46 +342,7 @@ if( file.exists(path.meta.data) )
     dca_sero_only[, categorisation:=paste0(categorisation, '.sero')]
     dca <- rbind(dca, dca_sero_only)
 
-    # deleted an if(0)
-
     setkey(dca, host.1, host.2)
-}
-
-if(0)
-{
-    # checking that redistribution of count has beem done in the correct direction
-    drange
-    tmp <- dca_sero_only[type %in% c('12', '21') & categorisation %like% 'sero', .(host.1, host.2, type, score)]
-    tmp <- merge(tmp, drange[, .(host.1=AID, MIN.1=MIN, MAX.1=MAX)], by='host.1')
-    tmp <- merge(tmp, drange[, .(host.2=AID, MIN.2=MIN, MAX.2=MAX)], by='host.2')
-    tmp[MAX.1 < MIN.2]
-    stopifnot(tmp[MAX.1 < MIN.2, mean(score[type=='12'], na.rm=TRUE) == 1 & mean(score[type=='21'], na.rm=TRUE) == 0])
-    stopifnot(tmp[MAX.2 < MIN.1, mean(score[type=='12'], na.rm=TRUE) == 0 & mean(score[type=='21'], na.rm=TRUE) == 1])
-}
-
-if(0)
-{
-    # get pairs whose direction was changed according to serohistory
-    class <- 'close.and.adjacent.and.directed.cat.sero'
-    dca_class <- dca[categorisation == class | categorisation == gsub( '.sero', '', class)]
-    # in the majority of cases, scores sum to 0
-    summed_scores <- dca_class[, sum( score, na.rm=T), by=c('host.1', 'host.2', 'categorisation')]
-    summed_scores[, table(V1)/.N*100 ]
-    # in 8 cases, the sum of the scores went from 1 to 0... (why?)
-    summed_scores |>
-        dcast(host.1 + host.2 ~ categorisation) |> 
-        with( table(close.and.adjacent.and.directed.cat, close.and.adjacent.and.directed.cat.sero)) 
-    
-    # subset to cases where summed scores were always one ? 
-    idx <- summed_scores[ , all(V1==1) , by=c('host.1', 'host.2') ][V1 == TRUE, .(host.1, host.2)]
-
-    idx <- dca_class[idx][, uniqueN(score), by=c('host.1', 'host.2', 'type')][V1>1, .(host.1, host.2)]
-    stopifnot( uniqueN(idx) == nrow(idx)/2 )
-    idx <- unique(idx)
-
-    # when changes, mass is moving towards 0
-    dca_class[idx][categorisation %like% 'sero', table(score)]
-
 }
 
 # find pairs according to classification rule and thresholds.
@@ -392,8 +371,7 @@ tmp <- find.networks(dc, control=control, verbose=TRUE)
 dnet <- copy(tmp$transmission.networks)
 dchain <- copy(tmp$most.likely.transmission.chains)
 
-
-cat("\n---- Save in output directory (default:gitdir.data) ----\n")
+cat("\n---- Save in output directory (default:dir.zenodo.phyloproc) ----\n")
 suff <- ''
 if(args$confidential == FALSE)
     suff <- '_randomized'

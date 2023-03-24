@@ -38,7 +38,7 @@ if (dir.exists(indir.deepsequence_analyses)){
 
 
 # stan model
-path.stan <- file.path(gitdir, 'misc', 'stan_models', 'binomial_gp.stan')
+path.stan <- file.path(gitdir.misc, 'stan_models', 'binomial_gp.stan')
 
 # find count of newly registered participants who reported art use
 rart <- fread(path.newly.registered.art)
@@ -325,7 +325,8 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-file.name <- file.path(gitdir, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_221208.rds'))
+# file.name <- file.path(gitdir.fit, paste0('RCCS_art_posterior_samples_newlyregistered_221208.rds'))
+file.name <- file.selfreportedart.newly 
 saveRDS(nsinf.samples, file = file.name)
 
 file.name <- file.path(outdir, paste0('RCCS_art_model_fit_newlyregistered_221208.RDS'))

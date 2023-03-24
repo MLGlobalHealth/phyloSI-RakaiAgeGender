@@ -6,31 +6,16 @@
 library(data.table)
 library(here)
 
-indir <- here()
-indir.data <- file.path(indir, 'data')
-usr <- Sys.info()[['user']]
-if(usr=='andrea')
-{
-    indir.deepsequencedata <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
-}
+gitdir <- here()
+source(file.path(gitdir, 'paths.R'))
 
-file.path.meta.original <- file.path(
-    indir.deepsequencedata,
-    "RCCS_R15_R18",
-    "Rakai_Pangea2_RCCS_Metadata_20221128.RData"
-)
-
-file.exists(
-    file.path.meta.original,
-    indir,
-    indir.data
-) |> all() |> stopifnot()
+file.exists( path.meta.confidential) |> stopifnot()
 
 
 # load original meta data.
 
 meta_env <- new.env()
-load(file.path.meta.original, envir = meta_env)
+load(path.meta.confidential, envir = meta_env)
 ls(meta_env)
 
 columns_of_interest <- c(
@@ -97,6 +82,11 @@ meta_randomized <- merge(meta_randomized, ddates, by='aid')
 # rename to 'meta'
 meta_data <- copy(meta_randomized)
 
-filename <- file.path(indir.data, 'Rakai_Pangea2_RCCS_Metadata_randomized.RData')
-cat("Saving",filename, '\n')
-save(meta_data, file=filename)
+filename <- path.meta.randomized
+if(! file.exists(filename))
+{
+    cat("Saving file:", filename, '\n')
+    save(meta_data, file=filename)
+}else{
+    cat("File:", filename, "already exists...\n")
+}

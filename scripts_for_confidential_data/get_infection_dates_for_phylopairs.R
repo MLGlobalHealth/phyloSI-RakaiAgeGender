@@ -1,15 +1,15 @@
 # AIMS:
 # compute generation intervals for pairs in a network.
-# needs phylo_dir as an input
 
 ################
 # DEPENDENCIES #
 ################ 
-library(data.table)
-library(ggplot2)
-library(lubridate)
-library(xtable)
-library(igraph)
+library(data.table) |> suppressPackageStartupMessages()
+library(ggplot2)    |> suppressPackageStartupMessages()
+library(lubridate)  |> suppressPackageStartupMessages()
+library(xtable)     |> suppressPackageStartupMessages()
+library(igraph)     |> suppressPackageStartupMessages()
+library(here)       |> suppressPackageStartupMessages()
 
 ################
 #   OPTIONS    #
@@ -19,14 +19,14 @@ option_list <- list(
     optparse::make_option(
         "--path-chains",
         type = "character",
-        default = NULL,
+        default = NA_character_,
         help = "path to main output of source recipients pairs analyses",
         dest = 'path.chains.data'
     ),
     optparse::make_option(
         "--path-tsi",
         type = "character",
-        default = NULL,
+        default = NA_character_,
         help = "path to main output of time since infection analyses",
         dest = 'path.tsiestimates'
     ),
@@ -80,7 +80,7 @@ option_list <- list(
     optparse::make_option(
         "--outdir",
         type = "character",
-        default = NULL,
+        default = NA_character_,
         help = "Absolute file path to output directory to save the scripts outputs in", 
         dest = 'outdir'
     )
@@ -97,60 +97,52 @@ catn <- function(x) cat("\n----", x, "----\n")
 
 usr <- Sys.info()[['user']]
 
-gitdir <- here::here()
-gitdir.data <- file.path(gitdir, 'data')
+gitdir <- here()
+source(file.path(gitdir, 'paths.R'))
 
-# if output directory is null, set it to gitdir.data
-if( is.null(args$outdir) )
-    args$outdir <- gitdir.data
+# set zenodo directory as standard.
+if( is.na(args$outdir) )
+{
+    args$outdir <- dir.zenodo.phyloproc
+}
 
 # randomized version of the paths used for the analysis
-path.meta <- file.path(gitdir.data,"Rakai_Pangea2_RCCS_Metadata_randomized.RData" )
-path.sequence.dates <- file.path(gitdir.data, "sequences_collection_dates_randomized.rds")
+path.meta <- fifelse(args$confidential, 
+    yes=path.meta.confidential,
+    no=path.meta.randomized)
 
-if( args$confidential)
+# better keep same name as before here
+file.path.sequence.dates <- fifelse(args$confidential, 
+    yes=path.collection.dates.confidential,
+    no=path.collection.dates.randomized)
+
+if(args$save.intermediate)
 {
-    if(usr == 'andrea')
-    {
-        args$phylo_dir <- '/home/andrea/HPC/project'
-        intermed.out.dir<- '/home/andrea/HPC/ab1820/home/projects/2022/genintervals'
-        indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    }
-
-    # paths that should not be available to everyone, but were used for the analysis
-    path.meta <- file.path(indir.deepsequencedata, 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
-    path.sequence.dates <- file.path(indir.deepsequencedata, "RCCS_R15_R18/sequences_collection_dates.rds")
-
+    intermed.out.dir <- fcase(
+        usr == 'andrea', '/home/andrea/HPC/ab1820/home/projects/2022/genintervals',
+        default = dir.zenodo.phyloproc)
 }
 
-# intermediate output directory:
-if( args$save.intermediate )
-{
-    intermed.out.dir <- args$outdir
-}else{
-    intermed.out.dir <- tempdir()
-    warning("output directory for intermediary results not set.\n Setting a temporary directory through `tempdir()`")
-}
-
-path.round.timeline <- file.path(gitdir.data, 'RCCS_round_timeline_220905.RData' )
 path.chains.data <- fifelse(
-    is.null(args$path.chains.data),
-    yes=file.path(gitdir.data, 'Rakai_phscnetworks_ruleo_sero.rda'),
+    is.na(args$path.chains.data),
+    yes=path.chains.data, 
     no=args$path.chains.data
 )
+
+# do I need this? or instead I can work with the aggegated
 path.tsiestimates <- fifelse(
-    is.null(args$path.tsiestimates),
-    file.path(gitdir.data, 'TSI_estimates.csv'),
+    is.na(args$path.tsiestimates),
+    path.tsiestimates,
     no=args$path.tsiestimates
 )
 
 file.exists(
     path.meta,
-    path.sequence.dates,
+    file.path.sequence.dates,
     path.chains.data,
-    path.round.timeline,
-    # file.anonymisation.keys,
+    file.path.round.timeline,
     path.tsiestimates) |> all() |> stopifnot()
+
 
 
 ################
@@ -179,9 +171,6 @@ stopifnot(is.metadata.randomized==!args$confidential)
 # initialise overleaf substitute-expressions.
 overleaf_expr <- list()
 
-# Load anon. keys
-# aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
-
 meta <- load.meta.data(path.meta)
 chain <- build.phylo.network.from.pairs(path.chains.data)
 aids_of_interest <- chain[, unique(c(SOURCE,RECIPIENT))]
@@ -200,7 +189,7 @@ chain <- check.inconsistent.testing(drange, switch_if_no_other_src = TRUE)
 drange <- shrink.intervals(drange)
 
 # update using TSI estimates
-drange_tsi <- get.infection.range.from.tsi(path.tsiestimates, path.sequence.dates )
+drange_tsi <- get.infection.range.from.tsi(path.tsiestimates, file.path.sequence.dates)
 drange_tsi <- check.inconsistent.testing(drange_tsi, switch_if_no_other_src = FALSE)
 drange_tsi <- shrink.intervals(drange_tsi)
 setnames(drange_tsi, c('MIN', 'MAX'), c('TSI.MIN', 'TSI.MAX'))
@@ -253,18 +242,19 @@ range_gi <- c(.5, 1:10)
 tmp <- dinfectiousness[!is.infinite(END), paste(round(END, 2), sep='')]
 tmp <- gsub('\\.', '', tmp)
 
-filename_drange <- 'networks_individualDOIrange'
 filename_net <- 'networks_GICentroids'
 filename_overleaf <- 'pairsinfo_overleaf'
 
 suffix <- set.mcmc.outputs.suffix()
 
-filename_drange <- file.path(intermed.out.dir, paste0(filename_drange, suffix,  '.rds'))
-filename_net <- file.path(intermed.out.dir, paste0(filename_net, suffix, '.rds'))
-filename_overleaf <- file.path(intermed.out.dir, paste0(filename_overleaf, suffix, '.rds'))
+if(args$save.intermediate)
+{
+    filename_net <- file.path(intermed.out.dir, paste0(filename_net, suffix, '.rds'))
+    filename_overleaf <- file.path(intermed.out.dir, paste0(filename_overleaf, suffix, '.rds'))
+}
 
 if(args$get.round.probabilities)
-    df_round_gi <- get.round.dates(path.round.timeline)
+    df_round_gi <- get.round.dates(file.path.round.timeline)
 
 if( file.exists(filename_net) & ! args$rerun )
 {
@@ -298,7 +288,9 @@ if( file.exists(filename_net) & ! args$rerun )
     dcohords <- merge( dcohords[, .(GROUP, IDS, N_IDS)], tmp, by='GROUP')
 
     rm(provide_samples, n_iter)
-    saveRDS(dcohords, filename_net)
+
+    if(args$save.intermediate)
+        saveRDS(dcohords, filename_net)
 }
 
 # checks only really make sense with the real data
@@ -337,8 +329,12 @@ if( nrow(df_round_gi) )
     cols <- c('BeforeR10', 'R10_R15', 'R16_18')
     dprobs_roundallocation[, (cols) := lapply(.SD, function(x){x[is.na(x)] <- 0; x} ) , .SDcols=cols]
     
-    filename <- file.path(intermed.out.dir, paste0('probs_roundallocations', suffix, '.rds'))
-    saveRDS(dprobs_roundallocation, filename)
+    if(args$save.intermediate)
+    {
+        cat('Saving file:', filename, '...\n')
+        filename <- file.path(intermed.out.dir, paste0('probs_roundallocations', suffix, '.rds'))
+        saveRDS(dprobs_roundallocation, filename)
+    }
 }
 
 # Final results
@@ -437,6 +433,9 @@ if(  file.exists(filename) & ! args$rerun == TRUE )
         PARTICIPATED.RECIPIENT=NULL
     )]
 
+    cat("Saving file:", filename, '\n')
     saveRDS(dresults, filename)    
-    saveRDS(overleaf_expr, filename_overleaf)
+
+    if(args$save.intermediate)
+        saveRDS(overleaf_expr, filename_overleaf)
 }
