@@ -22,37 +22,27 @@ library(optparse)
 # set to directory
 gitdir <- here()
 
-library(optparse)
-
 option_list <- list(
     make_option(
         "--outdir",
         type = "character",
-        default = NULL,
+        default = NA_character_,
         help = "Output directory []",
         dest= "outdir"
-    ),
+    )
 )
 
 args <- parse_args(OptionParser(option_list = option_list))
 
-# set up path to data
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-
-if (dir.exists(indir.deepsequence.analyses)){
-  # set path to save results
-  outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'incidence_rate_inland')
-} else {
-  outdir <- '../phyloSI-RakaiAgeGender/run_incidence_rates_estimation'
-  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
-}
-
 # source paths 
-source(gitdir, "paths.R")
+source(file.path(gitdir, "paths.R"))
+
+# path where to store results
+if ( is.na(args$outdir) )
+    args$outdir <- output.dir.incidence.estimation
 
 # # function
-source(file.path(gitdir, 'functions', 'incidence_rate_estimation_functions.R'))
+source(file.path(gitdir.functions, 'incidence_rate_estimation_functions.R'))
 
 stopifnot("Outdir could not be found"=file.exists(args$outdir))
 stopifnot("Seroconverter_cohort file not found"=file.exists(file.path.seroconverter_cohort))
@@ -71,7 +61,7 @@ rounds_numeric_group_3 <- df_round[visit == rounds_group_3, round_numeric]
 
 # load data 
 seroconverter_cohort.list <- readRDS(file.path.seroconverter_cohort)
-
+seroconverter_cohort.list 
 
 ###############################
 
@@ -383,25 +373,57 @@ plot_comparison_loess_gam(
 #################
 
 file.name <- file.path(args$outdir, 'list_long_results_221109.RData')
-save(modelpreds.age.1218.list, seroconverter_cohort.list, modelaics.age.list, file = file.name)
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    save(modelpreds.age.1218.list, seroconverter_cohort.list, modelaics.age.list, file = file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
-file.name	<- file.path(gitdir, 'data', "Rakai_incpredictions_inland_221107.csv")
+file.name	<- file.path(args$out.dir, "Rakai_incpredictions_inland_221107.csv")
 tmp <- select(modelpreds.age.1218[model == 'model_1'], c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
-write.csv(tmp, file = file.name, row.names = F)
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    write.csv(tmp, file = file.name, row.names = F)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
-file.name	<- file.path(gitdir, 'data', "Rakai_incpredictions_samples_inland_221107.csv")
+file.name	<- file.path(args$out.dir, "Rakai_incpredictions_samples_inland_221107.csv")
 tmp <- modelpreds.age.1218.all[model == 'model_1', .(Sex, round_label, age, iterations, fit, inc, iterations_within)]
-write.csv(tmp, file = file.name, row.names = F)
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    write.csv(tmp, file = file.name, row.names = F)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
-file.name	<- file.path(gitdir, 'data', "Rakai_incpredictions_loess_inland_221116.csv")
+file.name	<- file.path(args$out.dir, "Rakai_incpredictions_loess_inland_221116.csv")
 tmp <- select(modelpreds.loess.age.1218, c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
-write.csv(tmp, file = file.name, row.names = F)
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    write.csv(tmp, file = file.name, row.names = F)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
-file.name	<- file.path(gitdir, 'data', "Rakai_incpredictions_loess_samples_inland_221116.csv")
+file.name	<- file.path(args$out.dir, "Rakai_incpredictions_loess_samples_inland_221116.csv")
 tmp <- modelpreds.loess.age.1218.all[, .(Sex, round_label, age, iterations, INC_CRUDE_SMOOTH)]
 setnames(tmp, 'INC_CRUDE_SMOOTH', 'inc')
-write.csv(tmp, file = file.name, row.names = F)
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    write.csv(tmp, file = file.name, row.names = F)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
+
+# if HPC link exists: 
 if (dir.exists(indir.deepsequencedata)) {
   file.name	<- file.path(indir.deepsequencedata, 
         "RCCS_data_estimate_incidence_inland_R6_R18/220903/", 
@@ -411,15 +433,39 @@ if (dir.exists(indir.deepsequencedata)) {
   dir.create(out.path, recursive = TRUE)
   file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
 }
-write.csv(model_pred, file = file.name, row.names = F)
+
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    write.csv(model_pred, file = file.name, row.names = F)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
 # For paper
 file.name <- file.path(args$outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
-saveRDS(stats, file.name)
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(stats, file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
 file.name <- file.path(args$outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
-saveRDS(stats_prediction, file.name)
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(stats_prediction, file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
 
 file.name <- file.path(args$outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
-saveRDS(stats_prediction_loess, file.name)
-
+if(! file.exists(file.name))
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(stats_prediction_loess, file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
