@@ -6,7 +6,7 @@ require(here)
 #########
 
 gitdir <- here()
-source(file.path(gitdir, 'paths.R'))
+source(file.path(gitdir, 'config.R'))
 
 # path from phylo analyses
 path.anonymisation.keys <- file.path(indir.deepanalyses.xiaoyue, 'important_anonymisation_keys_210119.csv')

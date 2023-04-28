@@ -6,7 +6,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -130,7 +130,11 @@ for(round in 15:18){
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
   filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_1000.rds')
-  saveRDS(fit, file=file.path(outdir,filename))
+  filename <- file.path(outdir, filename)
+   if( ! file.exists(filename) | config$overwrite.existing.files )
+   {
+       saveRDS(fit, file=filename)
+   }
   # fit <- readRDS(file.path(outdir,filename))
   
 }

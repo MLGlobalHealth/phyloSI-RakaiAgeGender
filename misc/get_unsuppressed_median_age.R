@@ -6,7 +6,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # files
 file.exists(file.treatment.cascade) |> stopifnot()
@@ -72,7 +72,7 @@ sing = as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
 
 # file.name <- file.path(gitdir.fit,'RCCS_unsuppressed_median_age_221208.csv')
 file.name <- file.unsuppressed_median_age  
-if(! file.exists(fil.name))
+if(! file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("Saving file:", file.name, '\n')
     write.csv(sing, file = file.name, row.names = F)

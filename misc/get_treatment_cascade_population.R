@@ -7,7 +7,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -255,10 +255,10 @@ ns = tmp[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('AGE
 ns = as.data.table(reshape2::dcast(ns, AGEYRS + SEX + COMM + ROUND + variable ~ q_label, value.var = "q"))
 
 # check all entries are complete
-stopifnot(nrow(ns[COMM == 'inland']) == ns[, length(unique(AGEYRS))] * ns[, length(unique(SEX))] * ns[, length(unique(variable))] * ns[COMM == 'inland', length(unique(ROUND))])
-stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, length(unique(SEX))] * ns[, length(unique(variable))] * ns[COMM == 'fishing', length(unique(ROUND))])
-stopifnot(nrow(df[COMM == 'inland']) == df[, length(unique(AGEYRS))] * df[, length(unique(SEX))] * df[, length(unique(iterations))] * df[COMM == 'inland', length(unique(ROUND))])
-stopifnot(nrow(df[COMM == 'fishing']) == df[, length(unique(AGEYRS))] * df[, length(unique(SEX))] * df[, length(unique(iterations))] * df[COMM == 'fishing', length(unique(ROUND))])
+stopifnot(nrow(ns[COMM == 'inland']) == ns[, uniqueN(AGEYRS) * uniqueN(SEX) * uniqueN(variable)] * ns[COMM == 'inland', uniqueN(ROUND)])
+stopifnot(nrow(ns[COMM == 'fishing']) == ns[, uniqueN(AGEYRS) * uniqueN(SEX) * uniqueN(variable)] * ns[COMM == 'fishing', uniqueN(ROUND)])
+stopifnot(nrow(df[COMM == 'inland']) == df[, uniqueN(AGEYRS) * uniqueN(SEX) * uniqueN(iterations)] * df[COMM == 'inland', uniqueN(ROUND)])
+stopifnot(nrow(df[COMM == 'fishing']) == df[, uniqueN(AGEYRS) * uniqueN(SEX) * uniqueN(iterations)] * df[COMM == 'fishing', uniqueN(ROUND)])
 
 
 ####################################
@@ -269,7 +269,7 @@ stopifnot(nrow(df[COMM == 'fishing']) == df[, length(unique(AGEYRS))] * df[, len
 
 # file.name <- file.path(gitdir.fit, paste0('RCCS_treatment_cascade_population_posterior_samples_221208.rds'))
 file.name <- file.treatment.cascade 
-if(! file.exists(file.name))
+if(! file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("Saving file:", file.name, '\n')
     saveRDS(df, file = file.name)
@@ -277,8 +277,8 @@ if(! file.exists(file.name))
     cat("File:", file.name, "already exists...\n")
 }
 
-file.name <- file.path(gitdir.fit, paste0('RCCS_treatment_cascade_population_estimates_221208.csv'))
-if(! file.exists(file.name))
+file.name <- file.treatment.cascade.population 
+if(! file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("Saving file:", file.name, '\n')
     write.csv(ns, file = file.name, row.names = F)

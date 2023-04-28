@@ -6,7 +6,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -190,7 +190,7 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 ####################################
 
 file.name <- file.treatment.cascade.prop.nonparticipants.vl200.samples 
-if(! file.exists(file.name))
+if(! file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("Saving file:", file.name, '\n')
     saveRDS(df, file = file.name)
@@ -199,7 +199,7 @@ if(! file.exists(file.name))
 }
 
 file.name <- file.treatment.cascade.prop.nonparticipants.vl200 
-if(! file.exists(file.name))
+if(! file.exists(file.name) | config$overwrite.existing.files )
 {
     cat("Saving file:", file.name, '\n')
     write.csv(ns, file = file.name, row.names = F)

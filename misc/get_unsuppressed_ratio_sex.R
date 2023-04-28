@@ -6,7 +6,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # directory to repository
 gitdir <- getwd()
@@ -144,7 +144,7 @@ ggplot(sing, aes(x = ROUND)) +
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM'))
 # file.name <- file.path(gitdir.fit,'RCCS_unsuppressed_ratio_sex_221208.csv')
 file.name <- file.unsuppressed_rate_ratio 
-if(! file.exists(file.name))
+if(! file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("Saving file:", file.name, '\n')
     write.csv(tmp, file = file.name, row.names = F)

@@ -4,14 +4,14 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library(rstan)
-library("haven")
+library(haven)
 library(here)
 
 # directory to repository
 gitdir <- here()
 
 # load paths
-source(gitdir, "paths.R")
+source(gitdir, "config.R")
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -387,29 +387,26 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-if(0)
+# file.name <- file.path(gitdir.fit,'RCCS_prevalence_estimates_221116.csv')
+file.name <- file.prevalence.prop
+if(! file.exists(file.name) | config$overwrite.existing.files )
 {
-    # file.name <- file.path(gitdir.fit,'RCCS_prevalence_estimates_221116.csv')
-    file.name <- file.prevalence.prop
-    if(! file.exists(file.name))
-    {
-        cat("Saving file:", file.name, '\n')
-        write.csv(nsinf, file = file.name, row.names = F)
-    }else{
-        cat("File:", file.name, "already exists...\n")
-    }
-
-    # file.name <- file.path(gitdir.fit, 'RCCS_prevalence_posterior_sample_221116.rds')
-    file.name <- file.prevalence
-    if(! file.exists(file.name))
-    {
-        cat("Saving file:", file.name, '\n')
-        saveRDS(nsinf.samples, file = file.name)
-    }else{
-        cat("File:", file.name, "already exists...\n")
-    }
-
-    file.name <- file.path(outdir,'RCCS_prevalence_model_fit_convergence_221116.RDS')
-    saveRDS(stats, file = file.name)
+    cat("Saving file:", file.name, '\n')
+    write.csv(nsinf, file = file.name, row.names = F)
+}else{
+    cat("File:", file.name, "already exists...\n")
 }
+
+# file.name <- file.path(gitdir.fit, 'RCCS_prevalence_posterior_sample_221116.rds')
+file.name <- file.prevalence
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(nsinf.samples, file = file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
+
+file.name <- file.path(outdir,'RCCS_prevalence_model_fit_convergence_221116.RDS')
+saveRDS(stats, file = file.name)
 

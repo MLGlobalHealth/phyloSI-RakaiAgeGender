@@ -1,5 +1,10 @@
 # TODO: fill in path to zenodo dir and specify all the following files accordingly
 
+config <- list(
+    overwrite.existing.files  = FALSE,
+    vl  = 200
+)
+
 usr <- Sys.info()[['user']]
 
 # set your user and path here:
@@ -18,11 +23,11 @@ if(zenodo.exists)
     dir.zenodo.tsi <- file.path(dir.zenodo.phyloprim, "data_for_time_since_infection")
     dir.zenodo.tsi.phsc <- file.path(dir.zenodo.tsi, "phyloscanner-results")
 
-    dir.zenodo.phyloproc = file.path(dir.zenodo, "preprocessed_deep_sequence_phylogenies")
+    dir.zenodo.phyloproc = file.path(dir.zenodo, "preprocessed_outputs_deep_sequence_phylogenies")
 
-    # surveillance data (primary or processed)
+    # surveillance data (primary or processed_outputs)
     dir.zenodo.survprim = file.path(dir.zenodo, "data_RCCS_surveillance")
-    dir.zenodo.survproc = file.path(dir.zenodo, "preprocessed_RCCS_surveillance")
+    dir.zenodo.survproc = file.path(dir.zenodo, "preprocessed_outputs_RCCS_surveillance")
 
     # something
     dir.zenodo.central = file.path(dir.zenodo, "final_central_analysis")
@@ -121,7 +126,6 @@ file.prevalence.prop <- file.path(gitdir.fit, 'RCCS_prevalence_estimates_221116.
 file.pairs <- file.path(dir.zenodo.phyloproc, 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
 file.pairs.nonrefined <- file.path(dir.zenodo.phyloproc, 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
 
-
 file.treatment.cascade.prop.participants <- file.path(gitdir.fit, "RCCS_treatment_cascade_participants_estimates_221208.csv")
 file.treatment.cascade.prop.nonparticipants <- file.path(gitdir.fit, "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv")
 file.treatment.cascade.prop.participants.samples <- file.path(gitdir.fit, 'RCCS_treatment_cascade_participants_posterior_samples_221208.rds')
@@ -137,6 +141,9 @@ file.unsuppressed.share <- file.path(gitdir.fit, 'RCCS_unsuppressed_share_sex_22
 file.unsuppressed_rate_ratio <- file.path(gitdir.fit, 'RCCS_unsuppressed_ratio_sex_221208.csv')
 file.prevalence.share <- file.path(gitdir.fit, 'RCCS_prevalence_share_sex_221116.csv')
 file.unsuppressed_median_age <-file.path(gitdir.fit, 'RCCS_unsuppressed_median_age_221208.csv')
+
+file.unsuppressed.agegroup <- file.path(gitdir.fit, 'RCCS_propunsuppressed_age_group_221208.csv')
+file.prevalence.agegroup <- file.path(gitdir.fit, 'RCCS_prevalence_age_group_221116.csv')
 
 # sexual partnerships  rates
 file.number.sexual.partnerships <- file.path(dir.zenodo.survprim, 'age-age-group-est-cntcts-r15.rds')
@@ -180,3 +187,5 @@ file.unsuppressedviralload <- file.path(gitdir.fit,'RCCS_nonsuppressed_proportio
 file.selfreportedart <- file.path(gitdir.fit,'RCCS_art_posterior_samples_221208.rds')
 file.unsuppressedviralload.vl200 <- file.path(gitdir.fit,'RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds')
 file.selfreportedart.vl200 <- file.path(gitdir.fit,'RCCS_art_posterior_samples_vl200_221208.rds')
+
+file.treatment.cascade.population <- file.path(gitdir.fit, 'RCCS_treatment_cascade_population_estimates_221208.csv')

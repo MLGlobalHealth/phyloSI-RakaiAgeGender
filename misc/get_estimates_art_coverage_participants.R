@@ -4,14 +4,14 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library(rstan)
-library("haven")
+library(haven)
 library(here)
 
 # directory of the repository
 gitdir <- here()
 
 # load paths
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -154,7 +154,11 @@ for(round in c('R010', 'R011', 'R012', 'R013', 'R014', "R015", "R015S", 'R016', 
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
   filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_221208.rds')
-  saveRDS(fit, file=file.path(outdir,filename))
+  filename <- file.path(outdir,filename)
+  if( ! file.exists(filename) | config$overwrite.existing.files )
+  {
+    saveRDS(fit, file=filename)
+  }
   # fit <- readRDS(file.path(outdir,filename))
 }
 
@@ -316,7 +320,9 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 
 file.name <- file.path(gitdir, 'fit', paste0('RCCS_art_posterior_samples_221208.rds'))
-saveRDS(nsinf.samples, file = file.name)
+if( ! file.exists(file.name) | config$overwrite.existing.files )
+    saveRDS(nsinf.samples, file = file.name)
 
 file.name <- file.path(outdir, paste0('RCCS_art_model_fit_221208.RDS'))
-saveRDS(stats, file = file.name)
+if( ! file.exists(file.name) | config$overwrite.existing.files )
+    saveRDS(stats, file = file.name)

@@ -45,7 +45,7 @@ if(user != 'andrea')
 }
 
 gitdir <- here()
-source(file.path(gitdir, 'paths.R'))
+source(file.path(gitdir, 'config.R'))
 
 # if output directory is null, set it to gitdir.data
 if( is.null(args$outdir) )

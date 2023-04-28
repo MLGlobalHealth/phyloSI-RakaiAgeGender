@@ -6,7 +6,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -21,13 +21,13 @@ source(file.path(gitdir, "paths.R"))
 # )
 # args <- parse_args(OptionParser(option_list = option_list))
 
-# outdir to save figures
-if(dir.exists(indir.deepsequence_analyses)) {
-  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
-} else {
-  outdir <- '../phyloSI-RakaiAgeGender-outputs/get_treatment_cascade_non_participants'
-  if(!dir.exists(outdir)) dir.create(outdir);
-}
+# outdir to save figures: AB, is this useless now? 
+# if(dir.exists(indir.deepsequence_analyses)) {
+#   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+# } else {
+#   outdir <- '../phyloSI-RakaiAgeGender-outputs/get_treatment_cascade_non_participants'
+#   if(!dir.exists(outdir)) dir.create(outdir);
+# }
 
 # specificity and sensitivity art reporting
 
@@ -193,7 +193,7 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 ####################################
 
 file.name <- file.treatment.cascade.prop.nonparticipants.samples 
-if(file.exists(file.name))
+if(file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("file:", file.name, "already exists.\n")
 }else{
@@ -202,7 +202,7 @@ if(file.exists(file.name))
 }
 
 file.name <- file.treatment.cascade.prop.nonparticipants 
-if(file.exists(file.name))
+if(file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("file:", file.name, "already exists.\n")
 }else{

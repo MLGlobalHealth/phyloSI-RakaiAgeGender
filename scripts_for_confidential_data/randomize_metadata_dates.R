@@ -7,7 +7,7 @@ library(data.table)
 library(here)
 
 gitdir <- here()
-source(file.path(gitdir, 'paths.R'))
+source(file.path(gitdir, 'config.R'))
 
 file.exists( path.meta.confidential) |> stopifnot()
 

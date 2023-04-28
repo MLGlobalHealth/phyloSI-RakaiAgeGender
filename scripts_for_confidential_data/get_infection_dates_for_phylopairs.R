@@ -98,7 +98,7 @@ catn <- function(x) cat("\n----", x, "----\n")
 usr <- Sys.info()[['user']]
 
 gitdir <- here()
-source(file.path(gitdir, 'paths.R'))
+source(file.path(gitdir, 'config.R'))
 
 # set zenodo directory as standard.
 if( is.na(args$outdir) )
@@ -256,7 +256,7 @@ if(args$save.intermediate)
 if(args$get.round.probabilities)
     df_round_gi <- get.round.dates(file.path.round.timeline)
 
-if( file.exists(filename_net) & ! args$rerun )
+if( file.exists(filename_net) & ! args$rerun == TRUE )
 {
     dcohords <- readRDS(filename_net)
 }else{

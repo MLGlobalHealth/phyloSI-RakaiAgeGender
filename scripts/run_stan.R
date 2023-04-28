@@ -82,7 +82,7 @@ use_tsi_non_refined <- F
 path.to.stan.model <- file.path(gitdir, 'stan_models', paste0(stan_model, '.stan'))
 
 # load fil paths
-source(file.path(gitdir, 'paths.R'))
+source(file.path(gitdir, 'config.R'))
 
 # load functions
 source(file.path(gitdir.functions, 'utils.R'))

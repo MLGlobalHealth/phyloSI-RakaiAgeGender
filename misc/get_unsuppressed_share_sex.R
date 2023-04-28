@@ -6,7 +6,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -21,6 +21,7 @@ source(file.path(gitdir, "paths.R"))
 # )
 # args <- parse_args(OptionParser(option_list = option_list))
 
+# not sure if the outputs are ever used.
 outdir <- '../phyloSI-RakaiAgeGender-outputs/get_unsuppressed_share_sex'
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
 
@@ -200,7 +201,7 @@ tmp[, `:=` (CL = format(round(CL*100, n_digits), nsmall = n_digits),
 tmp[, CL := gsub(' ', '', CL)]
 tmp[, CU := gsub(' ', '', CU)]
 tmp[, M := gsub(' ', '', M)]
-file.name <- file.path(outdir, paste0('RCCS_shareunsuppressed_age_group_5years_R18_221215.rds'))
+file.name <- file.path(outdir, 'RCCS_shareunsuppressed_age_group_5years_R18_221215.rds')
 saveRDS(tmp, file = file.name)
 
 
@@ -231,4 +232,11 @@ tmp[, CU := gsub(' ', '', CU)]
 tmp[, M := gsub(' ', '', M)]
 
 file.name <- file.path(outdir,'RCCS_shareunsuppressed_total_R18_221215.rds')
-saveRDS(tmp, file = file.name)
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(tmp, file = file.name)
+}else{
+    cat("File:", file.name, "already exists...\n")
+}
+

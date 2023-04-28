@@ -4,10 +4,11 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library(rstan)
-library("haven")
+library(haven)
+library(here)
 
 # directory of the repository
-gitdir <- getwd()
+gitdir <- here()
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -24,7 +25,7 @@ gitdir <- getwd()
 
 
 # load file paths
-source(file.path(gitdir, 'paths.R'))
+source(file.path(gitdir, 'config.R'))
 
 # outdir directory for stan fit
 if (dir.exists(indir.deepsequence_analyses)) {
@@ -155,8 +156,11 @@ for(round in c("R015", 'R016', 'R017', 'R018')){
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
   filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_newlyregistered_vl200_221208.rds')
-  saveRDS(fit, file=file.path(outdir,filename))
-  # fit <- readRDS(file.path(outdir,filename))
+  filename <- file.path(outdir, filename)
+  if( ! file.exists(filename) | config$overwrite.existing.files )
+  {
+    saveRDS(fit, file=filename)
+  }
 }
 
 # load results 
@@ -325,7 +329,7 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 # file.name <- file.path(gitdir, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds'))
 file.name <- file.selfreportedart.newly.vl200 
-if(! file.exists(file.name))
+if(! file.exists(file.name) | config$overwrite.existing.files )
 {
     cat("Saving file:", file.name, '\n')
     saveRDS(nsinf.samples, file = file.name)
@@ -334,7 +338,7 @@ if(! file.exists(file.name))
 }
 
 file.name <- file.path(outdir, 'RCCS_art_model_fit_newlyregistered_vl200_221208.RDS')
-if(! file.exists(file.name))
+if(! file.exists(file.name) | config$overwrite.existing.files )
 {
     cat("Saving file:", file.name, '\n')
     saveRDS(stats, file = file.name)

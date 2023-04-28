@@ -3,22 +3,22 @@ library(ggplot2)
 require(lubridate)
 library(dplyr)
 library(ggpubr)
+library(here)
 
 # directory repository
-indir.repository <- '~/git/phyloflows'
+gitdir <- here()
+source(file.path(gitdir,'config.R'))
 
 # directory to save the figures
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
 
 # files
-file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
-infile.unsuppressed <- file.path(indir.repository, 'fit', paste0('RCCS_propunsuppressed_age_group_221208.csv'))
-infile.prevalence <- file.path(indir.repository, 'fit', paste0('RCCS_prevalence_age_group_221116.csv'))
+file.unsuppressed.agegroup 
+file.prevalence.agegroup 
 
 load(file.path.round.timeline)
-prevalence <- as.data.table(read.csv(infile.prevalence))
-unsuppressed <- as.data.table(read.csv(infile.unsuppressed))
+prevalence <- fread(file.prevalence.agegroup)
+unsuppressed <- fread(file.unsuppressed.agegroup)
 
 # format
 tmp <- data.table(reshape2::melt(prevalence, id.vars = c('ROUND', 'COMM', 'SEX', 'AGE_GROUP')))
@@ -60,8 +60,7 @@ if(0){
 # plot
 communities <- tmp[, unique(COMM)]
 
-for(i in seq_along(communities)){
-  tmp1 <- tmp[COMM == communities[i]]
+for(i in seq_along(communities)){ tmp1 <- tmp[COMM == communities[i]]
   
   p <- ggplot(tmp1, aes(x = MIDPOINT_DATE, group = interaction(TYPE, SEX_LABEL))) + 
     geom_line(aes(y = M, linetype = TYPE), position=position_dodge(width = 500), alpha = 1, col = 'grey50', size = 0.4) + 

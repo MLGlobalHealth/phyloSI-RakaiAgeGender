@@ -35,7 +35,7 @@ option_list <- list(
 args <- parse_args(OptionParser(option_list = option_list))
 
 # source paths 
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # path where to store results
 if ( is.na(args$outdir) )

@@ -108,8 +108,6 @@ ZENODO="~/OneDrive/shifting-dynamics-zenodo/" # path to your zenodo directory
 DATA_DIR_TSI=$ZENODO/"deep_sequence_phylogenies_primary/data_for_likely_transmission_pairs/phyloscanner-results"
 DATA_DIR_PHYLOSCANNER=$ZENODO/"deep_sequence_phylogenies_primary/data_for_time_since_infection/phyloscanner-results"
 
-# get individual level time since infection estimates
-# Rscript ./phylo_pipeline_src/TSI_estimate_dates.R --confidential FALSE --tsi-indir $DATA_DIR_TSI
 # get linkage and direction scores
 Rscript ./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER
 # refine time since infection estimates for source-recipient pairs

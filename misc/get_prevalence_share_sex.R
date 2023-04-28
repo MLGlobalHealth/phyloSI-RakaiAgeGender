@@ -6,7 +6,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -108,7 +108,7 @@ ggplot(sing, aes(x = ROUND)) +
 
 tmp <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX'))
 file.name <- file.prevalence.share
-if( ! file.exists(file.name))
+if( ! file.exists(file.name) | config$overwrite.existing.files )
 {
     cat('Saving file:', file.name, '...\n')
     write.csv(tmp, file = file.name, row.names = FALSE)

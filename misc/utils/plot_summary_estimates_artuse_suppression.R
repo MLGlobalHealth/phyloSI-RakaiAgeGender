@@ -6,35 +6,31 @@ library(lubridate)
 library(gridExtra)
 library("haven")
 library(ggpubr)
+library(here)
 
 # directory of the repository
-indir.repository <- '~/git/phyloflows'
+gitdir <- here()
+source(file.path(gitdir, 'config.R'))
 
 # outdir directory for stan fit
 indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
 
-# files
-artuse.path.np <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage.csv')
-artuse.path.p <- file.path(indir.repository, 'data', 'aggregated_participants_count_art_coverage.csv')
-file.cascade.participants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221208.csv'))
-file.cascade.nonparticipants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221208.csv'))
-file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221208.csv'))
 
 # find count of newly registered participants who reported art use
-rart.nonpart <- as.data.table( read.csv(artuse.path.np) )
+rart.nonpart <- fread(path.newly.registered.art)
 
 # find count of participants who reported art use
-rart.part <- as.data.table( read.csv(artuse.path.p) )
+rart.part <- fread(path.participant.art)
 
 # treatment cascade participants 
-cascade.participants  <- as.data.table( read.csv(file.cascade.participants) )
+cascade.participants  <- fread(file.treatment.cascade.prop.participants)
 
 # treatment cascade non-participants
-cascade.nonparticipants  <- as.data.table( read.csv(file.cascade.nonparticipants) )
+cascade.nonparticipants  <- fread(file.treatment.cascade.prop.nonparticipants)
 
 # treatment cascade population
-cascade.population  <- as.data.table( read.csv(file.cascade.population) )
+cascade.population  <- fread(file.treatment.cascade.population)
 
 
 #################################
@@ -239,6 +235,4 @@ p <- grid.arrange(pP.M, pNP.M, p.ART, p.US, layout_matrix = rbind(c(1, 2, 3, 4),
                   heights = c(0.95, 0.05, 0.02), 
                   widths =  c(rep(0.22, 3),0.25))
 ggsave(p, file = file.path(outdir, 'summary_estimates_art_suppressed_221208.pdf'), w = 9, h = 12)
-
-
 

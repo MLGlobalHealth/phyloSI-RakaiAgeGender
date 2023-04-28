@@ -8,7 +8,7 @@ library("haven")
 library(here)
 
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 
 path.stan <- file.path(gitdir.misc, 'stan_models', 'binomial_gp.stan')

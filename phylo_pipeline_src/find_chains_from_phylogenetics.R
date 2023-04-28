@@ -49,7 +49,7 @@ args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 
 gitdir <- here()
 gitdir.data <- file.path(gitdir, 'data')
-source(file.path(gitdir, 'paths.R'))
+source(file.path(gitdir, 'config.R'))
 
 # if output directory is null, set it to proc
 if( is.null(args$outdir) )
@@ -377,7 +377,7 @@ if(args$confidential == FALSE)
     suff <- '_randomized'
 filename <- paste0('Rakai_phscnetworks_ruleo_sero',suff,'.rda')
 filename <- file.path(args$outdir, filename)
-if(! file.exists(filename) )
+if(! file.exists(filename) | config$overwrite.existing.files)
 {
     catn(paste0("saving ", filename))
     save(dpl, dc, dw, dnet, dchain, file=filename)

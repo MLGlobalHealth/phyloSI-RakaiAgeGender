@@ -6,7 +6,7 @@ library(here)
 
 # directory of the repository
 gitdir <- here()
-source(file.path(gitdir, "paths.R"))
+source(file.path(gitdir, "config.R"))
 
 # TODO: shozen: do you think this would be helpful? 
 # library(optparse)
@@ -294,7 +294,7 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 # file.name <- file.path(gitdir.fit,'RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds')
 file.name <- file.unsuppressedviralload.vl200
-if(! file.exists(file.name))
+if(! file.exists(file.name) | config$overwrite.existing.files )
 {
     cat("Saving file:", file.name, '\n')
     saveRDS(nsinf.samples, file = file.name)
@@ -302,5 +302,13 @@ if(! file.exists(file.name))
     cat("File:", file.name, "already exists...\n")
 }
 
+
 file.name <- file.path(outdir,'RCCS_nonsuppressed_proportion_model_fit_vl200_221121.RDS')
-saveRDS(stats, file = file.name)
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+    cat("Saving file:", file.name, '\n')
+    saveRDS(stats, file = file.name)
+
+}else{
+    cat("File:", file.name, "already exists...\n")
+i

@@ -4,7 +4,7 @@ library(ggplot2)
 library(scales)
 library(lubridate)
 library(rstan)
-library("haven")
+library(haven)
 library(here)
 
 # directory of the repository
@@ -26,7 +26,7 @@ gitdir <- here()
 
 
 # load file paths
-source(file.path(gitdir, 'paths.R'))
+source(file.path(gitdir, 'config.R'))
 
 # outdir directory for stan fit
 if (dir.exists(indir.deepsequence_analyses)){
@@ -327,7 +327,9 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 # file.name <- file.path(gitdir.fit, paste0('RCCS_art_posterior_samples_newlyregistered_221208.rds'))
 file.name <- file.selfreportedart.newly 
-saveRDS(nsinf.samples, file = file.name)
+
+if( ! file.exists(file.name) | config$overwrite.existing.files )
+    saveRDS(nsinf.samples, file = file.name)
 
 file.name <- file.path(outdir, paste0('RCCS_art_model_fit_newlyregistered_221208.RDS'))
 saveRDS(stats, file = file.name)
