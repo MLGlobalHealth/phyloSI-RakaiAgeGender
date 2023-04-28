@@ -32,6 +32,18 @@ if(zenodo.exists)
     # something
     dir.zenodo.central = file.path(dir.zenodo, "final_central_analysis")
 
+    c( 
+        dir.zenodo.phyloprim,
+        dir.zenodo.pairs ,
+        dir.zenodo.pairs.phsc ,
+        dir.zenodo.tsi ,
+        dir.zenodo.tsi.phsc ,
+        dir.zenodo.phyloproc ,
+        dir.zenodo.survprim ,
+        dir.zenodo.survproc,
+        dir.zenodo.central
+    ) |> dir.exists() |> all() |> stopifnot()
+
 }
 
 gitdir.data <- file.path(gitdir, 'data')
