@@ -87,6 +87,7 @@ Rscript "./misc/get_estimates_unsuppressed_proportion_non_participants.R"
 Rscript "./misc/get_treatment_cascade_non_participants.R"
 Rscript "./misc/get_treatment_cascade_participants.R"
 ```
+**Warning:** Some of scripts above may take more than 15 hours to run on a laptop computer (e.g., `get_stimates_art_coverage_participants.R` takes 15 hours to complete on a MacBook Pro with 16GB of RAM). We recommend users to skip Stage 1 unless necessary and start with Stage 2 to save time.
 
 #### Stage 2 (pre-processing of surveillance data)
 ```shell
