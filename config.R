@@ -127,7 +127,7 @@ file.incidence.loess.samples.inland	<- file.path(output.dir.incidence.estimation
 
 # obtained in src/ for analysis
 file.eligible.count <- file.path(dir.zenodo.phyloprim, "RCCS_census_eligible_individuals_221116.csv")
-file.participation <- file.path(dir.zenodo.phyloprim, "RCCS_participation_221208.csv")
+file.participation <- file.path(dir.zenodo.survprim, "RCCS_participation_221208.csv")
 file.prevalence.prop <- file.path(dir.zenodo.survproc, "RCCS_prevalence_estimates_221116.csv")
 
 # obtained in misc/ for analysis
