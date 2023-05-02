@@ -10,38 +10,37 @@ usr <- Sys.info()[['user']]
 # set your user and path here:
 dir.zenodo <- data.table::fcase(
     usr == 'andrea', "~/OneDrive/shifting-dynamics-zenodo/",
+    usr == 'shozendan', '~/Imperial/phyloSI-RakaiAgeGender-data',
     usr == 'your-user', "your-path-to-zenodo-dir",
     default="")
 
 zenodo.exists <- dir.exists(dir.zenodo)
-if(zenodo.exists)
-{
-    list.files( dir.zenodo, pattern="")
+if (zenodo.exists) {
+    list.files(dir.zenodo, pattern = "")
     dir.zenodo.phyloprim <- file.path(dir.zenodo, 'data_deep_sequence_phylogenies')
-    dir.zenodo.pairs <- file.path(dir.zenodo.phyloprim, "data_for_likely_transmission_pairs")
-    dir.zenodo.pairs.phsc <- file.path(dir.zenodo.pairs, "phyloscanner-results")
-    dir.zenodo.tsi <- file.path(dir.zenodo.phyloprim, "data_for_time_since_infection")
-    dir.zenodo.tsi.phsc <- file.path(dir.zenodo.tsi, "phyloscanner-results")
-
+    # dir.zenodo.pairs <- file.path(dir.zenodo.phyloprim, "data_for_likely_transmission_pairs")
+    # dir.zenodo.pairs.phsc <- file.path(dir.zenodo.pairs, "phyloscanner-results")
+    # dir.zenodo.tsi <- file.path(dir.zenodo.phyloprim, "data_for_time_since_infection")
+    # dir.zenodo.tsi.phsc <- file.path(dir.zenodo.tsi, "phyloscanner-results")
+    
     dir.zenodo.phyloproc = file.path(dir.zenodo, "preprocessed_outputs_deep_sequence_phylogenies")
 
     # surveillance data (primary or processed_outputs)
-    dir.zenodo.survprim = file.path(dir.zenodo, "data_RCCS_surveillance")
-    dir.zenodo.survproc = file.path(dir.zenodo, "preprocessed_outputs_RCCS_surveillance")
+    dir.zenodo.survprim <- file.path(dir.zenodo, "data_RCCS_surveillance")
+    dir.zenodo.survproc <- file.path(dir.zenodo, "preprocessed_outputs_RCCS_surveillance")
 
     # something
-    dir.zenodo.central = file.path(dir.zenodo, "final_central_analysis")
+    dir.zenodo.central <- file.path(dir.zenodo, "final_central_analysis")
 
-    c( 
-        dir.zenodo.phyloprim,
-        dir.zenodo.pairs ,
-        dir.zenodo.pairs.phsc ,
-        dir.zenodo.tsi ,
-        dir.zenodo.tsi.phsc ,
-        dir.zenodo.phyloproc ,
-        dir.zenodo.survprim ,
-        dir.zenodo.survproc,
-        dir.zenodo.central
+    c(dir.zenodo.phyloprim,
+      # dir.zenodo.pairs,
+      # dir.zenodo.pairs.phsc,
+      # dir.zenodo.tsi,
+      # dir.zenodo.tsi.phsc,
+      dir.zenodo.phyloproc,
+      dir.zenodo.survprim,
+      dir.zenodo.survproc,
+      dir.zenodo.central
     ) |> dir.exists() |> all() |> stopifnot()
 
 }
@@ -97,8 +96,7 @@ path.meta.randomized <- file.path(dir.zenodo.survprim,"Rakai_Pangea2_RCCS_Metada
 path.collection.dates.randomized <- file.path(dir.zenodo.survprim, 'sequences_collection_dates_randomized.rds')
 file.path.round.timeline <- file.path(dir.zenodo.survprim, 'RCCS_round_timeline_220905.RData' )
 
-if(zenodo.exists)
-{
+if (zenodo.exists) {
     path.chains.data <- file.path(dir.zenodo.phyloproc, 'Rakai_phscnetworks_ruleo_sero.rda')
     path.tsiestimates <- file.path(dir.zenodo.phyloproc, 'aggregated_TSI.rds')
 }
@@ -138,15 +136,38 @@ file.prevalence.prop <- file.path(gitdir.fit, 'RCCS_prevalence_estimates_221116.
 file.pairs <- file.path(dir.zenodo.phyloproc, 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
 file.pairs.nonrefined <- file.path(dir.zenodo.phyloproc, 'pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds')
 
-file.treatment.cascade.prop.participants <- file.path(gitdir.fit, "RCCS_treatment_cascade_participants_estimates_221208.csv")
-file.treatment.cascade.prop.nonparticipants <- file.path(gitdir.fit, "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv")
-file.treatment.cascade.prop.participants.samples <- file.path(gitdir.fit, 'RCCS_treatment_cascade_participants_posterior_samples_221208.rds')
-file.treatment.cascade.prop.nonparticipants.samples <- file.path(gitdir.fit, 'RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds')
-
-file.treatment.cascade.prop.participants.vl200 <- file.path(gitdir.fit, "RCCS_treatment_cascade_participants_estimates_vl200_221208.csv")
-file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(gitdir.fit, "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv")
-file.treatment.cascade.prop.participants.vl200.samples <- file.path(gitdir.fit, 'RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds')
-file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(gitdir.fit, 'RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds')
+file.treatment.cascade.prop.participants <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_participants_estimates_221208.csv"
+)
+file.treatment.cascade.prop.nonparticipants <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv"
+)
+file.treatment.cascade.prop.participants.samples <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_participants_posterior_samples_221208.rds"
+)
+file.treatment.cascade.prop.nonparticipants.samples <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds"
+)
+file.treatment.cascade.prop.participants.vl200 <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_participants_estimates_vl200_221208.csv"
+)
+file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv"
+)
+file.treatment.cascade.prop.participants.vl200.samples <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds"
+)
+file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds"
+)
 
 # obtained in misc/ for plots
 file.unsuppressed.share <- file.path(gitdir.fit, 'RCCS_unsuppressed_share_sex_221208.csv')
@@ -195,9 +216,27 @@ file.selfreportedart.newly.vl200 <- file.path(gitdir.fit, 'RCCS_art_posterior_sa
 file.spec.sens.art.vl200 = file.path(dir.zenodo.survprim, 'sensitivity_specificity_art_vl200.csv')
 
 # get_treatment_cascade*
-file.unsuppressedviralload <- file.path(gitdir.fit,'RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds')
-file.selfreportedart <- file.path(gitdir.fit,'RCCS_art_posterior_samples_221208.rds')
-file.unsuppressedviralload.vl200 <- file.path(gitdir.fit,'RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds')
-file.selfreportedart.vl200 <- file.path(gitdir.fit,'RCCS_art_posterior_samples_vl200_221208.rds')
+file.unsuppressedviralload <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds"
+)
 
-file.treatment.cascade.population <- file.path(gitdir.fit, 'RCCS_treatment_cascade_population_estimates_221208.csv')
+file.selfreportedart <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_art_posterior_samples_221208.rds"
+)
+
+file.unsuppressedviralload.vl200 <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds"
+)
+
+file.selfreportedart.vl200 <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_art_posterior_samples_vl200_221208.rds"
+)
+
+file.treatment.cascade.population <- file.path(
+    dir.zenodo.survproc,
+    "RCCS_treatment_cascade_population_estimates_221208.csv"
+)
