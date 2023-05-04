@@ -431,9 +431,9 @@ if (dir.exists(indir.deepsequencedata)) {
 } else {
   out.path <- file.path(args$outdir, "RCCS_data_estimate_incidence_inland_R6_R18/220903/")
   dir.create(out.path, recursive = TRUE)
-  file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
 }
 
+file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
 if(! file.exists(file.name))
 {
     cat("Saving file:", file.name, '\n')
