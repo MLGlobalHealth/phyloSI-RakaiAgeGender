@@ -431,16 +431,16 @@ if (dir.exists(indir.deepsequencedata)) {
 } else {
   out.path <- file.path(args$outdir, "RCCS_data_estimate_incidence_inland_R6_R18/220903/")
   dir.create(out.path, recursive = TRUE)
+    file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
+    if(! file.exists(file.name))
+    {
+        cat("Saving file:", file.name, '\n')
+        write.csv(model_pred, file = file.name, row.names = F)
+    }else{
+        cat("File:", file.name, "already exists...\n")
+    }
 }
 
-file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
-if(! file.exists(file.name))
-{
-    cat("Saving file:", file.name, '\n')
-    write.csv(model_pred, file = file.name, row.names = F)
-}else{
-    cat("File:", file.name, "already exists...\n")
-}
 
 # For paper
 file.name <- file.path(args$outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
