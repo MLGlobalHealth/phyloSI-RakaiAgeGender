@@ -78,7 +78,21 @@ Our main analyses depend on estimates of population sizes, HIV prevalence, and H
 
 To perform the data preprocessing steps, navigate to the root directory of the repository and execute the following commands
 
+> **Warning** **(Please read)** Several of the pre-processing code for the surveillance requires the running of computationally demanding Stan models which may take more than 24 hours to finish on a standard laptop computer. We provide summarized outputs for all Stan models and recommend users to run the following abbreviated version of the data pre-processing step. To run the full data pre-processing step, execute Stage 1 and Stage 2.
+
+#### Abbreviated pre-processing of surveillance data
+```shell
+Rscript "./misc/get_treatment_cascade_population.R"
+Rscript "./misc/get_unsuppressed_median_age.R"
+Rscript "./misc/get_unsuppressed_share_sex.R"
+Rscript "./misc/get_unsuppressed_ratio_sex.R"
+Rscript "./misc/get_unsuppressed_prevalence_share_sex.R"
+```
+
 #### Stage 1 (pre-processing of surveillance data)
+
+> **Note** Runtime arguments for Stan models may be configured by editing the contents of `./misc/stan_models/config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
+
 ```shell
 Rscript "./misc/get_estimates_art_coverage_participants.R"
 Rscript "./misc/get_estimates_unsuppressed_proportion_participants.R"
@@ -89,7 +103,6 @@ Rscript "./misc/get_estimates_unsuppressed_proportion_non_participants.R"
 Rscript "./misc/get_treatment_cascade_participants.R"
 Rscript "./misc/get_treatment_cascade_non_participants.R"
 ```
-**Warning:** Some of scripts above may take more than 15 hours to run on a laptop computer (e.g., `get_stimates_art_coverage_participants.R` takes 15 hours to complete on a MacBook Pro with 16GB of RAM). We recommend users to skip Stage 1 unless necessary and start with Stage 2 to save time.
 
 #### Stage 2 (pre-processing of surveillance data)
 ```shell
