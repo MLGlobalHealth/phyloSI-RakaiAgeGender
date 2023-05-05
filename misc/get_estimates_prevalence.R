@@ -19,7 +19,7 @@ outdir <- file.path(
   "../phyloSI-RakaiAgeGender-outputs",
   "get_estimates_prevalence"
 )
-if (!dir.exists(outdir)) dir.create(outdir)
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
 # Path to stan model
 path_stan <- file.path(gitdir.misc, "stan_models", "binomial_gp.stan")
