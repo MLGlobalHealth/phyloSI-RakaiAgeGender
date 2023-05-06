@@ -51,8 +51,8 @@ This study was supported by the following organizations:
 - [Johns Hopkins University Center for AIDS Research](https://hopkinscfar.org/) (P30AI094189)
 - [President’s Emergency Plan for AIDS Relief](https://www.state.gov/pepfar/) through the Centers for Disease Control and Prevention (NU2GGH000817)
 
+## Quick Start
 
-[##](##) Quick Start
 ### System Requirements
 - macOS or UNIX, the code was developed on macOS Big Sur 11.7
 - [R](https://www.r-project.org/) version >= 4.1.2
@@ -61,13 +61,13 @@ This study was supported by the following organizations:
 ### Installation 
 Please use the following ```bash``` script to build a conda virtual environment and install all R dependencies:
 ```shell
-$ git clone https://github.com/MLGlobalHealth/phyloSI-RakaiAgeGender.git
-$ cd phyloSI-RakaiAgeGender
-$ bash phyloSI-RakaiAgeGender-install.sh
+git clone https://github.com/MLGlobalHealth/phyloSI-RakaiAgeGender.git
+cd phyloSI-RakaiAgeGender
+bash phyloSI-RakaiAgeGender-install.sh
 ```
 If not activated, activate the environment for use:
 ```shell
-$ source activate phyloSI-RakaiAgeGender
+source activate phyloSI-RakaiAgeGender
 ```
 
 ### Data preprocessing
@@ -78,39 +78,27 @@ Our main analyses depend on estimates of population sizes, HIV prevalence, and H
 
 To perform the data preprocessing steps, navigate to the root directory of the repository and execute the following commands
 
-> **Warning** **(Please read)** Several of the pre-processing code for the surveillance requires the running of computationally demanding Stan models which may take more than 24 hours to finish on a standard laptop computer. We provide summarized outputs for all Stan models and recommend users to run the following abbreviated version of the data pre-processing step. To run the full data pre-processing step, execute Stage 1 and Stage 2.
-
-#### Abbreviated pre-processing of surveillance data
-```shell
-Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
-Rscript "./surveillance_pipeline_src/get_unsuppressed_median_age.R"
-Rscript "./surveillance_pipeline_src/get_unsuppressed_share_sex.R"
-Rscript "./surveillance_pipeline_src/get_unsuppressed_ratio_sex.R"
-```
+> **Warning** **(Please read)** Several of the pre-processing code for the surveillance requires the running of computationally demanding Stan models which may take more than 24 hours to finish on a standard laptop computer. We provide summarized outputs for all Stan models and recommend users to skip Stage 1 and proceed directly to Stage 2. To run the full data pre-processing step, execute both Stage 1 and Stage 2.
 
 #### Stage 1 (pre-processing of surveillance data)
 
 > **Note** Runtime arguments for Stan models may be configured by editing the contents of `./surveillance_pipeline_src/stan_models/config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
 
 ```shell
+Rscript "./surveillance_pipeline_src/get_estimates_prevalence.R"
+
 Rscript "./surveillance_pipeline_src/get_estimates_art_coverage_participants.R"
 Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R"
 
 Rscript "./surveillance_pipeline_src/get_estimates_art_coverage_non_participants.R"
 Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_non_participants.R"
-
-Rscript "./surveillance_pipeline_src/get_treatment_cascade_participants.R"
-Rscript "./surveillance_pipeline_src/get_treatment_cascade_non_participants.R"
 ```
 
-#### Stage 2 (pre-processing of surveillance data)
+#### Stage 2 (treatment cascade)
 ```shell
-Rscript "./surveillance_pipeline_src/get_estimates_prevalence.R"
-
+Rscript "./surveillance_pipeline_src/get_treatment_cascade_participants.R"
+Rscript "./surveillance_pipeline_src/get_treatment_cascade_non_participants.R"
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
-Rscript "./surveillance_pipeline_src/get_unsuppressed_median_age.R"
-Rscript "./surveillance_pipeline_src/get_unsuppressed_share_sex.R"
-Rscript "./surveillance_pipeline_src/get_unsuppressed_ratio_sex.R"
 ```
 
 #### Stage 3 (pre-processing of phylogenetic data)

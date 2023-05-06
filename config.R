@@ -47,6 +47,7 @@ if (zenodo.exists) {
 
 gitdir.data <- file.path(gitdir, "data")
 gitdir.functions <- file.path(gitdir, "functions")
+gitdir.misc <- file.path(gitdir, "surveillance_pipeline_src")
 
 ######################
 # confidential paths #

@@ -467,4 +467,3 @@ file_name <- file.path(
   "RCCS_prevalence_model_fit_convergence_221116.RDS"
 )
 saveRDS(stats, file = file_name)
-
