@@ -86,7 +86,6 @@ Rscript "./misc/get_treatment_cascade_population.R"
 Rscript "./misc/get_unsuppressed_median_age.R"
 Rscript "./misc/get_unsuppressed_share_sex.R"
 Rscript "./misc/get_unsuppressed_ratio_sex.R"
-Rscript "./misc/get_unsuppressed_prevalence_share_sex.R"
 ```
 
 #### Stage 1 (pre-processing of surveillance data)
@@ -106,12 +105,12 @@ Rscript "./misc/get_treatment_cascade_non_participants.R"
 
 #### Stage 2 (pre-processing of surveillance data)
 ```shell
-Rscript "./misc/get_treatment_cascade_population.R"
 Rscript "./misc/get_estimates_prevalence.R"
+
+Rscript "./misc/get_treatment_cascade_population.R"
 Rscript "./misc/get_unsuppressed_median_age.R"
 Rscript "./misc/get_unsuppressed_share_sex.R"
 Rscript "./misc/get_unsuppressed_ratio_sex.R"
-Rscript "./misc/get_unsuppressed_prevalence_share_sex.R"
 ```
 
 #### Stage 3 (pre-processing of phylogenetic data)
