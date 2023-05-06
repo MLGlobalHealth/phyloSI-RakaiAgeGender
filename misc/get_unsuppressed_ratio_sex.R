@@ -92,10 +92,10 @@ df_agg[, UNSUPPRESSION_RATE_RATIO := UNSUPPRESSION_RATE_REL_M / UNSUPPRESSION_RA
 # summarise
 ps <- c(0.025, 0.5, 0.975)
 qlab <- c("CL", "M", "CU")
-sing_age = df_agg[, list(q = quantile(UNSUPPRESSION_RATE_RATIO, prob=ps, na.rm = TRUE),
+sing_age <- df_agg[, list(q = quantile(UNSUPPRESSION_RATE_RATIO, prob = ps, na.rm = TRUE),
                          q_label = qlab),
                    by = c("ROUND", "COMM", "AGE_GROUP")]
-sing_age = as.data.table(
+sing_age <- as.data.table(
   reshape2::dcast(sing_age, ... ~ q_label, value.var = "q")
 )
 
@@ -150,7 +150,7 @@ df_agg[, UNSUPPRESSION_RATE_RATIO := UNSUPPRESSION_RATE_REL_M / UNSUPPRESSION_RA
 # summarise
 sing <- df_agg[, list(q = quantile(UNSUPPRESSION_RATE_RATIO, prob = ps, na.rm = TRUE),
                       q_label = qlab),
-                by=c("ROUND", "COMM")]
+                by = c("ROUND", "COMM")]
 sing <- as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
 
 # name
