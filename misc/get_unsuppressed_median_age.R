@@ -19,11 +19,11 @@ eligible_count <- fread(file.eligible.count)
 # load proportion prevalence
 proportion_prevalence <- as.data.table(readRDS(file.prevalence))
 
-# load unsuppressed proportion 
+# load unsuppressed proportion
 treatment_cascade <- as.data.table(readRDS(file.treatment.cascade))
 
-ps <- c(0.025,0.5,0.975)
-qlab <- c('CL','M','CU')
+ps <- c(0.025, 0.5, 0.975)
+qlab <- c("CL", "M", "CU")
 
 #############################
 
@@ -32,11 +32,14 @@ qlab <- c('CL','M','CU')
 ############################
 
 # define round
-df <- merge(proportion_prevalence, treatment_cascade, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX', 'iterations'))
-df[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
+join_keys <- c("ROUND", "COMM", "AGEYRS", "SEX", "iterations")
+df <- merge(proportion_prevalence, treatment_cascade, by = join_keys)
+df[, ROUND := gsub("R0(.+)", "\\1", ROUND)]
 
 # merge number of eligible and the prevalence
-df <- merge(eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)], df, by = c('ROUND', 'COMM', 'AGEYRS', 'SEX'))
+join_keys <- c("ROUND", "COMM", "AGEYRS", "SEX")
+eligible_count <- eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)]
+df <- merge(eligible_count, df, by = join_keys)
 
 # find infected
 df[, INFECTED := ELIGIBLE * PREVALENCE_POSTERIOR_SAMPLE]
@@ -48,21 +51,27 @@ df[, UNSUPPRESSED := INFECTED * PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
 #####################################################
 
-# FIND MEDIAN AGE OF INFECTED UNSUPPRESSED 
+# FIND MEDIAN AGE OF INFECTED UNSUPPRESSED
 
 #####################################################
 
 # find share of unsuppressed by sex across age
-df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'SEX', 'iterations')]
-df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED, by = c('ROUND', 'COMM', 'AGEYRS','SEX', 'iterations')]
+df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED),
+    by = c("ROUND", "COMM", "SEX", "iterations")]
+df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED,
+    by = c("ROUND", "COMM", "AGEYRS", "SEX", "iterations")]
 
 # find qunatile of unsuppressed
-df <- df[, list(value = Hmisc::wtd.quantile(x = AGEYRS, weight = UNSUPPRESSED_SHARE,
-                                                probs = c(0.1, 0.25, 0.5, 0.75, 0.9), normwt = TRUE),
-                    quantile = c('C10', 'C25', 'C50', 'C75', 'C90')), by = c('iterations', 'ROUND', 'COMM', 'SEX')]
+df <- df[, list(value = Hmisc::wtd.quantile(x = AGEYRS,
+                                            weight = UNSUPPRESSED_SHARE,
+                                            probs = c(0.1, 0.25, 0.5, 0.75, 0.9),
+                                            normwt = TRUE),
+                quantile = c("C10", "C25", "C50", "C75", "C90")),
+                by = c("iterations", "ROUND", "COMM", "SEX")]
 # summarise
-sing = df[, list(q= quantile(value, prob=ps, na.rm = T), q_label=qlab), by=c('ROUND', 'COMM', 'SEX', 'quantile')]
-sing = as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
+sing <- df[, list(q = quantile(value, prob = ps, na.rm = TRUE), q_label = qlab),
+            by = c("ROUND", "COMM", "SEX", "quantile")]
+sing <- as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
 
 #########################################
 
@@ -70,12 +79,10 @@ sing = as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
 
 #########################################
 
-# file.name <- file.path(gitdir.fit,'RCCS_unsuppressed_median_age_221208.csv')
-file.name <- file.unsuppressed_median_age  
-if(! file.exists(file.name) | config$overwrite.existing.files)
-{
-    cat("Saving file:", file.name, '\n')
-    write.csv(sing, file = file.name, row.names = F)
-}else{
+file.name <- file.unsuppressed_median_age
+if (!file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    write.csv(sing, file = file.name, row.names = FALSE)
+} else {
     cat("File:", file.name, "already exists...\n")
 }

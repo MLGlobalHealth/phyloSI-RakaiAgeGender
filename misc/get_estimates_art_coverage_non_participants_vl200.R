@@ -10,20 +10,6 @@ library(here)
 # directory of the repository
 gitdir <- here()
 
-# TODO: shozen: do you think this would be helpful? 
-# library(optparse)
-# option_list <- list(
-#     make_option(
-#         "--outdir",
-#         type = "",
-#         default = ,
-#         help = "",
-#         dest= ""
-#     ),
-# )
-# args <- parse_args(OptionParser(option_list = option_list))
-
-
 # load file paths
 source(file.path(gitdir, 'config.R'))
 

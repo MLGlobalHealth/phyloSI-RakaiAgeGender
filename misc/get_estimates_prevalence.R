@@ -176,7 +176,7 @@ for (round in rounds) {
 }
 
 # load results
-rounds <- c(10:15, 16:18)
+rounds <- 10:18
 nsinf <- vector(mode = "list", length = length(rounds))
 nspred <- vector(mode = "list", length = length(rounds))
 nsinf_samples <- vector(mode = "list", length = length(rounds))
@@ -298,21 +298,21 @@ for (i in seq_along(rounds)) {
   nspred_by_age[, ROUND := paste0("R0", round)]
 
   # load change of var name
-  set(nsinf_samples.by.age, NULL, "SEX", NULL)
-  set(nsinf_samples.by.age, NULL, "LOC", NULL)
-  set(nsinf_samples.by.age, NULL, "COUNT_PREDICT", NULL)
-  set(nsinf_samples.by.age, NULL, "TOTAL_COUNT", NULL)
-  set(nsinf_samples.by.age, NULL, "PREVALENCE_PREDICT", NULL)
+  set(nsinf_samples_by_age, NULL, "SEX", NULL)
+  set(nsinf_samples_by_age, NULL, "LOC", NULL)
+  set(nsinf_samples_by_age, NULL, "COUNT_PREDICT", NULL)
+  set(nsinf_samples_by_age, NULL, "TOTAL_COUNT", NULL)
+  set(nsinf_samples_by_age, NULL, "PREVALENCE_PREDICT", NULL)
   setnames(
-    nsinf_samples.by.age,
+    nsinf_samples_by_age,
     old = c("LOC_LABEL", "SEX_LABEL", "AGE_LABEL", "value"),
     new = c("COMM", "SEX", "AGEYRS", "PREVALENCE_POSTERIOR_SAMPLE"))
-  nsinf_samples.by.age[, ROUND := paste0("R0", round)]
+  nsinf_samples_by_age[, ROUND := paste0("R0", round)]
 
   # keep
   nsinf[[i]] <- nsinf_by_age
   nspred[[i]] <- nspred_by_age
-  nsinf_samples[[i]] <- nsinf_samples.by.age
+  nsinf_samples[[i]] <- nsinf_samples_by_age
   convergence_list[[i]] <- convergence
 }
 nsinf <- do.call("rbind", nsinf)
@@ -467,3 +467,4 @@ file_name <- file.path(
   "RCCS_prevalence_model_fit_convergence_221116.RDS"
 )
 saveRDS(stats, file = file_name)
+

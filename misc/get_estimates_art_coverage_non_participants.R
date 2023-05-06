@@ -20,8 +20,11 @@ outdir <- file.path(
 )
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# stan model
+# Path to Stan model
 path_stan <- file.path(gitdir.misc, "stan_models", "binomial_gp.stan")
+
+# Read Stan configurations
+model_config <- read_yaml(file.path(gitdir.misc, "stan_models", "config.yml"))
 
 # find count of newly registered participants who reported art use
 rart <- fread(path.newly.registered.art)
@@ -157,10 +160,14 @@ for (r in rounds) {
   fit <- sampling(
     stan_model,
     data = stan_data,
-    iter = 10e3,
-    warmup = 5e2,
-    chains = 1,
-    control = list(max_treedepth = 15, adapt_delta = 0.999)
+    iter = model_config$iter,
+    warmup = model_config$warmup,
+    chains = model_config$chains,
+    cores = model_config$cores,
+    control = list(
+      max_treedepth = model_config$control$max_treedepth,
+      adapt_delta = model_config$control$adapt_delta
+    )
   )
   filename <- paste0("art_gp_stanfit_round",
                      gsub("R0", "", r),

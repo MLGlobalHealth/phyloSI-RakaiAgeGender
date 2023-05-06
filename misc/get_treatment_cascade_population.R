@@ -9,14 +9,6 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-# outdir to save figures
-# outdir to save figures
-outdir <- file.path(
-  "../phyloSI-RakaiAgeGender-outputs",
-  "get_treatment_cascade_participants"
-)
-if (!dir.exists(outdir)) dir.create(outdir)
-
 # posterior samples participants
 file.exists(file.unsuppressedviralload) |> stopifnot()
 file.exists(file.selfreportedart) |> stopifnot()
@@ -43,7 +35,7 @@ sre_p <- as.data.table(readRDS(file.selfreportedart))
 sre_np <- as.data.table(readRDS(file.selfreportedart.newly))
 
 # add label
-setnames(uns_p, 
+setnames(uns_p,
          "PROP_UNSUPPRESSED_POSTERIOR_SAMPLE",
          "PROP_UNSUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE")
 setnames(uns_np,
