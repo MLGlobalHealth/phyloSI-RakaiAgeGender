@@ -266,7 +266,7 @@ The table below lists the data files within `/data` and a brief description of i
 
 ### Scripts
 
-The following table list the actions performed by each of the available scripts:
+The following table list the actions performed by each of the scripts in `surveillance_pipeline_src/`:
 <details>
   <summary><b>Click to show table</b></summary>
   <table>
@@ -279,35 +279,35 @@ The following table list the actions performed by each of the available scripts:
     <tbody>
       <tr>
         <td>Obtain smooth HIV prevalence by age, gender, and round</td>
-        <td><code>surveillance_pipeline_src/get_estimates_prevalence.R</code></td>
+        <td><code>get_estimates_prevalence.R</code></td>
       </tr>
       <tr>
         <td>Obtain smooth ART coverage in participants by age, gender, and round</td>
-        <td><code>surveillance_pipeline_src/get_estimates_art_coverage_participants.R</code></td>
+        <td><code>get_estimates_art_coverage_participants.R</code></td>
       </tr>
       <tr>
         <td>Obtain smooth ART coverage in first-time participants by age, gender, and round</td>
-        <td><code>surveillance_pipeline_src/get_estimates_art_coverage_non_participants.R</code></td>
+        <td><code>get_estimates_art_coverage_non_participants.R</code></td>
       </tr>
       <tr>
         <td>Obtain smooth viral suppression in participants by age, gender, and round</td>
-        <td><code>surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R</code></td>
+        <td><code>get_estimates_unsuppressed_proportion_participants.R</code></td>
       </tr>
       <tr>
         <td>Obtain smooth viral suppression in first-time participants by age, gender, and round</td>
-        <td><code>surveillance_pipeline_src/get_estimates_unsuppressed_proportion_non_participants.R</code></td>
+        <td><code>get_estimates_unsuppressed_proportion_non_participants.R</code></td>
       </tr>
       <tr>
         <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in participants</td>
-        <td><code>surveillance_pipeline_src/get_treatment_cascade_participants.R</code></td>
+        <td><code>get_treatment_cascade_participants.R</code></td>
       </tr>
       <tr>
         <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in first-time participants</td>
-        <td><code>surveillance_pipeline_src/get_treatment_cascade_non_participants.R</code></td>
+        <td><code>get_treatment_cascade_non_participants.R</code></td>
       </tr>
       <tr>
         <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in population</td>
-        <td><code>surveillance_pipeline_src/get_treatment_cascade_population.R</code></td>
+        <td><code>get_treatment_cascade_population.R</code></td>
       </tr>
     </tbody>
   </table>
