@@ -82,35 +82,35 @@ To perform the data preprocessing steps, navigate to the root directory of the r
 
 #### Abbreviated pre-processing of surveillance data
 ```shell
-Rscript "./misc/get_treatment_cascade_population.R"
-Rscript "./misc/get_unsuppressed_median_age.R"
-Rscript "./misc/get_unsuppressed_share_sex.R"
-Rscript "./misc/get_unsuppressed_ratio_sex.R"
+Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
+Rscript "./surveillance_pipeline_src/get_unsuppressed_median_age.R"
+Rscript "./surveillance_pipeline_src/get_unsuppressed_share_sex.R"
+Rscript "./surveillance_pipeline_src/get_unsuppressed_ratio_sex.R"
 ```
 
 #### Stage 1 (pre-processing of surveillance data)
 
-> **Note** Runtime arguments for Stan models may be configured by editing the contents of `./misc/stan_models/config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
+> **Note** Runtime arguments for Stan models may be configured by editing the contents of `./surveillance_pipeline_src/stan_models/config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
 
 ```shell
-Rscript "./misc/get_estimates_art_coverage_participants.R"
-Rscript "./misc/get_estimates_unsuppressed_proportion_participants.R"
+Rscript "./surveillance_pipeline_src/get_estimates_art_coverage_participants.R"
+Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R"
 
-Rscript "./misc/get_estimates_art_coverage_non_participants.R"
-Rscript "./misc/get_estimates_unsuppressed_proportion_non_participants.R"
+Rscript "./surveillance_pipeline_src/get_estimates_art_coverage_non_participants.R"
+Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_non_participants.R"
 
-Rscript "./misc/get_treatment_cascade_participants.R"
-Rscript "./misc/get_treatment_cascade_non_participants.R"
+Rscript "./surveillance_pipeline_src/get_treatment_cascade_participants.R"
+Rscript "./surveillance_pipeline_src/get_treatment_cascade_non_participants.R"
 ```
 
 #### Stage 2 (pre-processing of surveillance data)
 ```shell
-Rscript "./misc/get_estimates_prevalence.R"
+Rscript "./surveillance_pipeline_src/get_estimates_prevalence.R"
 
-Rscript "./misc/get_treatment_cascade_population.R"
-Rscript "./misc/get_unsuppressed_median_age.R"
-Rscript "./misc/get_unsuppressed_share_sex.R"
-Rscript "./misc/get_unsuppressed_ratio_sex.R"
+Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
+Rscript "./surveillance_pipeline_src/get_unsuppressed_median_age.R"
+Rscript "./surveillance_pipeline_src/get_unsuppressed_share_sex.R"
+Rscript "./surveillance_pipeline_src/get_unsuppressed_ratio_sex.R"
 ```
 
 #### Stage 3 (pre-processing of phylogenetic data)
@@ -191,23 +191,23 @@ The table below lists the data files within `/data` and a brief description of i
       </tr>
     <tr>
       <td><code>aggregated_count_hiv_positive.csv</code></td>
-      <td>Count of participants by hiv status, age, gender and round used in <code>misc/get_estimates_prevalence.R</code> to estimate smooth proportion of hiv prevalence among population.</td>
+      <td>Count of participants by hiv status, age, gender and round used in <code>surveillance_pipeline_src/get_estimates_prevalence.R</code> to estimate smooth proportion of hiv prevalence among population.</td>
     </tr>
     <tr>
       <td><code>aggregated_participants_count_art_coverage.csv</code></td>
-      <td>count of participants by self-reported art use, age, gender and round, used in <code>misc/get_estimates_art_coverage_participants.R</code> to estimate smooth proportion of art coverage among participants.</td>
+      <td>count of participants by self-reported art use, age, gender and round, used in <code>surveillance_pipeline_src/get_estimates_art_coverage_participants.R</code> to estimate smooth proportion of art coverage among participants.</td>
     </tr>
     <tr>
       <td><code>aggregated_participants_count_unsuppressed.csv</code></td>
-      <td>count of participants by viremic viral loads, age, gender and round, used in <code>misc/get_estimates_unsuppressed_proportion_participants.R</code> to estimate smooth proportion of viral suppression among participants.</td>
+      <td>count of participants by viremic viral loads, age, gender and round, used in <code>surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R</code> to estimate smooth proportion of viral suppression among participants.</td>
     </tr>
     <tr>
       <td><code>aggregated_newlyregistered_count_art_coverage.csv</code></td>
-      <td>count of first-time participants by self-reported art use, age, gender and round, used in <code>misc/get_estimates_art_coverage_non_participants.R</code> to estimate smooth proportion of art coverage among first-time participants.</td>
+      <td>count of first-time participants by self-reported art use, age, gender and round, used in <code>surveillance_pipeline_src/get_estimates_art_coverage_non_participants.R</code> to estimate smooth proportion of art coverage among first-time participants.</td>
     </tr>
     <tr>
       <td><code>aggregated_newlyregistered_count_unsuppressed.csv</code></td>
-      <td>count of first-time participants by viremic viral loads, age, gender and round, used in <code>misc/get_estimates_unsuppressed_proportion_non_participants.R</code> to estimate smooth proportion of viral suppression among first-time participants.</td>
+      <td>count of first-time participants by viremic viral loads, age, gender and round, used in <code>surveillance_pipeline_src/get_estimates_unsuppressed_proportion_non_participants.R</code> to estimate smooth proportion of viral suppression among first-time participants.</td>
     </tr>
     <tr>
       <td><code>seroconverter_cohort_R6R19.rds</code></td>
@@ -279,35 +279,35 @@ The following table list the actions performed by each of the available scripts:
     <tbody>
       <tr>
         <td>Obtain smooth HIV prevalence by age, gender, and round</td>
-        <td><code>misc/get_estimates_prevalence.R</code></td>
+        <td><code>surveillance_pipeline_src/get_estimates_prevalence.R</code></td>
       </tr>
       <tr>
         <td>Obtain smooth ART coverage in participants by age, gender, and round</td>
-        <td><code>misc/get_estimates_art_coverage_participants.R</code></td>
+        <td><code>surveillance_pipeline_src/get_estimates_art_coverage_participants.R</code></td>
       </tr>
       <tr>
         <td>Obtain smooth ART coverage in first-time participants by age, gender, and round</td>
-        <td><code>misc/get_estimates_art_coverage_non_participants.R</code></td>
+        <td><code>surveillance_pipeline_src/get_estimates_art_coverage_non_participants.R</code></td>
       </tr>
       <tr>
         <td>Obtain smooth viral suppression in participants by age, gender, and round</td>
-        <td><code>misc/get_estimates_unsuppressed_proportion_participants.R</code></td>
+        <td><code>surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R</code></td>
       </tr>
       <tr>
         <td>Obtain smooth viral suppression in first-time participants by age, gender, and round</td>
-        <td><code>misc/get_estimates_unsuppressed_proportion_non_participants.R</code></td>
+        <td><code>surveillance_pipeline_src/get_estimates_unsuppressed_proportion_non_participants.R</code></td>
       </tr>
       <tr>
         <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in participants</td>
-        <td><code>misc/get_treatment_cascade_participants.R</code></td>
+        <td><code>surveillance_pipeline_src/get_treatment_cascade_participants.R</code></td>
       </tr>
       <tr>
         <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in first-time participants</td>
-        <td><code>misc/get_treatment_cascade_non_participants.R</code></td>
+        <td><code>surveillance_pipeline_src/get_treatment_cascade_non_participants.R</code></td>
       </tr>
       <tr>
         <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in population</td>
-        <td><code>misc/get_treatment_cascade_population.R</code></td>
+        <td><code>surveillance_pipeline_src/get_treatment_cascade_population.R</code></td>
       </tr>
     </tbody>
   </table>
