@@ -36,6 +36,7 @@ treatment_cascade <- as.data.table(readRDS(file.treatment.cascade))
 ############################
 
 # define round
+cat("===== Checkpoint 1 =====")
 df <- merge(
   proportion_prevalence,
   treatment_cascade,
@@ -44,6 +45,7 @@ df <- merge(
 df[, ROUND := gsub("R0(.+)", "\\1", ROUND)]
 
 # merge number of eligible and the prevalence
+cat("===== Checkpoint 2 =====")
 eligible_count <- eligible_count[, .(ROUND, COMM, AGEYRS, SEX, ELIGIBLE)]
 df <- merge(eligible_count, df, by = c("ROUND", "COMM", "AGEYRS", "SEX"))
 
@@ -101,34 +103,8 @@ sing <- as.data.table(reshape2::dcast(sing, ... ~ q_label, value.var = "q"))
 setnames(sing, qlab, paste0("UNSUPPRESSED_SHARE_SEX_", qlab))
 
 # merge
+cat("===== Checkpoint 3 =====")
 sing <- merge(sing_age, sing, by = c("ROUND", "COMM", "SEX"))
-
-#####################################################
-
-# FIND SHARE OF INFECTED UNSUPPRESSED ACROSS AGE BY SEX
-
-#####################################################
-
-# find share of unsuppressed by sex across age
-df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED),
-    by = c("ROUND", "COMM", "iterations", "SEX")]
-df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED]
-
-# summarise
-ps <- c(0.025, 0.5, 0.975)
-qlab <- c("CL", "M", "CU")
-sing_age <- df[, list(q = quantile(UNSUPPRESSED_SHARE, prob = ps, na.rm = TRUE),
-                      q_label = qlab),
-              by = c("ROUND", "COMM", "SEX", "AGEYRS")]
-sing_age <- as.data.table(
-  reshape2::dcast(sing_age, ... ~ q_label, value.var = "q")
-)
-
-# name
-setnames(sing_age, qlab, paste0("UNSUPPRESSED_SHARE_AGE_BY_SEX_", qlab))
-
-# merge
-sing <- merge(sing_age, sing, by = c("ROUND", "COMM", "SEX", "AGEYRS"))
 
 #########################################
 
@@ -136,9 +112,9 @@ sing <- merge(sing_age, sing, by = c("ROUND", "COMM", "SEX", "AGEYRS"))
 
 #########################################
 
-tmp <- merge(sing_age, sing, by = c("ROUND", "COMM", "SEX"))
-file_name <- file.path(gitdir.fit, "RCCS_unsuppressed_share_sex_221208.csv")
-write.csv(tmp, file = file_name, row.names = FALSE)
+cat("===== Checkpoint 6 =====")
+file_name <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_share_sex_221208.csv")
+write.csv(sing, file = file_name, row.names = FALSE)
 
 #########################################
 
@@ -159,6 +135,7 @@ age_grps <- c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44", "45-49")
 df_age_aggregated[, AGE_GROUP := age_grps[INDEX_AGE_GROUP]]
 
 # aggregated by age groups
+cat("===== Checkpoint 7 =====")
 dfa <- merge(df, df_age_aggregated, by = "AGEYRS")
 dfa <- dfa[, list(UNSUPPRESSED = sum(UNSUPPRESSED)),
             by = c("ROUND", "COMM", "AGE_GROUP", "SEX", "iterations")]
