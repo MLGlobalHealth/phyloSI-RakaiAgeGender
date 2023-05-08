@@ -30,7 +30,7 @@ conda install -c conda-forge compilers r r-essentials r-devtools
 # Install R dependencies
 echo "\n\n=========================================\n\n
 Installing R dependencies\n\n"
-R -e 'options(unzip = "internal");install.packages(c("data.table","dplyr","ggplot2","rstan","stringi","extraDist","plyr","coda","LaplacesDemon","mvtnorm","R.utils","prodlim","ggpubr","broom","matrixStats","ggnewscale","doParallel","foreach","jcolors","lognorm","ggExtra","Hmisc","knitr","Matrix","scales","gridgraphics","cowplot","abind","ggrepel","truncnorm","invgamma","sna","lubridate","tidyverse","MASS","gridExtra","GGally","ggnetwork","binom","igraph","bh","bayesplot","loo","hexbin","purrr","viridis"), repos = c("http://cran.us.r-project.org","http://cran.ma.imperial.ac.uk"))'
+R -e 'options(unzip = "internal");install.packages(c("data.table","dplyr","ggplot2","rstan","stringi","extraDist","plyr","coda","LaplacesDemon","mvtnorm","R.utils","prodlim","ggpubr","broom","matrixStats","ggnewscale","doParallel","foreach","jcolors","lognorm","ggExtra","Hmisc","knitr","Matrix","scales","gridgraphics","cowplot","abind","ggrepel","truncnorm","invgamma","sna","lubridate","tidyverse","MASS","gridExtra","GGally","ggnetwork","binom","igraph","bh","bayesplot","loo","hexbin","purrr","viridis","yaml","here"), repos = c("http://cran.us.r-project.org","http://cran.ma.imperial.ac.uk"))'
 
 echo "=========================================\n\n
 phyloSI-RakaiAgeGender: completed installation.\n
