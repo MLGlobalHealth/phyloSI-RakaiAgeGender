@@ -1398,3 +1398,69 @@ get.sample.collection.dates.deprecated <- function(select_aid=NULL, get_first_vi
     ddates
 }
 
+set.sensitivity.indicators.from.jobname <- function(jobname)
+{
+
+    if(jobname == "incloess"){
+        cat("Modifying flag: use_loess_inc_estimates...\n"  )
+        use_loess_inc_estimates <<- TRUE
+    }
+
+    if(jobname == "30com"){
+        cat("Modifying flags: use_30com* ...\n"  )
+        use_30com_inc_estimates <<- TRUE
+        use_30com_pairs <<- TRUE
+    }
+
+    if(jobname == "tsinonrefined"){
+        cat("Modifying flag:  use_tsi_non_refined...\n"  )
+        use_tsi_non_refined <<- TRUE
+    }
+
+    if(jobname %like% 'woR[0-9]+$') {
+        cat("Modifying flag: remove.pairs.from.rounds...\n")
+        rounds_to_remove <- gsub('woR([0-9]+)$', '\\1', jobname) |> as.integer()
+        while(rounds_to_remove > 1){
+            tmp <- paste0('R0', rounds_to_remove %% 100)
+            rounds_to_remove <- rounds_to_remove %/% 100
+            remove.pairs.from.rounds <<- c(remove.pairs.from.rounds, tmp)
+        }
+    }
+
+    if(jobname %like% 'seed[0-9]+$') {
+        cat("Modifying flag: pairs_replicates.seed  ...\n")
+        pairs_replicates.seed <<- gsub('seed([0-9]+)$',"\\1",jobname) |> as.integer()
+    }
+
+    if(jobname == "nonparttreatedaspart"){
+        cat("Modifying flag: nonparticipants.treated.like.participants  ...\n")
+        nonparticipants.treated.like.participants <<- TRUE
+    }
+
+    if(jobname == "nonpartnottreated"){
+        cat("Modifying flag: nonparticipants.not.treated  ...\n")
+        nonparticipants.not.treated <<- TRUE
+    }
+
+    if(jobname == "nonpartfemalemale125moreinfectious"){
+        cat("Modifying flag: nonparticipants.male.relative.infection  ...\n")
+        nonparticipants.male.relative.infection <<- 1.25
+        nonparticipants.female.relative.infection <<- 1.25
+    }
+
+    if(jobname == "nonpartmale125moreinfectious"){
+        cat("Modifying flag: nonparticipants.male.relative.infection  ...\n")
+        nonparticipants.male.relative.infection <<- 1.25
+    }
+
+    if(jobname == "nonpartfemale125moreinfectious"){
+        cat("Modifying flag: nonparticipants.female.relative.infection  ...\n")
+        nonparticipants.female.relative.infection <<- 1.25
+    }
+
+    if(jobname == "vl200"){
+        cat("Modifying flag: viremic_viral_load_200ml  ...\n")
+        viremic_viral_load_200ml <<- TRUE
+    }
+
+}

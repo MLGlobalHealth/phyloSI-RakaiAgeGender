@@ -27,10 +27,10 @@ if(dir.exists('/home/andrea'))
   gitdir <-'~/git/phyloflows'
   outdir <- '~/Documents/Box/2021/phyloflows'
 
-  jobname <- 'test'
+  jobname <- 'woR18'
   stan_model <- 'gp_221201d'
-  outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
-  dir.create(outdir)
+  # outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
+  # dir.create(outdir)
 }
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
@@ -64,19 +64,21 @@ use_number_susceptible_offset <- T
 only.one.community <- 'inland'
 use_contact_rates_prior <- T
 
-# indicators -- sensitivity analyses
-nonparticipants.treated.like.participants <- F
-nonparticipants.not.treated <- F
+# indicators for sensitivity analyses: default values
+nonparticipants.treated.like.participants <- FALSE
+nonparticipants.not.treated <- FALSE
 nonparticipants.male.relative.infection <- 1
 nonparticipants.female.relative.infection <- 1
 remove.pairs.from.rounds <- NULL
-use_loess_inc_estimates <- F
+use_loess_inc_estimates <- FALSE
 pairs_replicates.seed <- NULL
-viremic_viral_load_200ml <- F
-use_30com_inc_estimates <- F
-use_30com_pairs <- F
-use_tsi_non_refined <- F
+viremic_viral_load_200ml <- FALSE
+use_30com_inc_estimates <- FALSE
+use_30com_pairs <- FALSE
+use_tsi_non_refined <- FALSE
 
+# modify values based on jobname for sensivity analyses 
+set.sensitivity.indicators.from.jobname(jobname)
 
 # stan model
 path.to.stan.model <- file.path(gitdir, 'stan_models', paste0(stan_model, '.stan'))
