@@ -488,7 +488,7 @@ cat('\t MSE of:', round(p$mse, 2), 'years \n')
 
 
 
-# TODO: some of the inds which Tanya treated as seroconverters 
+# NOTE: some of the inds which Tanya treated as seroconverters 
 # are not seroconverters in our eyes:
 # if(0)
 # {

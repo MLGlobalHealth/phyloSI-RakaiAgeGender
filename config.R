@@ -117,6 +117,17 @@ file.incidence.loess.samples.inland	<- file.path(output.dir.incidence.estimation
 # scripts/run_stan.R #
 ######################
 
+# obtained in phylo_pipeline-src
+file.pairs <- file.path(
+    dir.zenodo.phyloproc,
+    "pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds"
+)
+file.pairs.nonrefined <- file.path(
+    dir.zenodo.phyloproc,
+    "pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds"
+)
+
+
 # obtained in src/ for analysis
 file.eligible.count <- file.path(
     dir.zenodo.survprim,
@@ -132,16 +143,6 @@ file.prevalence.prop <- file.path(
 )
 
 # obtained in surveillance_pipeline_src/ for analysis
-# TODO: Andrea, I don't think these are part of surveillance_pipeline_src
-# file.pairs, file.pairs.nonrefined
-file.pairs <- file.path(
-    dir.zenodo.phyloproc,
-    "pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds"
-)
-file.pairs.nonrefined <- file.path(
-    dir.zenodo.phyloproc,
-    "pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds"
-)
 
 file.treatment.cascade.prop.participants <- file.path(
     dir.zenodo.survproc,
