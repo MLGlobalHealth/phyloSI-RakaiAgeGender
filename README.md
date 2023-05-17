@@ -1,8 +1,10 @@
 # phyloSI-RakaiAgeGender
 [![License: CC BY 4.0](https://img.shields.io/badge/License-CC_BY_4.0-lightgrey.svg)](https://creativecommons.org/licenses/by/4.0/)
+[![medRxiv link](https://img.shields.io/badge/medRxiv-link%20to%20paper-blue)](https://doi.org/10.1101/2023.03.16.23287351)
 
-**Welcome!** This repository contains the code and data for the analyses presented in the paper [*Growing gender inequity in HIV infection in Africa: sources and policy implications* by M Monod, A Brizzi, R Galiwango, R Ssekubugu, Y Chen, X Xi et al.](https://doi.org/10.1101/2023.03.16.23287351).
+**Welcome!** This repository contains the code and data for the analyses presented in the paper *Growing gender inequity in HIV infection in Africa: sources and policy implications* by M Monod, A Brizzi, R Galiwango, R Ssekubugu, Y Chen, X Xi et al.
 
+## Table of Contentes
 - [License](#license)
 - [Warrenty](#warranty)
 - [Citation](#cite)
