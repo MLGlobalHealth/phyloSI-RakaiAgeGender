@@ -9,7 +9,7 @@ usr <- Sys.info()[["user"]]
 
 # set your user and path here:
 dir.zenodo <- data.table::fcase(
-    usr == "andrea", "~/OneDrive/shifting-dynamics-zenodo/",
+    usr == "andrea", "~/OneDrive/Imperial/shifting-dynamics-zenodo/",
     usr == "shozendan", "~/Imperial/phyloSI-RakaiAgeGender-data",
     usr == "your-user", "your-path-to-zenodo-dir",
     default = "")
