@@ -28,6 +28,7 @@ if (zenodo.exists) {
     # surveillance data (primary or processed_outputs)
     dir.zenodo.survprim <- file.path(dir.zenodo, "data_RCCS_surveillance")
     dir.zenodo.survproc <- file.path(dir.zenodo, "preprocessed_outputs_RCCS_surveillance")
+    dir.zenodo.survfin <- file.path(dir.zenodo, "final_RCCS_surveillance")
 
     # something
     dir.zenodo.central <- file.path(dir.zenodo, "final_central_analysis")
@@ -138,18 +139,18 @@ file.participation <- file.path(
     "RCCS_participation_221208.csv"
 )
 file.prevalence.prop <- file.path(
-    dir.zenodo.survproc,
+    dir.zenodo.survfin,
     "RCCS_prevalence_estimates_221116.csv"
 )
 
 # obtained in surveillance_pipeline_src/ for analysis
 
 file.treatment.cascade.prop.participants <- file.path(
-    dir.zenodo.survproc,
+    dir.zenodo.survfin,
     "RCCS_treatment_cascade_participants_estimates_221208.csv"
 )
 file.treatment.cascade.prop.nonparticipants <- file.path(
-    dir.zenodo.survproc,
+    dir.zenodo.survfin,
     "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv"
 )
 file.treatment.cascade.prop.participants.samples <- file.path(
@@ -285,6 +286,6 @@ file.selfreportedart.vl200 <- file.path(
     "RCCS_art_posterior_samples_vl200_221208.rds"
 )
 file.treatment.cascade.population <- file.path(
-    dir.zenodo.survproc,
+    dir.zenodo.survfin,
     "RCCS_treatment_cascade_population_estimates_221208.csv"
 )
