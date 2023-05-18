@@ -94,3 +94,27 @@ print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
         fcase( x %like% 'Rakai_Pangea2_RCCS_Metadata_20221128.RData', 1)
 .assign.code.chain <- function(x)
         fcase( x %like% '211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd', 1)
+
+
+write.to.tex <- function(DT, file){
+
+    # write to file the "body" of the table
+    tab_latex <- xtable::xtable(DT, type='latex') 
+    print(tab_latex, 
+        file=file,
+        hline.after=c(),
+        include.rownames=FALSE,
+        include.colnames=FALSE,
+        only.contents=TRUE,
+        comment=FALSE)
+
+    # however, we want to be able to quickly copy-paste the tabular env
+    # so print a skeleton
+    
+    skeleton <- xtable::xtable(DT[0], type='latex') |> print(hline.after=c(), comment=FALSE) 
+
+    cmd_input <- sprintf("\n \\\\input{%s} \n \\\\end{tabular}", file.path("TODO", basename(file)))
+    cmd <- sub('\\n \\\\end\\{tabular\\}', cmd_input, skeleton) 
+    cat('\n', cmd, '\n')
+    cmd
+}
