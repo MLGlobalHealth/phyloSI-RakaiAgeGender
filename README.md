@@ -65,7 +65,10 @@ Please use the following ```bash``` script to build a conda virtual environment 
 ```shell
 git clone https://github.com/MLGlobalHealth/phyloSI-RakaiAgeGender.git
 cd phyloSI-RakaiAgeGender
+# for UNIX
 bash phyloSI-RakaiAgeGender-install.sh
+# for MacOS Apple M1 chip please use
+bash phyloSI-RakaiAgeGender-install-macosM1.sh
 ```
 If not activated, activate the environment for use:
 ```shell
