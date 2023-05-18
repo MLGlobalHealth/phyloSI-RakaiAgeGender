@@ -27,7 +27,7 @@ if(dir.exists('/home/andrea'))
   gitdir <-'~/git/phyloflows'
   outdir <- '~/Documents/Box/2021/phyloflows'
 
-  jobname <- 'woR18'
+  jobname <- 'central'
   stan_model <- 'gp_221201d'
   # outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   # dir.create(outdir)
@@ -47,9 +47,15 @@ if(length(args_line) > 0)
   jobname <- args_line[[8]]
 }
 
-gitdir.data <- file.path(gitdir, 'data')
-gitdir.fit <- file.path(gitdir, 'fit')
-gitdir.functions <- file.path(gitdir, 'functions')
+source(file.path(gitdir, 'config.R'))
+
+# load functions
+source(file.path(gitdir.functions, 'utils.R'))
+source(file.path(gitdir.functions, 'summary_functions.R'))
+source(file.path(gitdir.functions, 'plotting_functions.R'))
+source(file.path(gitdir.functions, 'statistics_functions.R'))
+source(file.path(gitdir.functions, 'stan_utils.R'))
+
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
@@ -81,17 +87,7 @@ use_tsi_non_refined <- FALSE
 set.sensitivity.indicators.from.jobname(jobname)
 
 # stan model
-path.to.stan.model <- file.path(gitdir, 'stan_models', paste0(stan_model, '.stan'))
-
-# load fil paths
-source(file.path(gitdir, 'config.R'))
-
-# load functions
-source(file.path(gitdir.functions, 'utils.R'))
-source(file.path(gitdir.functions, 'summary_functions.R'))
-source(file.path(gitdir.functions, 'plotting_functions.R'))
-source(file.path(gitdir.functions, 'statistics_functions.R'))
-source(file.path(gitdir.functions, 'stan_utils.R'))
+path.to.stan.model <- file.path(gitdir.stan, paste0(stan_model, '.stan'))
 
 # load pairs
 if(use_tsi_non_refined){
@@ -316,7 +312,7 @@ stan_init <- add_init(stan_data)
 # MAKE EXPLANATORY PLOTS
 #
 
-if(1){
+if(0){
   
   # find color palette of rounds
   find_palette_round()
