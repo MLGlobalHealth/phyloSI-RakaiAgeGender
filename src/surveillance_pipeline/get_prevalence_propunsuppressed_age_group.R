@@ -11,10 +11,12 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-file.exists(file.eligible.count) |> stopifnot()
-file.exists(file.prevalence) |> stopifnot()
-file.exists(file.treatment.cascade) |> stopifnot()
+file.exists(c(
+    file.eligible.count ,
+    file.prevalence,
+    file.treatment.cascade))  |> all() |> stopifnot()
 
+# outdir directory for intermediary results
 outdir <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "prevalence_by_gender_loc_age")
 
 # load census eligible ount

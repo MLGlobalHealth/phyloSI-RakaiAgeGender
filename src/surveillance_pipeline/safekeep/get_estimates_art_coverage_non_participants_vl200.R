@@ -14,16 +14,15 @@ gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
 # outdir directory for stan fit
-if (dir.exists(indir.deepsequence_analyses)) {
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_estimates_art_coverage_non_participants_vl200")
+if(usr == 'melodiemonod'){
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'suppofinfected_by_gender_loc_age')
-} else {
-  outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_art_coverage_non_participants_vl200'
-  if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE);
 }
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-
-# stan model
-path.stan <- file.path(gitdir, 'misc', 'stan_models', 'binomial_gp.stan')
+file.exists(c(
+  path_stan_binomialgp ,
+  path.newly.registered.art.vl200 ))  |> all() |> stopifnot()
 
 # find count of newly registered participants who reported art use
 rart <- fread(path.newly.registered.art.vl200)
@@ -137,7 +136,7 @@ for(round in c("R015", 'R016', 'R017', 'R018')){
   stan.data$rho_hyper_par_11 <- diff(range(stan.data$x_predict))/3
   
   # load stan model
-  stan.model <- stan_model(path.stan, model_name='gp_all')	
+  stan.model <- stan_model(path_stan_binomialgp, model_name='gp_all')	
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
@@ -313,7 +312,7 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-# file.name <- file.path(gitdir, 'fit', paste0('RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds'))
+# samples
 file.name <- file.selfreportedart.newly.vl200 
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
@@ -323,6 +322,7 @@ if(! file.exists(file.name) | config$overwrite.existing.files )
     cat("File:", file.name, "already exists...\n")
 }
 
+# statistics
 file.name <- file.path(outdir, 'RCCS_art_model_fit_newlyregistered_vl200_221208.RDS')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {

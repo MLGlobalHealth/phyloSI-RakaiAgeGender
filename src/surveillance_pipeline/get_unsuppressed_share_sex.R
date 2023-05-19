@@ -8,16 +8,18 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-outdir <- file.path(
-  "../phyloSI-RakaiAgeGender-outputs",
-  "get_unsuppressed_share_sex"
-)
+# outdir directory for intermediary resylts
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_unsuppressed_share_sex")
+if(usr == 'melodiemonod'){
+  outdir <- file.path("/Users/melodiemonod/Box Sync/2023//phyloSI-RakaiAgeGender-outputs","get_unsuppressed_share_sex")
+}
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# files
-file.exists(file.treatment.cascade) |> stopifnot()
-file.exists(file.prevalence) |> stopifnot()
-file.exists(file.eligible.count) |> stopifnot()
+# check files exist
+file.exists(c(
+  file.treatment.cascade ,
+  file.prevalence,
+  file.eligible.count))  |> all() |> stopifnot()
 
 # load census eligible ount
 eligible_count <- fread(file.eligible.count)
@@ -113,8 +115,15 @@ sing <- merge(sing_age, sing, by = c("ROUND", "COMM", "SEX"))
 #########################################
 
 cat("===== Checkpoint 6 =====")
-file_name <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_share_sex_221208.csv")
-write.csv(sing, file = file_name, row.names = FALSE)
+file.name <- file.unsuppressed.share
+if( ! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat('Saving file:', file.name, '...\n')
+  write.csv(sing, file = file_name, row.names = FALSE)
+}else{
+  cat('File', file.name, 'already exists.\n')
+}
+
 
 #########################################
 
@@ -159,19 +168,22 @@ tmp[, `:=`(CL = format(round(CL * 100, n_digits), nsmall = n_digits),
 tmp[, CL := gsub(" ", "", CL)]
 tmp[, CU := gsub(" ", "", CU)]
 tmp[, M := gsub(" ", "", M)]
-file_name <- file.path(
-  outdir,
-  "RCCS_shareunsuppressed_age_group_5years_R18_221215.rds"
-)
-saveRDS(tmp, file = file_name)
 
+# save
+file.name <- file.path(outdir,"RCCS_shareunsuppressed_age_group_5years_R18_221215.rds")
+if( ! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat('Saving file:', file.name, '...\n')
+  saveRDS(tmp, file = file_name)
+}else{
+  cat('File', file.name, 'already exists.\n')
+}
 
 #########################################
 
 # FIND SEX SHARE OF INFECTED BY SEX
 
 #########################################
-
 
 dfa <- df[, list(UNSUPPRESSED = sum(UNSUPPRESSED)),
           by = c("ROUND", "COMM", "SEX", "iterations")]

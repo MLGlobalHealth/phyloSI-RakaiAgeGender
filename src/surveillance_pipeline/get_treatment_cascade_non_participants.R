@@ -8,20 +8,23 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-outdir <- file.path(
-  "../phyloSI-RakaiAgeGender-outputs",
-  "get_treatment_cascade_non_participants"
-)
-if (!dir.exists(outdir)) dir.create(outdir)
+# outdir directory for stan fit
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_treatment_cascade_non_participants")
+if(usr == 'melodiemonod'){
+  outdir <- file.path("/Users/melodiemonod/Box Sync/2023//phyloSI-RakaiAgeGender-outputs","get_treatment_cascade_non_participants")
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
 # Specificity and sensitivity ART reporting
 ps <- c(0.025, 0.5, 0.975)
 qlab <- c("CL", "M", "CU")
 
 # check files exist
-file.exists(file.unsuppressedviralload.newly)|> stopifnot()
-file.exists(file.selfreportedart.newly)|> stopifnot()
-file.exists(file.spec.sens.art)|> stopifnot()
+file.exists(c(
+  file.unsuppressedviralload.newly ,
+  file.selfreportedart.newly,
+  file.spec.sens.art))  |> all() |> stopifnot()
+
 
 ###########################
 
@@ -235,17 +238,18 @@ stopifnot(
 ####################################
 
 file_name <- file.treatment.cascade.prop.nonparticipants.samples
-if (file.exists(file_name) || config$overwrite.existing.files) {
-    cat("file:", file_name, "already exists.\n")
+if (!file.exists(file_name) || config$overwrite.existing.files) {
+  cat("Saving file:", file_name, "\n")
+  saveRDS(df, file = file_name)
 } else {
-    cat("saving file:", file_name, "....\n")
-    saveRDS(df, file = file_name)
+  cat("File:", file_name, "already exists...\n")
 }
 
 file_name <- file.treatment.cascade.prop.nonparticipants
-if (file.exists(file_name) || config$overwrite.existing.files) {
-    cat("file:", file_name, "already exists.\n")
+if (! file.exists(file_name) || config$overwrite.existing.files) {
+  cat("Saving file:", file_name, "\n")
+  write.csv(ns, file = file_name, row.names = FALSE)
 } else {
-    cat("saving file:", file_name, "....\n")
-    write.csv(ns, file = file_name, row.names = FALSE)
+  cat("File:", file_name, "already exists...\n")
 }
+

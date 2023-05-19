@@ -8,17 +8,18 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-# outdir to save figures
-outdir <- file.path(
-  "../phyloSI-RakaiAgeGender-outputs",
-  "get_treatment_cascade_participants"
-)
-if (!dir.exists(outdir)) dir.create(outdir)
+# outdir directory for stan fit
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_treatment_cascade_participants")
+if(usr == 'melodiemonod'){
+  outdir <- file.path("/Users/melodiemonod/Box Sync/2023//phyloSI-RakaiAgeGender-outputs","get_treatment_cascade_participants")
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# posterior samples
-file.exists(file.unsuppressedviralload) |> stopifnot()
-file.exists(file.selfreportedart) |> stopifnot()
-file.exists(file.spec.sens.art) |> stopifnot()
+# check files exist
+file.exists(c(
+  file.unsuppressedviralload ,
+  file.selfreportedart,
+  file.spec.sens.art))  |> all() |> stopifnot()
 
 ps <- c(0.025, 0.5, 0.975)
 qlab <- c("CL", "M", "CU")
@@ -227,10 +228,11 @@ stopifnot(
 file_name <- file.treatment.cascade.prop.participants.samples
 if (!file.exists(file_name) || config$overwrite.existing.files) {
   cat("Saving file:", file_name, "\n")
+  saveRDS(df, file = file_name)
 } else {
   cat("File:", file_name, "already exists...\n")
 }
-saveRDS(df, file = file_name)
+
 
 file_name <- file.treatment.cascade.prop.participants
 if (! file.exists(file_name) || config$overwrite.existing.files) {

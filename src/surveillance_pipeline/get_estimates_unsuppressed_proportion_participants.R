@@ -9,14 +9,15 @@ gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
 # outdir directory for stan fit
-outdir <- file.path(
-  "../phyloSI-RakaiAgeGender-outputs",
-  "get_estimates_unsuppressed_proportion_participants"
-)
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_estimates_unsuppressed_proportion_participants")
+if(usr == 'melodiemonod'){
+  outdir <- file.path("/Users/melodiemonod/Box Sync/2023//phyloSI-RakaiAgeGender-outputs","get_estimates_unsuppressed_proportion_participants")
+}
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# stan model
-path_stan <- file.path(gitdir.stan, "binomial_gp.stan")
+file.exists(c(
+  path_stan_binomialgp ,
+  path.count.unsupp ))  |> all() |> stopifnot()
 
 # Load count of participants with unsuppressed viral loads
 vla <- fread(path.count.unsupp)
@@ -109,7 +110,7 @@ for (round in 15:18) {
   stan_data$rho_hyper_par_11 <- diff(range(stan_data$x_predict)) / 3
 
   # load stan model
-  stan_model <- stan_model(path_stan, model_name = "gp_all")
+  stan_model <- stan_model(path_stan_binomialgp, model_name = "gp_all")
 
   # run and save model
   fit <- sampling(
@@ -337,13 +338,19 @@ stats[["max_rhat"]] <- convergence[, round(max(rhat), 4)]
 #########
 
 file_name <- file.unsuppressedviralload
-if (!file.exists(file_name)) {
-    cat("Saving file:", file_name, "\n")
-    saveRDS(nsinf_samples, file = file_name)
-} else {
-    cat("File:", file_name, "already exists...\n")
+if (!file.exists(file_name) || config$overwrite.existing.files) {
+  saveRDS(nsinf_samples, file = file_name)
 }
 
-file_name <- file.path(outdir,
-                       "RCCS_nonsuppressed_proportion_model_fit_221101.RDS")
-saveRDS(stats, file = file_name)
+
+file_name <- file.path(outdir, "RCCS_nonsuppressed_proportion_model_fit_221101.RDS")
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  saveRDS(stats, file = file_name)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
+cat("\n Done \n")
+
+

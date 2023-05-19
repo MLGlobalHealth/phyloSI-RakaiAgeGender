@@ -21,8 +21,9 @@ source(file.path(gitdir, "config.R"))
 # )
 # args <- parse_args(OptionParser(option_list = option_list))
 
-file.exists(file.eligible.count) |> stopifnot()
-file.exists(file.prevalence) |> stopifnot()
+file.exists(c(
+  file.eligible.count ,
+  file.prevalence))  |> all() |> stopifnot()
 
 # load census eligible ount
 eligible_count <- fread(file.eligible.count)

@@ -9,13 +9,14 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-# posterior samples participants
-file.exists(file.unsuppressedviralload) |> stopifnot()
-file.exists(file.selfreportedart) |> stopifnot()
-file.exists(file.unsuppressedviralload.newly) |> stopifnot()
-file.exists(file.selfreportedart.newly) |> stopifnot()
-file.exists(file.participation) |> stopifnot()
-file.exists(file.spec.sens.art) |> stopifnot()
+# check files exist
+file.exists(c(
+  file.unsuppressedviralload ,
+  file.selfreportedart,
+  file.unsuppressedviralload.newly,
+  file.selfreportedart.newly,
+  file.participation,
+  file.spec.sens.art))  |> all() |> stopifnot()
 
 ps <- c(0.025, 0.5, 0.975)
 qlab <- c("CL", "M", "CU")

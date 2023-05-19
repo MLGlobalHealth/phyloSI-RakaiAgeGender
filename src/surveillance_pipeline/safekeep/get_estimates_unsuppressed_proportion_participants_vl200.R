@@ -9,17 +9,15 @@ gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
 # outdir directory for stan fit
-indir.deepsequence.analyses <- "~/Box\ Sync/2021/ratmann_deepseq_analyses/live"
-if (dir.exists(indir.deepsequence.analyses)) {
-  outdir <- file.path(indir.deepsequence.analyses, "PANGEA2_RCCS", "vl_suppofinfected_by_gender_loc_age")
-} else {
-  outdir <- "../phyloSI-RakaiAgeGender-outputs/get_estimates_unsuppressed_proportion_participants_vl200"
-  if (!dir.exists(outdir)) dir.create(outdir);
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_estimates_unsuppressed_proportion_participants_vl200")
+if(usr == 'melodiemonod'){
+  outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
 }
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# file
-path.stan <- file.path(gitdir, "misc", "stan_models", "binomial_gp.stan")
-path.data <- file.path(gitdir, "data", "aggregated_participants_count_unsuppressed_vl200.csv")
+file.exists(c(
+  path_stan_binomialgp ,
+  path.newly.registered.art ))  |> all() |> stopifnot()
 
 # Load count of participants with unsuppressed viral loads
 vla <- fread(path.count.newly.unsupp.vl200)
@@ -112,7 +110,7 @@ for (round in 15:18) {
   stan.data$rho_hyper_par_11 <- diff(range(stan.data$x_predict)) / 3
 
   # load stan model
-  stan.model <- stan_model(path.stan, model_name = "gp_all")
+  stan.model <- stan_model(path_stan_binomialgp, model_name = "gp_all")
 
   # run and save model
   fit <- sampling(
@@ -335,6 +333,7 @@ stats[["max_rhat"]] <- convergence[, round(max(rhat), 4)]
 
 #########
 
+# samples
 file.name <- file.unsuppressedviralload.vl200
 if (! file.exists(file.name) | config$overwrite.existing.files) {
     cat("Saving file:", file.name, "\n")
@@ -343,7 +342,7 @@ if (! file.exists(file.name) | config$overwrite.existing.files) {
     cat("File:", file.name, "already exists...\n")
 }
 
-
+# stats
 file.name <- file.path(outdir,"RCCS_nonsuppressed_proportion_model_fit_vl200_221121.RDS")
 if (! file.exists(file.name) | config$overwrite.existing.files) {
     cat("Saving file:", file.name, "\n")

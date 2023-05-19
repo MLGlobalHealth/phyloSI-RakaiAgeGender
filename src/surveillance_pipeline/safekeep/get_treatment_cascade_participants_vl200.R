@@ -8,46 +8,26 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-# TODO: shozen: do you think this would be helpful? 
-# library(optparse)
-# option_list <- list(
-#     make_option(
-#         "--outdir",
-#         type = "",
-#         default = ,
-#         help = "",
-#         dest= ""
-#     ),
-# )
-# args <- parse_args(OptionParser(option_list = option_list))
-
-# outdir to save figures
-if (dir.exists(indir.deepsequence_analyses)) {
-  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
-} else {
-  outdir <- 'outputs'
-  if (!dir.exists(outdir)) dir.create(outdir);
-}
-
-file.exists(file.unsuppressedviralload.newly.vl200) |> stopifnot()
-file.exists(file.selfreportedart.newly.vl200 )|> stopifnot()
-file.exists(file.spec.sens.art.vl200 )|> stopifnot()
+file.exists(c(
+  file.unsuppressedviralload.vl200 ,
+  file.selfreportedart.vl200,
+  file.spec.sens.art))  |> all() |> stopifnot()
 
 ps <- c(0.025,0.5,0.975)
 qlab <- c('CL','M','CU')
 
 
-###########################
+############################
 
 # COMBINE POSTERIOR SAMPLE
 
-###########################
+############################
 
 # load proportion unsuppressed viral load
-uns <- as.data.table(readRDS(file.unsuppressedviralload))
+uns <- as.data.table(readRDS(file.unsuppressedviralload.vl200))
 
 # load proportion art
-sre <- as.data.table(readRDS(file.selfreportedart))
+sre <- as.data.table(readRDS(file.selfreportedart.vl200))
 
 # merge (fyi for round < 15, we do not have viral load info)
 df <- merge(uns, sre, by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations'), all.y = T)
@@ -60,10 +40,10 @@ df <- rbind(tmp, df[ROUND != 'R010'])
 # restrict age 
 df <- df[AGEYRS > 14 & AGEYRS < 50]
 
-# find proportion suppressed among new registed HIV-positive 
+# find proportion suppressed among HIV positive participants
 df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_UNSUPPRESSED_POSTERIOR_SAMPLE]
 
-# find suppression rate  among new registed HIV-positive 
+# find suppression rate among HIV positive participants
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE / PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 df[, SUPPRESSION_RATE_EMPIRICAL := (1-PROP_UNSUPPRESSED_EMPIRICAL) / PROP_ART_COVERAGE_EMPIRICAL ]
 
@@ -71,11 +51,21 @@ df[, SUPPRESSION_RATE_EMPIRICAL := (1-PROP_UNSUPPRESSED_EMPIRICAL) / PROP_ART_CO
 df[SUPPRESSION_RATE_POSTERIOR_SAMPLE > 1, SUPPRESSION_RATE_POSTERIOR_SAMPLE := 1]
 
 
-##############################################################################
+##################################################################
 
-# FIND ART COVERERAGE AMONG NEWLY REGISTERED HIV-POSITIVE 
+# FIND PROPORTION OF DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS
 
-##############################################################################
+##################################################################
+
+# all participants are diagnosed
+df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := 1]
+
+
+######################################################################################
+
+# FIND ART COVERERAGE GIVEN DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS FOR ALL ROUND
+
+######################################################################################
 
 # for round 15 find % on art by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == 'R016'], by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
@@ -85,7 +75,7 @@ df[ROUND %in% c('R015'), SUPPRESSION_RATE_POSTERIOR_SAMPLE := SUPPRESSION_RATE_P
 df[ROUND %in% c('R015'), SUPPRESSION_RATE_EMPIRICAL := SUPPRESSION_RATE_EMPIRICAL_R016, by = c('AGEYRS', 'SEX', 'COMM', 'iterations')]
 
 # find art coverage with the same suppression rate as round 16
-df[ROUND %in% c('R015'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE := min(1, PROP_SUPPRESSED_POSTERIOR_SAMPLE / SUPPRESSION_RATE_POSTERIOR_SAMPLE), by = c('AGEYRS', 'ROUND', 'SEX', 'COMM', 'iterations')]
+df[ROUND %in% c('R015'), PROP_ART_COVERAGE_POSTERIOR_SAMPLE := min(1, PROP_SUPPRESSED_POSTERIOR_SAMPLE / SUPPRESSION_RATE_POSTERIOR_SAMPLE), by = c('AGEYRS', 'SEX', 'COMM', 'ROUND', 'iterations')]
 set(df, NULL, 'SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016', NULL)
 set(df, NULL, 'SUPPRESSION_RATE_EMPIRICAL_R016', NULL)
 
@@ -93,14 +83,6 @@ set(df, NULL, 'SUPPRESSION_RATE_EMPIRICAL_R016', NULL)
 df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE < PROP_SUPPRESSED_POSTERIOR_SAMPLE, PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE]
 stopifnot(nrow(df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE > 1]) == 0)
 
-####################################
-
-# FIND DIAGNOSED PROPORTION AMONG NEWLY REGISTERED HIV-POSITIVE 
-
-####################################
-
-# assume that proportion diagnosed in non -participants = proportion on art
-df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 
 ##########################################################################
 
@@ -144,11 +126,13 @@ if(1){
   
 }
 
+
 ##########################################################################
 
 # FIND PROP UNSUPPRESSED AND SUPPRESSION RATE
 
 ##########################################################################
+
 
 # find proportion suppressed among HIV positive participants
 df[, PROP_UNSUPPRESSED_POSTERIOR_SAMPLE := 1 - PROP_SUPPRESSED_POSTERIOR_SAMPLE]
@@ -189,7 +173,8 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-file.name <- file.treatment.cascade.prop.nonparticipants.vl200.samples 
+# file.name <- file.path(gitdir.fit, paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds')) 
+file.name <- file.treatment.cascade.prop.participants.vl200.samples 
 if(! file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("Saving file:", file.name, '\n')
@@ -198,8 +183,9 @@ if(! file.exists(file.name) | config$overwrite.existing.files)
     cat("File:", file.name, "already exists...\n")
 }
 
-file.name <- file.treatment.cascade.prop.nonparticipants.vl200 
-if(! file.exists(file.name) | config$overwrite.existing.files )
+# file.name <- file.path(gitdir.fit,'RCCS_treatment_cascade_participants_estimates_vl200_221208.csv')
+file.name <- file.treatment.cascade.prop.participants.vl200 
+if(! file.exists(file.name) | config$overwrite.existing.files)
 {
     cat("Saving file:", file.name, '\n')
     write.csv(ns, file = file.name, row.names = F)

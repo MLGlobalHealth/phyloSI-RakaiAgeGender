@@ -15,23 +15,25 @@ gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
 # Output directory to save stan fits and figures
-outdir <- file.path(
-  "../phyloSI-RakaiAgeGender-outputs",
-  "get_estimates_prevalence"
-)
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_estimates_prevalence")
+if(usr == 'melodiemonod'){
+  outdir <- file.path("/Users/melodiemonod/Box Sync/2023//phyloSI-RakaiAgeGender-outputs","get_estimates_prevalence")
+}
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# Path to stan model
-path_stan <- file.path(gitdir.stan, "binomial_gp.stan")
-
-# Read Stan configurations
-model_config <- read_yaml(file.path(gitdir.stan, "binomial_gp_config.yml"))
+file.exists(c(
+  path_stan_binomialgp ,
+  path_binomialgp_model_config ,
+  path.count.hivpositive ))  |> all() |> stopifnot()
 
 # Load count of participants by hiv status
 rprev <- fread(path.count.hivpositive)
 
+# config stan
+binomialgp_model_config <- read_yaml(path_binomialgp_model_config)
+
 # Load nature med requirements
-source(file.path(gitdir.functions, "plotting_functions.R"))
+source(file.path(gitdir.functions, "naturemed_reqs.R"))
 naturemed_reqs()
 
 #################################
@@ -72,7 +74,6 @@ if (TRUE) {
   save_path <- file.path(outdir, "count_participants_by_gender_loc_age.png")
   ggsave(p, file = save_path, w = 8, h = 10)
 }
-
 
 
 ########################
@@ -152,19 +153,19 @@ for (round in rounds) {
   stan_data$rho_hyper_par_11 <- diff(range(stan_data$x_predict)) / 3
 
   # load stan model
-  stan_model <- stan_model(path_stan, model_name = "gp_all")
+  stan_model <- stan_model(path_stan_binomialgp, model_name = "gp_all")
 
   # run and save model
   fit <- sampling(
     stan_model,
     data = stan_data,
-    iter = model_config$iter,
-    warmup = model_config$warmup,
-    chains = model_config$chains,
-    cores = model_config$cores,
+    iter = binomialgp_model_config$iter,
+    warmup = binomialgp_model_config$warmup,
+    chains = binomialgp_model_config$chains,
+    cores = binomialgp_model_config$cores,
     control = list(
-      max_treedepth = model_config$control$max_treedepth,
-      adapt_delta = model_config$control$adapt_delta
+      max_treedepth = binomialgp_model_config$control$max_treedepth,
+      adapt_delta = binomialgp_model_config$control$adapt_delta
     )
   )
 
@@ -446,6 +447,7 @@ stats[["max_rhat"]] <- convergence[, round(max(rhat), 4)]
 
 #########
 
+# estimates
 file_name <- file.prevalence.prop
 if (!file.exists(file_name) || config$overwrite.existing.files) {
   cat("Saving file:", file_name, "\n")
@@ -454,6 +456,7 @@ if (!file.exists(file_name) || config$overwrite.existing.files) {
     cat("File:", file_name, "already exists...\n")
 }
 
+# samples 
 file_name <- file.prevalence
 if (!file.exists(file_name) || config$overwrite.existing.files) {
   cat("Saving file:", file_name, "\n")
@@ -462,8 +465,14 @@ if (!file.exists(file_name) || config$overwrite.existing.files) {
   cat("File:", file_name, "already exists...\n")
 }
 
-file_name <- file.path(
-  outdir,
-  "RCCS_prevalence_model_fit_convergence_221116.RDS"
-)
-saveRDS(stats, file = file_name)
+# stats
+file_name <- file.path(outdir,"RCCS_prevalence_model_fit_convergence_221116.RDS")
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  saveRDS(stats, file = file_name)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
+cat("\n Done \n")
+

@@ -11,10 +11,11 @@ source(file.path(gitdir, "config.R"))
 # directory to repository
 gitdir <- getwd()
 
-# files
-file.exists(file.treatment.cascade) |> stopifnot()
-file.exists(file.prevalence) |> stopifnot()
-file.exists(file.eligible.count) |> stopifnot()
+# check files exist
+file.exists(c(
+  file.treatment.cascade ,
+  file.prevalence,
+  file.eligible.count))  |> all() |> stopifnot()
 
 # load census eligible ount
 eligible_count <- fread(file.eligible.count)
@@ -24,6 +25,7 @@ proportion_prevalence <- as.data.table(readRDS(file.prevalence))
 
 # load unsuppressed proportion
 treatment_cascade <- as.data.table(readRDS(file.treatment.cascade))
+
 
 #############################
 

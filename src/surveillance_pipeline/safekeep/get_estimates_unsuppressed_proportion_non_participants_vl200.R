@@ -8,31 +8,16 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-# TODO: shozen: do you think this would be helpful? 
-# library(optparse)
-# option_list <- list(
-#     make_option(
-#         "--outdir",
-#         type = "",
-#         default = ,
-#         help = "",
-#         dest= ""
-#     ),
-# )
-# args <- parse_args(OptionParser(option_list = option_list))
-
 # outdir directory for stan fit
-if (dir.exists(indir.deepsequence.analyses)) {
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_estimates_unsuppressed_proportion_non_participants_vl200")
+if(usr == 'melodiemonod'){
   outdir <- file.path(indir.deepsequence.analyses, 'PANGEA2_RCCS', 'vl_suppofinfected_by_gender_loc_age')
-} else {
-  outdir <- '../phyloSI-RakaiAgeGender-outputs/get_estimates_unsuppressed_proportion_non_participants_vl200'
-  if (!dir.exists(outdir)) dir.exists(outdir);
 }
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-
-# files
-path.stan <- file.path(gitdir, 'misc', 'stan_models', 'binomial_gp.stan')
-path.data <- file.path(gitdir, 'data', 'aggregated_newlyregistered_count_unsuppressed_vl200.csv')
+file.exists(c(
+  path_stan_binomialgp ,
+  path.newly.registered.art ))  |> all() |> stopifnot()
 
 # Load count of newly registered participants with unsuppressed viral loads
 vla <- fread(path.count.newly.unsupp.vl200)
@@ -126,7 +111,7 @@ for(round in 15:18){
   stan.data$rho_hyper_par_11 <- diff(range(stan.data$x_predict))/3
   
   # load stan model
-  stan.model <- stan_model(path.stan, model_name='gp_all')	
+  stan.model <- stan_model(path_stan_binomialgp, model_name='gp_all')	
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
@@ -289,7 +274,7 @@ stats[['max_rhat']] = convergence[, round(max(rhat), 4)]
 
 #########
 
-# file.name <- file.path(gitdir.fit, 'RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_221121.rds')
+# samples
 file.name <- file.unsuppressedviralload.newly.vl200 
 if(! file.exists(file.name) | config$overwrite.existing.files)
 {
@@ -299,6 +284,7 @@ if(! file.exists(file.name) | config$overwrite.existing.files)
     cat("File:", file.name, "already exists...\n")
 }
 
+# stats
 file.name <- file.path(outdir, 'RCCS_nonsuppressed_proportion_model_fit_newlyregistered_vl200_221121.RDS')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {

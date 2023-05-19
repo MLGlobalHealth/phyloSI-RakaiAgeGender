@@ -8,17 +8,20 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-outdir <- file.path(
-  "../phyloSI-RakaiAgeGender-outputs",
-  "get_estimates_unsuppressed_proportion_non_participants"
-)
-if (!dir.exists(outdir)) dir.create(outdir)
+# outdir directory for stan fit
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","get_estimates_unsuppressed_proportion_non_participants")
+if(usr == 'melodiemonod'){
+  outdir <- file.path("/Users/melodiemonod/Box Sync/2023//phyloSI-RakaiAgeGender-outputs","get_estimates_unsuppressed_proportion_non_participants")
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# path to stan model
-path_stan <- file.path(gitdir.stan, "binomial_gp.stan")
+file.exists(c(
+  path_stan_binomialgp ,
+  path.count.newly.unsupp))  |> all() |> stopifnot()
 
 # Load count of newly registered participants with unsuppressed viral loads
 vla <- fread(path.count.newly.unsupp)
+
 
 ##########
 
@@ -137,7 +140,7 @@ for (r in 15:18) {
   stan_data$rho_hyper_par_11 <- diff(range(stan_data$x_predict)) / 3
 
   # load stan model
-  stan_model <- stan_model(path_stan, model_name = "gp_all")
+  stan_model <- stan_model(path_stan_binomialgp, model_name = "gp_all")
 
   # run and save model
   fit <- sampling(
@@ -325,6 +328,7 @@ nsinf_samples <- do.call("rbind", nsinf_samples)
 nspred <- do.call("rbind", nspred)
 convergence <- do.call("rbind", convergence_list)
 
+
 ###########################
 
 # STATISTICS FOR PAPER #
@@ -343,12 +347,14 @@ stats[["within.CI"]] <- tmp[, paste0(round(mean(within.CI) * 100, 2))]
 stats[["min_neff"]] <- convergence[, round(min(neff))]
 stats[["max_rhat"]] <- convergence[, round(max(rhat), 4)]
 
+
 #########
 
 # SAVE #
 
 #########
 
+# samples
 file_name <- file.unsuppressedviralload.newly
 if (!file.exists(file_name) || config$overwrite.existing.files) {
   cat("Saving file:", file_name, "\n")
@@ -357,13 +363,13 @@ if (!file.exists(file_name) || config$overwrite.existing.files) {
   cat("File:", file_name, "already exists...\n")
 }
 
-file_name <- file.path(
-  outdir,
-  "RCCS_nonsuppressed_proportion_model_fit_newlyregistered_221101.rds"
-)
-if (!file.exists(file_name) || config$overwrite.existing.files) {
-  cat("Saving file:", file_name, "\n")
+# stats
+file_name <- file.path(outdir, "RCCS_nonsuppressed_proportion_model_fit_newlyregistered_221101.rds")
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
   saveRDS(stats, file = file_name)
-} else {
-  cat("File:", file_name, "already exists...\n")
+}else{
+  cat("\n Output file", file.name, "already exists\n")
 }
+cat("\n Done \n")
