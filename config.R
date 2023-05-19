@@ -119,7 +119,7 @@ file.incidence.loess.samples.inland	<- file.path(output.dir.incidence.estimation
 # scripts/run_stan.R #
 ######################
 
-# obtained in phylo_pipeline-src
+# obtained in confidential_data_src
 file.pairs <- file.path(
     dir.zenodo.phyloproc,
     "pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds"

@@ -25,7 +25,8 @@ The results are then stored in `data/Rakai_phscnetworks_ruleo_sero.rda`.
 
 This folder contains the scripts that were used to perform the phylogenetic analyses.
 These require extensive computational resources, and in our case were run on Imperial College London HPC.
-Note that these scripts cannot be run on any computer, but the code in the repository documents the different steps of the analyses. In particular, the code is currently maintained [in this repo](`https://github.com/olli0601/Phyloscanner.R.utilities/tree/master/misc_data_analysis_RCCS1519/software`).
+Note that these scripts cannot be run on any computer, but the code in the repository documents the different steps of the analyses.
+In particular, the code is currently maintained [in this repo](`https://github.com/olli0601/Phyloscanner.R.utilities/tree/master/misc_data_analysis_RCCS1519/software`).
 
 The bash script `runall_TSI_pairs2.sh` describes the order in which the scripts are run, and is therefore denoted as the 'controller'.
 The primary inputs are two: `\*bam` files and base frequency files `\*BaseFreqs_WithHXB2.csv` for each NGS sequence.
@@ -45,11 +46,8 @@ Details on the shell jobs is summarised below:
 
 | job             | program used | input                               | output                             | output by         |
 | --------------- | ------------ | ----------------------------------- | ---------------------------------- | ----------------- |
-| `readali*.sh`   | MAFFT        | `*bam` files + consensus sequences  | `In_Window_XX_toYY*.fasta`         | group , window   |
-| `srx*job.sh`    | IQTREE       | `In_Window_XX_toYY*fasta`           | `*iqtree` , `*.treefile`   | group , window   |
-| `phsc_tsi*.sh`       | Phyloscanner |`*iqtree`   , `*.treefile`| `PatStats*csv` among others |group|
+| `readali*.sh`   | MAFFT        | `*bam` files + consensus sequences  | `In_Window_XX_toYY*.fasta`         | group , window    |
+| `srx*job.sh`    | IQTREE       | `In_Window_XX_toYY*fasta`           | `*iqtree` , `*.treefile`           | group , window    |
+| `phsc_tsi*.sh`  | Phyloscanner | `*iqtree`   , `*.treefile`          | `PatStats*csv` among others        | group             |
 | `tsi*sh`        | HIV-phyloTSI | `PatStats*csv`, `maf*csv`           | `ptyr*_tsi.csv`                    | group             |
 
-### De-identification: is this necessary?
-
-The script `get_tsi_predictions.R` removes `visit_dt` and the `PANGEA_ID` columns, as well as estimates on the dates of infection. Instead, these are re-computed as needed when necessary, and true dates are only used in confidential execution. Results are stored in `data/TSI_estimates.csv`

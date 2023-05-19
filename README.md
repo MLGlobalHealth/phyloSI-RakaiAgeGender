@@ -311,5 +311,6 @@ The following table list the actions performed by each of the scripts in `survei
 
 The statistical models present in this repository are built on top of outputs from phylogenetic analyses.
 In particular, the same phylogenies as in [Xi et al.](https://doi.org/10.1111/rssc.12544) are used to obtain potential source-recipient pairs, and these can be found in our Zenodo data repository.
-Separate phylogenetic analyses were also performed to obtain individual-level estimates of time since infection using the [HIV-phylo-TSI algorithm](https://github.com/BDI-pathogens/HIV-phyloTSI) described in [Golubchik et al.](https://doi.org/10.1101/2022.05.15.22275117). The scripts to perform this analysis can be found in the subdirectory `phylo_pipeline_src`
-After the analyses were over, we were able to date transmission events as per the script `confidential_data_src/get_infection_dates_for_phylopairs.R`.
+Separate phylogenetic analyses were also performed to obtain individual-level estimates of time since infection using the [HIV-phylo-TSI algorithm](https://github.com/BDI-pathogens/HIV-phyloTSI) described in [Golubchik et al.](https://doi.org/10.1101/2022.05.15.22275117). 
+The scripts to perform this analysis can be found in the subdirectory `src/phylo_pipeline`.
+After the analyses were over, we were able to date transmission events as per the script `scripts_for_confidential_data/get_infection_dates_for_phylopairs.R`.
