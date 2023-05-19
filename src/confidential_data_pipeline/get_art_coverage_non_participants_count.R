@@ -7,22 +7,8 @@ library(rstan)
 library("haven")
 library(here)
 
-usr <- Sys.info()[['user']]
-if(usr == 'andrea')
-{
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}else{
-    indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-}
-
-indir.repository <- here()
-
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
-path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
 c(  file.community.keys,
     file.path.hiv,
@@ -76,6 +62,7 @@ rprev[ROUND %in% c('R017', 'R018'), ART := CUARVMED ==1]
 rprev[ROUND %in% c('R017', 'R018') & is.na(CUARVMED), ART := F]
 rprev[, table(ROUND)]
 
+
 #################################
 
 # ADD VIRAL LOAD DATA  #
@@ -85,8 +72,8 @@ rprev[, table(ROUND)]
 # for round with suppressed set art to true if indiv is suppressed
 
 # tuning
-VL_DETECTABLE = 0
-VIREMIC_VIRAL_LOAD = 200 # WHO standards
+VL_DETECTABLE = 400
+VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 
 # Load data: exclude round 20 as incomplete
 dall <- fread(path.tests)
@@ -191,12 +178,15 @@ rart <- rprev[, list(COUNT = sum(ART == T), TOTAL_COUNT = length(ART)), by = c('
 
 #################################
 
-file.name <- file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_art_coverage_vl200.csv')
+file.name=path.newly.registered.art
 
 if( !file.exists(file.name))
 {
-    cat('\n Saving', file.name,'...\n')
-    write.csv(rart, file = file.name , row.names = F)
+    cat('\n Careful: This data should already exist exist in ', file.name  )
+    cat('\n check that your Zenodo path is correctly specified in config.R ' )
+    cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+    # write.csv(rart, file = file.name , row.names = F)
 }else{
     cat('\n Output file', file.name,'already exists.\n')
 }
+

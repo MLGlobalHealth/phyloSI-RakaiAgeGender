@@ -1,3 +1,8 @@
+#
+# TODO: DEPRECATED
+#
+
+
 # Confidential Data Processing
 
 This directory contains scripts for processing confidential data.

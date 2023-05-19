@@ -1,25 +1,14 @@
 library(data.table)
 library(here)
 
-usr <- Sys.info()[['user']]
-indir.repository <- here()
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
-indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
-if(usr=="andrea")
-{
-    indir.deepsequence.data <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence.analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}
-
-# paths
-path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
-
-path.tests |> file.exists() |> all() |> stopifnot()
+c(  path.tests) |> file.exists() |> all() |> stopifnot()
 
 # tuning
-VL_DETECTABLE = 0
-VIREMIC_VIRAL_LOAD = 200 
+VL_DETECTABLE = 400
+VIREMIC_VIRAL_LOAD = 1000 # WHO standards
 
 
 #################
@@ -112,11 +101,14 @@ vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsu
 
 ##########################################
 
-file <- file.path(indir.repository, 'data', 'aggregated_participants_count_unsuppressed_vl200.csv')
-if(! file.exists(file))
+file.name <- path.count.unsupp
+if( !file.exists(file.name))
 {
-    cat("\n Saving", file, "...\n")
-    write.csv(vla, file, row.names = F)
+  cat('\n Careful: This data should already exist exist in ', file.name  )
+  cat('\n check that your Zenodo path is correctly specified in config.R ' )
+  cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+  #  write.csv(vla, file , row.names = F)
 }else{
-    cat("\n Output file", file, "already exists\n")
+  cat('\n Output file', file.name,'already exists.\n')
 }
+

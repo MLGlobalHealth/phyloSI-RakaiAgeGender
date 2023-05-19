@@ -10,37 +10,17 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-
-path.stan <- file.path(gitdir.misc, 'stan_models', 'binomial_gp.stan')
-
-# round 15 to 18 
-file.path.hiv <- file.path(indir.deepsequencedata.r151r18, 'HIV_R15_R18_VOIs_220129.csv')
-
-# round 15 to 18 without 16
-file.path.quest <- file.path(indir.deepsequencedata.r151r18, 'quest_R15_R18_VoIs_220129.csv')
-
-# round 16
-file.path.quest.16 <- file.path(indir.deepsequencedata.r151r18, 'quest_R15_R19_VoIs_Dec072022.csv')
-
-# round < 14
-file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
-file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
-
-# Latest update from Joseph concerning dates of infection
-file.path.update.first.positive <- file.path(indir.deepsequencedata.r151r18, '221128_requested_updated_serohistory.csv')
-
+# make sure all files exist
 file.exists(c(
-    indir.deepsequencedata.r151r18,
     file.community.keys ,
-    path.stan ,
-    file.path.hiv ,
-    file.path.quest ,
+    file.path.hiv.1518 ,
+    file.path.quest.1518 ,
     file.path.quest.16 ,
     file.path.hiv.614 ,
     file.path.quest.614 ,
     file.path.update.first.positive))  |> all() |> stopifnot()
 
-# load files
+# load community keys files
 community.keys <- fread(file.community.keys)
 
 
@@ -50,10 +30,9 @@ community.keys <- fread(file.community.keys)
 
 ################################
 
-
 # load datasets ROUND 15 TO 18 without 16
 cols <- c('round', 'study_id', 'ageyrs', 'sex', 'comm_num', 'intdate', 'birthdat', 'arvmed', 'cuarvmed')
-quest <- fread(file.path.quest, select=cols)
+quest <- fread(file.path.quest.1518, select=cols)
 quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
 
 # load datasets rond 16 and combine
@@ -91,9 +70,15 @@ quest.14[, intdate := as.Date(intdate)]
 quest <- rbind(quest.14, quest)
 
 # `save
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
-write.csv(quest, file = file.name, row.names = F)
-
+file.name <- file.path.quest
+if(! file.exists(file.name))
+{
+    cat("\n Saving output file", file.name, "\n")
+    write.csv(quest, file = file.name, row.names = F)
+}else{
+    cat("\n Output file", file.name, "already exists\n")
+}
+cat("\n Done \n")
 
 
 ################################
@@ -110,7 +95,7 @@ hiv.14 <- hiv.14[!round %in% paste0('R0', 15:18)]
 hiv.14[, hivdate := as.Date(hivdate)]
 
 # load datasets ROUND 15 TO 18
-hiv <- as.data.table(read.csv(file.path.hiv))
+hiv <- as.data.table(read.csv(file.path.hiv.1518))
 hiv <- hiv[, .(study_id, round, hiv, hivdate)]
 hiv[, hivdate := as.Date(hivdate, format = '%d-%B-%y')]
 hiv <- rbind(hiv.14, hiv)
@@ -121,7 +106,7 @@ hiv.update <- as.data.table(read.csv(file.path.update.first.positive))
 hiv[study_id %in% hiv.update[, gsub('RK-(.+)', '\\1', study_id)], hiv := 'P'] # set to positive hiv test after first positive test
 
 # `save
-file.name <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
+file.name <- file.path.hiv
 if(! file.exists(file.name))
 {
     cat("\n Saving output file", file.name, "\n")
@@ -130,3 +115,4 @@ if(! file.exists(file.name))
     cat("\n Output file", file.name, "already exists\n")
 }
 cat("\n Done \n")
+

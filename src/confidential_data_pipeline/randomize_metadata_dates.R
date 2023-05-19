@@ -83,10 +83,13 @@ meta_randomized <- merge(meta_randomized, ddates, by='aid')
 meta_data <- copy(meta_randomized)
 
 filename <- path.meta.randomized
-if(! file.exists(filename))
+if( !file.exists(file.name))
 {
-    cat("Saving file:", filename, '\n')
-    save(meta_data, file=filename)
+    cat('\n Careful: This data should already exist exist in ', file.name  )
+    cat('\n check that your Zenodo path is correctly specified in config.R ' )
+    cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+    #     save(meta_data, file=filename)
 }else{
-    cat("File:", filename, "already exists...\n")
+    cat('\n Output file', file.name,'already exists.\n')
 }
+

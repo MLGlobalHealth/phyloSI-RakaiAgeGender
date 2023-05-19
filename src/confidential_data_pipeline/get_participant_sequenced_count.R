@@ -2,32 +2,21 @@ library(data.table)
 library(seqinr)
 library(dplyr)
 
-usr <- Sys.info()[['user']]
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
+c(  infile.sequence,
+    infile.ind.rccs,
+    infile.ind.mrc ,
+    infile.seq.criteria ,
+    file.path.metadata,
+    file.path.hiv,
+    file.path.quest, 
+    file.path.neuro.metadata, 
+    file.community.keys) |> file.exists() |> all() |> stopifnot()
 
-if(usr=="andrea")
-{
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-}
-
-infile.sequence <- file.path(indir.deepsequencedata,"200422_PANGEA2_RCCSMRC_alignment.fasta")
-infile.ind.rccs <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
-infile.ind.mrc <- file.path(indir.deepsequencedata,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
-infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct.rda')
-
-file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
-file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
+# path to save intermediary analyses
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
-
-if(! dir.exists(outdir))
-    dir.create(outdir)
 
 # load files
 community.keys <- fread(file.community.keys)
@@ -36,6 +25,7 @@ community.keys[, comm := fifelse(COMM_NUM_A %like% 'f', 'fishing', 'inland')]
 # rounds of interest
 df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
                   data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, 15, '15S', 16:18))))
+
 
 ###############################################
 
@@ -92,10 +82,16 @@ colnames(rinc) <- toupper(colnames(rinc))
 # sample date
 setnames(rinc, 'INTDATE', 'SAMPLE_DATE')
 
+# format date
+rinc[, SAMPLE_DATE := as.character(SAMPLE_DATE)]
+
 # add meta data from Kate
 tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], rinc[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
 tmp <- merge(tmp, meta_data, by = c('STUDY_ID', 'ROUND'))
-rinc <- rbind(rinc[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS)], tmp[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS)])
+tmp[, SAMPLE_DATE := as.character(SAMPLE_DATE)]
+
+rinc <- rbind(rinc[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS)], 
+              tmp[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS)])
 
 
 #
@@ -116,6 +112,7 @@ hivs <- merge(rhiv, rinc, by = c('STUDY_ID', 'ROUND'))
 # add meta data from Kate
 tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], hivs[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
 tmp <- merge(tmp, meta_data, by = c('STUDY_ID', 'ROUND'))
+tmp[, SAMPLE_DATE := as.character(SAMPLE_DATE)]
 hivs <- rbind(hivs[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS, HIV)], tmp[, .(STUDY_ID, SEX, ROUND, COMM, SAMPLE_DATE, AGEYRS, HIV)])
 
 
@@ -192,7 +189,14 @@ dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
 dcount <- dcount[, .(COMM, ROUND, PANGEA_ID, PT_ID, STUDY_ID, SEX, AGEYRS, AGEGP, DIFF_DATE)]
 
 # save sequenced id
-saveRDS(dcount, file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds'))
+file.name <- file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds')
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  saveRDS(dcount, file.name)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
 
 
 ############################################
@@ -225,7 +229,16 @@ sequ[, COMM:= factor(COMM,levels=c('Total','inland','fishing'),labels=c('Total',
 sequ[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Male'))]
 sequ[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))]
 sequ <- sequ[order(ROUND, COMM,SEX,AGEGP),]
-saveRDS(sequ, file.path(outdir, 'characteristics_ever_sequenced.rds'))
+
+# save
+file.name <- file.path(outdir, 'characteristics_ever_sequenced.rds')
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  saveRDS(sequ, file.name)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
 
 # unique participants across rounds 14-18 by comm, sex, agegp
 sequ <- dcount.ever[ROUND %in% c('R014','R015','R016','R017','R018'),
@@ -240,4 +253,15 @@ sequ[, SEX:= factor(SEX,levels=c('Total','F','M'),labels=c('Total','Female','Mal
 sequ[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))]
 sequ <- sequ[order(COMM,SEX,AGEGP),]
 
-saveRDS(sequ, file.path(outdir, 'characteristics_sequenced_R14_18.rds'))
+# save
+file.name <- file.path(outdir, 'characteristics_sequenced_R14_18.rds')
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  saveRDS(sequ, file.name)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
+
+
+

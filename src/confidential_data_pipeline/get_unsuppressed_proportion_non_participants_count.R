@@ -1,21 +1,11 @@
 library(data.table)
 library(here)
 
-usr <- Sys.info()[['user']]
-indir.repository <- here()
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
-indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
-if(usr=="andrea")
-{
-    indir.deepsequence.data <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence.analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}
-
-# file
-path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
-
-c(path.tests) |> file.exists() |> all() |> stopifnot()
+c(  path.tests,
+    file.path.quest ) |> file.exists() |> all() |> stopifnot()
 
 # tuning
 VL_DETECTABLE = 400
@@ -33,11 +23,6 @@ dall <- fread(path.tests)
 dall <- dall[ROUND %in% c(15:18, 15.5)]
 # dall <- dall[ROUND == round]
 
-# percent of hiv positive with viral laod measurements 
-virperc <- dall[HIV_STATUS == 1 & COMM == 'inland']
-virperc <- virperc[, paste0(round(mean(!is.na(HIV_VL))*100, 2)), by = 'ROUND']
-print(virperc)
-
 # rename variables according to Oli's old script + remove 1 unknown sex
 setnames(dall, c('HIV_VL', 'COMM'), c('VL_COPIES', 'FC') )
 dall[, HIV_AND_VL := ifelse( HIV_STATUS == 1 & !is.na(VL_COPIES), 1, 0)]
@@ -45,6 +30,48 @@ dall <- dall[! SEX=='']
 
 # keep within census eligible age
 DT <- subset(dall, AGEYRS <= 50)
+
+
+#################################
+
+# KEEP INDIVIDUALS SEEN FOR THE FIRST TIME  
+# THAT ARE THE CLOSEST TO NON-PARTICIPANTS
+
+#################################
+
+# keep variable of interest
+quest <- as.data.table(read.csv(file.path.quest))
+rinc <- quest[, .(round, study_id)]
+
+# to upper
+colnames(rinc) <- toupper(colnames(rinc))
+
+# find index of round
+rinc <- rinc[order(STUDY_ID, ROUND)]
+rinc[, INDEX_ROUND := 1:length(ROUND), by = 'STUDY_ID']
+
+# format round as in DT
+rinc[, ROUND := gsub('R0(.+)', '\\1', ROUND)]
+rinc[ROUND == '15S', ROUND := '15.1']
+rinc[, ROUND := as.numeric(ROUND)]
+
+# merge
+DT <- merge(DT, rinc, by= c('STUDY_ID', 'ROUND'))
+
+# keep participants seen for the first time 
+DT <- DT[INDEX_ROUND == 1]
+
+# percent of hiv positive with viral laod measurements 
+virperc <- DT[HIV_STATUS == 1 & FC == 'inland']
+virperc <- virperc[, paste0(round(mean(!is.na(VL_COPIES))*100, 2)), by = 'ROUND'][order(ROUND)]
+print(virperc)
+
+
+#################################
+
+# FIND INDIVIDUALS WITH VIREMIC VIRA; LOADS
+
+#################################
 
 # remove HIV+ individuals with missing VLs  
 DT <- subset(DT, HIV_STATUS==0 | HIV_AND_VL==1)
@@ -70,6 +97,13 @@ set(DT, NULL, 'HIV_AND_VLD', DT[, as.integer(VLD==1 & HIV_AND_VL==1)])
 # reset undetectable to VLC 0
 set(DT, DT[, which(HIV_AND_VL==1 & VLU==1)], 'VLC', 0)
 setkey(DT, ROUND, FC, SEX, AGEYRS)
+
+
+#################################
+
+# AGGREGATE BY ROUND, SEX, COMM AND AGE  #
+
+#################################
 
 # get count for every categories
 tmp <- seq.int(min(DT$AGEYRS), max(DT$AGEYRS))
@@ -105,20 +139,20 @@ vla[, NONVLNS := HIV_N-VLNS_N]
 vla[, EMPIRICAL_NONVLNS_IN_HIV := NONVLNS / HIV_N, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# proportion of suppressed
 vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsuppressed
 
+##########################################
+
+# SAVE DE-IDENTIFIED DATA #
 
 ##########################################
 
-# SAVE DE-INDENTIFIED DATA #
-
-##########################################
-
-file <- file.path(indir.repository, 'data', 'aggregated_participants_count_unsuppressed.csv')
-if(! file.exists(file))
+file.name <- path.count.newly.unsupp
+if( !file.exists(file.name))
 {
-    cat("\n Saving", file, "...\n")
-    write.csv(vla, file , row.names = F)
+  cat('\n Careful: This data should already exist exist in ', file.name  )
+  cat('\n check that your Zenodo path is correctly specified in config.R ' )
+  cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+  # write.csv(vla, file, row.names = F)
 }else{
-    cat("\n Output file", file, "already exists\n")
+  cat('\n Output file', file.name,'already exists.\n')
 }
-
 

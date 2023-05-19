@@ -5,32 +5,20 @@ library(scales)
 library(lubridate)
 library(here)
 
-usr <- Sys.info()[['user']]
-indir.repository <- here()
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-if(usr=="andrea")
-{
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}
-
-
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
-file.census.count <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
-
-c(  outdir,
-    file.census.count,
+c(  file.eligible.count,
     file.community.keys,
     file.path.quest) |> file.exists() |> all() |> stopifnot()
 
 # load files
 community.keys <- fread(file.community.keys)
-ncen <- fread(file.census.count)
+ncen <- fread(file.eligible.count)
 quest <- fread(file.path.quest)
+
+# path for intermediary results
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 
 
 ################################
@@ -104,23 +92,19 @@ tmp <- rbind(tmp, tmp1)
 tmp1 <- rpr[!ROUND %in% c("06", "07", "08", "09"), list(MEAN = paste0(round(mean(PARTICIPATION)*100, 1))), by = c('ROUND', 'COMM')]
 tmp1 <- tmp1[, list(MIN = min(MEAN), MAX= max(MEAN)), by = 'COMM']
 
-file <- file.path(outdir, 'Participation.rds')
-if(! file.exists(file))
-{
-    cat("\n Saving", file, "...\n")
-    saveRDS(list(tmp, tmp1), )
-}else{
-    cat("\n Output file", file, "already exists\n")
-}
-
 # participation rate non-aggregated
-file <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
 tmp <- rpr[, .(AGEYRS, ROUND, SEX, COMM, PARTICIPANT, PARTICIPATION_SMOOTH)]
 setnames(tmp, 'PARTICIPATION_SMOOTH', 'PARTICIPATION')
-if(! file.exists(file))
+
+# save
+file.name <- file.participation
+if( !file.exists(file.name))
 {
-    cat("\n Saving", file, "...\n")
-    write.csv(tmp, file = file, row.names = F)
+  cat('\n Careful: This data should already exist exist in ', file.name  )
+  cat('\n check that your Zenodo path is correctly specified in config.R ' )
+  cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+  #  write.csv(tmp, file = file, row.names = F)
 }else{
-    cat("\n Output file", file, "already exists\n")
+  cat('\n Output file', file.name,'already exists.\n')
 }
+

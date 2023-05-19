@@ -1,20 +1,16 @@
+# update from Joseph in February 2023 giving us quest data for all communities (not only communities continuously surveyed)
+# the hiv data were embedded in the quest data. So this file exctract the necessary information from the quest data
+# and create a standalone hiv data
+
 library("data.table")
 library("dplyr")
+library(here)
 
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-usr <- Sys.info()[['user']]
-
-if(usr == 'andrea')
-{
-    indir.deepsequencedata <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
-}else{
-    # set up path to data
-    indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-}
-
-
-# file to data
-file.quest_R09_R14 = file.path(indir.deepsequencedata, 'RCCS_R9_R14/quest_R09_R14.csv')
+file.exists(c(
+    file.quest_R09_R14 ))  |> all() |> stopifnot()
 
 # load file
 quest_R09_R14 <- fread(file.quest_R09_R14)
@@ -30,7 +26,6 @@ hiv_R09_R14[hivdate == '', hivdate := as.character(int_date)]
 hiv_R09_R14 <- select(hiv_R09_R14, -c('int_date'))
 
 # save
-file.hiv_R09_R14 = file.path(indir.deepsequencedata, 'RCCS_R9_R14/HIV_R09_R14.csv')
 if(! file.exists(file.hiv_R09_R14))
 {
     cat('\n Saving ', file.hiv_R09_R14 ,'...\n')
@@ -39,3 +34,6 @@ if(! file.exists(file.hiv_R09_R14))
     cat('\n Output file ', file.hiv_R09_R14 ,'already exists\n')
 }
 cat('\n Done \n')
+
+
+

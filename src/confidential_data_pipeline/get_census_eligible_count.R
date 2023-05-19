@@ -6,27 +6,8 @@ library(lubridate)
 library("haven")
 library(here)
 
-usr <- Sys.info()[['user']]
-indir.repository <- here()
-
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-
-if(usr=="andrea")
-{
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}
-
-
-# outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
-file.community.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
-# round 14
-file.path.flow.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'verif_1.dta')
-
-# round 15 to 18
-file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_221118.csv')
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
 c(  file.community.keys,
     file.path.flow.614,
@@ -36,6 +17,9 @@ c(  file.community.keys,
 flow <- fread(file.path.flow)
 flow.14<-as.data.table(read_dta(file.path.flow.614))
 community.keys <- fread(file.community.keys)
+
+# path to save intermediary results that are not saved on Zenodo 
+outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
 
 
 #
@@ -185,12 +169,13 @@ ncen[, ELIGIBLE := ELIGIBLE_SMOOTH]
 ncen <- select(ncen, -'ELIGIBLE_SMOOTH')
 
 # save
-file <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
-if(! file.exists(file))
+file.name <- file.eligible.count
+if( !file.exists(file.name))
 {
-    cat("\n Saving", file, "...\n")
-    write.csv(ncen, file , row.names = F)
+  cat('\n Careful: This data should already exist exist in ', file.name  )
+  cat('\n check that your Zenodo path is correctly specified in config.R ' )
+  cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+  #  write.csv(ncen, file , row.names = F)
 }else{
-    cat("\n Output file", file, "already exists\n")
+  cat('\n Output file', file.name,'already exists.\n')
 }
-

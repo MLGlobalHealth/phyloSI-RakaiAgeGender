@@ -5,20 +5,8 @@ library(lubridate)
 library("haven")
 library(here)
 
-usr <- Sys.info()[['user']]
-indir.repository <- here()
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-
-if(usr=="andrea")
-{
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}
-
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
 c(  file.community.keys,
     file.path.hiv,
@@ -86,11 +74,14 @@ rprev <- hivs[, list(COUNT = sum(HIV == 'P'),
 
 #########
 
-filename = file.path(indir.repository, "data", "aggregated_count_hiv_positive.csv")
-if(! file.exists(filename))
+file.name = path.count.hivpositive
+if( !file.exists(file.name))
 {
-    cat("\n Saving", filename, "...\n")
-    write.csv(rprev, filename, row.names = F)
+  cat('\n Careful: This data should already exist exist in ', file.name  )
+  cat('\n check that your Zenodo path is correctly specified in config.R ' )
+  cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+  #   write.csv(rprev, filename, row.names = F)
 }else{
-    cat("\n Output file", filename, "already exists\n")
+  cat('\n Output file', file.name,'already exists.\n')
 }
+

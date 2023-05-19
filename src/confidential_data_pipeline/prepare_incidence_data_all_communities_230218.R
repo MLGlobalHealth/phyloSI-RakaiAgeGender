@@ -14,60 +14,20 @@ library(metR)
 library(lubridate)
 library(ggpubr)
 
-# set to directory
-indir <- "~/git/phyloSI-RakaiAgeGender"
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-# set up path to data
-indir_deepsequencedata <- file.path("~/Box\ Sync",
-                                    "2019",
-                                    "ratmann_pangea_deepsequencedata",
-                                    "live")
-indir_deepsequence_analysis <- file.path("~/Box\ Sync",
-                                         "2021",
-                                         "ratmann_deepseq_analyses",
-                                         "live")
-
-# set path to save results
-outdir <- file.path(indir_deepsequence_analysis,
-                    "PANGEA2_RCCS",
-                    "incidence_rate_inland")
-
-# round 6 to 18: only use round 6 to 8
-path_flow_68 <- file.path(indir_deepsequencedata,
-                          "RCCS_data_estimate_incidence_inland_R6_R18",
-                          "220903",
-                          "verif_1.dta")
-path_hiv_68 <- file.path(indir_deepsequencedata,
-                         "RCCS_data_estimate_incidence_inland_R6_R18",
-                         "220903",
-                         "hivincidence_1.dta")
-
-# round 9 to 14:
-path_flow_914 <- file.path(indir_deepsequencedata,
-                           "RCCS_R9_R14",
-                           "FlowR09_R14.csv")
-path_hiv_914 <- file.path(indir_deepsequencedata,
-                          "RCCS_R9_R14",
-                          "HIV_R09_R14.csv")
-
-# round 15 to 18
-path_flow_1518 <- file.path(indir_deepsequencedata,
-                            "RCCS_R15_R18",
-                            "FlowR15_R18_VoIs_220129.csv")
-path_hiv_1518 <- file.path(indir_deepsequencedata,
-                           "RCCS_R15_R18",
-                           "HIV_R15_R18_VOIs_220129.csv")
-
-# round 19
-path_flow_19 <- file.path(indir_deepsequencedata,
-                          "R019_VoIs",
-                          "Flow_R019_VoIs_220607.csv")
-path_hiv_19 <- file.path(indir_deepsequencedata,
-                         "R019_VoIs",
-                         "HIV_R019_VOIs_220607.csv")
+c(  file.path.flow.614,
+    file.path.hiv.614,
+    file.path.flow_914 ,
+    file.hiv_R09_R14,
+    file.path.flow,
+    file.path.hiv.1518,
+    file.path.flow_19,
+    file.path.hiv_19) |> file.exists() |> all() |> stopifnot()
 
 # function
-source(file.path(indir, "functions", "incidence_rate_estimation_functions.R"))
+source(file.path('R', "functions_incidence_rate", "incidence_rate_estimation_functions.R"))
 
 # utils
 rounds_group_0 <- c("R006", "R007", "R008")
@@ -90,16 +50,16 @@ rounds_numeric_group_3 <- df_round[visit == rounds_group_3, round_numeric]
 ##############
 
 # load HIV status data
-hivstatus_vlcopies_raw <- read_hiv_data_230218(path_hiv_68,
-                                               path_hiv_914,
-                                               path_hiv_1518,
-                                               path_hiv_19)
+hivstatus_vlcopies_raw <- read_hiv_data_230218(file.path.hiv.614,
+                                               file.hiv_R09_R14,
+                                               file.path.hiv.1518,
+                                               file.path.hiv_19)
 
 # load HIV verification data set
-verif_raw <- read_flow_data_230218(path_flow_68,
-                                   path_flow_914,
-                                   path_flow_1518,
-                                   path_flow_19)
+verif_raw <- read_flow_data_230218(file.path.flow.614,
+                                   file.path.flow_914,
+                                   file.path.flow,
+                                   file.path.flow_19)
 
 
 ################
@@ -223,15 +183,23 @@ for (i in 1:N) {
 ################
 
 # anonimized id
-file <- file.path(indir_deepsequencedata,
-                  "RCCS_R9_R14",
-                  "RCCS_data_estimate_incidence_inland_R6_R18_230218",
-                  "anonimized_id_for_incidence_estimate.csv")
-write.csv(anonimized_id, file = file, row.names = FALSE)
+file.name <- file.anonymised.id.all_comm 
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  write.csv(anonimized_id, file = file, row.names = FALSE)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
 
 # seroconvert cohort central analysis
-file <- file.path(indir_deepsequencedata,
-                  "RCCS_R9_R14",
-                  "RCCS_data_estimate_incidence_inland_R6_R18_230218",
-                  "seroconverter_cohort.rds")
-saveRDS(seroconverter_cohort_list, file = file)
+file.name <- file.seroconvert.cohort.all.comm
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  saveRDS(seroconverter_cohort_list, file = file)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
+
+

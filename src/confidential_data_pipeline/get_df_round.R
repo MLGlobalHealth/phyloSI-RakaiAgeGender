@@ -6,27 +6,8 @@ library(lubridate)
 library("haven")
 library(here)
 
-usr <- Sys.info()[['user']]
-
-indir.repository <- here()
-indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-
-if(usr == 'andrea')
-{
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}
-
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
-# round 15 to 18
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
-
-# round 14
-file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
-file.path.flow.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'verif_1.dta')
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
 c(  file.community.keys,
     file.path.hiv,
@@ -36,6 +17,7 @@ c(  file.community.keys,
 
 # load files
 community.keys <- fread(file.community.keys)
+
 
 ################################
 
@@ -54,7 +36,7 @@ flow.14 <- flow.14[!round %in% paste0('R0', 15:18)]
 flow.14[, intdate := as.Date(intdate, format = '%d/%m/%Y')]
 
 # load datasets ROUND 15 TO 18
-quest <- as.data.table(read.csv(file.path.quest))
+quest <- as.data.table(read.csv(file.path.quest.1518))
 quest<- quest[, .(round, study_id, ageyrs, sex, comm_num, intdate)]
 quest[, intdate := as.Date(intdate, format = '%d-%B-%y')]
 quest <- rbind(flow.14, quest)
@@ -71,7 +53,7 @@ hiv.14 <- hiv.14[!round %in% paste0('R0', 15:18)]
 hiv.14[, hivdate := as.Date(hivdate)]
 
 # load datasets ROUND 15 TO 18
-hiv <- as.data.table(read.csv(file.path.hiv))
+hiv <- as.data.table(read.csv(file.path.hiv.1518))
 hiv <- hiv[, .(study_id, round, hiv, hivdate)]
 hiv[, hivdate := as.Date(hivdate, format = '%d-%B-%y')]
 hiv <- rbind(hiv.14, hiv)
@@ -118,11 +100,13 @@ if(0){
 # SAVE ROUND TIMELINE
 #
 
-filename=file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
-if(! file.exists(filename))
+file.name=file.path.round.timeline
+if( !file.exists(file.name))
 {
-    cat("\n Saving", filename, "...\n")
-    save(df_round_inland, df_round_fishing, file=filename, row.names=F)
+  cat('\n Careful: This data should already exist exist in ', file.name  )
+  cat('\n check that your Zenodo path is correctly specified in config.R ' )
+  cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+  #   save(df_round_inland, df_round_fishing, file=filename, row.names=F)
 }else{
-    cat("\n Output file", filename, "already exists\n")
+  cat('\n Output file', file.name,'already exists.\n')
 }

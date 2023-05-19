@@ -5,53 +5,29 @@ library(dplyr)
 # change as appropriate
 make.hiv.history.plots <- 0
 
-if(dir.exists('/Users/melodiemonod'))
-{
-  indir.repository <- '~/git/phyloflows'
-  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-}
+# paths
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-if(dir.exists('/home/andrea'))
-{
-  base.hpc <- '/home/andrea/HPC'
-  indir.deepsequence_analyses   <- file.path(base.hpc, 'project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI')
-  indir.deepsequencedata <- file.path(base.hpc, 'project/ratmann_pangea_deepsequencedata/live')
-  indir.repository <- '/home/andrea/git/phyloflows'
+# make sure all files exist
+file.exists(c(
+  file.anonymisation.keys ,
+  file.community.keys ,
+  file.path.allhiv,
+  file.path.hiv.1518,
+  file.path.quest.1518,
+  file.path.metadata,
+  file.path.neuro.metadata,
+  file.path.update.first.positive))  |> all() |> stopifnot()
 
-}
-
-if(dir.exists('/rds/general/user/'))
-{
-  indir.repository <-'~/git/phyloflows'
-  indir.deepsequence_analyses   <- '/rds/general/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
-  indir.deepsequencedata <- '/rds/general/project/ratmann_pangea_deepsequencedata/live/'
-}
-
-# file paths keys
-file.anonymisation.keys <- file.path(indir.deepsequence_analyses,'important_anonymisation_keys_210119.csv')
-file.community.keys <- file.path(indir.deepsequence_analyses,'community_names.csv')
-
-# Latest data from Rakai's CCS (Joseph's data from 2022-01-29)
-file.path.allhiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'All_HIVpcr_for_questR15_R18_220129.csv')
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'HIV_R15_R18_VOIs_220129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'quest_R15_R18_VoIs_220129.csv')
-
-# Latest data from Rakai's CCS (Kate's data from 2022-03-08)
-file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
-
-# Latest data from Rakai's CCS (Kate's data from 2022-03-08)
-file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
-
-# Latest update from Joseph concerning dates of infection
-file.path.update.first.positive <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', '221128_requested_updated_serohistory.csv')
 
 #
 # LOAD FUNCTIONS
 #
 
-source(file.path(indir.repository, 'functions', 'utils.R'))
-source(file.path(indir.repository, 'misc', 'functions', 'preprocess_meta_data-functions.R'))
+source(file.path('R', 'utils.R'))
+source(file.path('R', "functions_confidential_data_pipeline", "preprocess_meta_data-functions.R"))
+
 
 #
 # LOAD DATA
@@ -64,8 +40,8 @@ community.keys <-.read(file.community.keys)
 
 # Load Joseph's data from 2022-01-29
 allhiv <- .read(file.path.allhiv) 
-hiv <- .read(file.path.hiv)
-quest <- .read(file.path.quest)
+hiv <- .read(file.path.hiv.1518)
+quest <- .read(file.path.quest.1518)
 
 # Load Kate's data from 2022-03-08
 raw_metadata <- .read(file.path.metadata)
@@ -77,6 +53,7 @@ setnames(raw_neuro_metadata,  'studyid', 'study_id')
 # update with joseph's first positive frp, 2022-11-28
 firstpos_update <- fread(file.path.update.first.positive )
 setnames(firstpos_update, c('firstposdat', 'lastnegdat'), c('date_first_positive', 'date_last_negative'))
+
 
 #
 # PROCESS RAW DATA
@@ -91,13 +68,11 @@ invisible(lapply(list(hiv, allhiv, quest, raw_metadata, raw_neuro_metadata),
 # process quest and make date.birth
 quest <- process.quest(quest)
 
-
 # make date of first positive and last negative test with allhiv
 date.first.positive <- make.date.first.positive(allhiv)
 
 # process hiv and find date first and last visit 
 hiv <- process.hiv(hiv)
-
 
 date.first.last.visit <- make.date.first.last.visit(hiv)
 
@@ -124,6 +99,10 @@ meta_data_neuro <- process.neuro.meta.data(copy(raw_neuro_metadata), aik)
 meta_data <- get.meta.data(quest, date.first.positive, date.first.last.visit, aik, community.keys)
 
 # add Kate's data for missing individuals
+meta_data[, date_last_negative := as.character(date_last_negative)]
+meta_data_2[, date_last_negative := as.character(date_last_negative)]
+meta_data[, date_first_positive := as.character(date_first_positive)]
+meta_data_2[, date_first_positive := as.character(date_first_positive)]
 meta_data <- rbind(meta_data, meta_data_2[!study_id %in% meta_data[, study_id]])
 
 # get round by study_id
@@ -144,4 +123,16 @@ meta_data <- rbind(meta_data, meta_data_neuro[!study_id %in% meta_data[, study_i
 #
 # SAVE META DATA
 #
-save(meta_data, file = file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20221128.RData'), row.names = F)
+file.name <- path.meta.confidential
+
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  save(meta_data, file = , row.names = F)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
+cat("\n Done \n")
+
+
+

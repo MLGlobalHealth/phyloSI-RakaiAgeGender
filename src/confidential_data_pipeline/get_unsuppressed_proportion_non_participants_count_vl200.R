@@ -1,27 +1,15 @@
 library(data.table)
 library(here)
 
-usr <- Sys.info()[['user']]
-indir.repository <- here()
-indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
-indir.deepsequence.analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live'
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-if(usr=="andrea")
-{
-    indir.deepsequence.data <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence.analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-}
-
-
-# file
-path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
-file.path.quest <- file.path(indir.deepsequence.data, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
-
-c(path.tests, file.path.quest) |> file.exists() |> all() |> stopifnot() 
+c(  path.tests,
+    file.path.quest ) |> file.exists() |> all() |> stopifnot()
 
 # tuning
-VL_DETECTABLE = 400
-VIREMIC_VIRAL_LOAD = 1000 # WHO standards
+VL_DETECTABLE = 0
+VIREMIC_VIRAL_LOAD = 200 
 
 
 #################
@@ -151,18 +139,22 @@ vla[, NONVLNS := HIV_N-VLNS_N]
 vla[, EMPIRICAL_NONVLNS_IN_HIV := NONVLNS / HIV_N, by = c('ROUND', 'LOC', 'SEX', 'AGE')]# proportion of suppressed
 vla[, EMPIRICAL_VLNS_IN_HIV := 1 - EMPIRICAL_NONVLNS_IN_HIV]# proportion of unsuppressed
 
+
 ##########################################
 
 # SAVE DE-IDENTIFIED DATA #
 
 ##########################################
 
-file <-  file.path(indir.repository, 'data', 'aggregated_newlyregistered_count_unsuppressed.csv')
-if(! file.exists(file))
+file.name <- path.count.newly.unsupp.vl200
+if( !file.exists(file.name))
 {
-    cat("\n Saving", file, "...\n")
-    write.csv(vla, file, row.names = F)
+  cat('\n Careful: This data should already exist exist in ', file.name  )
+  cat('\n check that your Zenodo path is correctly specified in config.R ' )
+  cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
+  #  write.csv(vla, , row.names = F)
 }else{
-    cat("\n Output file", file, "already exists\n")
+  cat('\n Output file', file.name,'already exists.\n')
 }
+
 

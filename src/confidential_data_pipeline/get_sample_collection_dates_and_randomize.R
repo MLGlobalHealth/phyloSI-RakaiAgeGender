@@ -1,20 +1,14 @@
 require(data.table)
 require(here)
 
-#########
-# PATHS # 
-#########
-
 gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
-# path from phylo analyses
-path.anonymisation.keys <- file.path(indir.deepanalyses.xiaoyue, 'important_anonymisation_keys_210119.csv')
-path.selected.samples <- file.path(indir.deepanalyses.xiaoyue,"210120_RCCSUVRI_phscinput_samples.rds" )
-
-# path from PANGEA data
-path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '200316_pangea_db_sharing_extract_rakai.csv')
-path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
+file.exists(c(
+    path.anonymisation.keys ,
+    path.selected.samples ,
+    path.sdates.rccs ,
+    path.sdates.mrc ))  |> all() |> stopifnot()
 
 ###########
 # HELPERS #
