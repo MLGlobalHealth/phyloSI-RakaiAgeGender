@@ -74,6 +74,15 @@ ggsave_nature <- function(filename, p, w=18,h=24, add_reqs=TRUE)
 
     # save
     ggsave(filename=filename, plot=p, width=w, height=h, units='cm', dpi=310)
+
+    # return cmd command to open in viewer
+    prog <- data.table::fcase(
+        filename %like% '.png$', 'gthumb', 
+        filename %like% '.pdf$', 'zathura', 
+        default = "xdg-open"
+    )
+    cmd <- sprintf("! %s %s &", prog , filename)
+    return(cmd)
 }
 
 
