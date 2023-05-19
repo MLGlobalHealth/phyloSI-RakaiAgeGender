@@ -87,7 +87,7 @@ To perform the data preprocessing steps, navigate to the root directory of the r
 
 #### Stage 1 (pre-processing of surveillance data)
 
-> **Note** Runtime arguments for Stan models may be configured by editing the contents of `./surveillance_pipeline_src/stan_models/config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
+> **Note** Runtime arguments for Stan models may be configured by editing the contents of `./stan_models/binomial_gp_config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
 
 ```shell
 Rscript "./surveillance_pipeline_src/get_estimates_prevalence.R"
