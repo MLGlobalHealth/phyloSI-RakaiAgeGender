@@ -58,7 +58,7 @@ if (zenodo.exists) {
 }
 
 gitdir.outputs <- file.path(gitdir, "outputs")
-gitdir.stan <- file.path(gitdir, "stan")
+gitdir.stan <- file.path(gitdir, "stan_models")
 gitdir.functions <- file.path(gitdir, "R")
 
 ######################
@@ -247,18 +247,18 @@ file.incidence.30com.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_i
 ##########################################
 
 file.prevalence.prop <- file.path(dir.zenodo.survfin,"RCCS_prevalence_estimates_221116.csv")
-file.prevalence <- file.path(dir.zenodo.survproc,"RCCS_prevalence_posterior_sample_221116.rds")
+file.prevalence <- file.path(dir.zenodo.survfin,"RCCS_prevalence_posterior_sample_221116.rds")
 
-file.unsuppressedviralload <- file.path(dir.zenodo.survproc,"RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds")
+file.unsuppressedviralload <- file.path(dir.zenodo.survfin,"RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds")
 file.unsuppressedviralload.newly <- file.path(dir.zenodo.survfin,"RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds")
 
-file.unsuppressedviralload.vl200 <- file.path(dir.zenodo.survproc,"RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds")
+file.unsuppressedviralload.vl200 <- file.path(dir.zenodo.survfin,"RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds")
 file.unsuppressedviralload.newly.vl200 <- file.path(dir.zenodo.survfin,"RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_221121.rds")
 
-file.selfreportedart <- file.path(dir.zenodo.survproc,"RCCS_art_posterior_samples_221208.rds")
+file.selfreportedart <- file.path(dir.zenodo.survfin,"RCCS_art_posterior_samples_221208.rds")
 file.selfreportedart.newly <- file.path(dir.zenodo.survfin,"RCCS_art_posterior_samples_newlyregistered_221208.rds")
 
-file.selfreportedart.vl200 <- file.path(dir.zenodo.survproc,"RCCS_art_posterior_samples_vl200_221208.rds")
+file.selfreportedart.vl200 <- file.path(dir.zenodo.survfin,"RCCS_art_posterior_samples_vl200_221208.rds")
 file.selfreportedart.newly.vl200 <- file.path(dir.zenodo.survfin,"RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds")
 
 file.treatment.cascade.prop.participants <- file.path(dir.zenodo.survfin,"RCCS_treatment_cascade_participants_estimates_221208.csv")
@@ -286,3 +286,11 @@ file.prevalence.agegroup <- file.path(dir.zenodo.survproc, "RCCS_prevalence_age_
 ##########################################
 
 file.lambda.est <- file.path(dir.zenodo.transflow, 'gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.source_age_infection.recipientstandardisedby_direction_round.rds')
+
+##########################################
+# PATH TO STAN MODELS #
+##########################################
+
+path_stan_binomialgp <- file.path(gitdir.stan, "binomial_gp.stan")
+path_binomialgp_model_config <- file.path(gitdir.stan, "binomial_gp_config.yml")
+
