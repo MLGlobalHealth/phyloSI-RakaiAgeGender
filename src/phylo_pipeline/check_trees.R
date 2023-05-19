@@ -140,7 +140,7 @@ args$out.dir.work <- .f('_phsc_work')
 args$out.dir.output <- .f('_phsc_output')
 
 # Source functions
-source(file.path(args$prj.dir, "utility.R"))
+source(file.path(args$prj.dir, 'R', 'functions_phylo_pipeline', "utility.R"))
 
 #
 #	produce trees
