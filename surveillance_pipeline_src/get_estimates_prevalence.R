@@ -22,10 +22,10 @@ outdir <- file.path(
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
 # Path to stan model
-path_stan <- file.path(gitdir.misc, "stan_models", "binomial_gp.stan")
+path_stan <- file.path(gitdir.stan, "binomial_gp.stan")
 
 # Read Stan configurations
-model_config <- read_yaml(file.path(gitdir.misc, "stan_models", "config.yml"))
+model_config <- read_yaml(file.path(gitdir.stan, "binomial_gp_config.yml"))
 
 # Load count of participants by hiv status
 rprev <- fread(path.count.hivpositive)

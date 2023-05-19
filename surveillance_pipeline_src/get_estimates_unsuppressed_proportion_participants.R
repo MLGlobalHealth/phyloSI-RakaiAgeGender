@@ -16,7 +16,7 @@ outdir <- file.path(
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
 # stan model
-path_stan <- file.path(gitdir.misc, "stan_models", "binomial_gp.stan")
+path_stan <- file.path(gitdir.stan, "binomial_gp.stan")
 
 # Load count of participants with unsuppressed viral loads
 vla <- fread(path.count.unsupp)
