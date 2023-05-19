@@ -27,7 +27,7 @@ c(  file.path.flow.614,
     file.path.hiv_19) |> file.exists() |> all() |> stopifnot()
 
 # function
-source(file.path('R', "functions_incidence_rate", "incidence_rate_estimation_functions.R"))
+source(file.path(gitdir.functions, "functions_incidence_rate", "incidence_rate_estimation_functions.R"))
 
 # utils
 rounds_group_0 <- c("R006", "R007", "R008")

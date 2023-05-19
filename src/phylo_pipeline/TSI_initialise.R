@@ -285,7 +285,7 @@ saveRDS(dclus, filename)
 
 
 # Source functions
-source(file.path(args$pkg.dir, 'R', 'functions_phylo_pipeline', "utility.R"))
+source(file.path(gitdir.functions, 'functions_phylo_pipeline', "utility.R"))
 qsub.next.step(file=args$controller,
                next_step='ali', 
                res=1, 

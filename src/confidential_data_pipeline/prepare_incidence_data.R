@@ -32,7 +32,7 @@ c(  file.path.flow.614,
 outdir <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "incidence_rate_inland")
 
 # function
-source(file.path('R', "functions_incidence_rate", "incidence_rate_estimation_functions.R"))
+source(file.path(gitdir.functions, "functions_incidence_rate", "incidence_rate_estimation_functions.R"))
 
 # utils
 rounds_group_1 <- c("R006","R007", "R008", "R009", "R010",

@@ -191,7 +191,7 @@ if(0){
 }
 
 # Source functions
-source(file.path(args$pkg.dir, 'R', 'functions_phylo_pipeline', "utility.R"))
+source(file.path(gitdir.functions, 'functions_phylo_pipeline', "utility.R"))
 
 # 
 # Chose PBS specifications according to PBS index

@@ -25,8 +25,8 @@ file.exists(c(
 # LOAD FUNCTIONS
 #
 
-source(file.path('R', 'utils.R'))
-source(file.path('R', "functions_confidential_data_pipeline", "preprocess_meta_data-functions.R"))
+source(file.path(gitdir.functions, 'utils.R'))
+source(file.path(gitdir.functions, "functions_confidential_data_pipeline", "preprocess_meta_data-functions.R"))
 
 
 #
