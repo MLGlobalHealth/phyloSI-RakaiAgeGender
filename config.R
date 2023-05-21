@@ -69,22 +69,17 @@ gitdir.functions <- file.path(gitdir, "R")
 indir.deepsequencedata <- ""
 indir.deepsequence_analyses <- ""
 
-if (usr == "andrea") {
-    indir.deepsequencedata <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
-    indir.deepsequence_analyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
-    indir.deepanalyses.xiaoyue <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live"
-}
-
-if (usr %in% c("melodiemonod")) {
-    indir.deepsequencedata <- "~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/"
-    indir.deepsequence_analyses <- "~/Box\ Sync/2021/ratmann_deepseq_analyses/live/"
-}
-
-if (usr == "andrea" & dir.exists(indir.deepsequencedata)) {
+if (usr == "andrea" ) {
+  # main indir 
+  indir.deepsequencedata <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
+  indir.deepsequence_analyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
+  indir.deepanalyses.xiaoyue <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live"
+  
   indir.deepsequencedata.r151r18 <- file.path(indir.deepsequencedata, "RCCS_R15_R18")
   
   # commuynity keys
   file.community.keys <- file.path(indir.deepsequencedata.r151r18, "community_names.csv")
+  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
   
   # meta data
   path.meta.confidential <- file.path(indir.deepsequencedata.r151r18, "Rakai_Pangea2_RCCS_Metadata_20221128.RData")
@@ -102,13 +97,48 @@ if (usr == "andrea" & dir.exists(indir.deepsequencedata)) {
   path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '200316_pangea_db_sharing_extract_rakai.csv')
   path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
   
+  # quest
+  file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
+  
 }
 
-if (usr == "melodiemonod" & dir.exists(indir.deepsequencedata)){  
+
+if(usr == 'alex'){
+  
+  indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
+  indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
+  indir.repository <- '~/Documents/GitHub/phyloflows'
+  
+  file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
+  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
+  
+  file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_221129.csv')
+  file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'Quest_R6_R18_221208.csv')
+  
+  # Latest data from Rakai's CCS (Kate's data from 2022-03-08)
+  file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
+  
+  # characteristics sequenced participants 
+  file.characteristics_sequenced_ind_R14_18 <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_sequenced_ind_R14_18_221206.rds')
+  file.characteristics_ever_sequenced <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_ever_sequenced.rds')
+  file.characteristics_sequenced_R14_18 <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_sequenced_R14_18.rds')
+  
+}
+
+if (usr == "melodiemonod"){  
+  
+  # main indir
+  indir.deepsequencedata <- "~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/"
+  indir.deepsequence_analyses <- "~/Box\ Sync/2021/ratmann_deepseq_analyses/live/"
+  
   indir.deepsequencedata.r151r18 <- file.path(indir.deepsequencedata, "RCCS_R15_R18")
 
   # community keys
   file.community.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', "community_names.csv")
+  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
+  
+  # geography
+  file.Rakai_community_geography <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_community_geography_R15.rda')
   
   # anonymisation keys
   file.anonymisation.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', 'important_anonymisation_keys_210119.csv')
@@ -160,6 +190,11 @@ if (usr == "melodiemonod" & dir.exists(indir.deepsequencedata)){
   infile.ind.mrc <- file.path(indir.deepsequencedata,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
   infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct.rda')
   
+  # characteristics sequenced participants 
+  file.characteristics_sequenced_ind_R14_18 <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_sequenced_ind_R14_18_221206.rds')
+  file.characteristics_ever_sequenced <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_ever_sequenced.rds')
+  file.characteristics_sequenced_R14_18 <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_sequenced_R14_18.rds')
+  
   # metadata: Latest data from Rakai's CCS (Kate's data from 2022-03-08)
   file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
   file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
@@ -169,9 +204,6 @@ if (usr == "melodiemonod" & dir.exists(indir.deepsequencedata)){
   
   # seroconvert individuals restrained to 30 continuously surveyed communities in round < 14 but not afterwards
   file.anonymised.id <- file.path(indir.deepsequencedata,"RCCS_data_estimate_incidence_inland_R6_R18","220903","anonymized_id_for_incidence_estimate_221129.csv")
-  
-  # individuals not restrained to 30 continuously surveyed communities in round < 14
-  # individuals restrained to 30 continuously surveyed communities in round < 14
   
   # seroconvert individuals not restrained to 30 continuously surveyed communities in round < 14
   file.anonymised.id.all_comm <- file.path(indir.deepsequencedata, "RCCS_R9_R14","RCCS_data_estimate_incidence_inland_R6_R18_230218","anonimized_id_for_incidence_estimate.csv")
