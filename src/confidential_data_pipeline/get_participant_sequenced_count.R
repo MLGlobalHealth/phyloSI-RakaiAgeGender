@@ -15,9 +15,6 @@ c(  infile.sequence,
     file.path.neuro.metadata, 
     file.community.keys) |> file.exists() |> all() |> stopifnot()
 
-# path to save intermediary analyses
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
-
 # load files
 community.keys <- fread(file.community.keys)
 community.keys[, comm := fifelse(COMM_NUM_A %like% 'f', 'fishing', 'inland')]
@@ -189,7 +186,7 @@ dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
 dcount <- dcount[, .(COMM, ROUND, PANGEA_ID, PT_ID, STUDY_ID, SEX, AGEYRS, AGEGP, DIFF_DATE)]
 
 # save sequenced id
-file.name <- file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds')
+file.name <- file.characteristics_sequenced_ind_R14_18
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
@@ -231,7 +228,7 @@ sequ[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('
 sequ <- sequ[order(ROUND, COMM,SEX,AGEGP),]
 
 # save
-file.name <- file.path(outdir, 'characteristics_ever_sequenced.rds')
+file.name <- file.characteristics_ever_sequenced
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
@@ -254,7 +251,7 @@ sequ[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('
 sequ <- sequ[order(COMM,SEX,AGEGP),]
 
 # save
-file.name <- file.path(outdir, 'characteristics_sequenced_R14_18.rds')
+file.name <- file.characteristics_sequenced_R14_18
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
