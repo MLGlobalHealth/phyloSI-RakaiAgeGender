@@ -8,6 +8,9 @@ require(here)
 usr <- Sys.info()[["user"]]
 indir <- here::here()
 
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
+
 if (usr == "andrea") {
     indir.deepsequencedata <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
     indir.deepanalyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
@@ -15,7 +18,6 @@ if (usr == "andrea") {
 }
 
 # outdir is actually in the git repository
-outdir.data <- file.path(indir, "data")
 
 file.path.tsiestimates <- file.path(
     indir.deepanalyses,
@@ -32,6 +34,6 @@ cols <- c( "AID", "RENAME_ID",
 dtsi <- fread(file.path.tsiestimates, select = cols)
 
 
-cat("\n---- Save in gitdir.data ----\n")
-filename <- file.path(outdir.data, "TSI_estimates.csv")
+cat("\n---- Save in gitdir.outputs ----\n")
+filename <- file.path(gitdir.outputs, "TSI_estimates.csv")
 fwrite(dtsi, file=filename)

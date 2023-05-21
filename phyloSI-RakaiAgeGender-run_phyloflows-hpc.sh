@@ -2,8 +2,8 @@
 
 STAN_MODEL="gp_220108"
 JOBNAME="cutoff_2014"
-INDIR="/rds/general/user/mm3218/home/git/phyloflows"
-OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloflows"
+INDIR="/rds/general/user/mm3218/home/git/phyloSI-RakaiAgeGender"
+OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender"
 
 mkdir $OUTDIR
 

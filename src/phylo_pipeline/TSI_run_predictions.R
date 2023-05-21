@@ -339,7 +339,7 @@ if(0){
 # main
 ################
 
-source(file.path(args$pkg.dir, "utility.R"))
+source(file.path(gitdir.functions, 'functions_phylo_pipeline',  "utility.R"))
 
 args$date <- gsub('-','_',args$date)
 .f <- function(x)

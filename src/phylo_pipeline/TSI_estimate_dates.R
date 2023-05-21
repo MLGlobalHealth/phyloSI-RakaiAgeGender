@@ -47,9 +47,9 @@ if(user != 'andrea')
 gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
-# if output directory is null, set it to gitdir.data
+# if output directory is null, set it to gitdir.outputs
 if( is.null(args$outdir) )
-    args$outdir <- gitdir.data
+    args$outdir <- gitdir.outputs
 
 path.collection.dates <- fifelse(args$confidential, 
     yes=path.collection.dates.confidential,
@@ -126,7 +126,7 @@ cols <- c( "AID", "RENAME_ID",
 dpreds  <- subset(dpreds, select=cols) 
 
 
-cat("\n---- Save in outdir (default:gitdir.data) ----\n")
+cat("\n---- Save in outdir (default:gitdir.outputs) ----\n")
 suffix <- ''
 if(is.randomized)
     suffix <- '_randomized'

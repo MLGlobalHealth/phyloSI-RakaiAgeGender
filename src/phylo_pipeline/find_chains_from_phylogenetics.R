@@ -48,7 +48,7 @@ args <- optparse::parse_args(optparse::OptionParser(option_list = option_list))
 #
 
 gitdir <- here()
-gitdir.data <- file.path(gitdir, 'data')
+
 source(file.path(gitdir, 'config.R'))
 
 # if output directory is null, set it to proc
