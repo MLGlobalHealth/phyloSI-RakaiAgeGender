@@ -1,56 +1,35 @@
-{
-    library(data.table)
-    library(dplyr)
-    library(ggplot2)
-    library(scales)
-    library(lubridate)
-    library(rstan)
-    library(haven)
-} |> suppressPackageStartupMessages()
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(lubridate)
+library(rstan)
+library(haven)
 
+# directory of the repository
+gitdir <- here()
 
-usr <- Sys.info()[['user']]
+# load file paths
+source(file.path(gitdir, 'config.R'))
 
-if(usr == 'alex'){
-
-    indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
-    indir.repository <- '~/Documents/GitHub/phyloflows'
-
-}else if(usr == 'melodie'){
-
-  indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-  indir.repository <- '~/git/phyloflows'
-
-}else if(usr == 'andrea'){
-
-  indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-  indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
-  indir.repository <- '~/git/phyloflows'
-
+# outdir for figures
+if(usr == 'alex' || usr == 'melodiemonod'){
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 }
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-gitdir <- here::here()
+file.exists(c(
+  file.community.keys ,
+  file.path.hiv,
+  file.path.quest,
+  file.characteristics_sequenced_ind_R14_18,
+  file.characteristics_sequenced_R14_18,
+  file.path.metadata))  |> all() |> stopifnot()
 
-source( file.path(gitdir,'functions/plotting_functions.R') )
-source( file.path(gitdir,'functions/utils.R') )
+# load functions 
+source( file.path(gitdir.functions,'naturemed_reqs.R') )
+source( file.path(gitdir.functions,'utils.R') )
 naturemed_reqs()
-
-
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
-
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
-file.seq.count <- file.path(outdir, 'characteristics_sequenced_R14_18.rds')
-file.seq.count.ind <- file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds')
-
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'Quest_R6_R18_221208.csv')
-
-
-# Latest data from Rakai's CCS (Kate's data from 2022-03-08)
-file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
 
 # load files
 community.keys <- fread(file.community.keys)
@@ -273,13 +252,14 @@ art[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('T
 # arti is a subset of rincp
 
 # keep age within 15-49
-sequ <- as.data.table(readRDS(file.seq.count.ind))
+sequ <- as.data.table(readRDS(file.characteristics_sequenced_ind_R14_18))
 sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
 sequ[,  EVER.SEQ:=T]
 sequ.ever <- subset(sequ,select=c('STUDY_ID', 'EVER.SEQ')) |> 
     unique()
 
 # get unsuppressed at time x / not on ART at time x
+## TODO I GET AN ERROR HERE
 stopifnot( arti[, all(HIV == "P")] )
 tmp <- arti[ COMM=='inland' & AGEYRS %between% c(15, 50)] |>
     merge(x=_, y=sequ.ever, by='STUDY_ID', all.x=TRUE)
@@ -319,8 +299,16 @@ p_everseq_givenart <- ggplot(tmp, aes(x=ROUND_LAB, color=SEX_LAB, pch=AGEGP, lin
     theme(legend.position = "bottom", strip.background = element_blank()) + 
     reqs
 
-filename <- file.path(outdir, "prop_arteverdeepseq_byroundagesex.pdf") 
-ggsave_nature(filename=filename, p=p_everseq_givenart, w=15, h=12)
+file.name <- file.path(outdir, "prop_arteverdeepseq_byroundagesex.pdf") 
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  ggsave_nature(filename=file.name, p=p_everseq_givenart, w=15, h=12)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+
+
 
 # write table
 
@@ -358,17 +346,36 @@ tab2[, (cols) := lapply(.SD, function(vec) {
 rownames(tab2) <- NULL
 
 
-filename <- file.path(outdir, 'table_proportionART_eventuallysequenced.tex')
-write.to.tex(tab2, file=filename)
+file.name <- file.path(outdir, 'table_proportionART_eventuallysequenced.tex')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  write.to.tex(tab2, file=file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+
 
 print(tab_latex, 
     include.rownames=FALSE,
     comment=FALSE)
 
 # if we want to split them
-filename1 <- file.path(outdir, 'table_proportionART_eventuallysequenced_part1.tex')
-filename2 <- file.path(outdir, 'table_proportionART_eventuallysequenced_part2.tex')
+file.name <- file.path(outdir, 'table_proportionART_eventuallysequenced_part1.tex')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  write.to.tex(tab2[1:(.N/2)],file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
 
-write.to.tex(tab2[1:(.N/2)],filename1)
-write.to.tex(tab2[((.N/2)+1):.N],filename2)
+file.name <- file.path(outdir, 'table_proportionART_eventuallysequenced_part2.tex')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  write.to.tex(tab2[((.N/2)+1):.N],filename2)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
 
