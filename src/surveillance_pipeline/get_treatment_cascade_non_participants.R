@@ -97,11 +97,11 @@ df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE < PROP_SUPPRESSED_POSTERIOR_SAMPLE,
    PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE]
 stopifnot(nrow(df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE > 1]) == 0)
 
-####################################
+################################################################
 
 # FIND DIAGNOSED PROPORTION AMONG NEWLY REGISTERED HIV-POSITIVE
 
-####################################
+################################################################
 
 # assume that proportion diagnosed in non -participants = proportion on art
 df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
@@ -115,13 +115,15 @@ df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := PROP_ART_COVERAGE_POSTERIOR_SAMPLE]
 ##########################################################################
 
 if (TRUE) {
+  
   #
   #  USE SENSITIVITY AND SPECIFICITY IN ROUND 15
-  #
+  
   # load file
   sensitivity_specificity_art <- fread(file.spec.sens.art)
 
   # use specificity and sensitivity from round 15
+  #(note that we plug value of round 16 for missing value in round 15 in R/functionx_cnfidential_data_pipeline/sensitivity_specificity_art.R)
   spa <- sensitivity_specificity_art[ROUND == "R015"]
 
   # select variable of interest
@@ -138,9 +140,10 @@ if (TRUE) {
   set(df, NULL, "SENS_M", NULL)
 
 } else {
+  
   #
   #  USE PROP SUPPRESSION GIVEN ART UPTAKE IN ROUND 16
-  #
+  
   # for round <15 find % suppressed by using
   # the same suppression rate as round 16
   group_keys <- c("AGEYRS", "SEX", "COMM", "iterations")

@@ -96,11 +96,11 @@ df[SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1,
    SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE := 1]
 
 
-####################################
+##########################################################
 
 # FIND PROPORTION OF ART USE GIVEN INFECTED FOR ROUND 15
 
-####################################
+##########################################################
 
 # for round 15 find % on art by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE[ROUND == "R016"],
@@ -119,8 +119,7 @@ df[ROUND == "R015", PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE := min(1,
     by = c("AGEYRS", "SEX", "COMM", "ROUND", "iterations")]
 set(df, NULL, "SUPPRESSION_RATE_NONPARTICIPANTS_POSTERIOR_SAMPLE_R016", NULL)
 
-# add constraint that art coverage must be smaller 
-# than prop suppression (can occur if prop suppression > art coverage)
+# add constraint that art coverage must be smaller than prop suppression (can occur if prop suppression > art coverage)
 df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE < PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE,
    PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE := PROP_SUPPRESSED_NONPARTICIPANTS_POSTERIOR_SAMPLE]
 df[PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE < PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_SAMPLE,
@@ -135,12 +134,14 @@ df[PROP_ART_COVERAGE_PARTICIPANTS_POSTERIOR_SAMPLE < PROP_SUPPRESSED_PARTICIPANT
 ##########################################################################
 
 if (TRUE) {
+  
   #
   #  USE SENSITIVITY AND SPECIFICITY IN ROUND 15
-  #
+  
   # load file
   sensitivity_specificity_art <- as.data.table(read.csv(file.spec.sens.art))
-  # use specificity and sensitivity from round 15
+  # use specificity and sensitivity from round 15 
+  #(note that we plug value of round 16 for missing value in round 15 in R/functionx_cnfidential_data_pipeline/sensitivity_specificity_art.R)
   spa <- sensitivity_specificity_art[ROUND == "R015"]
 
   # select variable of interest
@@ -163,11 +164,11 @@ if (TRUE) {
   set(df, NULL, "SENS_M", NULL)
 
 } else {
+  
   #
   #  USE PROP SUPPRESSION GIVEN ART UPTAKE IN ROUND 16
-  #
-  # for round <15 find % suppressed by
-  # using the same suppression rate as round 16
+  
+  # for round <15 find % suppressed by using the same suppression rate as round 16
   subset_rounds <- c("R010", "R011", "R012", "R013", "R014", "R015S")
   groupby_keys <- c("AGEYRS", "SEX", "COMM", "iterations")
   df[, SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_PARTICIPANTS_POSTERIOR_SAMPLE[ROUND == "R016"],
@@ -210,11 +211,11 @@ stopifnot(
 )
 
 
-########################################
+###################################################
 
 # ART COVERERAGE and prop suppressed IN POPULATION
 
-########################################
+###################################################
 
 # art coverage in population
 stopifnot(nrow(df[PROP_ART_COVERAGE_NONPARTICIPANTS_POSTERIOR_SAMPLE > 1]) == 0)
@@ -235,11 +236,11 @@ df[, PROP_SUPPRESSED_POSTERIOR_SAMPLE := PROP_SUPPRESSED_PARTICIPANTS_POSTERIOR_
                                          (1 - PARTICIPATION)]
 
 
-####################################
+################################
 
 # FIND PROPORTION OF DIAGNOSED
 
-####################################
+################################
 
 # all participants are diagnosed
 df[, PROP_DIAGNOSED_PARTICIPANT_POSTERIOR_SAMPLE := 1]

@@ -70,12 +70,11 @@ df[SUPPRESSION_RATE_POSTERIOR_SAMPLE > 1, SUPPRESSION_RATE_POSTERIOR_SAMPLE := 1
 df[, PROP_DIAGNOSED_POSTERIOR_SAMPLE := 1]
 
 
-###########
+###################################################################################
 
-# FIND ART COVERERAGE GIVEN DIAGNOSED AMONG
-# HIV POSITIVE PARTICIPANTS FOR ROUND 15
+# FIND ART COVERERAGE GIVEN DIAGNOSED AMONG HIV POSITIVE PARTICIPANTS FOR ROUND 15
 
-###########
+###################################################################################
 
 # for round 15 find % on art by using the same suppression rate as round 16
 df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == "R016"], 
@@ -99,21 +98,22 @@ df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE < PROP_SUPPRESSED_POSTERIOR_SAMPLE,
    PROP_ART_COVERAGE_POSTERIOR_SAMPLE := PROP_SUPPRESSED_POSTERIOR_SAMPLE]
 stopifnot(nrow(df[PROP_ART_COVERAGE_POSTERIOR_SAMPLE > 1]) == 0)
 
-##########################################################################
+##################################################################################################
 
 # FIND PROP SUPPRESSED AMONG HIV POSITIVE PARTICIPANTS FOR ROUNDS WITHOUT VIRAL LOAD MEASUREMENTS
 
-##########################################################################
+##################################################################################################
 
 if (1) {
 
   #
   #  USE SENSITIVITY AND SPECIFICITY IN ROUND 15
-  #
+  
   # load file
   sensitivity_specificity_art <- as.data.table(read.csv(file.spec.sens.art))
 
   # use specificity and sensitivity from round 15
+  #(note that we plug value of round 16 for missing value in round 15 in R/functionx_cnfidential_data_pipeline/sensitivity_specificity_art.R)
   spa <- sensitivity_specificity_art[ROUND == "R015"]
 
   # select variable of interest
@@ -128,9 +128,10 @@ if (1) {
   set(df, NULL, "SENS_M", NULL)
 
 } else {
+  
   #
   #  USE PROP SUPPRESSION GIVEN ART UPTAKE IN ROUND 16
-  #
+  
   # for round <15 find % suppressed by using the same suppression rate as round 16
   df[, SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016 := SUPPRESSION_RATE_POSTERIOR_SAMPLE[ROUND == "R016"],
       by = c("AGEYRS", "SEX", "COMM", "iterations")]
@@ -144,11 +145,11 @@ if (1) {
   set(df, NULL, "SUPPRESSION_RATE_POSTERIOR_SAMPLE_R016", NULL)
 }
 
-##########################################################################
+###############################################
 
 # FIND PROP UNSUPPRESSED AND SUPPRESSION RATE
 
-##########################################################################
+###############################################
 
 
 # find proportion suppressed among HIV positive participants
