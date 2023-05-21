@@ -345,18 +345,18 @@ stopifnot(
 
 ####################################
 
-file_name <- file.treatment.cascade
-if (! file.exists(file_name) || config$overwrite.existing.files) {
-  cat("Saving file:", file_name, "\n")
-  saveRDS(df, file = file_name)
+file.name <- file.treatment.cascade
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  saveRDS(df, file = file.name)
 } else {
-  cat("File:", file_name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
-file_name <- file.treatment.cascade.population
-if (! file.exists(file_name) || config$overwrite.existing.files) {
-  cat("Saving file:", file_name, "\n")
-  write.csv(ns, file = file_name, row.names = FALSE)
+file.name <- file.treatment.cascade.population
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  write.csv(ns, file = file.name, row.names = FALSE)
 } else {
-  cat("File:", file_name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }

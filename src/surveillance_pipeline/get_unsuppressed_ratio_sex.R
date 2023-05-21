@@ -174,10 +174,10 @@ ggplot(sing, aes(x = ROUND)) +
 #########################################
 
 tmp <- merge(sing_age, sing, by = c("ROUND", "COMM"))
-file_name <- file.unsuppressed_rate_ratio
-if (! file.exists(file_name) || config$overwrite.existing.files) {
-    cat("Saving file:", file_name, "\n")
-    write.csv(tmp, file = file_name, row.names = FALSE)
+file.name <- file.unsuppressed_rate_ratio
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    write.csv(tmp, file = file.name, row.names = FALSE)
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }

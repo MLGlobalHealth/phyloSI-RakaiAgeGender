@@ -135,22 +135,22 @@ ggplot(sinf_age, aes(x = AGE_GROUP, group = SEX)) +
 
 #########################################
 
-file_name <- file.unsuppressed.agegroup
-if (! file.exists(file_name) || config$overwrite.existing.files) {
-    cat("Saving file:", file_name, "\n")
-    fwrite(sing_age, file = file_name, row.names = FALSE)
+file.name <- file.unsuppressed.agegroup
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    fwrite(sing_age, file = file.name, row.names = FALSE)
 
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
-file_name <- file.prevalence.agegroup
-if (!file.exists(file_name) || config$overwrite.existing.files) {
-    cat("Saving file:", file_name, "\n")
-    fwrite(sinf_age, file = file_name, row.names = FALSE)
+file.name <- file.prevalence.agegroup
+if (!file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    fwrite(sinf_age, file = file.name, row.names = FALSE)
 
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
 
@@ -240,12 +240,12 @@ tmp[, `:=`(
     PROP_UNSUPPRESSED_AGE_GROUP_M = gsub(" ", "", PROP_UNSUPPRESSED_AGE_GROUP_M)
 )]
 
-file_name <- file.path(outdir, "RCCS_propunsuppressed_age_group_5years_R18_221215.rds")
-if (! file.exists(file_name) || config$overwrite.existing.files) {
-    cat("Saving file:", file_name, "\n")
-    saveRDS(tmp, file = file_name)
+file.name <- file.path(outdir, "RCCS_propunsuppressed_age_group_5years_R18_221215.rds")
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    saveRDS(tmp, file = file.name)
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
 tmp <- sinf_age[ROUND == "18" & COMM == "inland"]
@@ -260,15 +260,15 @@ tmp[, `:=`(
     PREVALENCE_AGE_GROUP_M = gsub(" ", "", PREVALENCE_AGE_GROUP_M)
 )]
 
-file_name <- file.path(
+file.name <- file.path(
     outdir,
     "RCCS_prevalence_age_group_5years_R18_221215.rds"
 )
-if (!file.exists(file_name) || config$overwrite.existing.files) {
-    cat("Saving file:", file_name, "\n")
-    saveRDS(tmp, file = file_name)
+if (!file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    saveRDS(tmp, file = file.name)
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
 
@@ -285,15 +285,15 @@ tmp[, `:=`(
     DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M = gsub(" ", "", DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M)
 )]
 
-file_name <- file.path(
+file.name <- file.path(
     outdir,
     "RCCS_diffpropunsuppressed_age_group_5years_R18_221215.rds"
 )
-if (! file.exists(file_name) || config$overwrite.existing.files) {
-    cat("Saving file:", file_name, "\n")
-    saveRDS(tmp, file = file_name)
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    saveRDS(tmp, file = file.name)
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
 
@@ -359,12 +359,12 @@ tmp[, `:=`(
 tmp[, PROP_UNSUPPRESSED_AGE_GROUP_CL := gsub(" ", "", PROP_UNSUPPRESSED_AGE_GROUP_CL)]
 tmp[, PROP_UNSUPPRESSED_AGE_GROUP_CU := gsub(" ", "", PROP_UNSUPPRESSED_AGE_GROUP_CU)]
 tmp[, PROP_UNSUPPRESSED_AGE_GROUP_M := gsub(" ", "", PROP_UNSUPPRESSED_AGE_GROUP_M)]
-file_name <- file.path(outdir, "RCCS_propunsuppressed_total_R18_221215.rds")
-if (!file.exists(file_name) | config$overwrite.existing.files) {
-    cat("saving file:", file_name, "\n")
-    saveRDS(tmp, file = file_name)
+file.name <- file.path(outdir, "RCCS_propunsuppressed_total_R18_221215.rds")
+if (!file.exists(file.name) | config$overwrite.existing.files) {
+    cat("saving file:", file.name, "\n")
+    saveRDS(tmp, file = file.name)
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
 tmp <- sinf_t[ROUND == "18" & COMM == "inland"]
@@ -376,12 +376,12 @@ tmp[, `:=`(
 tmp[, PREVALENCE_AGE_GROUP_CL := gsub(" ", "", PREVALENCE_AGE_GROUP_CL)]
 tmp[, PREVALENCE_AGE_GROUP_CU := gsub(" ", "", PREVALENCE_AGE_GROUP_CU)]
 tmp[, PREVALENCE_AGE_GROUP_M := gsub(" ", "", PREVALENCE_AGE_GROUP_M)]
-file_name <- file.path(outdir, "RCCS_prevalence_total_R18_221215.rds")
-if (!file.exists(file_name) | config$overwrite.existing.files) {
-    cat("Saving file:", file_name, "\n")
-    saveRDS(tmp, file = file_name)
+file.name <- file.path(outdir, "RCCS_prevalence_total_R18_221215.rds")
+if (!file.exists(file.name) | config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    saveRDS(tmp, file = file.name)
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
 tmp <- sind_t[ROUND == "18" & COMM == "inland"]
@@ -394,10 +394,10 @@ tmp[, `:=`(
 tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL := gsub(" ", "", DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CL)]
 tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CU := gsub(" ", "", DIFF_PROP_UNSUPPRESSED_AGE_GROUP_CU)]
 tmp[, DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M := gsub(" ", "", DIFF_PROP_UNSUPPRESSED_AGE_GROUP_M)]
-file_name <- file.path(outdir, "RCCS_diffpropunsuppressed_total_R18_221215.rds")
-if (!file.exists(file_name) | config$overwrite.existing.files) {
-    cat("Saving file:", file_name, "\n")
-    saveRDS(tmp, file = file_name)
+file.name <- file.path(outdir, "RCCS_diffpropunsuppressed_total_R18_221215.rds")
+if (!file.exists(file.name) | config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    saveRDS(tmp, file = file.name)
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }

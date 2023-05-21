@@ -169,11 +169,11 @@ for (round in rounds) {
     )
   )
 
-  file_name <- paste0("hivprevalence_gp_stanfit_round",
+  file.name <- paste0("hivprevalence_gp_stanfit_round",
                      gsub("R0", "", round),
                      "_221116.rds")
-  file_name <- file.path(outdir, file_name)
-  saveRDS(fit, file = file_name)
+  file.name <- file.path(outdir, file.name)
+  saveRDS(fit, file = file.name)
 }
 
 # load results
@@ -448,29 +448,29 @@ stats[["max_rhat"]] <- convergence[, round(max(rhat), 4)]
 #########
 
 # estimates
-file_name <- file.prevalence.prop
-if (!file.exists(file_name) || config$overwrite.existing.files) {
-  cat("Saving file:", file_name, "\n")
-  write.csv(nsinf, file = file_name, row.names = FALSE)
+file.name <- file.prevalence.prop
+if (!file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  write.csv(nsinf, file = file.name, row.names = FALSE)
 } else {
-    cat("File:", file_name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
 # samples 
-file_name <- file.prevalence
-if (!file.exists(file_name) || config$overwrite.existing.files) {
-  cat("Saving file:", file_name, "\n")
-  saveRDS(nsinf_samples, file = file_name)
+file.name <- file.prevalence
+if (!file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  saveRDS(nsinf_samples, file = file.name)
 } else {
-  cat("File:", file_name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
 # stats
-file_name <- file.path(outdir,"RCCS_prevalence_model_fit_convergence_221116.RDS")
+file.name <- file.path(outdir,"RCCS_prevalence_model_fit_convergence_221116.RDS")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
-  saveRDS(stats, file = file_name)
+  saveRDS(stats, file = file.name)
 }else{
   cat("\n Output file", file.name, "already exists\n")
 }

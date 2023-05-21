@@ -355,20 +355,20 @@ stats[["max_rhat"]] <- convergence[, round(max(rhat), 4)]
 #########
 
 # samples
-file_name <- file.unsuppressedviralload.newly
-if (!file.exists(file_name) || config$overwrite.existing.files) {
-  cat("Saving file:", file_name, "\n")
-  saveRDS(nsinf_samples, file = file_name)
+file.name <- file.unsuppressedviralload.newly
+if (!file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  saveRDS(nsinf_samples, file = file.name)
 } else {
-  cat("File:", file_name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
 # stats
-file_name <- file.path(outdir, "RCCS_nonsuppressed_proportion_model_fit_newlyregistered_221101.rds")
+file.name <- file.path(outdir, "RCCS_nonsuppressed_proportion_model_fit_newlyregistered_221101.rds")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
-  saveRDS(stats, file = file_name)
+  saveRDS(stats, file = file.name)
 }else{
   cat("\n Output file", file.name, "already exists\n")
 }
