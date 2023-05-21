@@ -6,12 +6,23 @@ library(sf)
 library(data.table)
 library(ggspatial)
 
-indir.deepsequence.data <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live'
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'map')
+# directory of the repository
+gitdir <- here()
 
-path.tests <- file.path(indir.deepsequence.data, 'RCCS_R15_R20', "all_participants_hivstatus_vl_220729.csv")
-infile <- file.path(indir.deepsequence.data, 'RCCS_R15_R18', 'Rakai_community_geography_R15.rda')
+# load file paths
+source(file.path(gitdir, 'config.R'))
+
+# outdir for figures
+if(usr == 'melodiemonod'){
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'map')
+}else{
+  outdir #<- #TODO
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
+
+file.exists(c(
+  path.tests ,
+  file.Rakai_community_geography))  |> all() |> stopifnot()
 
 # process dall
 dall <- fread(path.tests)
@@ -63,7 +74,7 @@ palettes <- list(
 # Fix factors stored as integers (COMM_NUM)
 # TODO: merge plotDT with rest
 tmp <- new.env()
-load(infile, envir=tmp)
+load(file.Rakai_community_geography, envir=tmp)
 ds <- as.data.table(tmp$comgps)
 cols <- c('latitude', 'longitude')
 ds[, (cols):=lapply(.SD, unlist), .SDcols=cols]
@@ -165,7 +176,24 @@ p2 <- ggplot() +
                          pad_x = unit(0.3, "in"), pad_y = unit(0.5, "in"),
                          style = north_arrow_fancy_orienteering)
 
+# save
+file.name <- file.path(outdir, 'map_RCCS_communities_1.pdf')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  ggsave(p1, file = file.name, w = 2.5, h = 2.5)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
 
-ggsave(p1, file = file.path(outdir, 'map_RCCS_communities_1.pdf'), w = 2.5, h = 2.5)
-ggsave(p2, file = file.path(outdir, 'map_RCCS_communities_2.pdf'), w = 4, h = 4)
+file.name <- file.path(outdir, 'map_RCCS_communities_2.pdf')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  ggsave(p2, file = file.name, w = 4, h = 4)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+
+
 

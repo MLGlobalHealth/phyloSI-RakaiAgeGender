@@ -6,28 +6,25 @@ library(lubridate)
 library(rstan)
 library(haven)
 
-indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
-indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
-indir.repository <- '~/Documents/GitHub/phyloflows'
+# directory of the repository
+gitdir <- here()
 
-if(0){
-  indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-  indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-  indir.repository <- '~/git/phyloflows'
+# load file paths
+source(file.path(gitdir, 'config.R'))
+
+# outdir for figs
+if(usr == 'alex' || usr == 'melodiemonod'){
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 }
 
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
-
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-
-file.seq.count <- file.path(outdir, 'characteristics_sequenced_R14_18.rds')
-file.seq.count.ind <- file.path(outdir, 'characteristics_sequenced_ind_R14_18_221206.rds')
-
-file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_221129.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'Quest_R6_R18_220909.csv')
-
-# Latest data from Rakai's CCS (Kate's data from 2022-03-08)
-file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
+# make sure files exist
+file.exists(c(
+  file.community.keys ,
+  file.characteristics_sequenced_R14_18,
+  file.characteristics_sequenced_ind_R14_18,
+  file.path.hiv,
+  file.path.quest,
+  file.path.metadata))  |> all() |> stopifnot()
 
 # load files
 community.keys <- as.data.table(read.csv(file.community.keys))
@@ -248,7 +245,7 @@ art[, AGEGP:= factor(AGEGP,levels=c('Total','15-24','25-34','35-49'),labels=c('T
 ########################################################################
 
 # load seq count
-sequ <- as.data.table(readRDS(file.seq.count.ind))
+sequ <- as.data.table(readRDS(file.characteristics_sequenced_ind_R14_18))
 
 # keep age within 15-49
 sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
@@ -289,7 +286,15 @@ tab[, c("COMM", "SEX", "AGEGP") := lapply(list(COMM, SEX, AGEGP), as.character)]
 tab[, pct:= round(SEQUENCE/HIV*100,0)]
 
 # save
-saveRDS(tab, file.path(outdir, 'RCCS_transmission_cohort_characteristics_R14_18.rds'))
+file.name <- file.path(outdir, 'RCCS_transmission_cohort_characteristics_R14_18.rds')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  saveRDS(tab, file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+
 
 # check
 `%notin%` <- Negate(`%in%`)
@@ -311,4 +316,12 @@ tab[, c("COMM") := lapply(list(COMM), as.character)]
 tab[, pct:= round(SEQUENCE/HIV*100,0)]
 
 # save
-saveRDS(tab, file.path(outdir, 'RCCS_transmission_cohort_characteristics_rounds_R14_18.rds'))
+file.name <- file.path(outdir, 'RCCS_transmission_cohort_characteristics_rounds_R14_18.rds')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  saveRDS(tab, file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+

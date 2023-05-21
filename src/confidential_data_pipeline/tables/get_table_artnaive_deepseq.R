@@ -15,6 +15,8 @@ source(file.path(gitdir, 'config.R'))
 # outdir for figures
 if(usr == 'alex' || usr == 'melodiemonod'){
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+}else{
+  outdir #<- #TODO
 }
 if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 

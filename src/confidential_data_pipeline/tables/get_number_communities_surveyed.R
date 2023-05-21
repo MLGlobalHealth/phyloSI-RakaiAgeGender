@@ -1,21 +1,23 @@
 library(data.table)
 library(ggplot2)
 
-usr <- Sys.info()[['user']]
-if(usr!='andrea')
-{
-    indir.deepsequencedata <- '~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/'
-    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-}else{
-    indir.deepsequencedata <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_deepseq_analyses/live'
+# directory of the repository
+gitdir <- here()
+
+# load file paths
+source(file.path(gitdir, 'config.R'))
+
+# outdir directory for stan fit
+outdir <- file.path("../phyloSI-RakaiAgeGender-outputs","census_eligible_count_by_gender_loc_age")
+if(usr == 'melodiemonod'){
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
 }
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
-file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
-
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
+file.exists(c(
+  file.community.keys ,
+  file.community.keys.aggregated,
+  file.path.quest ))  |> all() |> stopifnot()
 
 # load files
 community.keys <- fread(file.community.keys)
@@ -40,24 +42,39 @@ inlcom <- merge(inlcom, community.aggregated, by.x = 'COMM_NUM', by.y = 'comm_nu
 community.aggregated[!comm_num %in% inlcom[, COMM_NUM]]
 community.aggregated
 
-inlcom[, list(N_COMM = uniqueN())]
+inlcom[, list(N_COMM = uniqueN(COMM_NUM))]
 
 # find number of community by round
 # do merge close communities
 numcom <- inlcom[, list(N_COMM = uniqueN(comm_id)), by = 'round'][order(round)]
 numcom.total <- inlcom[, list(N_COMM = length(unique(comm_id)))]
 numcom.unique <- length(Reduce(intersect, inlcom[, .(list(unique(comm_id))), round]$V1))
+
 # save
-saveRDS(list(numcom, numcom.total, numcom.unique), file.path(outdir, 'number_communities_surveyed.rds'))
+file.name <- file.path(outdir, 'number_communities_surveyed.rds')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  saveRDS(list(numcom, numcom.total, numcom.unique), file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+
 
 # Do not merge close communities
 numcom2 <- inlcom[, list(N_COMM = uniqueN(COMM_NUM)), by = 'round'][order(round)]
 numcom.total2 <- inlcom[, list(N_COMM = uniqueN(COMM_NUM))]
 numcom.unique2 <- length(Reduce(intersect, inlcom[, .(list(unique(COMM_NUM))), round]$V1))
+
 # save
-saveRDS(list(numcom2, numcom.total2, numcom.unique2), file.path(outdir, 'number_communities_surveyed_nomerging.rds'))
-
-
+file.name <-  file.path(outdir, 'number_communities_surveyed_nomerging.rds')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  saveRDS(list(numcom2, numcom.total2, numcom.unique2), file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
 
 # plot
 df <- data.table(expand.grid(COMM_NUM = inlcom[, sort(unique(COMM_NUM))], 
@@ -70,7 +87,7 @@ ggplot(tmp, aes(x = round, y = as.factor(COMM_NUM))) +
   geom_raster(aes(fill = SURVEYED)) +
   theme_bw() +
   labs(x = 'Round', y = 'Community index')
-ggsave('~/Downloads/communities_surveyed.png', w = 6, h = 5)
+# ggsave('~/Downloads/communities_surveyed.png', w = 6, h = 5)
 
 # make table
 df <- data.table(expand.grid(COMM_NUM = inlcom[, sort(unique(COMM_NUM))],
@@ -92,4 +109,13 @@ tmp[value>0, SURVEYED:= 'Yes']
 set(tmp,NULL,'value',NULL)
 tmp <- dcast(tmp, comm_id~round,value.var = 'SURVEYED')
 
-saveRDS(tmp, file.path(outdir, 'communities_surveyed_by_round.rds'))
+# save
+file.name <- file.path(outdir, 'communities_surveyed_by_round.rds')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  saveRDS(tmp, file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+
