@@ -5,17 +5,24 @@ library(dplyr)
 library(ggpubr)
 library(here)
 
-# directory repository
-gitdir <- here()
-source(file.path(gitdir,'config.R'))
 
-# directory to save the figures
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
+
+# directory to save the figure
+if(usr == 'melodiemonod'){
+  outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'prevalence_by_gender_loc_age')
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
+
+# check files exist
+file.exists(c(
+  file.unsuppressed.agegroup ,
+  file.prevalence.agegroup,
+  file.path.round.timeline))  |> all() |> stopifnot()
 
 # files
-file.unsuppressed.agegroup 
-file.prevalence.agegroup 
-
 load(file.path.round.timeline)
 prevalence <- fread(file.prevalence.agegroup)
 unsuppressed <- fread(file.unsuppressed.agegroup)
@@ -93,18 +100,34 @@ for(i in seq_along(communities)){ tmp1 <- tmp[COMM == communities[i]]
     guides(fill = guide_legend(override.aes = list(shape = 21), order = 1), 
            linetype = guide_legend(order = 2), 
            shape = guide_legend(order = 2, override.aes = list(fill = 'black')))
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221208.png')), w = 8,h = 3.5)
-  ggsave(p, file = file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221208.pdf')), w = 8,h = 3.5)
+  
+  # save
+  file.name <- file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221208.png'))
+  if (! file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    ggsave(p, file = file.name, w = 8,h = 3.5)
+  } else {
+    cat("File:", file.name, "already exists...\n")
+  }
+  
+  file.name <- file.path(outdir, paste0('prevalence_unsuppressed_among_census_eligible_', communities[i], '_221208.pdf'))
+  if (! file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    ggsave(p, file = file.name, w = 8,h = 3.5)
+  } else {
+    cat("File:", file.name, "already exists...\n")
+  }
+
 }
 
 # find statistics
 tmp1 <- tmp[COMM == 'inland' & ROUND == 'R018']
 tmp1 <- dcast.data.table(tmp1, SEX + AGE_GROUP ~ TYPE, value.var = 'M')
-tmp1[, UNSUPPRESSED_TO_PREVALENCE_RATIO := `HIV-positive with\nunsuppressed viral load` / `HIV prevalence` ]
+tmp1[, UNSUPPRESSED_TO_PREVALENCE_RATIO := `HIV-positive with\nunsuppressed virus` / `HIV prevalence` ]
 tmp2 <- tmp1[order(AGE_GROUP, SEX), .(AGE_GROUP, SEX, UNSUPPRESSED_TO_PREVALENCE_RATIO)]
 tmp2
 
-tmp1[, PREVALENCE_TO_UNSUPPRESSED_RATIO := `HIV prevalence` / `HIV-positive with\nunsuppressed viral load`  ]
+tmp1[, PREVALENCE_TO_UNSUPPRESSED_RATIO := `HIV prevalence` / `HIV-positive with\nunsuppressed virus`  ]
 tmp2 <- tmp1[order(AGE_GROUP, SEX), .(AGE_GROUP, SEX, PREVALENCE_TO_UNSUPPRESSED_RATIO)]
 tmp2
 

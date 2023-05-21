@@ -8,17 +8,21 @@ library("haven")
 library(ggpubr)
 
 # directory of the repository
-indir.repository <- '~/git/phyloflows'
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-# outdir directory for stan fit
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+# directory to save the figure
+outdir <- file.path('/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live','PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+if(usr == 'melodiemonod'){
+  outdir <- file.path('~/Box\ Sync/2021/ratmann_deepseq_analyses/live/', 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# files
-file.cascade.population <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_population_estimates_221208.csv'))
+# check files exist
+file.exists(c(file.treatment.cascade.population))  |> all() |> stopifnot()
 
 # treatment cascade population
-ns  <- as.data.table( read.csv(file.cascade.population) )
+ns  <- as.data.table( read.csv(file.treatment.cascade.population) )
 
 
 
@@ -65,7 +69,16 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0)) + 
   guides(color = guide_legend(byrow = T, nrow = 3),
          fill = guide_legend(byrow = T, nrow = 3))
-ggsave(file = file.path(outdir, 'treatment_cascade_inland_population_221208.pdf'), w = 6.5, h = 4.5)  
+
+# save
+file.name <- file.path(outdir, 'treatment_cascade_inland_population_221208.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(file = file.name, w = 6.5, h = 4.5)  
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
+
 
 # ALL ROUNDS
 tmp <- tab[COMM == 'inland']
@@ -139,7 +152,15 @@ p2 <- ggplot(tmp, aes(x = AGEYRS)) +
 p2 <- ggarrange(p2, labels = c('b'))
 
 p <- grid.arrange(p1,p2,layout_matrix = rbind(c(1, 2), c(1, NA)), heights =c(0.6, 0.4), widths = c(0.45, 0.55))
-ggsave(p, file = file.path(outdir, 'population_suppression_rate_221208.pdf'), w = 8, h = 8)
+
+# save
+file.name <- file.path(outdir, 'population_suppression_rate_221208.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(p, file = file.name, w = 8, h = 8)
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
 
 
 ####################################
@@ -170,7 +191,15 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'population_suppression_rate_R18_221213.pdf'), w = 4, h = 3.2)
+
+# save
+file.name <- file.path(outdir, 'population_suppression_rate_R18_221213.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(file = file.name, w = 4, h = 3.2)
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
 
 
 ####################################
@@ -207,7 +236,17 @@ ggplot(tmp, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0)) + 
   guides(color = guide_legend(byrow = T, nrow = 3),
          fill = guide_legend(byrow = T, nrow = 3))
-ggsave(file = file.path(outdir, 'population_suppression_rate_overtime_221208.pdf'), w = 6, h = 5)
+
+# save
+file.name <- file.path(outdir, 'population_suppression_rate_overtime_221208.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(file = file.name, w = 6, h = 5)
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
+
+
 
 ####################################
 
@@ -225,4 +264,14 @@ tab <- tab[, `:=` (M = format(round(M*100, n_digit), n_digit),
                    CU = format(round(CU*100, n_digit), n_digit))]
 tab <- tab[order(ROUND, SEX, AGEYRS)]
 
-saveRDS(tab, file = file.path(outdir, 'prop_suppressed.rds'))
+# save
+file.name <- file.path(outdir, 'prop_suppressed.rds')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  saveRDS(tab, file = file.name)
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
+
+
+

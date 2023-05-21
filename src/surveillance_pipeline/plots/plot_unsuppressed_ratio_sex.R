@@ -4,19 +4,24 @@ require(lubridate)
 library(dplyr)
 library(ggpubr)
 
-# directory repository
-indir.repository <- '~/git/phyloflows'
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-# directory to save the figures
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'artcoverage_by_gender_loc_age')
+# directory to save the figure
+outdir <- file.path('/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live','PANGEA2_RCCS', 'artcoverage_by_gender_loc_age')
+if(usr == 'melodiemonod'){
+  outdir <- file.path('~/Box\ Sync/2021/ratmann_deepseq_analyses/live/', 'PANGEA2_RCCS', 'artcoverage_by_gender_loc_age')
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# files
-file.name <- file.path(indir.repository, 'fit', paste0('RCCS_unsuppressed_ratio_sex_221208.csv'))
-file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
+# check files exist
+file.exists(c(
+  file.unsuppressed_rate_ratio ,
+  file.path.round.timeline))  |> all() |> stopifnot()
 
 # load files
-unsuppressed_ratio <- as.data.table(read.csv(file.name))
+unsuppressed_ratio <- as.data.table(read.csv(file.unsuppressed_rate_ratio))
 load(file.path.round.timeline)
 
 # label sex and communities
@@ -64,8 +69,24 @@ for(i in seq_along(communities)){
     scale_y_continuous( expand = expansion(mult = c(0.02, 0.1))) + 
     labs(y = 'Male-female ratio of the proportion of individuals\nwith HIV who have unsuppressed virus\nrelative to round 10', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.png')), w = 3.8,h = 3.15)
-    ggsave(p, file = file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.pdf')), w = 4.1,h = 3.4)
+  
+  # save
+  file.name <- file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.png'))
+  if (! file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    ggsave(p, file = file.name, w = 3.8,h = 3.15)
+  } else {
+    cat("File:", file.name, "already exists...\n")
+  }
+  
+  file.name <- file.path(outdir, paste0('unsuppressed_rate_ratio_', communities[i], '_221208.pdf'))
+  if (! file.exists(file.name) || config$overwrite.existing.files) {
+    cat("Saving file:", file.name, "\n")
+    ggsave(p, file = file.name, w = 4.1,h = 3.4)
+  } else {
+    cat("File:", file.name, "already exists...\n")
+  }
+
 }
 
 

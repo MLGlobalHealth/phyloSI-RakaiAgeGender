@@ -12,10 +12,20 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
-# outdir directory for stan fit
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+# outdir directory for figures
+outdir <- file.path('/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live','PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+if(usr == 'melodiemonod'){
+  outdir <- file.path('~/Box\ Sync/2021/ratmann_deepseq_analyses/live/', 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
+# check files exist
+file.exists(c(
+  path.newly.registered.art ,
+  path.participant.art,
+  file.treatment.cascade.prop.participants,
+  file.treatment.cascade.prop.nonparticipants,
+  file.treatment.cascade.population))  |> all() |> stopifnot()
 
 # find count of newly registered participants who reported art use
 rart.nonpart <- fread(path.newly.registered.art)
@@ -234,5 +244,15 @@ p <- grid.arrange(pP.M, pNP.M, p.ART, p.US, layout_matrix = rbind(c(1, 2, 3, 4),
                                                                   c(NA, NA, NA, 4)), 
                   heights = c(0.95, 0.05, 0.02), 
                   widths =  c(rep(0.22, 3),0.25))
-ggsave(p, file = file.path(outdir, 'summary_estimates_art_suppressed_221208.pdf'), w = 9, h = 12)
+
+# save
+file.name <- file.path(outdir, 'summary_estimates_art_suppressed_221208.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(p, file = file.name, w = 9, h = 12)
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
+
+
 

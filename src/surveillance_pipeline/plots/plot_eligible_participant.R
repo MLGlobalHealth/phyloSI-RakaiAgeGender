@@ -4,30 +4,25 @@ library(ggplot2)
 library(scales)
 library(ggpubr)
 
-# EXTENDED DATA FIGURE XXX
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-# directory repository
-indir.repository <- '~/git/phyloflows'
-
-usr <- Sys.info()[['user']]
-
-if(usr=='andrea')
-{
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-    outdir <- "~/Downloads/"
-}else{
-    # directory to save the figure
-    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-    outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+# directory to save the figure
+outdir <- file.path('/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live','PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+if(usr == 'melodiemonod'){
+  outdir <- file.path('~/Box\ Sync/2021/ratmann_deepseq_analyses/live/', 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 }
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# files
-eligible <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
-participation <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
+# check files exist
+file.exists(c(
+  file.participation ,
+  file.eligible.count))  |> all() |> stopifnot()
 
 # load
-ncen <- fread(eligible)
-rinc <- fread(participation)
+ncen <- fread(file.eligible.count)
+rinc <- fread(file.participation)
 
 #  plot census eligible 
 tmp <- copy(ncen)
@@ -131,5 +126,16 @@ pP.F <- ggplot(tmp1, aes(x = AGEYRS)) +
 # combine figure
 p <- ggarrange(pE.F, pE.M, pP.F, pP.M, legend = 'bottom', common.legend = T, nrow = 1, labels = c('a', 'b', 'c', 'd'), 
                widths = c(rep(0.22, 3),0.25))
-ggsave(p, file = file.path(outdir, 'CensusEligibleCount_Participation_221208.pdf'), w = 9, h = 12)
+
+# save
+file.name <- file.path(outdir, 'CensusEligibleCount_Participation_221208.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(p, file = file.name, w = 9, h = 12)
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
+
+
+
 

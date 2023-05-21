@@ -7,24 +7,23 @@ library(ggsci)
 library(gridExtra)
 library(ggpubr)
 
-# directory repository
-indir.repository <- '~/git/phyloflows'
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
-# directory to save the figures
-indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+# directory to save the figure
+outdir <- file.path('/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live','PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+if(usr == 'melodiemonod'){
+  outdir <- file.path('~/Box\ Sync/2021/ratmann_deepseq_analyses/live/', 'PANGEA2_RCCS', 'treatment_cascade_by_gender_loc_age')
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-# treatment cascade participants
-file.cascade.participants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_221208.csv'))
-
-# treatment cascade non-participants
-file.cascade.nonparticipants <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_221208.csv'))
-
-# treatment cascade participants
-file.cascade.participants.200 <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_participants_estimates_vl200_221208.csv'))
-
-# treatment cascade non-participants
-file.cascade.nonparticipants.200 <- file.path(indir.repository, 'fit', paste0('RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv'))
+# check files exist
+file.exists(c(
+  file.treatment.cascade.prop.participants,
+  file.treatment.cascade.prop.nonparticipants,
+  file.treatment.cascade.prop.participants.vl200 ,
+  file.treatment.cascade.prop.nonparticipants.vl200))  |> all() |> stopifnot()
 
 
 ##############
@@ -34,8 +33,8 @@ file.cascade.nonparticipants.200 <- file.path(indir.repository, 'fit', paste0('R
 ##############
 
 # load files
-cascade.np <- as.data.table(read.csv(file.cascade.nonparticipants))
-cascade.np200 <- as.data.table(read.csv(file.cascade.nonparticipants.200))
+cascade.np <- as.data.table(read.csv(file.treatment.cascade.prop.nonparticipants))
+cascade.np200 <- as.data.table(read.csv(file.treatment.cascade.prop.nonparticipants.vl200))
 
 # combine
 cascade.np[, type := 'Viral load threshold 1,000 mL']
@@ -94,7 +93,15 @@ ggplot(tab, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'non_participants_smooth_unsuppressed_vl200vs1000_221208.pdf'), w = 7, h = 12)  
+
+# save
+file.name <- file.path(outdir, 'non_participants_smooth_unsuppressed_vl200vs1000_221208.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(file = file.name, w = 7, h = 12)  
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
 
 
 ##############
@@ -104,8 +111,8 @@ ggsave(file = file.path(outdir, 'non_participants_smooth_unsuppressed_vl200vs100
 ##############
 
 # load files
-cascade <- as.data.table(read.csv(file.cascade.participants))
-cascade.200 <- as.data.table(read.csv(file.cascade.participants.200))
+cascade <- as.data.table(read.csv(file.treatment.cascade.prop.participants))
+cascade.200 <- as.data.table(read.csv(file.treatment.cascade.prop.participants.vl200))
 
 # combine
 cascade[, type := 'Viral load threshold 1,000 mL']
@@ -164,5 +171,14 @@ ggplot(tab, aes(x = AGEYRS)) +
   scale_x_continuous(expand = c(0,0))  + 
   guides(shape = guide_legend(order = 1), linetype = guide_legend(order = 2), 
          color = guide_legend(order = 3),fill = guide_legend(order = 3))
-ggsave(file = file.path(outdir, 'participants_smooth_unsuppressed_vl200vs1000_221208.pdf'), w = 7, h = 12)  
+
+file.name <- file.path(outdir, 'participants_smooth_unsuppressed_vl200vs1000_221208.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(file = file.name, w = 7, h = 12)  
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
+
+
 

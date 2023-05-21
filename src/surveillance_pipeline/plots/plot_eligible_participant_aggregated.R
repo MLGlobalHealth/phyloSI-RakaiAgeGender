@@ -6,34 +6,26 @@ library(ggnewscale)
 #remotes::install_github("coolbutuseless/ggpattern")
 library(ggpattern)
 
-# repository directory
-indir.repository <- '~/git/phyloflows'
-
-usr <- Sys.info()[['user']]
-
-if(usr=='andrea')
-{
-    indir.deepsequence_analyses <- '/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live'
-}else{
-    indir.deepsequence_analyses <- '~/Box\ Sync/2021/ratmann_deepseq_analyses/live/'
-}
+# directory of the repository
+gitdir <- here()
+source(file.path(gitdir, "config.R"))
 
 # directory to save the figure
-outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+outdir <- file.path('/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live','PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+if(usr == 'melodiemonod'){
+  outdir <- file.path('~/Box\ Sync/2021/ratmann_deepseq_analyses/live/', 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+}
+if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 
-if(! dir.exists(outdir))
-    dir.create(outdir)
-
-
-
-# files
-participants <- file.path(indir.repository, 'data', 'RCCS_participation_221208.csv')
-eligible <- file.path(indir.repository, 'data', 'RCCS_census_eligible_individuals_221116.csv')
-file.path.round.timeline <- file.path(indir.repository, 'data', 'RCCS_round_timeline_220905.RData')
+# check files exist
+file.exists(c(
+  file.participation ,
+  file.eligible.count,
+  file.path.round.timeline))  |> all() |> stopifnot()
 
 # load
-rinc <- fread(participants)
-ncen <- fread(eligible)
+rinc <- fread(file.participation)
+ncen <- fread(file.eligible.count)
 load(file.path.round.timeline)
 
 # merge
@@ -122,5 +114,14 @@ p <- ggplot(tmp1[COMM == 'inland']) +
          fill = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
          color = guide_legend(byrow = T, nrow = 2, order = 2, override.aes = list(pattern = "none", col = 'white')),
          pattern = guide_legend(byrow = T, nrow = 2, override.aes = list(fill = "white", col = 'black'), order = 3))
-ggsave(p, file = file.path(outdir, 'Participants_aggregated_age_221208.pdf'), w = 3.2, h = 6.2)
+
+file.name <- file.path(outdir, 'Participants_aggregated_age_221208.pdf')
+if (! file.exists(file.name) || config$overwrite.existing.files) {
+  cat("Saving file:", file.name, "\n")
+  ggsave(p, file = file.name, w = 3.2, h = 6.2)
+} else {
+  cat("File:", file.name, "already exists...\n")
+}
+
+
 
