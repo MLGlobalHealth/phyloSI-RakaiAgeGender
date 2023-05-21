@@ -50,11 +50,11 @@ if(length(args_line) > 0)
 source(file.path(gitdir, 'config.R'))
 
 # load functions
-source(file.path(gitdir.functions, 'utils.R'))
-source(file.path(gitdir.functions, 'summary_functions.R'))
-source(file.path(gitdir.functions, 'plotting_functions.R'))
-source(file.path(gitdir.functions, 'statistics_functions.R'))
-source(file.path(gitdir.functions, 'stan_utils.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'utils.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'summary_functions.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'plotting_functions.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'statistics_functions.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'stan_utils.R'))
 
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
@@ -99,6 +99,7 @@ if(use_tsi_non_refined){
 # load round timeline
 load(file.path.round.timeline)
 df_round_inland[, `:=` (min_sample_date = as.Date(min_sample_date), max_sample_date = as.Date(max_sample_date))]
+
 # load census eligible ount
 eligible_count_smooth <- fread(file.eligible.count)
 

@@ -36,10 +36,10 @@ if(length(args_line) > 0)
 }
 
 # load functions
-source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_utils_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_statistics_functions.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'postprocessing_summary_functions.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'postprocessing_plot_functions.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'postprocessing_utils_functions.R'))
+source(file.path(gitdir.functions, 'functions_transmission_flow', 'postprocessing_statistics_functions.R'))
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
