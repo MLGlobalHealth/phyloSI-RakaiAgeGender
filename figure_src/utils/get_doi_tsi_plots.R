@@ -6,66 +6,41 @@ library(ggplot2)
 library(lubridate)
 library(xtable)
 library(ggpubr)
+library(here)
 
 ################
 #    PATHS     #
 ################
 
-usr <- Sys.info()[['user']]
+
+gidtir <- here::here()
+source(gitdir, 'config.R')
+
 if(usr == 'andrea')
 {
-    base.hpc <- '/home/andrea/HPC'
-    # out.dir <- '/home/andrea/HPC/Documents/Box/2022/genintervals/'
     out.dir <- '/home/andrea/HPC/ab1820/home/projects/2022/genintervals'
-    indir.deepsequence_xiaoyue   <- file.path(base.hpc, 'project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI')
-    indir.deepsequencedata <- file.path(base.hpc, 'project/ratmann_pangea_deepsequencedata/live')
-    indir.deepsequence_analyses   <- file.path(base.hpc, 'project/ratmann_deepseq_analyses/live')
-    indir <- '/home/andrea/git/phyloflows'
-
-}else{
-    indir.deepsequence_xiaoyue  #  <- TODO
-    indir.deepsequencedata #  <- TODO
-    indir # <- TODO
 }
 
-.fp <- function(C, x)
-{
-    if(C=='X')
-        indir <- indir.deepsequence_xiaoyue
-    if(C=='A')
-        indir <- indir.deepsequence_analyses
-    if(C=='D')
-        indir <- indir.deepsequencedata
-    file.path(indir, x)
-}
-
-file.path.meta <- .fp('D', 'RCCS_R15_R18/Rakai_Pangea2_RCCS_Metadata_20221128.RData')
-# file.path.chains.data <- .fp('X','211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd/Rakai_phscnetworks_ruleo_sero.rda')
-file.anonymisation.keys <- .fp('X','important_anonymisation_keys_210119.csv')
-file.path.tsiestimates <- .fp('A', 'PANGEA2_RCCS_MRC_UVRI_TSI/2022_08_22_phsc_phscTSI_sd_42_sdt_002_005_dsl_100_mr_30_mlt_T_npb_T_og_REF_BFR83HXB2_LAI_IIIB_BRU_K03455_phcb_T_rtt_001_rla_T_zla_T/aggregated_TSI_with_estimated_dates.csv')
-file.path.round.timeline <- .fp('D', 'RCCS_data_estimate_incidence_inland_R6_R18/220903/RCCS_round_timeline_220905.RData')
-path.network <-file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds')
+file.anonymisation.keys <- file.path(indir.deepanalyses.xiaoyue,'important_anonymisation_keys_210119.csv')
 path.range <-file.path(out.dir, 'networks_individualDOIrange_d1_w11_netfrompairs_seropairs.rds')
 
-file.exists(file.path.meta,
+file.exists(path.meta.confidential,
             # file.path.chains.data,
             file.anonymisation.keys,
-            file.path.tsiestimates,
+            path.tsiestimates,
             file.path.round.timeline 
             ) |> all() |> stopifnot()
 
 threshold.likely.connected.pairs <- 0.5
+
 ################
 #    HELPERS   #
 ################
 
-source(file.path(indir, 'functions', 'utils.R'))
+source(file.path(gitdir.functions, 'utils.R'))
 source(file.path(indir, 'confidential_data_src/utils', 'functions_tsi_attribution.R'))
-source(file.path(indir, 'functions', 'plotting_functions.R'))
-source(file.path(indir, 'functions', 'summary_functions.R'))
-# source(file.path(indir, 'functions', 'statistics_functions.R'))
-# source(file.path(indir, 'functions', 'stan_utils.R'))
-# source(file.path(indir, 'functions', 'check_potential_TNet.R'))
+source(file.path(gitdir.functions, 'plotting_functions.R'))
+source(file.path(gitdir.functions, 'summary_functions.R'))
 find_palette_round()
 naturemed_reqs()
 
@@ -77,7 +52,7 @@ naturemed_reqs()
 # Load data
 #
 
-dresults <- readRDS(path.network)    
+dresults <- readRDS(file.pairs)    
 tmp <- readRDS(path.range)
 drange <- tmp[[1]]
 chain <- tmp[[2]]
@@ -86,7 +61,7 @@ aik <- fread(file.anonymisation.keys,
 
 # get meta 
 meta_env <- new.env()
-load(file.path.meta, envir=meta_env)
+load(path.meta.confidential, envir=meta_env)
 meta <- subset(meta_env$meta_data,
                select=c('aid', 'sex', 'date_birth', 'date_first_positive', 'date_last_negative'))
 meta <- unique(meta[!is.na(aid)])
@@ -209,7 +184,7 @@ if(1)
     tmp <- unique(dresults[, .(RECIPIENT, CL, M, CU)])
 
     cols <- c('RENAME_ID','pred_doi_mid',  'pred_doi_min', 'pred_doi_max')
-    drange_tsi2 <- fread(file.path.tsiestimates, select = cols) 
+    drange_tsi2 <- fread(path.tsiestimates, select = cols) 
     cols_new <- c('RECIPIENT', 'MID','MIN', 'MAX')
     setnames(drange_tsi2, cols, cols_new)
     drange_tsi2[, `:=` (RECIPIENT=gsub('-fq[0-9]', '', RECIPIENT)) ] 
@@ -360,7 +335,7 @@ if(1)
 if(0)
 {
     cols <- c('RENAME_ID', 'pred_doi_min', 'pred_doi_max', 'visit_dt')
-    drange_tsi2 <- fread(file.path.tsiestimates, select = cols) 
+    drange_tsi2 <- fread(path.tsiestimates, select = cols) 
     cols_new <- c('AID', 'MIN', 'MAX', 'visit_dt')
     setnames(drange_tsi2, cols, cols_new)
     cols_new <- setdiff(cols_new, 'AID')
