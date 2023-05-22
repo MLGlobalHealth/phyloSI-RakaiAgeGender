@@ -233,6 +233,8 @@ file.age_dist_cntct_area <- file.path(dir.zenodo.ressexpart, "inland-R015_age-di
 file.age_dist_ma_cntct_area <- file.path(dir.zenodo.ressexpart, "inland-R015_age-dist_ma_cntct_area_1549.rds")
 
 # final flow data for Extended data fig 7
+file.unsuppressed.share.fig <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_share_sex_221208_fig.csv")
+
 file.expected_contribution_age_source <- file.path(dir.zenodo.transflow, "gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_direction_round.rds")
 file.expected_contribution_sliced_age_source <- file.path(dir.zenodo.transflow, "gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.source_age_infection.recipientstandardisedby_direction_round.rds")
 
