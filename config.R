@@ -171,7 +171,7 @@ if( ! indir.deepsequencedata == "" ){
   file.seroconvert.cohort.all.comm<- file.path(indir.deepsequencedata,"RCCS_R9_R14", "RCCS_data_estimate_incidence_inland_R6_R18_230218","seroconverter_cohort.rds")
 
   # sequence collection date
-  path.collection.dates.confidential <- file.path(indir.deepsequencedata.r151r18, "sequences_collection_dates.rds"
+  path.collection.dates.confidential <- file.path(indir.deepsequencedata.r151r18, "sequences_collection_dates.rds")
 
   # phyloscanner samples
   path.selected.samples <- file.path(indir.deepanalyses.xiaoyue,"210120_RCCSUVRI_phscinput_samples.rds" )
