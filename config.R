@@ -12,6 +12,7 @@ dir.zenodo <- data.table::fcase(
     usr == "shozendan", "~/Imperial/phyloSI-RakaiAgeGender-data",
     usr == 'melodiemonod', '/Users/melodiemonod/Box Sync/2023/shifting-dynamics-zenodo',
     usr == "Yu", "C:/Users/Yu/OneDrive - Imperial College London/shifting-dynamics-zenodo/",
+    usr == 'alexb', '/Users/alexb/Library/CloudStorage/OneDrive-ImperialCollegeLondon/shifting-dynamics-zenodo',
     usr == "your-user", "your-path-to-zenodo-dir",
     default = "")
 
@@ -104,7 +105,7 @@ if (usr == "andrea" ) {
 }
 
 
-if(usr == 'alex'){
+if(usr == 'alexb'){
   
   indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
   indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
