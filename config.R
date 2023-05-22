@@ -11,6 +11,8 @@ dir.zenodo <- data.table::fcase(
     usr == "andrea", "~/OneDrive/Imperial/shifting-dynamics-zenodo/",
     usr == "shozendan", "~/Imperial/phyloSI-RakaiAgeGender-data",
     usr == 'melodiemonod', '/Users/melodiemonod/Box Sync/2023/shifting-dynamics-zenodo',
+    usr == "Yu", "C:/Users/Yu/OneDrive - Imperial College London/shifting-dynamics-zenodo/",
+    usr == 'alexb', '/Users/alexb/Library/CloudStorage/OneDrive-ImperialCollegeLondon/shifting-dynamics-zenodo',
     usr == "your-user", "your-path-to-zenodo-dir",
     default = "")
 
@@ -103,7 +105,7 @@ if (usr == "andrea" ) {
 }
 
 
-if(usr == 'alex'){
+if(usr == 'alexb'){
   
   indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
   indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
@@ -231,6 +233,11 @@ file.sexual.partnerships.rates <- file.path(dir.zenodo.ressexpart, "inland_R015_
 file.age_dist_cntct_area <- file.path(dir.zenodo.ressexpart, "inland-R015_age-dist_cntct_area_1549.rds")
 file.age_dist_ma_cntct_area <- file.path(dir.zenodo.ressexpart, "inland-R015_age-dist_ma_cntct_area_1549.rds")
 
+# final flow data for Extended data fig 7
+file.unsuppressed.share.fig <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_share_sex_221208_fig.csv")
+
+file.expected_contribution_age_source <- file.path(dir.zenodo.transflow, "gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_direction_round.rds")
+file.expected_contribution_sliced_age_source <- file.path(dir.zenodo.transflow, "gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.source_age_infection.recipientstandardisedby_direction_round.rds")
 
 ###################################################
 #  OUTPUTS GENERATED IN scripts_for_confidential_data #
