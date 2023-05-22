@@ -149,10 +149,10 @@ file.exists(
 #    HELPERS   #
 ################
 
-source(file.path(gitdir, 'functions', 'utils.R'))
-source(file.path(gitdir, 'scripts_for_confidential_data/utils', 'functions_tsi_attribution.R'))
-source(file.path(gitdir, 'functions', 'plotting_functions.R'))
-source(file.path(gitdir, 'functions', 'summary_functions.R'))
+source(file.path(gitdir.R.conf,'functions_tsi_attribution.R'))
+source(file.path(gitdir.R, 'utils.R'))
+source(file.path(gitdir.R.flow, 'plotting_functions.R'))
+source(file.path(gitdir.R.flow, 'summary_functions.R'))
 find_palette_round()
 
 ################

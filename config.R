@@ -61,7 +61,14 @@ if (zenodo.exists) {
 
 gitdir.outputs <- file.path(gitdir, "outputs")
 gitdir.stan <- file.path(gitdir, "stan_models")
-gitdir.functions <- file.path(gitdir, "R")
+# gitdir.functions <- file.path(gitdir, "R") # DEPRECATED
+gitdir.R <- file.path(gitdir, "R")
+gitdir.R.flow <- file.path(gitdir.r, 'functions_transmission_flow')
+gitdir.R.surv <- file.path(gitdir.r, 'functions_surveillance_pipeline')
+gitdir.R.phylo <- file.path(gitdir.r, 'functions_phylo_pipeline')
+gitdir.R.incid <- file.path(gitdir.r, 'functions_incidence_rate')
+gitdir.R.conf <- file.path(gitdir.r, 'functions_confidential_data_pipeline')
+
 
 ######################
 # confidential paths #

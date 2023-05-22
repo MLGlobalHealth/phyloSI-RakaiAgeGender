@@ -34,9 +34,10 @@ if(usr == 'alexb'){
 gitdir <- here::here()
 
 source(file.path(gitdir, "config.R"))
+
 # load functions
-source(file.path(gitdir.functions, 'functions_transmission_flow', 'summary_functions.R'))
-source( file.path(gitdir.functions,'functions_transmission_flow','plotting_functions.R') )
+source(file.path(gitdir.R.flow, 'summary_functions.R'))
+source(file.path(gitdir.R.flow, 'plotting_functions.R') )
 naturemed_reqs()
 
 # indicators for sensitivity analyses: default values

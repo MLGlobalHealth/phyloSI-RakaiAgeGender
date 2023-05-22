@@ -1,4 +1,4 @@
-source(file.path(gitdir.functions, 'naturemed_reqs.R'))
+source(file.path(gitdir.R, 'naturemed_reqs.R'))
 
 find_palette_round <- function()
 {

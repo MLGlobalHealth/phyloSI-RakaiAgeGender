@@ -33,7 +33,7 @@ rprev <- fread(path.count.hivpositive)
 binomialgp_model_config <- read_yaml(path_binomialgp_model_config)
 
 # Load nature med requirements
-source(file.path(gitdir.functions, "naturemed_reqs.R"))
+source(file.path(gitdir.R, "naturemed_reqs.R"))
 naturemed_reqs()
 
 #################################

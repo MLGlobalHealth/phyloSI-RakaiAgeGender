@@ -28,8 +28,8 @@ file.exists(c(
   file.path.metadata))  |> all() |> stopifnot()
 
 # load functions 
-source( file.path(gitdir.functions,'naturemed_reqs.R') )
-source( file.path(gitdir.functions,'utils.R') )
+source( file.path(gitdir.R,'naturemed_reqs.R') )
+source( file.path(gitdir.R,'utils.R') )
 naturemed_reqs()
 
 # load files
