@@ -16,11 +16,6 @@ if (!dir.exists((outfile))) dir.create((outfile))
 if (!dir.exists(file.path(outdir, 'figures'))) dir.create(file.path(outdir, 'figures'))
 if (!dir.exists((outfile.figures))) dir.create((outfile.figures))
 
-# paths to data
-# file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221208.csv')) # please modify accordingly
-# file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData') # please modify accordingly
-# file.expected_contribution_age_source <- file.path(indir, 'data', paste0(stan_model, '-', jobname, '-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_direction_round.rds')) # please modify accordingly
-# file.contribution.sexual.contacts <- file.path(indir, 'data', 'inland-R015_age-dist_ma_cntct_area_1549.rds')
 # load functions
 source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_summary_functions.R'))
 source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_plot_functions.R'))
