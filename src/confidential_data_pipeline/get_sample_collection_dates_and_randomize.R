@@ -5,7 +5,7 @@ gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
 file.exists(c(
-    path.anonymisation.keys ,
+    file.anonymisation.keys ,
     path.selected.samples ,
     path.sdates.rccs ,
     path.sdates.mrc ))  |> all() |> stopifnot()
@@ -28,7 +28,7 @@ perturb_dates <- function(date, .min=-1, .max=1)
 ##############
 
 catn("Get Anonimization Keys")
-aik <- fread(path.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
+aik <- fread(file.anonymisation.keys, header = TRUE, select=c('PT_ID', 'AID'))
 names(aik) <- tolower(names(aik)) 
 
 catn("Get selected samples for Xiaoyue's analysis")
