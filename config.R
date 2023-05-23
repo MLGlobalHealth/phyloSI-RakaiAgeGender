@@ -63,11 +63,11 @@ gitdir.outputs <- file.path(gitdir, "outputs")
 gitdir.stan <- file.path(gitdir, "stan_models")
 # gitdir.functions <- file.path(gitdir, "R") # DEPRECATED
 gitdir.R <- file.path(gitdir, "R")
-gitdir.R.flow <- file.path(gitdir.r, 'functions_transmission_flow')
-gitdir.R.surv <- file.path(gitdir.r, 'functions_surveillance_pipeline')
-gitdir.R.phylo <- file.path(gitdir.r, 'functions_phylo_pipeline')
-gitdir.R.incid <- file.path(gitdir.r, 'functions_incidence_rate')
-gitdir.R.conf <- file.path(gitdir.r, 'functions_confidential_data_pipeline')
+gitdir.R.flow <- file.path(gitdir.R, 'functions_transmission_flow')
+gitdir.R.surv <- file.path(gitdir.R, 'functions_surveillance_pipeline')
+gitdir.R.phylo <- file.path(gitdir.R, 'functions_phylo_pipeline')
+gitdir.R.incid <- file.path(gitdir.R, 'functions_incidence_rate')
+gitdir.R.conf <- file.path(gitdir.R, 'functions_confidential_data_pipeline')
 
 
 ######################
@@ -82,20 +82,20 @@ indir.deepsequence_analyses <- ""
 if (usr == "andrea" ) {
   indir.deepsequencedata <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
   indir.deepsequence_analyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
-  indir.deepanalyses.xiaoyue <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live"
+  indir.deepanalyses.xiaoyue <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
 }
 
 if(usr == 'alexb') {
   indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
   indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
-  indir.deepsequence.xiaoyue <- '~/OneDrive - Imperial College London/PANGEA/ratmann_xiaoyue_jrssc2022_analyses/live'
+  indir.deepsequence.xiaoyue <- '~/OneDrive - Imperial College London/PANGEA/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
 }
 
 if(usr == "melodiemonod"){
   # main indir
   indir.deepsequencedata <- "~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/"
   indir.deepsequence_analyses <- "~/Box\ Sync/2021/ratmann_deepseq_analyses/live/"
-  indir.deepsequence.xiaoyue <- "~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/"
+  indir.deepsequence.xiaoyue <- "~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
 }
 
 # define all other confidential paths
