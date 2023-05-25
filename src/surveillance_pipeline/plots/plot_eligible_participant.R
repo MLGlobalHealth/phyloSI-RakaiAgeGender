@@ -5,15 +5,13 @@ library(scales)
 library(ggpubr)
 
 # directory of the repository
-gitdir <- here()
+gitdir <- here::here()
 source(file.path(gitdir, "config.R"))
 
 # directory to save the figure
-outdir <- file.path('/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live','PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
-if(usr == 'melodiemonod'){
-  outdir <- file.path('~/Box\ Sync/2021/ratmann_deepseq_analyses/live/', 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
-}
-if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
+outdir <- file.path(indir.deepsequencedata,'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
+
+if (!dir.exists(outdir)) dir.create(outdir)
 
 # check files exist
 file.exists(c(

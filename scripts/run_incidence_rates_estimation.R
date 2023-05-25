@@ -42,7 +42,7 @@ if ( is.na(args$outdir) )
     args$outdir <- output.dir.incidence.estimation
 
 # # function
-source(file.path(gitdir.functions, 'incidence_rate_estimation_functions.R'))
+source(file.path(gitdir.R.incid, 'incidence_rate_estimation_functions.R'))
 
 stopifnot("Outdir could not be found"=file.exists(args$outdir))
 stopifnot("Seroconverter_cohort file not found"=file.exists(file.path.seroconverter_cohort))

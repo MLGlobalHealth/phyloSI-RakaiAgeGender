@@ -11,6 +11,8 @@ dir.zenodo <- data.table::fcase(
     usr == "andrea", "~/OneDrive/Imperial/shifting-dynamics-zenodo/",
     usr == "shozendan", "~/Imperial/phyloSI-RakaiAgeGender-data",
     usr == 'melodiemonod', '/Users/melodiemonod/Box Sync/2023/shifting-dynamics-zenodo',
+    usr == "Yu", "C:/Users/Yu/OneDrive - Imperial College London/shifting-dynamics-zenodo/",
+    usr == 'alexb', '/Users/alexb/Library/CloudStorage/OneDrive-ImperialCollegeLondon/shifting-dynamics-zenodo',
     usr == "your-user", "your-path-to-zenodo-dir",
     default = "")
 
@@ -59,7 +61,14 @@ if (zenodo.exists) {
 
 gitdir.outputs <- file.path(gitdir, "outputs")
 gitdir.stan <- file.path(gitdir, "stan_models")
-gitdir.functions <- file.path(gitdir, "R")
+# gitdir.functions <- file.path(gitdir, "R") # DEPRECATED
+gitdir.R <- file.path(gitdir, "R")
+gitdir.R.flow <- file.path(gitdir.R, 'functions_transmission_flow')
+gitdir.R.surv <- file.path(gitdir.R, 'functions_surveillance_pipeline')
+gitdir.R.phylo <- file.path(gitdir.R, 'functions_phylo_pipeline')
+gitdir.R.incid <- file.path(gitdir.R, 'functions_incidence_rate')
+gitdir.R.conf <- file.path(gitdir.R, 'functions_confidential_data_pipeline')
+
 
 ######################
 # confidential paths #
@@ -69,138 +78,97 @@ gitdir.functions <- file.path(gitdir, "R")
 indir.deepsequencedata <- ""
 indir.deepsequence_analyses <- ""
 
+# set base paths
 if (usr == "andrea" ) {
-  # main indir 
   indir.deepsequencedata <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
   indir.deepsequence_analyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
-  indir.deepanalyses.xiaoyue <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live"
-  
-  indir.deepsequencedata.r151r18 <- file.path(indir.deepsequencedata, "RCCS_R15_R18")
-  
-  # commuynity keys
-  file.community.keys <- file.path(indir.deepsequencedata.r151r18, "community_names.csv")
-  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
-  
-  # meta data
-  path.meta.confidential <- file.path(indir.deepsequencedata.r151r18, "Rakai_Pangea2_RCCS_Metadata_20221128.RData")
-  
-  # sequence collection date
-  path.collection.dates.confidential <- file.path(indir.deepsequencedata.r151r18, "sequences_collection_dates.rds")
-  
-  # anonymisation keys
-  path.anonymisation.keys <- file.path(indir.deepanalyses.xiaoyue, 'important_anonymisation_keys_210119.csv')
-  
-  # samples
-  path.selected.samples <- file.path(indir.deepanalyses.xiaoyue,"210120_RCCSUVRI_phscinput_samples.rds" )
-  
-  # ppangea_db
-  path.sdates.rccs <- file.path(indir.deepsequencedata, 'PANGEA2_RCCS', '200316_pangea_db_sharing_extract_rakai.csv')
-  path.sdates.mrc <- file.path(indir.deepsequencedata, 'PANGEA2_MRC','200319_pangea_db_sharing_extract_mrc.csv')
-  
-  # quest
-  file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
-  
+  indir.deepanalyses.xiaoyue <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
 }
 
-
-if(usr == 'alex'){
-  
+if(usr == 'alexb') {
   indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
   indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
-  indir.repository <- '~/Documents/GitHub/phyloflows'
-  
-  file.community.keys <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_names.csv')
-  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
-  
-  file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'HIV_R6_R18_221129.csv')
-  file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903', 'Quest_R6_R18_221208.csv')
-  
-  # Latest data from Rakai's CCS (Kate's data from 2022-03-08)
-  file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
-  
-  # characteristics sequenced participants 
-  file.characteristics_sequenced_ind_R14_18 <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_sequenced_ind_R14_18_221206.rds')
-  file.characteristics_ever_sequenced <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_ever_sequenced.rds')
-  file.characteristics_sequenced_R14_18 <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_sequenced_R14_18.rds')
-  
+  indir.deepsequence.xiaoyue <- '~/OneDrive - Imperial College London/PANGEA/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
 }
 
-if (usr == "melodiemonod"){  
-  
+if(usr == "melodiemonod"){
   # main indir
   indir.deepsequencedata <- "~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/"
   indir.deepsequence_analyses <- "~/Box\ Sync/2021/ratmann_deepseq_analyses/live/"
-  
+  indir.deepsequence.xiaoyue <- "~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
+}
+
+# define all other confidential paths
+if( ! indir.deepsequencedata == "" ){
+
   indir.deepsequencedata.r151r18 <- file.path(indir.deepsequencedata, "RCCS_R15_R18")
 
   # community keys
-  file.community.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', "community_names.csv")
-  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
+  file.community.keys <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS1519_UVRI", "community_names.csv")
+  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,"PANGEA2_RCCS1519_UVRI", "community_id_index.csv")
   
   # geography
-  file.Rakai_community_geography <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_community_geography_R15.rda')
+  file.Rakai_community_geography <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "Rakai_community_geography_R15.rda")
   
   # anonymisation keys
-  file.anonymisation.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', 'important_anonymisation_keys_210119.csv')
+  file.anonymisation.keys <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS1519_UVRI", "important_anonymisation_keys_210119.csv")
   
   # hiv dataset round 15 to 18 
-  file.path.hiv.1518 <- file.path(indir.deepsequencedata.r151r18, 'HIV_R15_R18_VOIs_220129.csv')
+  file.path.hiv.1518 <- file.path(indir.deepsequencedata.r151r18, "HIV_R15_R18_VOIs_220129.csv")
   # hiv dataset round 6-14: 30 continuously surveyed communities
-  file.path.hiv.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'hivincidence_1.dta')
+  file.path.hiv.614 <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "hivincidence_1.dta")
   # hiv dataset round 9-14: all communities (created in create_hiv_dataset_from_quest_all_communities.R)
-  file.hiv_R09_R14 = file.path(indir.deepsequencedata, 'RCCS_R9_R14/HIV_R09_R14.csv')
+  file.hiv_R09_R14 = file.path(indir.deepsequencedata, "RCCS_R9_R14/HIV_R09_R14.csv")
   # hiv dataset combination of all rounds obtained in clean_quest_hiv
-  file.path.hiv <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'HIV_R6_R18_221129.csv')
+  file.path.hiv <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "HIV_R6_R18_221129.csv")
   # hiv dataset round 19
   file.path.hiv_19 <- file.path(indir.deepsequencedata,"R019_VoIs","HIV_R019_VOIs_220607.csv")
   
   # quest dataset round 15 to 18 without 16
-  file.path.quest.1518 <- file.path(indir.deepsequencedata.r151r18, 'quest_R15_R18_VoIs_220129.csv')
+  file.path.quest.1518 <- file.path(indir.deepsequencedata.r151r18, "quest_R15_R18_VoIs_220129.csv")
   # quest dataset round 16
-  file.path.quest.16 <- file.path(indir.deepsequencedata.r151r18, 'quest_R15_R19_VoIs_Dec072022.csv')
+  file.path.quest.16 <- file.path(indir.deepsequencedata.r151r18, "quest_R15_R19_VoIs_Dec072022.csv")
   # quest dataset round 6-14: 30 continuously surveyed communities
-  file.path.quest.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'quest_1.dta')
+  file.path.quest.614 <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "quest_1.dta")
   # quest dataset round 9-14: all communities
-  file.quest_R09_R14 = file.path(indir.deepsequencedata, 'RCCS_R9_R14/quest_R09_R14.csv')
+  file.quest_R09_R14 = file.path(indir.deepsequencedata, "RCCS_R9_R14/quest_R09_R14.csv")
   # quest dataset combination of all rounds obtained in clean_quest_hiv 
-  file.path.quest <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'Quest_R6_R18_221208.csv')
+  file.path.quest <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "Quest_R6_R18_221208.csv")
   
   # flow dataset round <14: 30 continuously surveyed communities
-  file.path.flow.614 <- file.path(indir.deepsequencedata, 'RCCS_data_estimate_incidence_inland_R6_R18/220903/', 'verif_1.dta')
+  file.path.flow.614 <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "verif_1.dta")
   # flow dataset round 9-14: all communities
   file.path.flow_914 <- file.path(indir.deepsequencedata, "RCCS_R9_R14", "FlowR09_R14.csv")
   # flow dataset round 15 to 18
-  file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_221118.csv')
-  # file.path.flow <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'FlowR15_R18_VoIs_220129.csv') # deprecated
+  file.path.flow <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "FlowR15_R18_VoIs_221118.csv")
+  # file.path.flow <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "FlowR15_R18_VoIs_220129.csv") # deprecated
   # flow dataset round 19
   file.path.flow_19 <- file.path(indir.deepsequencedata,"R019_VoIs","Flow_R019_VoIs_220607.csv")
   
-  # Latest data from Rakai's CCS (Joseph's data from 2022-01-29)
-  file.path.allhiv <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'All_HIVpcr_for_questR15_R18_220129.csv')
+  # Latest data from Rakai"s CCS (Joseph"s data from 2022-01-29)
+  file.path.allhiv <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "All_HIVpcr_for_questR15_R18_220129.csv")
   
   # Latest update from Joseph concerning dates of infection
-  file.path.update.first.positive <- file.path(indir.deepsequencedata.r151r18, '221128_requested_updated_serohistory.csv')
+  file.path.update.first.positive <- file.path(indir.deepsequencedata.r151r18, "221128_requested_updated_serohistory.csv")
   
   # vl tests
-  path.tests <- file.path(indir.deepsequencedata, 'RCCS_R15_R20',"all_participants_hivstatus_vl_220729.csv")
+  path.tests <- file.path(indir.deepsequencedata, "RCCS_R15_R20","all_participants_hivstatus_vl_220729.csv")
   
   # sequence files
   infile.sequence <- file.path(indir.deepsequencedata,"200422_PANGEA2_RCCSMRC_alignment.fasta")
-  infile.ind.rccs <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/200316_pangea_db_sharing_extract_rakai.csv')
-  infile.ind.mrc <- file.path(indir.deepsequencedata,'PANGEA2_MRC/200319_pangea_db_sharing_extract_mrc.csv')
-  infile.seq.criteria <- file.path(indir.deepsequencedata,'PANGEA2_RCCS/221117_dct.rda')
+  infile.seq.criteria <- file.path(indir.deepsequencedata,"PANGEA2_RCCS/221117_dct.rda")
   
   # characteristics sequenced participants 
-  file.characteristics_sequenced_ind_R14_18 <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_sequenced_ind_R14_18_221206.rds')
-  file.characteristics_ever_sequenced <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_ever_sequenced.rds')
-  file.characteristics_sequenced_R14_18 <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age', 'characteristics_sequenced_R14_18.rds')
+  file.characteristics_sequenced_ind_R14_18 <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_sequenced_ind_R14_18_221206.rds")
+  file.characteristics_ever_sequenced <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_ever_sequenced.rds")
+  file.characteristics_sequenced_R14_18 <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_sequenced_R14_18.rds")
   
-  # metadata: Latest data from Rakai's CCS (Kate's data from 2022-03-08)
-  file.path.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv')
-  file.path.neuro.metadata <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv')
+  # metadata: Latest data from Rakai"s CCS (Kate"s data from 2022-03-08)
+  file.path.metadata <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv")
+  file.path.neuro.metadata <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "Pangea_Rakai_NeuroStudy_Metadata_11Dec2015.csv")
   
   # combined meta data (from preprocess meta_data)
-  path.meta.confidential <- file.path(indir.deepsequencedata, 'RCCS_R15_R18', 'Rakai_Pangea2_RCCS_Metadata_20221128.RData')
+  path.meta.confidential <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "Rakai_Pangea2_RCCS_Metadata_20221128.RData")
   
   # seroconvert individuals restrained to 30 continuously surveyed communities in round < 14 but not afterwards
   file.anonymised.id <- file.path(indir.deepsequencedata,"RCCS_data_estimate_incidence_inland_R6_R18","220903","anonymized_id_for_incidence_estimate_221129.csv")
@@ -208,7 +176,19 @@ if (usr == "melodiemonod"){
   # seroconvert individuals not restrained to 30 continuously surveyed communities in round < 14
   file.anonymised.id.all_comm <- file.path(indir.deepsequencedata, "RCCS_R9_R14","RCCS_data_estimate_incidence_inland_R6_R18_230218","anonimized_id_for_incidence_estimate.csv")
   file.seroconvert.cohort.all.comm<- file.path(indir.deepsequencedata,"RCCS_R9_R14", "RCCS_data_estimate_incidence_inland_R6_R18_230218","seroconverter_cohort.rds")
+
+  # sequence collection date
+  path.collection.dates.confidential <- file.path(indir.deepsequencedata.r151r18, "sequences_collection_dates.rds")
+
+  # phyloscanner samples
+  path.selected.samples <- file.path(indir.deepanalyses.xiaoyue,"210120_RCCSUVRI_phscinput_samples.rds" )
+  
+  # pangea_db
+  path.sdates.rccs <- file.path(indir.deepsequencedata, "PANGEA2_RCCS", "200316_pangea_db_sharing_extract_rakai.csv")
+  path.sdates.mrc <- file.path(indir.deepsequencedata, "PANGEA2_MRC","200319_pangea_db_sharing_extract_mrc.csv")
 }
+
+
 
 ################################
 # PRIMARY DATA 
@@ -231,6 +211,11 @@ file.sexual.partnerships.rates <- file.path(dir.zenodo.ressexpart, "inland_R015_
 file.age_dist_cntct_area <- file.path(dir.zenodo.ressexpart, "inland-R015_age-dist_cntct_area_1549.rds")
 file.age_dist_ma_cntct_area <- file.path(dir.zenodo.ressexpart, "inland-R015_age-dist_ma_cntct_area_1549.rds")
 
+# final flow data for Extended data fig 7
+file.unsuppressed.share.fig <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_share_sex_221208_fig.csv")
+
+file.expected_contribution_age_source <- file.path(dir.zenodo.transflow, "gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_direction_round.rds")
+file.expected_contribution_sliced_age_source <- file.path(dir.zenodo.transflow, "gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.source_age_infection.recipientstandardisedby_direction_round.rds")
 
 ###################################################
 #  OUTPUTS GENERATED IN scripts_for_confidential_data #
@@ -255,7 +240,7 @@ file.spec.sens.art <- file.path(dir.zenodo.survprim,"sensitivity_specificity_art
 file.spec.sens.art.vl200 <- file.path(dir.zenodo.survprim,"sensitivity_specificity_art_vl200.csv")
 
 ############################################
-# OUTPUTS GENERATED IN src/phylo_pipeline #
+# OUTPUTS GENERATED IN confidential_data_src
 ############################################
 
 file.pairs <- file.path( dir.zenodo.phyloproc, "pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds")

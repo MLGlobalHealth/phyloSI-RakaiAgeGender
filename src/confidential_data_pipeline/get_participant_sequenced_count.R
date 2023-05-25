@@ -6,8 +6,8 @@ gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
 c(  infile.sequence,
-    infile.ind.rccs,
-    infile.ind.mrc ,
+    path.sdates.rccs,
+    path.sdates.mrc ,
     infile.seq.criteria ,
     file.path.metadata,
     file.path.hiv,
@@ -126,10 +126,10 @@ npos <- unique(lengths(alignment))
 
 # map alignments to studyid
 dinfo <- data.table(pangea_id=names(alignment))
-id.dt <- data.table(read.csv(infile.ind.rccs))
+id.dt <- fread(path.sdates.rccs)
 id.dt <- subset(id.dt,select = c("pt_id","pangea_id", 'cd4_count', 'visit_dt'))
 id.dt[,pangea_id:=paste0('RCCS_',pangea_id)]
-tmp <- data.table(read.csv(infile.ind.mrc))
+tmp <- fread(path.sdates.mrc)
 tmp <- subset(tmp,select = c("pt_id","pangea_id", 'cd4_count', 'visit_dt'))
 tmp[,pangea_id:=paste0('MRCUVRI_',pangea_id)]
 id.dt <- rbind(id.dt,tmp)

@@ -7,13 +7,13 @@ library(rstan)
 library(haven)
 
 # directory of the repository
-gitdir <- here()
+gitdir <- here::here()
 
 # load file paths
 source(file.path(gitdir, 'config.R'))
 
 # outdir for figures
-if(usr == 'alex' || usr == 'melodiemonod'){
+if(usr == 'alexb' | usr == 'melodiemonod' | usr == 'andrea') {
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 }else{
   outdir #<- #TODO
@@ -25,12 +25,11 @@ file.exists(c(
   file.path.hiv,
   file.path.quest,
   file.characteristics_sequenced_ind_R14_18,
-  file.characteristics_sequenced_R14_18,
   file.path.metadata))  |> all() |> stopifnot()
 
 # load functions 
-source( file.path(gitdir.functions,'naturemed_reqs.R') )
-source( file.path(gitdir.functions,'utils.R') )
+source( file.path(gitdir.R,'naturemed_reqs.R') )
+source( file.path(gitdir.R,'utils.R') )
 naturemed_reqs()
 
 # load files
@@ -263,8 +262,8 @@ sequ.ever <- subset(sequ,select=c('STUDY_ID', 'EVER.SEQ')) |>
 # get unsuppressed at time x / not on ART at time x
 ## TODO I GET AN ERROR HERE
 stopifnot( arti[, all(HIV == "P")] )
-tmp <- arti[ COMM=='inland' & AGEYRS %between% c(15, 50)] |>
-    merge(x=_, y=sequ.ever, by='STUDY_ID', all.x=TRUE)
+tmp <- arti[ COMM=='inland' & AGEYRS %between% c(15, 50)]
+tmp <- merge(x=tmp, y=sequ.ever, by='STUDY_ID', all.x=TRUE)
 
 arti[ART == FALSE, unique(ROUND)]
 arti[, table(ART),by=ROUND]

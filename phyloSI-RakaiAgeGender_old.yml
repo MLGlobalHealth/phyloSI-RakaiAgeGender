@@ -107,7 +107,6 @@ dependencies:
   - r-ggnewscale=0.4.8
   - r-doParallel=1.0.17
   - r-foreach=1.5.2
-  - r-jcolors=0.0.4
   - r-sna=2.7
   - r-lognorm=0.1.10
   - r-ggExtra=0.10.0

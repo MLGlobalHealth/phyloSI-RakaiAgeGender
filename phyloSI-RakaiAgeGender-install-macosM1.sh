@@ -68,7 +68,7 @@ r <- getOption("repos");
 r["CRAN"] <- "https://cloud.r-project.org";
 options(repos=r);
 pkgs <- c("dplyr","ggplot2","stringi","extraDistr","plyr","coda","LaplacesDemon","mvtnorm","R.utils","prodlim","ggpubr","broom","Hmisc","matrixStats","ggnewscale","doPara\
-llel","foreach","jcolors","lognorm","ggExtra","knitr","Matrix","scales","gridGraphics","cowplot","abind","ggrepel","truncnorm","invgamma","sna","lubridate","tidyverse","M\
+llel","foreach","lognorm","ggExtra","knitr","Matrix","scales","gridGraphics","cowplot","abind","ggrepel","truncnorm","invgamma","sna","lubridate","tidyverse","M\
 ASS","gridExtra","GGally","ggnetwork","binom","igraph","BH","bayesplot","loo","hexbin","purrr","viridis");
 for(pkg in pkgs){ if(!require(pkg, character.only = TRUE)){ install.packages(pkg) } };
 '  
@@ -80,7 +80,7 @@ https://github.com/MLGlobalHealth/phyloSI-RakaiAgeGender
 "
 fi
 
-# TODO remove jcolors support
+
 
 
 
