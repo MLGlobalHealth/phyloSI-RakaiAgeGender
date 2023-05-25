@@ -40,6 +40,12 @@ The flowchart below illustrates in detail how the data is consumed and processed
       f6[(RCCS_prevalence_estimates_221116.csv)]
     end
 
+    style f1 color:#000000
+    style f2 color:#000000
+    style f3 color:#000000
+    style f4 color:#000000
+    style f5 color:#000000
+    style f6 color:#000000
     style f1 fill:#C0C0C0
     style f2 fill:#C0C0C0
     style f3 fill:#C0C0C0
@@ -96,11 +102,20 @@ The flowchart below illustrates in detail how the data is consumed and processed
       f_pop_est[(RCCS_treatment_cascade_population_estimates_221208.csv)]
     end
 
+    style f_nsup_prop_post color:#000000
+    style f_art_post color:#000000
+    style f_nsup_prop_post_new color:#000000
+    style f_art_post_new color:#000000
     style f_nsup_prop_post fill:#C0C0C0
     style f_art_post fill:#C0C0C0
     style f_nsup_prop_post_new fill:#C0C0C0
     style f_art_post_new fill:#C0C0C0
+  
 
+
+    style f_pop_est color:#000000
+    style f_part_est color:#000000
+    style f_npart_est color:#000000
     style f_pop_est fill:#FFD700
     style f_part_est fill:#FFD700
     style f_npart_est fill:#FFD700
@@ -165,10 +180,21 @@ The flowchart below illustrates in detail how the data is consumed and processed
       f7[(RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds)]
       f8[(RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv)]
     end
+  
+    style f1 color:#000000
+    style f2 color:#000000
+    style f3 color:#000000
+    style f4 color:#000000
+
     style f1 fill:#C0C0C0
     style f2 fill:#C0C0C0
     style f3 fill:#C0C0C0
     style f4 fill:#C0C0C0
+  
+    style f5 color:#000000
+    style f6 color:#000000
+    style f7 color:#000000
+    style f8 color:#000000
     
     style f5 fill:#FFD700
     style f6 fill:#FFD700
