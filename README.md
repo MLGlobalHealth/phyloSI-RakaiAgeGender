@@ -83,6 +83,8 @@ Our main analyses depend on estimates of population sizes, HIV prevalence, and H
 
 To perform the data pre-processing and analysis, navigate to the root directory of the repository and follow the instructions in the next sections.
 
+> **Note** Some scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`. Detailed flowcharts of how data read and written by each R script can be found in `docs/README.md`.
+
 #### RCCS Surveillance Analyses
 > **Warning** **(Please read)** Several of the pre-processing code for the surveillance requires the running of computationally demanding Stan models which may take more than 24 hours to finish on a standard laptop computer. We provide summarized outputs for all Stan models and recommend users to skip Stage 1 and proceed directly to Stage 2. To run the full data pre-processing step, execute both Stage 1 and Stage 2.
 
@@ -111,11 +113,8 @@ Rscript "./surveillance_pipeline_src/get_treatment_cascade_participants.R"
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_non_participants.R"
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
 ```
-> **Note** Some scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`. Detailed flowcharts of how data read and written by each R script within each preprecessing stage can be found in `docs/README.md`.
 
 #### Phylogenetic Analyses
-##### Pre-processing of phylogenetic data
-
 The deep-sequence phylogenetic time since infection estimates were refined using exact patient meta-data that we do not share, and instead we provide the outputs in the `data` directory.  
 
 To reproduce our analyses in part, we share randomized versions of the data that are suffixed by `randomized`. Use these as shown below in combination with the deep-sequence phylogenetic data from the Zenodo repository:
@@ -141,7 +140,6 @@ To run the age-specific HIV incidence rates analysis, run:
 cd phyloSI-RakaiAgeGender
 $ Rscript scripts/run_incidence_rates_estimation.R
 ```
-The output will be saved in a seperate directory outside the repository under the name `phyloSI-RakaiAgeGender-outputs`.
 
 #### Transmission flows analysis
 For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. 
