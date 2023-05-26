@@ -51,7 +51,7 @@ if (zenodo.exists) {
       dir.zenodo.phyloproc,
       dir.zenodo.survprim,
       dir.zenodo.survproc
-    ) |> dir.exists() |> all() |> stopifnot()
+    ) %>% dir.exists() %>% all() %>% stopifnot()
 
 }else{
   stop("Please specify path to zenodo data in config.R")
@@ -133,6 +133,10 @@ if (usr == "melodiemonod"){
   
   indir.deepsequencedata.r151r18 <- file.path(indir.deepsequencedata, "RCCS_R15_R18")
 
+  # some outdir
+  output.dir.incidence.estimation <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'incidence_rate_inland')
+  output.dir.incidence.estimation.30comms <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'incidence_rate_inland_30comms')
+  
   # community keys
   file.community.keys <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS1519_UVRI', "community_names.csv")
   file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,'PANGEA2_RCCS1519_UVRI', 'community_id_index.csv')
@@ -264,6 +268,9 @@ file.pairs.nonrefined <- file.path( dir.zenodo.phyloproc, "pairsdata_toshare_d1_
 ###########################################
 #  OUTPUTS GENERATED IN src/incidence_rate #
 ###########################################
+
+file.incidence.fits	<- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221109.RData")
+file.incidence.30com.fits	<- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221109.RData")
 
 file.incidence.inland	<- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_inland_221107.csv")
 file.incidence.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_samples_inland_221107.csv")
