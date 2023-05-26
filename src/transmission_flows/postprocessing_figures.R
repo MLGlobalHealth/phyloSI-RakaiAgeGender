@@ -47,9 +47,6 @@ source(file.path(gitdir.R.flow, 'postprocessing_statistics_functions.R'))
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-source(file.path(indir, 'functions', 'summary_functions.R'))
-df_direction <- get.df.direction()
 
 #
 # offset
