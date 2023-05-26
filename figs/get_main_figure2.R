@@ -50,20 +50,20 @@ if(0)
 # load data, then overwrite outdirs 
 path.to.stan.data <- paste0(outfile, "-stanin_",jobname,".RData")
 load(path.to.stan.data)
-outfile.figures <- .outfile.figures
-outdir.table <- .outdir.table
 
 # samples: select the thinned sample if specified
 if(exists('path.to.suboutput') )
 {
     stopifnot("Thinned chains not found"=file.exists(path.to.suboutput))
-    .outfile.figures <- '~/Downloads' #file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
-    .outdir.table <- '~/Downloads' # file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
+    .outfile.figures <- '~/Downloads' 
+    .outdir.table <- '~/Downloads' 
     samples <- readRDS( file=path.to.suboutput)
 }else{
     fit <- readRDS(path.to.stan.output)
     samples <- rstan::extract(fit)
 }
+outfile.figures <- .outfile.figures
+outdir.table <- .outdir.table
 
 
 # temporary

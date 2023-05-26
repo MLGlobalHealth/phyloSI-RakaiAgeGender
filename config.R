@@ -84,6 +84,7 @@ if (usr == "andrea" ) {
   indir.deepsequencedata <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live"
   indir.deepsequence_analyses <- "/home/andrea/HPC/project/ratmann_deepseq_analyses/live"
   indir.deepanalyses.xiaoyue <- "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
+  outdir.phyloflows <- "/home/andrea/HPC/ab1820/home/projects/2022/phyloflows/results"
 }
 
 if(usr == 'alexb') {
