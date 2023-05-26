@@ -256,7 +256,7 @@ args$out.dir.output <- .f('_phsc_output')
 
 
 # Source functions
-source(file.path(gitdir.functions, 'functions_phylo_pipeline', "utility.R"))
+source(file.path(gitdir.R.phylo, "utility.R"))
 
 # clean work dir
 move.logs(args$out.dir.work)

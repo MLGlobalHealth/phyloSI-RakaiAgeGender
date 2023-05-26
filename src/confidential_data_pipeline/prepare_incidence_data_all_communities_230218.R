@@ -17,22 +17,29 @@ library(ggpubr)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-c(  file.path.flow.614,
+c(
+    file.path.flow.614,
     file.path.hiv.614,
-    file.path.flow_914 ,
+    file.path.flow_914,
     file.hiv_R09_R14,
     file.path.flow,
     file.path.hiv.1518,
     file.path.flow_19,
-    file.path.hiv_19) |> file.exists() |> all() |> stopifnot()
+    file.path.hiv_19
+) |>
+    file.exists() |>
+    all() |>
+    stopifnot()
 
 # function
-source(file.path(gitdir.functions, "functions_incidence_rate", "incidence_rate_estimation_functions.R"))
+source(file.path(gitdir.R.incid, "incidence_rate_estimation_functions.R"))
 
 # utils
 rounds_group_0 <- c("R006", "R007", "R008")
-rounds_group_1 <- c("R006", "R007", "R008", "R009", "R010",
-                    "R011", "R012", "R013", "R014")
+rounds_group_1 <- c(
+    "R006", "R007", "R008", "R009", "R010",
+    "R011", "R012", "R013", "R014"
+)
 rounds_group_2 <- c("R015", "R015S", "R016", "R017", "R018")
 rounds_group_3 <- c("R019")
 
