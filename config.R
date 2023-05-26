@@ -11,6 +11,7 @@ dir.zenodo <- data.table::fcase(
     usr == "andrea", "~/OneDrive/Imperial/shifting-dynamics-zenodo/",
     usr == "shozendan", "~/Imperial/phyloSI-RakaiAgeGender-data",
     usr == 'melodiemonod', '/Users/melodiemonod/Box Sync/2023/shifting-dynamics-zenodo',
+    usr == 'mm3218', '/rds/general/user/mm3218/home/data/shifting-dynamics-zenodo/',
     usr == "your-user", "your-path-to-zenodo-dir",
     default = "")
 
@@ -51,7 +52,7 @@ if (zenodo.exists) {
       dir.zenodo.phyloproc,
       dir.zenodo.survprim,
       dir.zenodo.survproc
-    ) |> dir.exists() |> all() |> stopifnot()
+    ) %>% dir.exists() %>% all() %>% stopifnot()
 
 }else{
   stop("Please specify path to zenodo data in config.R")
