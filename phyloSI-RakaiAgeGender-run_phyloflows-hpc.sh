@@ -1,7 +1,7 @@
 #!/bin/sh
 
-STAN_MODEL="gp_220108"
-JOBNAME="cutoff_2014"
+STAN_MODEL="gp_221201d"
+JOBNAME="firstrun"
 INDIR="/rds/general/user/mm3218/home/git/phyloSI-RakaiAgeGender"
 OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender"
 
@@ -31,7 +31,7 @@ CWD=\$PWD/\$STAN_MODEL-\$JOBNAME
 mkdir \$CWD
 mkdir \$CWD/figures
   
-Rscript \$INDIR/scripts/run_stan.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
+Rscript \$INDIR/src/transmission_flows/run_stan.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME
   
 cp -R --no-preserve=mode,ownership \$PWD/* \$OUTDIR
   
@@ -60,8 +60,8 @@ CWD=\$OUTDIR/\$STAN_MODEL-\$JOBNAME
 mkdir \$CWD/figures
 mkdir \$CWD/tables
 
-Rscript \$INDIR/scripts/postprocessing_assess_mixing.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
-Rscript \$INDIR/scripts/postprocessing_figures.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+Rscript \$INDIR/src/transmission_flows/postprocessing_assess_mixing.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+Rscript \$INDIR/src/transmission_flows/postprocessing_figures.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 
 EOF
   

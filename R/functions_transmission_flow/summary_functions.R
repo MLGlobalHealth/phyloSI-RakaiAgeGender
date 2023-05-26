@@ -1419,7 +1419,7 @@ set.sensitivity.indicators.from.jobname <- function(jobname)
 
     if(jobname %like% 'woR[0-9]+$') {
         cat("Modifying flag: remove.pairs.from.rounds...\n")
-        rounds_to_remove <- gsub('woR([0-9]+)$', '\\1', jobname) |> as.integer()
+        rounds_to_remove <- gsub('woR([0-9]+)$', '\\1', jobname) %>% as.integer()
         while(rounds_to_remove > 1){
             tmp <- paste0('R0', rounds_to_remove %% 100)
             rounds_to_remove <- rounds_to_remove %/% 100
@@ -1429,7 +1429,7 @@ set.sensitivity.indicators.from.jobname <- function(jobname)
 
     if(jobname %like% 'seed[0-9]+$') {
         cat("Modifying flag: pairs_replicates.seed  ...\n")
-        pairs_replicates.seed <<- gsub('seed([0-9]+)$',"\\1",jobname) |> as.integer()
+        pairs_replicates.seed <<- gsub('seed([0-9]+)$',"\\1",jobname) %>%  as.integer()
     }
 
     if(jobname == "nonparttreatedaspart"){

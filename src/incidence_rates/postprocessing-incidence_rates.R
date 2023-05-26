@@ -22,30 +22,45 @@ library(optparse)
 # set to directory
 gitdir <- here()
 
-option_list <- list(
-    make_option(
-        "--outdir",
-        type = "character",
-        default = NA_character_,
-        help = "Output directory []",
-        dest= "outdir"
-    )
-)
-
-args <- parse_args(OptionParser(option_list = option_list))
-
 # source paths 
 source(file.path(gitdir, "config.R"))
 
-# path where to store results
-if ( is.na(args$outdir) )
-    args$outdir <- output.dir.incidence.estimation
+# make sure file exists
+c(  file.path.seroconverter_cohort,
+    file.path.seroconverter_cohort.30,
+    file.incidence.fits,
+    file.incidence.30com.fits) |> file.exists() |> all() |> stopifnot()
 
-# # function
+# sensitivity analysis?
+restrict_to_30_comms <- F
+
+# path where to store results
+if(!restrict_to_30_comms){
+  outdir <- output.dir.incidence.estimation
+}else{
+  outdir <- output.dir.incidence.estimation.30comms
+}
+
+if(!dir.exists(outdir)) dir.create(outdir, recursive = T)
+
+# load functions
 source(file.path(gitdir.R.incid, 'incidence_rate_estimation_functions.R'))
 
-stopifnot("Outdir could not be found"=file.exists(args$outdir))
-stopifnot("Seroconverter_cohort file not found"=file.exists(file.path.seroconverter_cohort))
+# load data 
+if(!restrict_to_30_comms){
+  file <- file.path.seroconverter_cohort
+}else{
+  file <- file.path.seroconverter_cohort.30
+}
+seroconverter_cohort.list <- readRDS(file)
+
+# load fits
+if(!restrict_to_30_comms){
+  file.name <- file.incidence.fits
+}else{
+  file.name <- file.incidence.30com.fits
+}
+load(file.name)
 
 # utils
 rounds_group_1 <- c("R006","R007", "R008", "R009", "R010", "R011", "R012", "R013", "R014")
@@ -58,104 +73,6 @@ df_round <- make_df_round(rounds_group_1, rounds_group_2, rounds_group_3)
 rounds_numeric_group_1 <- df_round[visit %in% rounds_group_1, round_numeric]
 rounds_numeric_group_2 <- df_round[visit %in% rounds_group_2, round_numeric]
 rounds_numeric_group_3 <- df_round[visit == rounds_group_3, round_numeric]
-
-# load data 
-seroconverter_cohort.list <- readRDS(file.path.seroconverter_cohort)
-seroconverter_cohort.list 
-
-###############################
-
-# FIND SEROCONVERSION DATE #
-
-###############################
-
-N <- 50
-seed = 12
-
-modelpreds.age.1218.list = modelaics.age.list = vector(mode = 'list', length = N)
-
-set.seed(seed)
-for(i in 1:N){
-  
-  cat('\niteration', i)
-  
-  ####################################
-  
-  # GENERATE RANDOM DATE OF INFECTION
-  
-  ####################################
-  
-  seroconverter_cohort <- as.data.table(seroconverter_cohort.list[[i]])
-  
-  
-  ############
-  
-  # MODEL FIT
-  
-  ############
-  
-  summary(seroconverter_cohort$hivinc)
-  
-  # MODEL 1
-  gamfit.m.age.int <- gam(hivinc ~ s(round, bs="gp") + s(age, bs="gp")+ ti(round, age)  + offset(log(py)), family = poisson, data = subset(seroconverter_cohort,sex=="M" & py>0)) 
-  gamfit.f.age.int <- gam(hivinc ~ s(round, bs="gp") + s(age, bs="gp")+ ti(round, age)  + offset(log(py)), family = poisson, data = subset(seroconverter_cohort,sex=="F" & py>0))
-  
-  # MODEL 2
-  gamfit.m.age.2 <- gam(hivinc ~ s(round, age, bs="gp")+ ti(round, age)  + offset(log(py)), family = poisson, data = subset(seroconverter_cohort,sex=="M" & py>0)) 
-  gamfit.f.age.2 <- gam(hivinc ~ s(round, age, bs="gp")+ ti(round, age)  + offset(log(py)), family = poisson, data = subset(seroconverter_cohort,sex=="F" & py>0))
-  
-  # MODEL 3
-  gamfit.m.age.3 <- gam(hivinc ~ s(round, bs="gp") + s(age, bs="gp")  + offset(log(py)), family = poisson, data = subset(seroconverter_cohort,sex=="M" & py>0)) 
-  gamfit.f.age.3 <- gam(hivinc ~ s(round, bs="gp") + s(age, bs="gp")  + offset(log(py)), family = poisson, data = subset(seroconverter_cohort,sex=="F" & py>0))
-  
-  # MODEL 3
-  gamfit.m.age.4 <- gam(hivinc ~ s(round, age, bs="gp")  + offset(log(py)), family = poisson, data = subset(seroconverter_cohort,sex=="M" & py>0)) 
-  gamfit.f.age.4 <- gam(hivinc ~ s(round, age, bs="gp")  + offset(log(py)), family = poisson, data = subset(seroconverter_cohort,sex=="F" & py>0))
-  
-  # prediction
-  gg.age <- expand.grid(round=df_round$round_numeric, py=1, age=seq(15,49,1))
-  
-  modelpreds.age <- rbind(cbind(Sex="Male", model="model_1",gg.age, as.data.frame(predict(gamfit.m.age.int, gg.age, type="link", se.fit=TRUE))),
-                          cbind(Sex="Female", model="model_1",gg.age, as.data.frame(predict(gamfit.f.age.int, gg.age, type="link", se.fit=TRUE))),
-                          cbind(Sex="Male", model="model_2",gg.age, as.data.frame(predict(gamfit.m.age.2, gg.age, type="link", se.fit=TRUE))),
-                          cbind(Sex="Female", model="model_2",gg.age, as.data.frame(predict(gamfit.m.age.2, gg.age, type="link", se.fit=TRUE))),
-                          cbind(Sex="Male", model="model_3",gg.age, as.data.frame(predict(gamfit.m.age.3, gg.age, type="link", se.fit=TRUE))),
-                          cbind(Sex="Female", model="model_3",gg.age, as.data.frame(predict(gamfit.m.age.3, gg.age, type="link", se.fit=TRUE))),
-                          cbind(Sex="Male", model="model_4",gg.age, as.data.frame(predict(gamfit.m.age.4, gg.age, type="link", se.fit=TRUE))),
-                          cbind(Sex="Female", model="model_4",gg.age, as.data.frame(predict(gamfit.m.age.4, gg.age, type="link", se.fit=TRUE)))
-  )
-  
-  modelpreds.age <- modelpreds.age %>% 
-    mutate(incidence=exp(fit), se.fit=se.fit, lb=exp(fit - 1.96*(se.fit)), ub=exp(fit + 1.96*se.fit)) %>%
-    group_by(age, Sex, model) %>%
-    merge(select(df_round, -visit), by.x = 'round', by.y= 'round_numeric') %>%
-    mutate(round_label = as.numeric(gsub('Round: (.+)', '\\1', ROUND)))
-  modelpreds.age.1218 <- modelpreds.age[which(modelpreds.age$round_label %in% 10:18), ]
-  
-  # aic
-  modelaics.age <- rbind(cbind(Sex="Male", model="model_1",aic = gamfit.m.age.int$aic),
-                         cbind(Sex="Female", model="model_1",aic = gamfit.f.age.int$aic),
-                         cbind(Sex="Male", model="model_2",aic = gamfit.m.age.2$aic),
-                         cbind(Sex="Female", model="model_2",aic = gamfit.f.age.2$aic),
-                         cbind(Sex="Male", model="model_3",aic = gamfit.m.age.3$aic),
-                         cbind(Sex="Female", model="model_3",aic = gamfit.f.age.3$aic),
-                         cbind(Sex="Male", model="model_4",aic = gamfit.m.age.4$aic),
-                         cbind(Sex="Female", model="model_4",aic = gamfit.f.age.4$aic)
-  )%>%
-    as.data.frame()
-  modelaics.age$aic <- as.numeric( modelaics.age$aic)
-  
-
-  # prepare
-  modelpreds.age.1218$iterations <- i
-  modelaics.age$iterations <- i
-  
-  modelpreds.age.1218.list[[i]] <- modelpreds.age.1218
-  modelaics.age.list[[i]] <- modelaics.age
-  
-}
-
-# load(file.path(outdir, 'list_long_results_221109.RData'))
 
 
 ###############################################################################################
@@ -200,8 +117,6 @@ seroconverter_cohort <- merge(seroconverter_cohort, tmp1, by = c('sex', 'round',
 setnames(seroconverter_cohort, c('M_hivinc', 'M_py'), c('hivinc', 'py'))
 
 # by sex, age groups and round
-df_age_aggregated <- data.table(age = 15:49, age_group = c(rep('15-24', 10),  rep("25-34", 10), rep("35-49", 15)))
-seroconverter_cohort.all <- merge(seroconverter_cohort.all, df_age_aggregated, by = 'age')
 seroconverter_cohort_agg <- seroconverter_cohort.all[py > 0, list(seroconvsum = sum(na.omit(hivinc)), pysum = sum(na.omit(py))), by=c('sex', 'round', 'age_group', 'iterations')]
 tmp1 = seroconverter_cohort_agg[, list(q= quantile(seroconvsum, prob=ps, na.rm = T),q_label=paste0(p_labs, '_hivinc')), by=c('sex', 'round', 'age_group')]	
 tmp1 = dcast(tmp1, sex + round + age_group ~ q_label, value.var = "q")
@@ -218,6 +133,15 @@ seroconverter_cohort_agg_s <- seroconverter_cohort_agg_s[, list(q= quantile(pysu
 seroconverter_cohort_agg_s <- dcast(seroconverter_cohort_agg_s, sex + round ~ q_label, value.var = "q")
 seroconverter_cohort_agg_s <- merge(seroconverter_cohort_agg_s, tmp1, by = c('sex', 'round')) 
 setnames(seroconverter_cohort_agg_s, c('M_hivinc', 'M_py'), c('hivinc', 'py'))
+
+# by sex and round and missing visits
+seroconverter_cohort_agg_sm <- seroconverter_cohort.all[py > 0, list(seroconvsum = sum(na.omit(hivinc)), pysum = sum(na.omit(py))), by=c('sex', 'round', 'number_missing_visits_status', 'iterations')]
+tmp1 = seroconverter_cohort_agg_sm[, list(q= quantile(seroconvsum, prob=ps, na.rm = T),q_label=paste0(p_labs, '_hivinc')), by=c('sex', 'round', 'number_missing_visits_status')]	
+tmp1 = dcast(tmp1, sex + round + number_missing_visits_status ~ q_label, value.var = "q")
+seroconverter_cohort_agg_sm <- seroconverter_cohort_agg_sm[, list(q= quantile(pysum, prob=ps, na.rm = T),q_label=paste0(p_labs, '_py')), by=c('sex', 'round', 'number_missing_visits_status')]	
+seroconverter_cohort_agg_sm <- dcast(seroconverter_cohort_agg_sm, sex + round + number_missing_visits_status ~ q_label, value.var = "q")
+seroconverter_cohort_agg_sm <- merge(seroconverter_cohort_agg_sm, tmp1, by = c('sex', 'round', 'number_missing_visits_status')) 
+setnames(seroconverter_cohort_agg_sm, c('M_hivinc', 'M_py'), c('hivinc', 'py'))
 
 # by round
 seroconverter_cohort_agg_r <- seroconverter_cohort.all[py > 0, list(seroconvsum = sum(na.omit(hivinc)), pysum = sum(na.omit(py))), by=c('round', 'iterations')]
@@ -310,14 +234,14 @@ stats <- save_statistics_estimates(df_round,
 # DATA
 # 
 
-plot_data(seroconverter_cohort, args$outdir)
+plot_data(seroconverter_cohort, seroconverter_cohort_agg_s, outdir)
 
 
 #
 # ESTIMATES
 # 
 
-plot_model_fit(modelpreds, modelpreds.age.1218, args$outdir)
+plot_model_fit(modelpreds, modelpreds.age.1218, outdir)
 
 
 #
@@ -331,11 +255,11 @@ model_pred <- find_prediction_1y(modelpreds.age.1218.all, seroconverter_cohort_i
 stats_prediction <- find_statistics_prediction(model_pred)
 
 # plot for all iterations
-plot_predicted_incidence_events(model_pred, args$outdir)
-plot_estimate_incidence_rates(model_pred, args$outdir)
+plot_predicted_incidence_events(model_pred, outdir)
+plot_estimate_incidence_rates(model_pred, outdir)
 
 # plot summary across iterations
-plot_estimate_incidence_rates_summary(modelpreds.age.1218, seroconverter_cohort_crude, args$outdir)
+plot_estimate_incidence_rates_summary(modelpreds.age.1218, seroconverter_cohort_crude, outdir)
 
 
 ###########################
@@ -360,55 +284,46 @@ setnames(modelpreds.loess.age.1218, c('M_inc', 'CL_inc', 'CU_inc'), c('incidence
 
 # plot comparison smooth incidence rate using loess and gam
 plot_comparison_loess_gam(
-    modelpreds.loess.age.1218,
-    modelpreds.age.1218, 
-    seroconverter_cohort_imputation,
-    args$outdir)
+  modelpreds.loess.age.1218,
+  modelpreds.age.1218, 
+  seroconverter_cohort_imputation,
+  outdir)
 
-
-#################
-
+#
+#
 # SAVE
+#
+#
 
-#################
-
-file.name <- file.path(args$outdir, 'list_long_results_221109.RData')
-if(! file.exists(file.name))
-{
-    cat("Saving file:", file.name, '\n')
-    save(modelpreds.age.1218.list, seroconverter_cohort.list, modelaics.age.list, file = file.name)
-}else{
-    cat("File:", file.name, "already exists...\n")
-}
 
 file.name	<- file.path(args$out.dir, "Rakai_incpredictions_inland_221107.csv")
 tmp <- select(modelpreds.age.1218[model == 'model_1'], c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
 if(! file.exists(file.name))
 {
-    cat("Saving file:", file.name, '\n')
-    write.csv(tmp, file = file.name, row.names = F)
+  cat("Saving file:", file.name, '\n')
+  write.csv(tmp, file = file.name, row.names = F)
 }else{
-    cat("File:", file.name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
 file.name	<- file.path(args$out.dir, "Rakai_incpredictions_samples_inland_221107.csv")
 tmp <- modelpreds.age.1218.all[model == 'model_1', .(Sex, round_label, age, iterations, fit, inc, iterations_within)]
 if(! file.exists(file.name))
 {
-    cat("Saving file:", file.name, '\n')
-    write.csv(tmp, file = file.name, row.names = F)
+  cat("Saving file:", file.name, '\n')
+  write.csv(tmp, file = file.name, row.names = F)
 }else{
-    cat("File:", file.name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
 file.name	<- file.path(args$out.dir, "Rakai_incpredictions_loess_inland_221116.csv")
 tmp <- select(modelpreds.loess.age.1218, c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
 if(! file.exists(file.name))
 {
-    cat("Saving file:", file.name, '\n')
-    write.csv(tmp, file = file.name, row.names = F)
+  cat("Saving file:", file.name, '\n')
+  write.csv(tmp, file = file.name, row.names = F)
 }else{
-    cat("File:", file.name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
 file.name	<- file.path(args$out.dir, "Rakai_incpredictions_loess_samples_inland_221116.csv")
@@ -416,56 +331,56 @@ tmp <- modelpreds.loess.age.1218.all[, .(Sex, round_label, age, iterations, INC_
 setnames(tmp, 'INC_CRUDE_SMOOTH', 'inc')
 if(! file.exists(file.name))
 {
-    cat("Saving file:", file.name, '\n')
-    write.csv(tmp, file = file.name, row.names = F)
+  cat("Saving file:", file.name, '\n')
+  write.csv(tmp, file = file.name, row.names = F)
 }else{
-    cat("File:", file.name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
 
 # if HPC link exists: 
 if (dir.exists(indir.deepsequencedata)) {
   file.name	<- file.path(indir.deepsequencedata, 
-        "RCCS_data_estimate_incidence_inland_R6_R18/220903/", 
-        "Rakai_inc_model_fit_inland_221107.csv")
+                         "RCCS_data_estimate_incidence_inland_R6_R18/220903/", 
+                         "Rakai_inc_model_fit_inland_221107.csv")
 } else {
-  out.path <- file.path(args$outdir, "RCCS_data_estimate_incidence_inland_R6_R18/220903/")
+  out.path <- file.path(outdir, "RCCS_data_estimate_incidence_inland_R6_R18/220903/")
   dir.create(out.path, recursive = TRUE)
-    file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
-    if(! file.exists(file.name))
-    {
-        cat("Saving file:", file.name, '\n')
-        write.csv(model_pred, file = file.name, row.names = F)
-    }else{
-        cat("File:", file.name, "already exists...\n")
-    }
+  file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
+  if(! file.exists(file.name))
+  {
+    cat("Saving file:", file.name, '\n')
+    write.csv(model_pred, file = file.name, row.names = F)
+  }else{
+    cat("File:", file.name, "already exists...\n")
+  }
 }
 
 
 # For paper
-file.name <- file.path(args$outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
+file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
 if(! file.exists(file.name))
 {
-    cat("Saving file:", file.name, '\n')
-    saveRDS(stats, file.name)
+  cat("Saving file:", file.name, '\n')
+  saveRDS(stats, file.name)
 }else{
-    cat("File:", file.name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
-file.name <- file.path(args$outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
+file.name <- file.path(outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
 if(! file.exists(file.name))
 {
-    cat("Saving file:", file.name, '\n')
-    saveRDS(stats_prediction, file.name)
+  cat("Saving file:", file.name, '\n')
+  saveRDS(stats_prediction, file.name)
 }else{
-    cat("File:", file.name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }
 
-file.name <- file.path(args$outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
+file.name <- file.path(outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
 if(! file.exists(file.name))
 {
-    cat("Saving file:", file.name, '\n')
-    saveRDS(stats_prediction_loess, file.name)
+  cat("Saving file:", file.name, '\n')
+  saveRDS(stats_prediction_loess, file.name)
 }else{
-    cat("File:", file.name, "already exists...\n")
+  cat("File:", file.name, "already exists...\n")
 }

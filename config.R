@@ -11,6 +11,7 @@ dir.zenodo <- data.table::fcase(
     usr == "andrea", "~/OneDrive/Imperial/shifting-dynamics-zenodo/",
     usr == "shozendan", "~/Imperial/phyloSI-RakaiAgeGender-data",
     usr == 'melodiemonod', '/Users/melodiemonod/Box Sync/2023/shifting-dynamics-zenodo',
+    usr == 'mm3218', '/rds/general/user/mm3218/home/data/shifting-dynamics-zenodo/',
     usr == "Yu", "C:/Users/Yu/OneDrive - Imperial College London/shifting-dynamics-zenodo/",
     usr == 'alexb', '/Users/alexb/Library/CloudStorage/OneDrive-ImperialCollegeLondon/shifting-dynamics-zenodo',
     usr == "your-user", "your-path-to-zenodo-dir",
@@ -53,7 +54,7 @@ if (zenodo.exists) {
       dir.zenodo.phyloproc,
       dir.zenodo.survprim,
       dir.zenodo.survproc
-    ) |> dir.exists() |> all() |> stopifnot()
+    ) %>% dir.exists() %>% all() %>% stopifnot()
 
 }else{
   stop("Please specify path to zenodo data in config.R")
@@ -88,14 +89,14 @@ if (usr == "andrea" ) {
 if(usr == 'alexb') {
   indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
   indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
-  indir.deepsequence.xiaoyue <- '~/OneDrive - Imperial College London/PANGEA/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepanalyses.xiaoyue <- '~/OneDrive - Imperial College London/PANGEA/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
 }
 
 if(usr == "melodiemonod"){
   # main indir
   indir.deepsequencedata <- "~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/"
   indir.deepsequence_analyses <- "~/Box\ Sync/2021/ratmann_deepseq_analyses/live/"
-  indir.deepsequence.xiaoyue <- "~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
+  indir.deepanalyses.xiaoyue <- "~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
 }
 
 # define all other confidential paths
@@ -103,6 +104,10 @@ if( ! indir.deepsequencedata == "" ){
 
   indir.deepsequencedata.r151r18 <- file.path(indir.deepsequencedata, "RCCS_R15_R18")
 
+  # some outdir
+  output.dir.incidence.estimation <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'incidence_rate_inland')
+  output.dir.incidence.estimation.30comms <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'incidence_rate_inland_30comms')
+  
   # community keys
   file.community.keys <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS1519_UVRI", "community_names.csv")
   file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,"PANGEA2_RCCS1519_UVRI", "community_id_index.csv")
@@ -249,6 +254,9 @@ file.pairs.nonrefined <- file.path( dir.zenodo.phyloproc, "pairsdata_toshare_d1_
 ###########################################
 #  OUTPUTS GENERATED IN src/incidence_rate #
 ###########################################
+
+file.incidence.fits	<- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221109.RData")
+file.incidence.30com.fits	<- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221119.RData")
 
 file.incidence.inland	<- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_inland_221107.csv")
 file.incidence.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_samples_inland_221107.csv")

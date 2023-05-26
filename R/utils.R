@@ -111,7 +111,7 @@ write.to.tex <- function(DT, file){
     # however, we want to be able to quickly copy-paste the tabular env
     # so print a skeleton
     
-    skeleton <- xtable::xtable(DT[0], type='latex') |> print(hline.after=c(), comment=FALSE) 
+    skeleton <- xtable::xtable(DT[0], type='latex') %>% print(hline.after=c(), comment=FALSE) 
 
     cmd_input <- sprintf("\n \\\\input{%s} \n \\\\end{tabular}", file.path("TODO", basename(file)))
     cmd <- sub('\\n \\\\end\\{tabular\\}', cmd_input, skeleton) 

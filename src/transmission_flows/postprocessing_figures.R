@@ -10,17 +10,6 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
-jobname <- 'newpairscontactpriorb'
-stan_model <- 'gp_221201d'
-
-indir <- "/rds/general/user/mm3218/home/git/phyloflows"
-outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
-
-if(0){
-  indir <- '~/git/phyloflows/'
-  outdir <- paste0('~/Box\ Sync/2021/phyloflows/', stan_model, '-', jobname)
-}
-
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
 print(args_line)
 if(length(args_line) > 0)
@@ -35,12 +24,6 @@ if(length(args_line) > 0)
   jobname <- args_line[[8]]
 }
 
-# load functions
-source(file.path(gitdir.R.flow, 'postprocessing_summary_functions.R'))
-source(file.path(gitdir.R.flow, 'postprocessing_plot_functions.R'))
-source(file.path(gitdir.R.flow, 'postprocessing_utils_functions.R'))
-source(file.path(gitdir.R.flow, 'postprocessing_statistics_functions.R'))
-
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
 # paths
@@ -54,13 +37,16 @@ load(path.to.stan.data)
 outfile.figures <- .outfile.figures
 outdir.table <- .outdir.table
 
+# load functions
+source(file.path(gitdir.R.flow, 'postprocessing_summary_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_plot_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_utils_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_statistics_functions.R'))
+
 # samples 
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-source(file.path(indir, 'functions', 'summary_functions.R'))
-df_direction <- get.df.direction()
 
 #
 # offset
