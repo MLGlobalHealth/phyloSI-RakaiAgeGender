@@ -78,7 +78,7 @@ check.range.consistency <- function(drange)
     return(drange)
 }
 
-get.communities.where.participated <- function() {
+get.communities.where.participated <- function(path.meta=path.meta) {
     # For each AID reports the community type(s) where each participant had participated
     meta_env <- new.env()
     load(path.meta, envir = meta_env)
@@ -438,7 +438,7 @@ double.merge <- function(DT1, DT2, by_col = "AID") {
     out
 }
 
-get.infection.range.from.testing <- function() 
+get.infection.range.from.testing <- function(meta=meta) 
 {
     # get maximum and minimum dates
 
@@ -459,12 +459,12 @@ get.infection.range.from.testing <- function()
         MAX = pmin(date_first_positive - 30, date_collection - 30, na.rm = TRUE)
     )]
     drange[, lowb15lastneg := MAX - as.integer(365.25 * 15)]
-    drange[lowb15lastneg > MIN, MIN := lowb15lastneg]
+    drange[ lowb15lastneg > MIN, MIN := lowb15lastneg]
     drange[, lowb15lastneg := NULL]
     drange
 }
 
-get.infection.range.from.tsi <- function(path, path.sequence.dates, chain_subset = TRUE) 
+get.infection.range.from.tsi <- function(path.sequence.dates, chain_subset = TRUE, exclude_mid=TRUE) 
 {
     seqdates <- readRDS(path.sequence.dates)
     names(seqdates) <- toupper(names(seqdates)) 
@@ -481,6 +481,7 @@ get.infection.range.from.tsi <- function(path, path.sequence.dates, chain_subset
         AID=AID,
         RENAME_ID=RENAME_ID,
         MIN=VISIT_DT - as.integer(365.25*RF_PRED_MAX_LINEAR),
+        MID=VISIT_DT - as.integer(365.25*RF_PRED_LINEAR),
         MAX=VISIT_DT - as.integer(365.25*RF_PRED_MIN_LINEAR)
     )]
 
@@ -488,6 +489,11 @@ get.infection.range.from.tsi <- function(path, path.sequence.dates, chain_subset
         idx <- chain[, unique(c(SOURCE, RECIPIENT))]
         drange_tsi <- drange_tsi[AID %in% idx, ]
     }
+    
+    if (exclude_mid) {
+        drange_tsi[, MID := NULL ]
+    } 
+
     drange_tsi
 }
 
@@ -1868,10 +1874,10 @@ if (0) # 2D, uniform pdf
         dcohords <- merge(dcohords, tmp, all.x = TRUE)
     }
 
-prepare.pairs.input.for.bayesian.model <- function(DT) {
+prepare.pairs.input.for.bayesian.model <- function(DT, CHAIN=chain) {
     # get predictions for time of infection
     merge(
-        chain[, .(SOURCE, RECIPIENT)],
+        CHAIN[,.(SOURCE, RECIPIENT)],
         DT,
         by.x = "RECIPIENT", by.y = "ID"
     ) -> dresults
@@ -1908,13 +1914,17 @@ prepare.pairs.input.for.bayesian.model <- function(DT) {
     cols <- intersect(cols, names(dresults))
     setcolorder(dresults, cols)
 
-    cols <- c("SOURCE", "RECIPIENT")
-    chain_tmp <- chain[SCORE > threshold.likely.connected.pairs]
-    # chain_tmp <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
-    idx <- merge(dresults[, ..cols], chain_tmp[, ..cols], by = cols)
-    idx[, DIRECTION := "phyloscanner"]
-    dresults <- merge(dresults, idx, all.x = TRUE, by = cols)
-    dresults[, DIRECTION := fcoalesce(DIRECTION, "serohistory")]
+    # determine method of pair detection 
+    if(exists('chain'))
+    {
+        cols <- c("SOURCE", "RECIPIENT")
+        chain_tmp <- chain[SCORE > threshold.likely.connected.pairs]
+        # chain_tmp <- keep.likely.transmission.pairs(as.data.table(dchain), threshold.likely.connected.pairs)
+        idx <- merge(dresults[, ..cols], chain_tmp[, ..cols], by = cols)
+        idx[, DIRECTION := "phyloscanner"]
+        dresults <- merge(dresults, idx, all.x = TRUE, by = cols)
+        dresults[, DIRECTION := fcoalesce(DIRECTION, "serohistory")]
+    }
 
     dresults
 }

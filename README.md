@@ -13,13 +13,11 @@
 - [Quick Start](#quick-start)
   - [System Requirements](#system-requirements)
   - [Installation](#installation)
-  - [Data preprocessing](#data-preprocessing)
-  - [Age-specific HIV incidence rates](#age-specific-hiv-incidence-rates)
-  - [Transmission flows analysis](#transmission-flows-analysis)
-- [Data and Script Reference](#data-and-script-reference)
-  - [Sample Data](#sample-data)
-  - [Generated Data](#generated-data)
-- [Phylogenetic analyses](#phylogenetic-analyses)
+  - [Reproducing our Analyses](#reproducing-our-analyses)
+    - [RCCS Surveillance Analyses](#rccs-surveillance-analyses)
+    - [Phylogenetic Analyses](#phylogenetic-analyses)
+    - [Age-specific HIV incidence rates](#age-specific-hiv-incidence-rates)
+    - [Transmission flows analysis](#transmission-flows-analysis)
 
 ## License
 The code and data in this repository are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
@@ -59,15 +57,18 @@ This study was supported by the following organizations:
 - macOS or UNIX, the code was developed on macOS Big Sur 11.7
 - [R](https://www.r-project.org/) version >= 4.1.2
 
-
 ### Installation 
 Please use the following ```bash``` script to build a conda virtual environment and install all R dependencies:
 ```shell
 git clone https://github.com/MLGlobalHealth/phyloSI-RakaiAgeGender.git
 cd phyloSI-RakaiAgeGender
-# for UNIX
+```
+for UNIX, please use
+```shell
 bash phyloSI-RakaiAgeGender-install.sh
-# for MacOS Apple M1 chip please use
+```
+for MacOS Apple M1 chip, please use
+```Shell
 bash phyloSI-RakaiAgeGender-install-macosM1.sh
 ```
 If not activated, activate the environment for use:
@@ -75,39 +76,45 @@ If not activated, activate the environment for use:
 source activate phyloSI-RakaiAgeGender
 ```
 
-### Data preprocessing
-
+### Reproducing our Analyses
 We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout.
 
 Our main analyses depend on estimates of population sizes, HIV prevalence, and HIV suppression, as well as outputs from two phylogenetic analyses: one to estimate the 'time since infection', and the other to detect source-recipient pairs.
 
-To perform the data preprocessing steps, navigate to the root directory of the repository and execute the following commands
+To perform the data pre-processing and analysis, navigate to the root directory of the repository and follow the instructions in the next sections.
 
+> **Note** Some scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`. Detailed flowcharts of how data read and written by each R script can be found in `docs/README.md`.
+
+#### RCCS Surveillance Analyses
 > **Warning** **(Please read)** Several of the pre-processing code for the surveillance requires the running of computationally demanding Stan models which may take more than 24 hours to finish on a standard laptop computer. We provide summarized outputs for all Stan models and recommend users to skip Stage 1 and proceed directly to Stage 2. To run the full data pre-processing step, execute both Stage 1 and Stage 2.
-
-#### Stage 1 (pre-processing of surveillance data)
 
 > **Note** Runtime arguments for Stan models may be configured by editing the contents of `./stan_models/binomial_gp_config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
 
+##### Estimate HIV status and prevalence
 ```shell
 Rscript "./surveillance_pipeline_src/get_estimates_prevalence.R"
+```
 
+##### Estimate ART use
+```shell
 Rscript "./surveillance_pipeline_src/get_estimates_art_coverage_participants.R"
-Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R"
-
 Rscript "./surveillance_pipeline_src/get_estimates_art_coverage_non_participants.R"
+```
+
+##### Estimate viral suppresion
+```shell
+Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R"
 Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_non_participants.R"
 ```
 
-#### Stage 2 (treatment cascade)
+##### Estimate treatment cascade
 ```shell
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_participants.R"
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_non_participants.R"
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
 ```
 
-#### Stage 3 (pre-processing of phylogenetic data)
-
+#### Phylogenetic Analyses
 The deep-sequence phylogenetic time since infection estimates were refined using exact patient meta-data that we do not share, and instead we provide the outputs in the `data` directory.  
 
 To reproduce our analyses in part, we share randomized versions of the data that are suffixed by `randomized`. Use these as shown below in combination with the deep-sequence phylogenetic data from the Zenodo repository:
@@ -122,17 +129,19 @@ Rscript ./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FAL
 Rscript ./scripts_for_confidential_data/get_infection_dates_for_phylopairs --confidential FALSE
 ```
 
-Note that some preprocessing scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`. Detailed flowcharts of how data read and written by each R script within each preprecessing stage can be found in `docs/README.md`.
+The statistical models present in this repository are built on top of outputs from phylogenetic analyses.
+In particular, the same phylogenies as in [Xi et al.](https://doi.org/10.1111/rssc.12544) are used to obtain potential source-recipient pairs, and these can be found in our Zenodo data repository.
+Separate phylogenetic analyses were also performed to obtain individual-level estimates of time since infection using the [HIV-phylo-TSI algorithm](https://github.com/BDI-pathogens/HIV-phyloTSI) described in [Golubchik et al.](https://doi.org/10.1101/2022.05.15.22275117). The scripts to perform this analysis can be found in the subdirectory `phylo_pipeline_src`
+After the analyses were over, we were able to date transmission events as per the script `confidential_data_src/get_infection_dates_for_phylopairs.R`.
 
-### Age-specific HIV incidence rates
+#### Age-specific HIV incidence rates
 To run the age-specific HIV incidence rates analysis, run: 
 ```shell
 cd phyloSI-RakaiAgeGender
 $ Rscript scripts/run_incidence_rates_estimation.R
 ```
-The output will be saved in a seperate directory outside the repository under the name `phyloSI-RakaiAgeGender-outputs`.
 
-### Transmission flows analysis
+#### Transmission flows analysis
 For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. 
 
 Set the **absolute path** to the output directory where the results should be stored in **line 7** of `phyloSI-RakaiAgeGender-run_phyloflows-laptop.sh`: 
@@ -152,164 +161,3 @@ $ source activate phyloSI-RakaiAgeGender
 $ cd $OUTDIR
 $ bash bash_gp_220108-cutoff_2014.sh
 $ bash bash_gp_220108-cutoff_2014-postprocessing.sh
-```
-
-
-## Data and script reference
-
-### Sample Data
-The table below lists the data files within `/data` and a brief description of its contents
-
-<details>
-<summary><b>Click to show table</b></summary>
-  <table>
-    <thead>
-      <tr>
-        <th>File name</th>
-        <th>Description</th>
-      </tr>
-    </thead>
-  <tbody>
-    <tr>
-      <td><code>pairsdata_toshare_d1_w11_netfrompairs_postponessrm.rds</code></td>
-      <td>HIV source-recipient pairs</td>
-    </tr>
-    <tr>
-      <td><code>RCCS_census_eligible_individuals_221116.csv</code></td>
-      <td>Count of census eligible population by age, gender and round</td>
-    </tr>
-      <tr>
-      <td><code>RCCS_participation_221208.csv</code></td>
-      <td>Participation rates to the RCCS survey by age, gender and round</td>
-      </tr>
-    <tr>
-      <td><code>aggregated_count_hiv_positive.csv</code></td>
-      <td>Count of participants by hiv status, age, gender and round used in <code>surveillance_pipeline_src/get_estimates_prevalence.R</code> to estimate smooth proportion of hiv prevalence among population.</td>
-    </tr>
-    <tr>
-      <td><code>aggregated_participants_count_art_coverage.csv</code></td>
-      <td>count of participants by self-reported art use, age, gender and round, used in <code>surveillance_pipeline_src/get_estimates_art_coverage_participants.R</code> to estimate smooth proportion of art coverage among participants.</td>
-    </tr>
-    <tr>
-      <td><code>aggregated_participants_count_unsuppressed.csv</code></td>
-      <td>count of participants by viremic viral loads, age, gender and round, used in <code>surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R</code> to estimate smooth proportion of viral suppression among participants.</td>
-    </tr>
-    <tr>
-      <td><code>aggregated_newlyregistered_count_art_coverage.csv</code></td>
-      <td>count of first-time participants by self-reported art use, age, gender and round, used in <code>surveillance_pipeline_src/get_estimates_art_coverage_non_participants.R</code> to estimate smooth proportion of art coverage among first-time participants.</td>
-    </tr>
-    <tr>
-      <td><code>aggregated_newlyregistered_count_unsuppressed.csv</code></td>
-      <td>count of first-time participants by viremic viral loads, age, gender and round, used in <code>surveillance_pipeline_src/get_estimates_unsuppressed_proportion_non_participants.R</code> to estimate smooth proportion of viral suppression among first-time participants.</td>
-    </tr>
-    <tr>
-      <td><code>seroconverter_cohort_R6R19.rds</code></td>
-      <td>Individual-level seroconvert cohort data with information on rounds of enrollment, age, sex, hiv status</td>
-      </tr>
-      <tr>
-      <td><code>Rakai_incpredictions_inland_221107.csv</code></td>
-      <td>HIV incidence rates estimates by age, gender and round</td>
-    </tr>
-    <tr>
-      <td><code>inland_R015_cntcts_rate_1130b.rds</code></td>
-      <td>Sexual contact rate estimates by age and gender for round 15</td>
-    </tr>
-       <tr>
-      <td><code>Rakai_Pangea2_RCCS_Metadata_randomized.RData  data/sequences_collection_dates_randomized.rds</code></td>
-      <td>Individual-level meta data containing Anonymised IDs, round sex, community type, and randomized visit dates,  birthdays, and test dates  </td>
-    </tr>
-         <tr>
-      <td><code>sequences_collection_dates_randomized.rds</code></td>
-      <td> Blood samples collection dates randomized within 6 months. </td>
-    </tr>
-    </tbody>
-  </table>
-</details>
-
-### Generated Data
-<details>
-<summary><b>Click to show table</b></summary>
-<table>
-  <thead>
-    <tr>
-      <th>File name</th>
-      <th>Description</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td><code>RCCS_prevalence_estimates_DATE.csv</code></td>
-      <td>Smooth proportion of HIV prevalence in population by age, gender and round</td>
-    </tr>
-    <tr>
-      <td><code>RCCS_treatment_cascade_population_estimates_DATE.csv</code></td>
-      <td>Smooth estimates of ART coverage and viral suppression in population by age, gender and round</td>
-    </tr>
-    <tr>
-      <td><code>RCCS_treatment_cascade_participants_estimates_DATE.csv</code></td>
-      <td>Smooth estimates of ART coverage and viral suppression in participants by age, gender and round</td>
-    </tr>
-    <tr>
-      <td><code>RCCS_treatment_cascade_nonparticipants_estimates_DATE.csv</code></td>
-      <td>Smooth estimates of ART coverage and viral suppression in first-time participants by age, gender and round</td>
-    </tr>
-  </tbody>
-</table>
-</details>
-
-### Scripts
-
-The following table list the actions performed by each of the scripts in `surveillance_pipeline_src/`:
-<details>
-  <summary><b>Click to show table</b></summary>
-  <table>
-    <thead>
-      <tr>
-        <th>Action</th>
-        <th>Script</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>Obtain smooth HIV prevalence by age, gender, and round</td>
-        <td><code>get_estimates_prevalence.R</code></td>
-      </tr>
-      <tr>
-        <td>Obtain smooth ART coverage in participants by age, gender, and round</td>
-        <td><code>get_estimates_art_coverage_participants.R</code></td>
-      </tr>
-      <tr>
-        <td>Obtain smooth ART coverage in first-time participants by age, gender, and round</td>
-        <td><code>get_estimates_art_coverage_non_participants.R</code></td>
-      </tr>
-      <tr>
-        <td>Obtain smooth viral suppression in participants by age, gender, and round</td>
-        <td><code>get_estimates_unsuppressed_proportion_participants.R</code></td>
-      </tr>
-      <tr>
-        <td>Obtain smooth viral suppression in first-time participants by age, gender, and round</td>
-        <td><code>get_estimates_unsuppressed_proportion_non_participants.R</code></td>
-      </tr>
-      <tr>
-        <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in participants</td>
-        <td><code>get_treatment_cascade_participants.R</code></td>
-      </tr>
-      <tr>
-        <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in first-time participants</td>
-        <td><code>get_treatment_cascade_non_participants.R</code></td>
-      </tr>
-      <tr>
-        <td>Combine ART coverage and viral suppression estimates to obtain treatment cascade in population</td>
-        <td><code>get_treatment_cascade_population.R</code></td>
-      </tr>
-    </tbody>
-  </table>
-</details>
-
-
-## Phylogenetic analyses
-
-The statistical models present in this repository are built on top of outputs from phylogenetic analyses.
-In particular, the same phylogenies as in [Xi et al.](https://doi.org/10.1111/rssc.12544) are used to obtain potential source-recipient pairs, and these can be found in our Zenodo data repository.
-Separate phylogenetic analyses were also performed to obtain individual-level estimates of time since infection using the [HIV-phylo-TSI algorithm](https://github.com/BDI-pathogens/HIV-phyloTSI) described in [Golubchik et al.](https://doi.org/10.1101/2022.05.15.22275117). The scripts to perform this analysis can be found in the subdirectory `phylo_pipeline_src`
-After the analyses were over, we were able to date transmission events as per the script `confidential_data_src/get_infection_dates_for_phylopairs.R`.

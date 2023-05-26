@@ -7,22 +7,21 @@ stan_model <- 'gp_221201d'
 # indir repository
 indir <- here::here() # please modify accordingly
 outdir <- here::here()
+gitdir <- indir
+source( file.path( indir, 'config.R' ) )  # loads the paths
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
+if (!dir.exists((outfile))) dir.create((outfile))
+if (!dir.exists(file.path(outdir, 'figures'))) dir.create(file.path(outdir, 'figures'))
 if (!dir.exists((outfile.figures))) dir.create((outfile.figures))
 
-# paths to data
-file.unsuppressed.share <- file.path(indir, 'fit', paste0('RCCS_unsuppressed_share_sex_221208.csv')) # please modify accordingly
-file.path.round.timeline <- file.path(indir, 'data', 'RCCS_round_timeline_220905.RData') # please modify accordingly
-file.expected_contribution_age_source <- file.path(indir, 'data', paste0(stan_model, '-', jobname, '-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_direction_round.rds')) # please modify accordingly
-file.contribution.sexual.contacts <- file.path(indir, 'data', 'inland-R015_age-dist_ma_cntct_area_1549.rds')
 # load functions
-source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_utils_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_statistics_functions.R'))
-source(file.path(indir, 'functions', 'summary_functions.R'))
+source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_summary_functions.R'))
+source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_plot_functions.R'))
+source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_utils_functions.R'))
+source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_statistics_functions.R'))
+source(file.path(indir, 'R', 'functions_transmission_flow', 'summary_functions.R'))
 
 # get fig A ----
 # map direction
@@ -32,10 +31,10 @@ load(file.path.round.timeline)
 df_round <- make.df.round(df_round_inland)
 
 # load data
-unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
+unsuppressed_share <- fread(file.unsuppressed.share.fig) # share of unsuppressed count by sex
 expected_contribution_age_source <- as.data.table(readRDS(file.expected_contribution_age_source))
 # load the sexual contact data
-contribution_sexual_contact <- as.data.table(readRDS(file.contribution.sexual.contacts))
+contribution_sexual_contact <- as.data.table(readRDS(file.age_dist_ma_cntct_area))
 
 # clean
 df_contribution_sexual_contact <- clean_contribution_sexual_contact_yu(contribution_sexual_contact)
@@ -96,11 +95,11 @@ pA <- ggplot(pltA, aes(x = AGEYRS, y = M)) +
   labs(x = 'Female age                                                                                                           Male age',
        y = 'Percent') +
   theme(
-    panel.grid.major = element_line(size = 0.3),
+    panel.grid.major = element_line(linewidth = 0.3),
 
     panel.grid.minor = element_blank(),
-    panel.border = element_rect(fill = NA, colour = "black", size = 0.3),
-    axis.ticks = element_line(size = 0.2),
+    panel.border = element_rect(fill = NA, colour = "black", linewidth = 0.3),
+    axis.ticks = element_line(linewidth = 0.2),
     strip.background = element_blank(),
     axis.text = element_text(size = 5, family = 'sans'),
     legend.text =  element_text(size = 5, family = 'sans'),
@@ -119,7 +118,7 @@ pA <- ggplot(pltA, aes(x = AGEYRS, y = M)) +
   guides(color = guide_legend(nrow = 3, byrow = F))
 
 # conditional contact intensities----
-pd.a <- as.data.table(readRDS(file.path(indir, 'data', 'inland-R015_age-dist_cntct_area_1549.rds')))
+pd.a <- as.data.table(readRDS(file.age_dist_cntct_area))
 
 pd.a <- pd.a[cont.age %in% c(15, 20, 25, 30, 35, 40)]
 pd.a$part.sex <- ifelse(pd.a$part.sex == 'F', 'Women', 'Men')
@@ -132,7 +131,7 @@ pd.a[, cont.age := paste0('Sexual contact intensities to ', cont.sex, ' aged ', 
 pd.a[, type := 'Contribution to sexual contacts']
 
 # load data----
-dta <- readRDS(file.path(indir, 'data', 'gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.source_age_infection.recipientstandardisedby_direction_round.rds')) # subset to round 18
+dta <- readRDS(file.expected_contribution_sliced_age_source)
 dta <- dta[ROUND == 'R018'] # subset to gender of the source (i.e.., Female sources or Male sources)
 setnames(dta, c('LABEL_GENDER_SOURCE', 'LABEL_GENDER_RECIPIENT', 'AGE_TRANSMISSION.SOURCE', 'AGE_INFECTION.RECIPIENT'), c('part.sex', 'cont.sex', 'part.age', 'cont.age'))
 dta <- dta[cont.age %in% c(15, 20, 25, 30, 35, 40)]
@@ -147,7 +146,6 @@ plt <- rbind(pd.a[, list(part.age,cont.age,CL,CU,M,part.sex,cont.sex,label, plt.
              dta[, list(part.age,cont.age,CL,CU,M,part.sex,cont.sex,label, plt.bar, plt.age,type)]
              , use.names = TRUE, fill = TRUE)
 plt <- plt[order(label)]
-unique(plt$cont.age)
 plt$cont.age <- as.factor(plt$cont.age)
 
 # plot B new----
@@ -242,4 +240,4 @@ pB <- ggpubr::ggarrange(p1b, p2b, ncol = 1, common.legend = T, legend = 'bottom'
 
 # combine two plots----
 p <- ggpubr::ggarrange(pA, pB, ncol = 1, heights  = c(1.35, 2.8), labels = c('a', 'b'), font.label = list(color = "black", size = 8))
-ggsave(file = file.path(outfile.figures, 'extended-data-fig_age-dist_0125.pdf'), p, width = 18, height = 20, units = 'cm', dpi = 310, limitsize = FALSE)
+ggsave(file = file.path(outfile.figures, 'extended-data-fig_age-dist_EDF7.pdf'), p, width = 18, height = 20, units = 'cm', dpi = 310, limitsize = FALSE)
