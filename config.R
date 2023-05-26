@@ -88,14 +88,14 @@ if (usr == "andrea" ) {
 if(usr == 'alexb') {
   indir.deepsequencedata <- '~/OneDrive - Imperial College London/PANGEA/ratmann_pangea_deepsequencedata/live'
   indir.deepsequence_analyses <- '~/OneDrive - Imperial College London/PANGEA/ratmann_deepseq_analyses/live'
-  indir.deepsequence.xiaoyue <- '~/OneDrive - Imperial College London/PANGEA/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
+  indir.deepanalyses.xiaoyue <- '~/OneDrive - Imperial College London/PANGEA/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI'
 }
 
 if(usr == "melodiemonod"){
   # main indir
   indir.deepsequencedata <- "~/Box\ Sync/2019/ratmann_pangea_deepsequencedata/live/"
   indir.deepsequence_analyses <- "~/Box\ Sync/2021/ratmann_deepseq_analyses/live/"
-  indir.deepsequence.xiaoyue <- "~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
+  indir.deepanalyses.xiaoyue <- "~/Box\ Sync/2021/ratmann_xiaoyue_jrssc2022_analyses/live/PANGEA2_RCCS1519_UVRI"
 }
 
 # define all other confidential paths
