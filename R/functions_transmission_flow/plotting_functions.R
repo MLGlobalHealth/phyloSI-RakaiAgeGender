@@ -74,7 +74,7 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, cutoff_dat
     theme(legend.position = 'bottom')
 
   p <- ggarrange(p1, p2, ncol = 2)
-  if(!is.null(outdir))
+  if(!is.null(outdir) )
     ggsave(p, filename = paste0(outdir, '-data-AgeInfection_CommunitySourceRecipient_', plotlab, '.png'), w = 9, h = 7)
   plots = c(plots, list(p))
   
@@ -91,8 +91,13 @@ plot_age_infection_source_recipient <- function(data, title, plotlab, cutoff_dat
     ggtitle(paste0(title, ' - ', paste0(nrow(data), ' pairs'))) + 
     theme(legend.position = 'bottom') + 
     facet_grid(.~date_infection_before_cutoff_name.RECIPIENT)
-  ggsave(p2, filename = paste0(outdir, '-data-AgeInfection_CommunityRecipient_', plotlab, '.png'), w = 5, h = 5)
-  
+
+  if(!is.null(outdir) )
+    ggsave(p2, filename = paste0(outdir, '-data-AgeInfection_CommunityRecipient_', plotlab, '.png'), w = 5, h = 5)
+  if(nm_reqs)
+    return(p2)
+  plots = c(plots, list(p))
+
   return(plots)
 }
 
@@ -1364,16 +1369,15 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, 0.05))) + 
     scale_fill_manual(values = c('Male to Female'=male_to_female_color,'Female to Male'=female_to_male_color, 
                                  'Female to Female'=female_to_female_color,'Male to Male'=male_to_male_color)) 
-  ggsave(p, file = paste0(outdir, '-data-PairsAll.pdf'), w = 3.3, h = 2.5)
-
     if(nm_reqs){ p <- p + reqs }
     return(p)
+
+  ggsave(p, file = paste0(outdir, '-data-PairsAll.pdf'), w = 3.3, h = 2.5)
   
 }
 
 plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 {
-    nm_reqs = TRUE
     pairs <- copy(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE])
     
   # extend round periods to the beginning of next one.
