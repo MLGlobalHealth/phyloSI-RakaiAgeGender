@@ -209,7 +209,7 @@ get_incidence_cases_round <- function(incidence.inland, eligible_count_round)
       geom_line(aes(y = INCIDENCE*100, col = ROUND)) +
       geom_ribbon(aes(ymin = LB*100, ymax = UB*100, fill = ROUND),  alpha = 0.1) +
       labs(y = 'Incidence rate per 100 PY ', x = 'Age') +
-      facet_grid(COMM~SEX, label = 'label_both', scale = 'free_y') +
+      facet_grid(COMM~SEX, label = 'label_both', scales = 'free_y') +
       theme_bw() +
       theme(legend.position = 'bottom')
   }
@@ -233,7 +233,7 @@ get_incidence_cases_round <- function(incidence.inland, eligible_count_round)
       geom_line(aes(y = INCIDENT_CASES, col = ROUND)) +
       geom_ribbon(aes(ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, fill = ROUND), alpha = 0.1) +
       labs(y = 'Expected number of incident cases', x = 'Age') +
-      facet_grid(COMM~SEX, label = 'label_both', scale = 'free') +
+      facet_grid(COMM~SEX, label = 'label_both', scales = 'free') +
       theme_bw() +
       theme(legend.position = 'bottom')
     
