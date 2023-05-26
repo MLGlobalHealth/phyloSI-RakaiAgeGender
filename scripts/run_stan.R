@@ -63,11 +63,11 @@ if(length(args_line) > 0)
 source(file.path(gitdir, 'config.R'))
 
 # load functions
-source(file.path(gitdir.functions, 'utils.R'))
-source(file.path(gitdir.functions, 'functions_transmission_flow', 'summary_functions.R'))
-source(file.path(gitdir.functions, 'functions_transmission_flow', 'plotting_functions.R'))
-source(file.path(gitdir.functions, 'functions_transmission_flow', 'statistics_functions.R'))
-source(file.path(gitdir.functions, 'functions_transmission_flow', 'stan_utils.R'))
+source(file.path(gitdir.R, 'utils.R'))
+source(file.path(gitdir.R.flow, 'summary_functions.R'))
+source(file.path(gitdir.R.flow, 'plotting_functions.R'))
+source(file.path(gitdir.R.flow, 'statistics_functions.R'))
+source(file.path(gitdir.R.flow, 'stan_utils.R'))
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
