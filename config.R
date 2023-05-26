@@ -256,7 +256,7 @@ file.pairs.nonrefined <- file.path( dir.zenodo.phyloproc, "pairsdata_toshare_d1_
 ###########################################
 
 file.incidence.fits	<- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221109.RData")
-file.incidence.30com.fits	<- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221109.RData")
+file.incidence.30com.fits	<- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221119.RData")
 
 file.incidence.inland	<- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_inland_221107.csv")
 file.incidence.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_samples_inland_221107.csv")
