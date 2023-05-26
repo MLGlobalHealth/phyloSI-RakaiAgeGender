@@ -33,7 +33,7 @@ c(  file.path.seroconverter_cohort,
 restrict_to_30_comms <- F
 
 # load functions
-source(file.path(gitdir.functions, 'functions_incidence_rate', 'incidence_rate_estimation_functions.R'))
+source(file.path(gitdir.R.incid, 'incidence_rate_estimation_functions.R'))
 
 # utils
 rounds_group_1 <- c("R006","R007", "R008", "R009", "R010", "R011", "R012", "R013", "R014")
