@@ -325,7 +325,7 @@ stan_init <- add_init(stan_data)
 # MAKE EXPLANATORY PLOTS
 #
 
-if(0){
+if(1){
   
   # find color palette of rounds
   find_palette_round()
