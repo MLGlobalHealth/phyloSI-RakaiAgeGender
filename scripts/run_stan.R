@@ -13,7 +13,7 @@ library(Hmisc)
 # laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 {
-  gitdir <- '~/git/phyloflows'
+  gitdir <- '~/git/phyloSI-RakaiAgeGender'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
   jobname <- 'new_treatment_cascade'
@@ -22,9 +22,22 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   dir.create(outdir)
 }
 
+# hpc
+if(dir.exists('/rds/general/user/mm3218/'))
+{
+  gitdir <- '~/git/phyloSI-RakaiAgeGender'
+  outdir <- '/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender'
+  
+  jobname <- 'test'
+  stan_model <- 'gp_221201d'
+  outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
+  dir.create(outdir)
+}
+
+# andrea
 if(dir.exists('/home/andrea'))
 {
-  gitdir <-'~/git/phyloflows'
+  gitdir <-'~/git/phyloSI-RakaiAgeGender'
   outdir <- '~/Documents/Box/2021/phyloflows'
 
   jobname <- 'central'
@@ -50,12 +63,11 @@ if(length(args_line) > 0)
 source(file.path(gitdir, 'config.R'))
 
 # load functions
-source(file.path(gitdir.functions, 'functions_transmission_flow', 'utils.R'))
+source(file.path(gitdir.functions, 'utils.R'))
 source(file.path(gitdir.functions, 'functions_transmission_flow', 'summary_functions.R'))
 source(file.path(gitdir.functions, 'functions_transmission_flow', 'plotting_functions.R'))
 source(file.path(gitdir.functions, 'functions_transmission_flow', 'statistics_functions.R'))
 source(file.path(gitdir.functions, 'functions_transmission_flow', 'stan_utils.R'))
-
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
