@@ -209,7 +209,7 @@ get_incidence_cases_round <- function(incidence.inland, eligible_count_round)
       geom_line(aes(y = INCIDENCE*100, col = ROUND)) +
       geom_ribbon(aes(ymin = LB*100, ymax = UB*100, fill = ROUND),  alpha = 0.1) +
       labs(y = 'Incidence rate per 100 PY ', x = 'Age') +
-      facet_grid(COMM~SEX, label = 'label_both', scale = 'free_y') +
+      facet_grid(COMM~SEX, label = 'label_both', scales = 'free_y') +
       theme_bw() +
       theme(legend.position = 'bottom')
   }
@@ -233,7 +233,7 @@ get_incidence_cases_round <- function(incidence.inland, eligible_count_round)
       geom_line(aes(y = INCIDENT_CASES, col = ROUND)) +
       geom_ribbon(aes(ymin = INCIDENT_CASES_LB, ymax = INCIDENT_CASES_UB, fill = ROUND), alpha = 0.1) +
       labs(y = 'Expected number of incident cases', x = 'Age') +
-      facet_grid(COMM~SEX, label = 'label_both', scale = 'free') +
+      facet_grid(COMM~SEX, label = 'label_both', scales = 'free') +
       theme_bw() +
       theme(legend.position = 'bottom')
     
@@ -1346,6 +1346,84 @@ read_pairs <- function(file.pairs){
   setnames(pairs.all, 'M', 'DATE_INFECTION.RECIPIENT')
   pairs.all <- select(pairs.all, -c('CL', 'IL', 'IU', 'CU', 'ROUND.M', 'DIRECTION'))
   return(pairs.all)
+}
+ 
+select.pairs.for.analysis <- function(DPAIRS,
+                                      only.one.community, 
+                                      use_30com_pairs, 
+                                      only.transmission.after.start.observational.period, 
+                                      only.transmission.before.stop.observational.period, 
+                                      remove.pairs.from.rounds
+                                      )
+{
+    
+    out <- copy(DPAIRS)
+
+    sprintfcat <- function(fmt, ...)
+        cat(sprintf(fmt=fmt, ...), '\n\n')
+
+    n <- nrow(out)
+    out <- subset(out, SEX.RECIPIENT != SEX.SOURCE)
+    n.out <- nrow(out)
+    cat('Keep only heterosexual pairs\n')
+    sprintfcat('Removing %s pairs, resulting in a total of %s pairs.', n - n.out, n.out )
+
+    n <- nrow(out)
+    out <- subset(out, COMM.SOURCE != 'neuro' & COMM.RECIPIENT != 'neuro')
+    n.out <- nrow(out)
+    cat('Keep only RCCS participants\n')
+    sprintfcat('Removing %s pairs, resulting in a total of %s pairs.', n - n.out, n.out )
+
+    if(!is.null(only.one.community)){
+        n <- nrow(out)
+        out <- subset(out, COMM.SOURCE == only.one.community & COMM.RECIPIENT == only.one.community)
+        n.out <- nrow(out)
+        cat('Keep only pairs in selected community\n')
+        sprintfcat('Removing %s pairs, resulting in a total of %s pairs.', n - n.out, n.out )
+    }
+    if(use_30com_pairs){
+
+        comm_continuously_surveyed <- c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 
+            89, 94, 106, 107, 108, 120, 391, 602, 754)
+
+        n <- nrow(out)
+        out <- subset(out,(COMM_NUM.SOURCE %in% comm_continuously_surveyed & COMM_NUM.RECIPIENT %in% comm_continuously_surveyed))
+        n.out <- nrow(out)
+
+        cat('\nExcluding sources and recipients outside of the 30 continuously surveyed communities\n')
+        sprintfcat('Removing %s pairs, resulting in a total of %s pairs.', n - n.out, n.out )
+    }
+    if(only.transmission.after.start.observational.period){
+        n <- nrow(out)
+        out <- subset(out, !(DATE_INFECTION.RECIPIENT < start_first_period_inland & COMM.RECIPIENT == 'inland'))
+        n.out <- nrow(out)
+        cat('\nFor inland excluding recipients infected before ', as.character(start_first_period_inland), '\n')
+        sprintfcat('Removing %s pairs, resulting in a total of %s pairs.', n - n.out, n.out )
+    }
+    if(only.transmission.before.stop.observational.period){
+        n <- nrow(out)
+        out <- subset(out, !(DATE_INFECTION.RECIPIENT > stop_second_period_inland & COMM.RECIPIENT == 'inland'))
+        n.out <- nrow(out)
+        cat('\nFor inland excluding recipients infected after ', as.character(stop_second_period_inland), '\n')
+        sprintfcat('Removing %s pairs, resulting in a total of %s pairs.', n - n.out, n.out )
+    }
+    if(!is.null(remove.pairs.from.rounds)){
+
+        tmp <- df_round_inland[round %in% remove.pairs.from.rounds, list(
+            min_exclusion = min(min_sample_date), 
+            max_exclusion = max(max_sample_date))
+        ]
+        out[, DATE.COLLECTION.PAIR := max(c(DATE.COLLECTION.SOURCE, DATE.COLLECTION.RECIPIENT)), by = c('RECIPIENT', 'SOURCE')]
+        n <- nrow(out)
+        out <- subset(out, !(COMM.RECIPIENT == 'inland' & DATE.COLLECTION.PAIR <= tmp[, max_exclusion] & DATE.COLLECTION.PAIR >= tmp[,min_exclusion ]))
+        n.out <- nrow(out)
+
+        cat('\nExcluding pairs in inland community from round', remove.pairs.from.rounds, '\n')
+        cat('\nFor inland excluding recipients infected after ', as.character(stop_second_period_inland), '\n')
+        sprintfcat('Removing %s pairs, resulting in a total of %s pairs.', n - n.out, n.out )
+    }
+
+    return(out)
 }
 
 get.sample.collection.dates <- function(select_aid=NULL, get_first_visit=FALSE)

@@ -1,89 +1,84 @@
 cat("Start of get_main_figure2.R")
 
+suppressPackageStartupMessages({
+    library(rstan)
+    library(data.table)
+    library(ggplot2)
+    library(ggpubr)
+    library(gridExtra)
+    library(matrixStats)
+    library(dplyr)
+    library(lubridate)
+    library(ggnewscale)
+})
 
-library(rstan)
-library(data.table)
-library(ggplot2)
-library(ggpubr)
-library(gridExtra)
-library(matrixStats)
-library(dplyr)
-library(lubridate)
-library(ggnewscale)
+gitdir <- here::here()
+source(file.path(gitdir, 'config.R'))
+
+# load functions
+source(file.path(gitdir.R.flow, 'postprocessing_summary_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_plot_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_utils_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_statistics_functions.R'))
 
 jobname <- 'central3'
 stan_model <- 'gp_221201d'
+suffix <- paste(stan_model, jobname, sep='-')
 
-indir <- "/rds/general/user/mm3218/home/git/phyloflows"
-outdir <- paste0("/rds/general/user/mm3218/home/projects/2021/phyloflows/", stan_model, '-', jobname)
-
-if(1){
-    indir <- "/home/andrea/HPC/project/ratmann_pangea_deepsequencedata/live/temporary_for_Andrea/phyloflows/"
-    outdir <- file.path(indir,"results", paste0(stan_model, '-', jobname))
+# if on HPC, we know the username
+if(dir.exists('/rds/')){
+    if(usr == 'ab1820')
+        outdir <- paste0("/rds/general/user/",usr,"/home/projects/2022/phyloflows/", suffix)
+    if(usr == 'mm3218')
+        outdir <- paste0("/rds/general/user/",usr,"/home/projects/2021/phyloflows/", suffix)
+} else {
+    if(usr == 'andrea'){
+        outdir <- file.path(outdir.phyloflows, suffix) 
+    }
 }
 
-args_line <-  as.list(commandArgs(trailingOnly=TRUE))
-print(args_line)
-if(length(args_line) > 0)
-{
-  stopifnot(args_line[[1]]=='-indir')
-  stopifnot(args_line[[3]]=='-outdir')
-  stopifnot(args_line[[5]]=='-stan_model')
-  stopifnot(args_line[[7]]=='-jobname')
-  indir <- args_line[[2]]
-  outdir <- args_line[[4]]
-  stan_model <- args_line[[6]]
-  jobname <- args_line[[8]]
-}
-
-# load functions
-source(file.path(indir, 'functions', 'postprocessing_summary_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_plot_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_utils_functions.R'))
-source(file.path(indir, 'functions', 'postprocessing_statistics_functions.R'))
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
 # paths
 path.to.stan.output = paste0(outfile, "-stanout_", jobname, ".rds")
-.outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
-.outdir.table <-  file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
-path.to.suboutput <- '~/Downloads/subsample.rds'
+.outfile.figures <- file.path(outdir, 'figures', suffix)
+.outdir.table <-  file.path(outdir, 'tables', suffix)
+if(0)
+    path.to.suboutput <- '~/Downloads/subsample.rds'
 
-# load data
+# load data, then overwrite outdirs 
 path.to.stan.data <- paste0(outfile, "-stanin_",jobname,".RData")
 load(path.to.stan.data)
-outfile.figures <- .outfile.figures
-outdir.table <- .outdir.table
 
-# samples 
-if(file.exists(path.to.suboutput))
+# samples: select the thinned sample if specified
+if(exists('path.to.suboutput') )
 {
-    .outfile.figures <- '~/Downloads' #file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
-    .outdir.table <- '~/Downloads' # file.path(outdir, 'tables', paste0(stan_model,'-', jobname))
+    stopifnot("Thinned chains not found"=file.exists(path.to.suboutput))
+    .outfile.figures <- '~/Downloads' 
+    .outdir.table <- '~/Downloads' 
     samples <- readRDS( file=path.to.suboutput)
 }else{
     fit <- readRDS(path.to.stan.output)
     samples <- rstan::extract(fit)
 }
-
-# need to be able to get to: 
-# a Expected_contribution_sex_age_inland.pdf 
-# b MedianAgeSource_ByAgeGroupRecipient_inland.pdf 
-# c Expected_contribution_age_inland.pdf 
-# d Expected_contribution_sex_barplot.png 
+outfile.figures <- .outfile.figures
+outdir.table <- .outdir.table
 
 
 # temporary
-source(file.path(indir, 'functions', 'summary_functions.R'))
-df_direction <- get.df.direction()
+# source(file.path(indir, 'functions', 'summary_functions.R'))
+# df_direction <- get.df.direction()
 
 #
 # offset
 #
 
-log_offset_round <- find_log_offset_by_round(stan_data, eligible_count_round, df_estimated_contact_rates, 
-                                             use_number_susceptible_offset, use_contact_rates_prior)
+log_offset_round <- find_log_offset_by_round(
+    stan_data,
+    eligible_count_round, 
+    df_estimated_contact_rates,
+    use_number_susceptible_offset, use_contact_rates_prior)
 
 #
 # Summarise data and merge to maps for figures
@@ -109,7 +104,8 @@ median_age_source <- find_summary_output_by_round(
 # by age groups
 df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34', '35-39', '40-44', '45-49'))
 
-median_age_source_group <- find_summary_output_by_round(samples,
+median_age_source_group <- find_summary_output_by_round(
+    samples,
     'log_lambda_latent',
     c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
     transform = 'exp',
@@ -117,7 +113,8 @@ median_age_source_group <- find_summary_output_by_round(samples,
     quantile_age_source = T, save_output = FALSE ) 
 
 
-expected_contribution_age_group_source2 <- find_summary_output_by_round(samples,
+expected_contribution_age_group_source2 <- find_summary_output_by_round(
+    samples,
     'log_lambda_latent',
     c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
     transform = 'exp',

@@ -148,7 +148,6 @@ flowchart LR
       f_npart_est[(RCCS_treatment_cascade_nonparticipants_estimates_221208.csv)]
       f_pop_est[(RCCS_treatment_cascade_population_estimates_221208.csv)]
     end
-  
     f_art_post -- load --> r_part
     f_nsup_prop_post -- load --> r_part
     d3 -- load --> r_part

@@ -5,10 +5,10 @@ jobname <- 'central3'
 stan_model <- 'gp_221201d'
 
 # indir repository
-indir <- here::here() # please modify accordingly
+gitdir <- here::here() # please modify accordingly
+source( file.path( gitdir, 'config.R' ) )  # loads the paths
+
 outdir <- here::here()
-gitdir <- indir
-source( file.path( indir, 'config.R' ) )  # loads the paths
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 outfile.figures <- file.path(outdir, 'figures', paste0(stan_model,'-', jobname))
@@ -17,11 +17,11 @@ if (!dir.exists(file.path(outdir, 'figures'))) dir.create(file.path(outdir, 'fig
 if (!dir.exists((outfile.figures))) dir.create((outfile.figures))
 
 # load functions
-source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_summary_functions.R'))
-source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_plot_functions.R'))
-source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_utils_functions.R'))
-source(file.path(indir, 'R', 'functions_transmission_flow', 'postprocessing_statistics_functions.R'))
-source(file.path(indir, 'R', 'functions_transmission_flow', 'summary_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_summary_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_plot_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_utils_functions.R'))
+source(file.path(gitdir.R.flow, 'postprocessing_statistics_functions.R'))
+source(file.path(gitdir.R.flow, 'summary_functions.R'))
 
 # get fig A ----
 # map direction
