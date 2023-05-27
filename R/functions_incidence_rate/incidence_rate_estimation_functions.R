@@ -634,7 +634,8 @@ save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df
   comma_thousands <- function(x) format(x, big.mark=",")
   
   # number of participants
-  RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)[round %in% 5:13]$research_id)
+  # RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)[round %in% 5:13]$research_id)
+  RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)$research_id)
   stats$N = comma_thousands(length(RESEARCH_IDS))
   
   # number of participants followed up
@@ -674,7 +675,8 @@ save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df
   tab[, age_group := factor(age_group, levels = c('Total', unique(df_age_aggregated$age_group)))]
   tab[, sex := factor(sex, levels = c('Total', 'F', 'M'))]
   tab <- tab[order(round, sex, age_group)]
-  
+  tab <- tab[round %in%  df_round[visit >= 'R010' & visit <= 'R018', round_numeric]]
+
   stats[['table']] <- tab
   
   return(stats)
@@ -735,8 +737,9 @@ save_statistics_estimates <- function(df_round,
   
   # merge
   tab <- merge(seroconverter_cohort_agg, inc_rate, by = c('round', 'sex', 'age_group'))
-  
-  tab[, age_group := factor(age_group, levels = c('Total', unique(df_age_aggregated$age_group)))]
+
+  .levels <- unique(seroconverter_cohort_agg$age_group)[unique(seroconverter_cohort_agg$age_group) != 'Total' ]
+  tab[, age_group := factor(age_group, levels = c('Total', .levels))]
   tab[, sex := factor(sex, levels = c('Total', 'F', 'M'))]
   tab[, dummy := 1]
   tab <- tab[order(round, sex, age_group)]
@@ -747,7 +750,9 @@ save_statistics_estimates <- function(df_round,
   return(stats)
 }
 
-plot_data <- function(seroconverter_cohort, outdir){
+plot_data <- function(seroconverter_cohort, seroconverter_cohort_agg_s, outdir){
+  
+  date <- format(Sys.Date(), '%y%m%d')
   
   # find cases and py
   crude_cases_py <- subset(seroconverter_cohort) %>%
@@ -855,9 +860,65 @@ plot_data <- function(seroconverter_cohort, outdir){
   p <- ggarrange(p1F, p2F, p1M, p2M, nrow = 1, common.legend = T, legend='bottom', labels = c('a', 'b', 'c', 'd'))
   
   # save
-  date <- format(Sys.Date(), '%y%m%d')
   file = file.path(outdir, paste0('data-inland_', date, '.pdf'))
   ggsave(p, file= file, w = 9, h = 12)
+  
+  # person-years and incidence cases by Gender comparison to NEJM 
+  # NEJM hiv incidence rate estimate (https://www.nejm.org/doi/suppl/10.1056/NEJMoa1702150/suppl_file/nejmoa1702150_appendix.pdf)
+  nejm.f <- data.table(sex = 'F', 
+                       visit = c('R011', 'R012', 'R013', 'R014', 'R015', 'R016', 'R017'), 
+                       pysum = c(4425,4978,5610,5319,5587,7090,6689), 
+                       seroconvsum = c(50,65,67,61,50,55,56))
+  nejm.m <- data.table(sex = 'M', 
+                       visit = c('R011', 'R012', 'R013', 'R014', 'R015', 'R016', 'R017'), 
+                       pysum = c(3348,3791,4591,4497,4765,6069,5904), 
+                       seroconvsum = c(36,40,58,44,36,32,27))
+  nejm <- do.call('rbind', list(nejm.f, nejm.m))%>%
+    merge(df_round, by = 'visit') %>%
+    mutate(Sex = ifelse(sex == 'M', 'Male', 'Female'))
+  
+  # our cases and py (not stratified by age)
+  crude_cases_py_noage <- copy(seroconverter_cohort_agg_sm) %>%
+    subset(round >= 5)%>%
+    mutate(Sex = ifelse(sex == 'M', 'Male', 'Female'), 
+           number_missing_visits_status = factor(number_missing_visits_status, 
+                                                 levels = rev(levels(seroconverter_cohort_agg_sm$number_missing_visits_status)))) 
+  
+  # plot py
+  ggplot() +
+    geom_bar(data=subset(crude_cases_py_noage), aes(y=py, x=round + 5, 
+                                                    fill = number_missing_visits_status),size=1, stat = 'identity')+ 
+    geom_point(data=subset(nejm),aes(y=pysum, x=round_numeric + 5, col = 'NEJM analysis'))+
+    facet_grid(~Sex) +
+    xlab("Round")+ ylab("Person-years")+
+    labs(col = '', fill = '') + 
+    scale_y_continuous(expand=c(0,0)) + 
+    theme_bw(base_size=16) +
+    scale_color_manual(values = c('darkred', 'black' )) + 
+    theme_bw() + 
+    theme(strip.background = element_rect(colour="black", fill="white"))+
+    theme(legend.title=element_blank(), legend.position='bottom') + 
+    theme(strip.background = element_blank(),
+          panel.border = element_rect(colour = "black"))
+  ggsave(file.path(outdir, paste0('data-person_years_comparison_NEJM', date, '.png')), w = 7, h = 5)
+  
+  # plot incidence cases
+  ggplot() +
+    geom_bar(data=subset(crude_cases_py_noage), aes(y=hivinc, x=round + 5, 
+                                                    fill = number_missing_visits_status),size=1, stat = 'identity')+ 
+    geom_point(data=subset(nejm),aes(y=seroconvsum, x=round_numeric + 5, col = 'NEJM analysis'))+
+    facet_grid(~Sex) +
+    xlab("Round")+ ylab("Incident cases")+
+    labs(col = '', fill = '') + 
+    scale_y_continuous(expand=c(0,0)) + 
+    theme_bw(base_size=16) +
+    scale_color_manual(values = c('darkred', 'black' )) + 
+    theme_bw() + 
+    theme(strip.background = element_rect(colour="black", fill="white"))+
+    theme(legend.title=element_blank(), legend.position='bottom') + 
+    theme(strip.background = element_blank(),
+          panel.border = element_rect(colour = "black"))
+  ggsave(file.path(outdir, paste0('data-incidentcases_comparison_NEJM', date, '.png')), w = 7, h = 5)
   
 }
 
@@ -893,6 +954,46 @@ plot_model_fit <- function(modelpreds, modelpreds.age.1218, outdir){
     theme(strip.background = element_blank(),
           panel.border = element_rect(colour = "black"))
   ggsave(file.path(outdir, paste0('incidence_rate_sex_inland2_', date, '.png')), w = 7, h = 5)
+  
+  # incidence trends by Gender comparison to NEJM 
+  # NEJM hiv incidence rate estimate (https://www.nejm.org/doi/suppl/10.1056/NEJMoa1702150/suppl_file/nejmoa1702150_appendix.pdf)
+  
+  nejm.f <- data.table(Sex = 'Female', 
+                       visit = c('R011', 'R012', 'R013', 'R014', 'R015', 'R016', 'R017'), 
+                       inc = c(1.13, 1.31, 1.19, 1.15, 0.89, 0.78, 0.84), 
+                       lb = c(0.84, 1.01, 0.93, 0.88, 0.67, 0.59, 0.64), 
+                       ub = c(1.47, 1.65, 1.5, 1.46, 1.17, 1, 1.08))
+  nejm.m <- data.table(Sex = 'Male', 
+                       visit = c('R011', 'R012', 'R013', 'R014', 'R015', 'R016', 'R017'), 
+                       inc = c(1.08, 1.06, 1.26, 0.98, 0.76, 0.53, 0.46), 
+                       lb = c(0.76, 0.76, 0.97, 0.72, 0.53, 0.37, 0.31), 
+                       ub = c(1.47, 1.42, 1.62, 1.3, 1.03, 0.73, 0.65))
+  nejm.a <- data.table(Sex = 'All', 
+                       visit = c('R011', 'R012', 'R013', 'R014', 'R015', 'R016', 'R017'), 
+                       inc = c(1.11, 1.2, 1.23, 1.07, 0.83, 0.66, 0.66), 
+                       lb = c(0.89, 0.98, 1.02, 0.88, 0.67, 0.53, 0.53), 
+                       ub = c(1.36, 1.44, 1.45, 1.29, 1.02, 0.81, 0.81))
+  nejm <- do.call('rbind', list(nejm.f, nejm.m, nejm.a))
+  nejm <- merge(nejm, df_round, by = 'visit')
+  
+  ggplot() +
+    geom_line(data=subset(modelpreds), aes(y=inc*100, x=round + 5, col = 'Our estimates'),size=1)+ 
+    geom_ribbon(data=subset(modelpreds),aes(ymin=lb*100, ymax=ub*100, x=round + 5, fill = 'Our estimates'), alpha = 0.3)+
+    geom_line(data=subset(nejm), aes(y=inc, x=round_numeric + 5, col = 'NEJM estimates'),size=1)+ 
+    geom_ribbon(data=subset(nejm),aes(ymin=lb, ymax=ub, x=round_numeric + 5, fill = 'NEJM estimates'), alpha = 0.3)+
+    facet_grid(~Sex) +
+    xlab("Round")+ ylab("Incidence rate per 100 py")+
+    labs(col = '', fill = '') + 
+    scale_y_continuous(expand=c(0,0)) + 
+    theme_bw(base_size=16) +
+    scale_color_manual(values = c('darkred', 'black')) + 
+    scale_fill_manual(values = c('darkred', 'black')) + 
+    theme_bw() + 
+    theme(strip.background = element_rect(colour="black", fill="white"))+
+    theme(legend.title=element_blank(), legend.position='bottom') + 
+    theme(strip.background = element_blank(),
+          panel.border = element_rect(colour = "black"))
+  ggsave(file.path(outdir, paste0('incidence_rate_sex_inland_comparison_NEJM_', date, '.png')), w = 7, h = 5)
   
   # incidence trends by Gender and age uncertainty from estimate
   ggplot(subset(modelpreds.age.1218, model == 'model_1')) +

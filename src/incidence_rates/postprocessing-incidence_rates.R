@@ -91,6 +91,11 @@ p_labs <- c('M','CL','CU')
 seroconverter_cohort.all <- rbindlist(seroconverter_cohort.list)
 rm(seroconverter_cohort.list)
 
+if(!'age_group' %in% names(seroconverter_cohort.all)){
+  df_age_aggregated <- data.table(age = 15:49, age_group = c(rep('15-24', 10),  rep("25-34", 10), rep("35-49", 15)))
+  seroconverter_cohort.all <- merge(seroconverter_cohort.all, df_age_aggregated, by = 'age')
+}
+
 # pysum and seroconvsum by round, sex and 1-year age band for every iterations
 seroconverter_cohort_imputation <- seroconverter_cohort.all[, list(pysum=sum(na.omit(py)), 
                                                                    seroconvsum=sum(hivinc)), 
@@ -295,8 +300,11 @@ plot_comparison_loess_gam(
 #
 #
 
-
-file.name	<- file.path(args$out.dir, "Rakai_incpredictions_inland_221107.csv")
+if(!restrict_to_30_comms){
+  file.name	<- file.incidence.inland
+}else{
+  file.name	<- file.incidence.30com.inland
+}
 tmp <- select(modelpreds.age.1218[model == 'model_1'], c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
 if(! file.exists(file.name))
 {
@@ -306,7 +314,11 @@ if(! file.exists(file.name))
   cat("File:", file.name, "already exists...\n")
 }
 
-file.name	<- file.path(args$out.dir, "Rakai_incpredictions_samples_inland_221107.csv")
+if(!restrict_to_30_comms){
+  file.name	<- file.incidence.samples.inland
+}else{
+  file.name	<- file.incidence.30com.samples.inland
+}
 tmp <- modelpreds.age.1218.all[model == 'model_1', .(Sex, round_label, age, iterations, fit, inc, iterations_within)]
 if(! file.exists(file.name))
 {
@@ -316,37 +328,30 @@ if(! file.exists(file.name))
   cat("File:", file.name, "already exists...\n")
 }
 
-file.name	<- file.path(args$out.dir, "Rakai_incpredictions_loess_inland_221116.csv")
-tmp <- select(modelpreds.loess.age.1218, c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
-if(! file.exists(file.name))
-{
-  cat("Saving file:", file.name, '\n')
-  write.csv(tmp, file = file.name, row.names = F)
-}else{
-  cat("File:", file.name, "already exists...\n")
-}
-
-file.name	<- file.path(args$out.dir, "Rakai_incpredictions_loess_samples_inland_221116.csv")
-tmp <- modelpreds.loess.age.1218.all[, .(Sex, round_label, age, iterations, INC_CRUDE_SMOOTH)]
-setnames(tmp, 'INC_CRUDE_SMOOTH', 'inc')
-if(! file.exists(file.name))
-{
-  cat("Saving file:", file.name, '\n')
-  write.csv(tmp, file = file.name, row.names = F)
-}else{
-  cat("File:", file.name, "already exists...\n")
-}
-
-
-# if HPC link exists: 
-if (dir.exists(indir.deepsequencedata)) {
-  file.name	<- file.path(indir.deepsequencedata, 
-                         "RCCS_data_estimate_incidence_inland_R6_R18/220903/", 
-                         "Rakai_inc_model_fit_inland_221107.csv")
-} else {
-  out.path <- file.path(outdir, "RCCS_data_estimate_incidence_inland_R6_R18/220903/")
-  dir.create(out.path, recursive = TRUE)
-  file.name <- file.path(out.path, "Rakai_inc_model_fit_inland_221107.csv")
+if(!restrict_to_30_comms){
+  
+  file.name	<- file.incidence.loess.inland
+  tmp <- select(modelpreds.loess.age.1218, c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
+  if(! file.exists(file.name))
+  {
+    cat("Saving file:", file.name, '\n')
+    write.csv(tmp, file = file.name, row.names = F)
+  }else{
+    cat("File:", file.name, "already exists...\n")
+  }
+  
+  file.name	<- file.incidence.loess.samples.inland
+  tmp <- modelpreds.loess.age.1218.all[, .(Sex, round_label, age, iterations, INC_CRUDE_SMOOTH)]
+  setnames(tmp, 'INC_CRUDE_SMOOTH', 'inc')
+  if(! file.exists(file.name))
+  {
+    cat("Saving file:", file.name, '\n')
+    write.csv(tmp, file = file.name, row.names = F)
+  }else{
+    cat("File:", file.name, "already exists...\n")
+  }
+  
+  file.name <- file.path(outdir, "Rakai_inc_model_fit_inland_221107.csv")
   if(! file.exists(file.name))
   {
     cat("Saving file:", file.name, '\n')
@@ -354,33 +359,37 @@ if (dir.exists(indir.deepsequencedata)) {
   }else{
     cat("File:", file.name, "already exists...\n")
   }
+  
+  # For paper
+  file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
+  if(! file.exists(file.name))
+  {
+    cat("Saving file:", file.name, '\n')
+    saveRDS(stats, file.name)
+  }else{
+    cat("File:", file.name, "already exists...\n")
+  }
+  
+  file.name <- file.path(outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
+  if(! file.exists(file.name))
+  {
+    cat("Saving file:", file.name, '\n')
+    saveRDS(stats_prediction, file.name)
+  }else{
+    cat("File:", file.name, "already exists...\n")
+  }
+  
+  file.name <- file.path(outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
+  if(! file.exists(file.name))
+  {
+    cat("Saving file:", file.name, '\n')
+    saveRDS(stats_prediction_loess, file.name)
+  }else{
+    cat("File:", file.name, "already exists...\n")
+  }
 }
 
 
-# For paper
-file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
-if(! file.exists(file.name))
-{
-  cat("Saving file:", file.name, '\n')
-  saveRDS(stats, file.name)
-}else{
-  cat("File:", file.name, "already exists...\n")
-}
 
-file.name <- file.path(outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
-if(! file.exists(file.name))
-{
-  cat("Saving file:", file.name, '\n')
-  saveRDS(stats_prediction, file.name)
-}else{
-  cat("File:", file.name, "already exists...\n")
-}
 
-file.name <- file.path(outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
-if(! file.exists(file.name))
-{
-  cat("Saving file:", file.name, '\n')
-  saveRDS(stats_prediction_loess, file.name)
-}else{
-  cat("File:", file.name, "already exists...\n")
-}
+

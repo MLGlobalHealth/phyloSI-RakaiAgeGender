@@ -151,7 +151,6 @@ hivstatus_vlcopies_1_inc <- prepare_hiv_status(hivstatus_vlcopies_1, verif_el)
 rm(hivstatus_vlcopies_1)
 rm(verif_el)
 
-
 ###############################
 
 # FIND SEROCONVERSION STATUS #
@@ -221,11 +220,11 @@ if(! file.exists(file.name))
 }
 
 # statistics
-file_name <- file.path(outdir,"incidence_inland_statistics_cohort_for_paper_221129.rds")
+file.name <- file.path(outdir,"incidence_inland_statistics_cohort_for_paper_230527.rds")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
-  saveRDS(stats, file_name)
+  saveRDS(stats, file.name)
 }else{
   cat("\n Output file", file.name, "already exists\n")
 }
