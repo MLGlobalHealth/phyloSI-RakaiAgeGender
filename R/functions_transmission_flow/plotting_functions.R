@@ -1373,9 +1373,7 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
 
 plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 {
-    nm_reqs = TRUE
-    pairs <- copy(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE])
-    
+
   # extend round periods to the beginning of next one.
   df_round_extended <- copy(df_round)
   df_round_extended[, MAX_SAMPLE_DATE := fcoalesce( shift(MIN_SAMPLE_DATE, -1), MAX_SAMPLE_DATE )]
