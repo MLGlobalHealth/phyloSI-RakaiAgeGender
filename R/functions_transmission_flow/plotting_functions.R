@@ -9,7 +9,7 @@ find_palette_round <- function()
 }
 
 
-plot_age_infection_source_recipient <- function(data, title, plotlab, cutoff_date, outdir = NULL)
+plot_age_infection_source_recipient <- function(data, title, plotlab, cutoff_date, outdir = NULL, nm_reqs = F)
 {
   
   plots = list()
