@@ -437,7 +437,8 @@ tab_seq_unsup <- copy(tmp)
 # Make Figure
 
 tmp |> prettify_labs()
-p_everseq_givenunspp <- .make.plot(tmp, 
+p_everseq_givenunspp <- .make.plot.with.binconf(
+    tmp, 
     x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED, 
     .ylab = "Proportion of unsuppressed census eligible\nwho were ever deep-sequenced")
 
@@ -461,6 +462,15 @@ if(0) # on "participants" only
         .ylab = "Proportion of unsuppressed participants\nwho were ever deep-sequenced")
     filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_onlyparts_byroundagesex.png") 
     ggsave_nature(filename=filename, p=p_sequnsup_parts, w=13, h=11)
+
+    # cap proportion at 1... 
+    p_sequnsup_parts_capped <- .make.plot.with.binconf(
+        tmp1, 
+        x=N_EVERSEQ, n=pmax(INFECTED_NON_SUPPRESSED_2, N_EVERSEQ), 
+        .ylab = "Proportion of unsuppressed participants\nwho were ever deep-sequenced")
+    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_onlyparts_capped_byroundagesex.png") 
+    ggsave_nature(filename=filename, p=p_sequnsup_parts_capped, w=13, h=11)
+ 
 }
 
 
