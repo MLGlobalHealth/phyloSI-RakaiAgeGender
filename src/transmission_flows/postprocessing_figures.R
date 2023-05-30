@@ -10,6 +10,7 @@ library(dplyr)
 library(lubridate)
 library(ggnewscale)
 
+usr <- Sys.info()[['user']]
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
 print(args_line)
 if(length(args_line) > 0)
@@ -22,7 +23,14 @@ if(length(args_line) > 0)
   outdir <- args_line[[4]]
   stan_model <- args_line[[6]]
   jobname <- args_line[[8]]
+}else if (usr == 'andrea'){
+
+    indir <- here::here() 
+    jobname <- 'central3'
+    stan_model <- 'gp221201d'
+    outdir <- '~/HPC/ab1820/home/projects/2022/phyloflows/results/'
 }
+
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
@@ -38,6 +46,8 @@ outfile.figures <- .outfile.figures
 outdir.table <- .outdir.table
 
 # load functions
+gitdir <- copy(indir)
+source(file.path(gitdir, 'config.R'))
 source(file.path(gitdir.R.flow, 'postprocessing_summary_functions.R'))
 source(file.path(gitdir.R.flow, 'postprocessing_plot_functions.R'))
 source(file.path(gitdir.R.flow, 'postprocessing_utils_functions.R'))
