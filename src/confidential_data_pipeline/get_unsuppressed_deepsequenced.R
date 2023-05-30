@@ -26,6 +26,7 @@ nonparticipants.treated.like.participants <- FALSE
 nonparticipants.not.treated <- FALSE
 nonparticipants.male.relative.infection <- 1
 nonparticipants.female.relative.infection <- 1
+sequenced.at.round.or.later <- TRUE
 
 # check files exist
 file.exists(c(
@@ -396,11 +397,13 @@ semt[, round:= as.integer(gsub('R0|S','',ROUND))]
 semt <- semt[round %between% c(10, 18)]
 
 
-if(0){
+if(sequenced.at.round.or.later){
     # only count participants who were sequenced at current or future round
     semt <- subset(semt,round<=MAXROUND)
-}else{
-    # exclude those that are unsuppressed at a given round 
+}
+
+# exclude those that are unsuppressed at a given round 
+if(TRUE){
     keys <- c('STUDY_ID', 'ROUND')
     suppressed <- supptests |> 
         subset(VLNS == 0) |>
@@ -437,13 +440,23 @@ tab_seq_unsup <- copy(tmp)
 # Make Figure
 
 tmp |> prettify_labs()
+ylab1 <- fifelse(sequenced.at.round.or.later == TRUE,
+    yes = "Proportion of unsuppressed census eligible\neventually deep-sequenced",
+    no = "Proportion of unsuppressed census eligible\nwho were ever deep-sequenced"
+) 
+
 p_everseq_givenunspp <- .make.plot.with.binconf(
     tmp, 
     x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED, 
-    .ylab = "Proportion of unsuppressed census eligible\nwho were ever deep-sequenced")
+    .ylab = ylab1)
 
-filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.pdf") 
-filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.png") 
+if(sequenced.at.round.or.later) {
+    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_nopast_byroundagesex.pdf") 
+    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_nopast_byroundagesex.png") 
+} else {
+    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.pdf") 
+    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.png") 
+}
 ggsave_nature(filename=filename, p=p_everseq_givenunspp, w=12, h=10)
 
 dplot <- melt(tmp, id.vars=c('ROUND_LAB', 'SEX_LAB', 'AGEGP') , measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED')) 
