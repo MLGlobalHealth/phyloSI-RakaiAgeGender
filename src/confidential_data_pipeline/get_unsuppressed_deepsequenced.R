@@ -158,8 +158,8 @@ prettify_labs <- function(DT){
 
     ggplot(dplot, aes(x=ROUND_LAB, color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=P )) + 
         geom_hline(yintercept = 1, linetype='dashed', color='grey50') +
-        geom_point(position=position_dodge(width=.6) ) + 
-        geom_linerange(aes(ymin=CL, ymax=CU), position=position_dodge(width =.6)) +
+        geom_point(position=position_dodge(width=.8) ) + 
+        geom_linerange(aes(ymin=CL, ymax=CU), position=position_dodge(width =.8)) +
         scale_y_continuous(limits = ylims, expand=c(0,0),labels=scales::percent) +
         scale_color_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
         labs( 
@@ -208,7 +208,6 @@ meta_data <- fread(file.path.metadata) #additional meta_data
 meta_data[, date_birth := as.Date(paste0(birthyr, '-', birthmo, '-', '01'), format = '%Y-%m-%d')]
 meta_data[, AGEYRS := round(lubridate::time_length(difftime(sample_date, date_birth),"years"))]
 meta_data[is.na(AGEYRS), AGEYRS := round(lubridate::time_length(difftime(firstposvd, date_birth),"years"))]
-meta_data[is.na(AGEYRS)]
 
 # restrict age
 meta_data <- meta_data[AGEYRS %between% c(15,49)]
@@ -396,7 +395,6 @@ semt <- semt[HIV == 'P']
 semt[, round:= as.integer(gsub('R0|S','',ROUND))]
 semt <- semt[round %between% c(10, 18)]
 
-
 if(sequenced.at.round.or.later){
     # only count participants who were sequenced at current or future round
     semt <- subset(semt,round<=MAXROUND)
@@ -444,44 +442,49 @@ ylab1 <- fifelse(sequenced.at.round.or.later == TRUE,
     yes = "Proportion of unsuppressed census eligible\neventually deep-sequenced",
     no = "Proportion of unsuppressed census eligible\nwho were ever deep-sequenced"
 ) 
-
 p_everseq_givenunspp <- .make.plot.with.binconf(
     tmp, 
     x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED, 
     .ylab = ylab1)
 
-if(sequenced.at.round.or.later) {
-    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_nopast_byroundagesex.pdf") 
-    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_nopast_byroundagesex.png") 
-} else {
-    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.pdf") 
-    filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.png") 
-}
+filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.pdf") 
+if(sequenced.at.round.or.later) 
+    filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
 ggsave_nature(filename=filename, p=p_everseq_givenunspp, w=12, h=10)
 
-dplot <- melt(tmp, id.vars=c('ROUND_LAB', 'SEX_LAB', 'AGEGP') , measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED')) 
-p_hist <- plot.hist.numerators.denominators(dplot)
-filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.pdf") 
-filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.png") 
-ggsave_nature(filename=filename, p=p_hist, w=13, h=11)
+if(0){ # filled histogram 
+    dplot <- melt(tmp, id.vars=c('ROUND_LAB', 'SEX_LAB', 'AGEGP') , measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED')) 
+    p_hist <- plot.hist.numerators.denominators(dplot)
+    filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.pdf") 
+    filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.png") 
+    ggsave_nature(filename=filename, p=p_hist, w=13, h=11)
+}
 
 if(0) # on "participants" only
 {
 
+    ylab2 <- paste0( 'Proportion of unsuppressed participants\n',
+        fifelse(sequenced.at.round.or.later, 
+            no='eventually deep-sequeced',
+            yes='who were ever deep-sequenced'))
+
     tmp1 |> prettify_labs()
     p_sequnsup_parts <- .make.plot.with.binconf(
         tmp1, ylims = c(0,1.25),
-        x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED_2, 
-        .ylab = "Proportion of unsuppressed participants\nwho were ever deep-sequenced")
+        x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED_2, .ylab = ylab2)
     filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_onlyparts_byroundagesex.png") 
+    if(sequenced.at.round.or.later)
+        filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
     ggsave_nature(filename=filename, p=p_sequnsup_parts, w=13, h=11)
 
     # cap proportion at 1... 
     p_sequnsup_parts_capped <- .make.plot.with.binconf(
         tmp1, 
         x=N_EVERSEQ, n=pmax(INFECTED_NON_SUPPRESSED_2, N_EVERSEQ), 
-        .ylab = "Proportion of unsuppressed participants\nwho were ever deep-sequenced")
+        .ylab = ylab2)
     filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_onlyparts_capped_byroundagesex.png") 
+    if(sequenced.at.round.or.later)
+        filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
     ggsave_nature(filename=filename, p=p_sequnsup_parts_capped, w=13, h=11)
  
 }
