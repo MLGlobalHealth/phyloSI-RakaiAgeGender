@@ -165,11 +165,12 @@ unsuppressed_median_age <-fread(file.unsuppressed_median_age) # median age of un
 # Define start time, end time and cutoff
 #
 
-start_first_period_inland <- df_round_inland[round == 'R010', min_sample_date] # "2003-09-26"
-stop_first_period_inland <- df_round_inland[round == 'R015', max_sample_date] # "2013-07-05"
-start_second_period_inland <-df_round_inland[round == 'R016', min_sample_date] #  "2013-07-08"
-stop_second_period_inland <- df_round_inland[round == 'R018', max_sample_date] #  "2018-05-22"
-
+with(df_round_inland, {
+    start_first_period_inland   <<- min_sample_date[round == 'R010']    # [1] "2003-09-26"
+    stop_first_period_inland    <<- max_sample_date[round == 'R015']    # [1] "2013-07-05"
+    start_second_period_inland  <<- min_sample_date[round == 'R016']    # [1] "2013-07-08"
+    stop_second_period_inland   <<- max_sample_date[round == 'R018']    # [1] "2018-05-22"
+})
 stopifnot(start_first_period_inland < stop_first_period_inland)
 stopifnot(stop_first_period_inland < start_second_period_inland)
 stopifnot(start_second_period_inland < stop_second_period_inland)
