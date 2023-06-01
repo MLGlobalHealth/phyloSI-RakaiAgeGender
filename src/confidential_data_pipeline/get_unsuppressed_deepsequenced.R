@@ -2,6 +2,8 @@
     library(data.table)
     library(dplyr)
     library(ggplot2)
+    library(ggpattern)
+    library(ggpubr)
     library(scales)
     library(lubridate)
     library(rstan)
@@ -10,6 +12,11 @@
     binconf <- Hmisc::binconf
 } |> suppressPackageStartupMessages()
 
+
+# TODO: finalise plots:
+# - 1 : histograms consistent with Alex's plot (unsuppressed among participants) 
+# - 2 : redo point-range plot 
+# - 3 : relative ratios plots: are there differences among age groups
 
 usr <- Sys.info()[['user']]
 
@@ -26,7 +33,7 @@ nonparticipants.treated.like.participants <- FALSE
 nonparticipants.not.treated <- FALSE
 nonparticipants.male.relative.infection <- 1
 nonparticipants.female.relative.infection <- 1
-sequenced.at.round.or.later <- TRUE
+sequenced.at.round.or.later <- FALSE
 
 # check files exist
 file.exists(c(
@@ -174,17 +181,65 @@ prettify_labs <- function(DT){
         reqs
 }
 
+.binconf.ratio.plot <- function(DT, x, n, .ylab)
+{
+    x <- enexpr(x)
+    n <- enexpr(n)
+
+    dplot <- copy(DT)
+    dplot[, (c('P', 'CL', 'CU')) := binconf(x=eval(x), n=eval(n), return.df=TRUE) ]
+    dplot[, ROUND_LAB := gsub('^R0','Round', ROUND_LAB)]
+
+    add_hline = TRUE
+
+    dplot[, (c('RATIO_P', 'RATIO_CL', 'RATIO_CU')):= {
+        P.both <- P[which(SEX == 'Both')]
+        list( 
+            RATIO_P = P/P.both ,
+            RATIO_CL = CL/P.both,
+            RATIO_CU = CU/P.both
+        )
+    }, by=ROUND]
+
+    dplot |> subset(SEX_LAB != 'Both') |> 
+        ggplot(aes(x=ROUND_LAB, color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=RATIO_P )) + 
+        geom_hline(yintercept = 1, linetype='dashed', color='grey50') +
+        geom_point(position=position_dodge(width=.8) ) + 
+        geom_linerange(aes(ymin=RATIO_CL, ymax=RATIO_CU), position=position_dodge(width =.8)) +
+        scale_y_continuous(expand=c(0,0),labels=scales::percent) +
+        scale_color_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
+        # coord_cartesian(ylim = ylims) +
+        labs( 
+            x = NULL,
+            y = .ylab,
+            linetype = "Age", 
+            pch = "Age", 
+            color = NULL,
+        ) +
+        theme_bw() + 
+        theme(legend.position = "bottom", strip.background = element_blank()) + 
+        reqs
+}
+
 plot.hist.numerators.denominators <- function(DT)
 {
+    # can show agegroups as different bar fills! How to do this? 
     dplot <- copy(DT)
     dplot[, variable_lab := fifelse(variable == 'N_EVERSEQ', 'Ever-sequenced', 'Never deep-sequenced') ]
     lims <- dplot[ , levels(interaction(variable_lab, SEX_LAB))[c(1,3)]] 
     ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=interaction(variable_lab, SEX_LAB) )) +
-        geom_col(data=dplot[variable == 'INFECTED_NON_SUPPRESSED'], position=position_dodge(width=.9), width=.9, color='black' ) + 
-        geom_col(data=dplot[variable == 'N_EVERSEQ'], position=position_dodge(width=.9), color='black', width=.9 ) + 
+        geom_col(data=dplot[variable == 'INFECTED_NON_SUPPRESSED'], position=position_dodge(width=.9), width=.9, color='black') + 
+        geom_col_pattern(
+            data=dplot[variable == 'N_EVERSEQ'],
+            aes(pattern=AGEGP),
+            position=position_dodge(width=.9), color='black', width=.9,
+            pattern_fill = 'white', pattern_color='white', pattern_density = .2, pattern_spacing=.01) +
         facet_grid(SEX_LAB~.) + 
         theme_bw() + 
         scale_y_continuous(expand = expansion(c(0,0.1)) ) +
+        scale_pattern_manual(values = c('15-24' = 'circle' , '25-34'= 'none', '35-49' = 'stripe' )) + 
+        guides(pattern = guide_legend(override.aes = list(fill = "purple"), pattern_density = .1)) +
+        guides(fill = guide_legend(override.aes = list(pattern = "none"))) +
         scale_fill_manual(
             values=c("#85D4E3", "#F4B5BD",  'white', 'white'), 
             labels=c('Men', 'Women', NA_character_, NA_character_),
@@ -192,7 +247,13 @@ plot.hist.numerators.denominators <- function(DT)
             na.value = 'white'
         ) +  
         theme(legend.position = "bottom", strip.background = element_blank()) + 
-        labs(x=NULL, y="Number of unsuppressed individuals among census eligible", fill="Ever deep-sequenced", color=NULL)
+        labs(
+            x=NULL,
+            y="Number of unsuppressed individuals among census eligible",
+            fill="Ever deep-sequenced",
+            pattern='Age',
+            color=NULL
+        )
 }
 
 
@@ -425,8 +486,8 @@ seqs
 
 # merge together
 
-tmp <- merge( eligible_count_round, seqs,  by=c('COMM','ROUND','SEX','AGEGP'))
-tmp1 <- merge( eligible_count_round_onlyparts, seqs,  by=c('COMM','ROUND','SEX','AGEGP'))
+tmp  <- merge( eligible_count_round, seqs,  by=c('COMM','ROUND','SEX','AGEGP')) |> prettify_labs()
+tmp1 <- merge( eligible_count_round_onlyparts, seqs,  by=c('COMM','ROUND','SEX','AGEGP')) |> prettify_labs()
 
 # save saveRDS(tmp,file=file.path(outdir,'prop_unsupp_eventuallydeepseq_byroundagesex.RDS'))
 
@@ -434,43 +495,96 @@ tmp1 <- merge( eligible_count_round_onlyparts, seqs,  by=c('COMM','ROUND','SEX',
 
 tab_seq_unsup <- copy(tmp)
 
+################################
+cat('\nDot-linearange plots \n')
+################################
 
-# Make Figure
 
-tmp |> prettify_labs()
 ylab1 <- fifelse(sequenced.at.round.or.later == TRUE,
     yes = "Proportion of unsuppressed census eligible\neventually deep-sequenced",
     no = "Proportion of unsuppressed census eligible\nwho were ever deep-sequenced"
 ) 
 p_everseq_givenunspp <- .make.plot.with.binconf(
-    tmp, 
+    tab_seq_unsup, 
     x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED, 
     .ylab = ylab1)
 
-filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.pdf") 
-if(sequenced.at.round.or.later) 
-    filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
-ggsave_nature(filename=filename, p=p_everseq_givenunspp, w=12, h=10)
+# filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.pdf") 
+# if(sequenced.at.round.or.later) 
+#     filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
+# ggsave_nature(filename=filename, p=p_everseq_givenunspp, w=12, h=10)
 
-if(0){ # filled histogram 
-    dplot <- melt(tmp, id.vars=c('ROUND_LAB', 'SEX_LAB', 'AGEGP') , measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED')) 
-    p_hist <- plot.hist.numerators.denominators(dplot)
-    filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.pdf") 
-    filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.png") 
-    ggsave_nature(filename=filename, p=p_hist, w=13, h=11)
-}
+############################
+cat('\nFilled histogram \n')
+############################
+
+# hard to show uncertainty pop sizes as we previous uncertainty is specified in one-year bands 
+dplot <- melt(tab_seq_unsup,
+    id.vars=c('ROUND_LAB', 'SEX_LAB', 'AGEGP') ,
+    measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED')) |> suppressWarnings()
+p_hist <- plot.hist.numerators.denominators(dplot)
+
+# filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.pdf") 
+# filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.png") 
+# if(sequenced.at.round.or.later) 
+#     filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
+# ggsave_nature(filename=filename, p=p_hist, w=13, h=11)
+
+#####################
+cat('\nRatio plot\n')
+#####################
+
+# take aggregate stratifying over round only
+by_cols <- c('ROUND')
+daggregates <- tab_seq_unsup[, list(
+    COMM=unique(COMM),
+    ROUND_LAB = unique(ROUND_LAB),
+    SEX="Both",
+    SEX_LAB="Both",
+    AGEGP='All',
+    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED), 
+    N_EVERSEQ = sum(N_EVERSEQ)
+) , by='ROUND']
+
+dall <- rbind(daggregates, tab_seq_unsup[, -"N_EVERSEQ_OLD"])
+
+p_ratio <- dall |> .binconf.ratio.plot(
+    x=N_EVERSEQ, 
+    n=INFECTED_NON_SUPPRESSED, 
+    .ylab='Ratio of sequencing success relative to round-aggregates'
+    )
+
+# filename <- file.path(outdir, "ratio_unsupp_eventuallydeepseq_byroundagesex.pdf") 
+# filename <- file.path(outdir, "ratio_unsupp_eventuallydeepseq_byroundagesex.png") 
+# if(sequenced.at.round.or.later) 
+#     filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
+# ggsave_nature(filename=filename, p=p_hist, w=13, h=11)
+
+######################
+cat('\nFINAL PLOTS\n')
+######################
+
+filenames <- paste0('unsupeverdeepseq_', c('hist', 'range', 'ratio' ), '.png')
+filenames <- file.path(outdir, filenames)
+ggsave_nature(filename = filenames[1], p=p_hist, w = 13, h = 11 )
+ggsave_nature(filename = filenames[2], p=p_everseq_givenunspp, w = 13, h = 11 )
+ggsave_nature(filename = filenames[3], p=p_ratio, w = 13, h = 11 )
+
+
+###########################
+cat("\nDEPRECATED STUFF\n")
+###########################
 
 if(0) # on "participants" only
 {
 
     ylab2 <- paste0( 'Proportion of unsuppressed participants\n',
         fifelse(sequenced.at.round.or.later, 
-            no='eventually deep-sequeced',
-            yes='who were ever deep-sequenced'))
+            yes='eventually deep-sequenced',
+            no='who were ever deep-sequenced'))
 
-    tmp1 |> prettify_labs()
     p_sequnsup_parts <- .make.plot.with.binconf(
-        tmp1, ylims = c(0,1.25),
+        tab_seq_unsup1, ylims = c(0,1.25),
         x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED_2, .ylab = ylab2)
     filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_onlyparts_byroundagesex.png") 
     if(sequenced.at.round.or.later)
@@ -479,14 +593,14 @@ if(0) # on "participants" only
 
     # cap proportion at 1... 
     p_sequnsup_parts_capped <- .make.plot.with.binconf(
-        tmp1, 
+        tab_seq_unsup1, 
         x=N_EVERSEQ, n=pmax(INFECTED_NON_SUPPRESSED_2, N_EVERSEQ), 
         .ylab = ylab2)
     filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_onlyparts_capped_byroundagesex.png") 
     if(sequenced.at.round.or.later)
         filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
     ggsave_nature(filename=filename, p=p_sequnsup_parts_capped, w=13, h=11)
- 
+
 }
 
 
