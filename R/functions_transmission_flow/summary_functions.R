@@ -1079,7 +1079,7 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir)
     cat('\n In', tmp[, unique(COMM)], 'communities at period', tmp[, unique(PERIOD)])
   }
   
-  if(1)
+  if(dir.exists(outdir))
   { # plots
     
     tmp1 <- copy(df)
@@ -1127,8 +1127,6 @@ get_proportion_sampling <- function(pairs, incidence_cases, outdir)
       theme(strip.background = element_rect(colour="black", fill="white"),
             strip.text = element_text(size = rel(1)))
     ggsave(paste0(outdir, '-data-proportion_sampling_source_recipient_period.png'), w = 12, h = 8)
-    
-    
   }
   
   df
