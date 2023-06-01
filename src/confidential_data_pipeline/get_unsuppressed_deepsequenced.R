@@ -14,9 +14,6 @@
 
 
 # TODO: finalise plots:
-# - 1 : histograms consistent with Alex's plot (unsuppressed among participants) 
-# - 2 : redo point-range plot 
-# - 3 : relative ratios plots: are there differences among age groups
 
 usr <- Sys.info()[['user']]
 
@@ -161,8 +158,6 @@ prettify_labs <- function(DT){
     dplot[, (c('P', 'CL', 'CU')) := binconf(x=eval(x), n=eval(n), return.df=TRUE) ]
     dplot[, ROUND_LAB := gsub('^R0','Round', ROUND_LAB)]
 
-    add_hline = fifelse(max(ylims) < 1, yes=TRUE, no=FALSE)
-
     ggplot(dplot, aes(x=ROUND_LAB, color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=P )) + 
         geom_hline(yintercept = 1, linetype='dashed', color='grey50') +
         geom_point(position=position_dodge(width=.8) ) + 
@@ -190,23 +185,21 @@ prettify_labs <- function(DT){
     dplot[, (c('P', 'CL', 'CU')) := binconf(x=eval(x), n=eval(n), return.df=TRUE) ]
     dplot[, ROUND_LAB := gsub('^R0','Round', ROUND_LAB)]
 
-    add_hline = TRUE
-
-    dplot[, (c('RATIO_P', 'RATIO_CL', 'RATIO_CU')):= {
+    dplot[, (c('LOG_RATIO_P', 'LOG_RATIO_CL', 'LOG_RATIO_CU')):= {
         P.both <- P[which(SEX == 'Both')]
         list( 
-            RATIO_P = P/P.both ,
-            RATIO_CL = CL/P.both,
-            RATIO_CU = CU/P.both
+            LOG_RATIO_P = log(P/P.both),
+            LOG_RATIO_CL = log(CL/P.both),
+            LOG_RATIO_CU = log(CU/P.both)
         )
     }, by=ROUND]
 
     dplot |> subset(SEX_LAB != 'Both') |> 
-        ggplot(aes(x=ROUND_LAB, color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=RATIO_P )) + 
-        geom_hline(yintercept = 1, linetype='dashed', color='grey50') +
+        ggplot(aes(x=ROUND_LAB, color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=LOG_RATIO_P )) + 
+        geom_hline(yintercept = 0, linetype='dashed', color='grey50') +
         geom_point(position=position_dodge(width=.8) ) + 
-        geom_linerange(aes(ymin=RATIO_CL, ymax=RATIO_CU), position=position_dodge(width =.8)) +
-        scale_y_continuous(expand=c(0,0),labels=scales::percent) +
+        geom_linerange(aes(ymin=LOG_RATIO_CL, ymax=LOG_RATIO_CU), position=position_dodge(width =.8)) +
+        # scale_y_continuous(expand=c(0,0),labels=scales::percent) +
         scale_color_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
         # coord_cartesian(ylim = ylims) +
         labs( 
@@ -218,17 +211,20 @@ prettify_labs <- function(DT){
         ) +
         theme_bw() + 
         theme(legend.position = "bottom", strip.background = element_blank()) + 
+        rotate_x_axis(60) +
         reqs
 }
 
-plot.hist.numerators.denominators <- function(DT)
+plot.hist.numerators.denominators <- function(DT, DRANGE)
 {
     # can show agegroups as different bar fills! How to do this? 
     dplot <- copy(DT)
     dplot[, variable_lab := fifelse(variable == 'N_EVERSEQ', 'Ever-sequenced', 'Never deep-sequenced') ]
     lims <- dplot[ , levels(interaction(variable_lab, SEX_LAB))[c(1,3)]] 
     ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=interaction(variable_lab, SEX_LAB) )) +
-        geom_col(data=dplot[variable == 'INFECTED_NON_SUPPRESSED'], position=position_dodge(width=.9), width=.9, color='black') + 
+        geom_col(data=dplot[variable == 'INFECTED_NON_SUPPRESSED_M'], position=position_dodge(width=.9), width=.9, color='black') + 
+        geom_linerange(data=DRANGE, position = position_dodge(width =.9),
+            aes(y=NULL, ymin=INFECTED_NON_SUPPRESSED_CL, ymax=INFECTED_NON_SUPPRESSED_CU, fill=NULL)) +
         geom_col_pattern(
             data=dplot[variable == 'N_EVERSEQ'],
             aes(pattern=AGEGP),
@@ -249,8 +245,8 @@ plot.hist.numerators.denominators <- function(DT)
         theme(legend.position = "bottom", strip.background = element_blank()) + 
         labs(
             x=NULL,
-            y="Number of unsuppressed individuals among census eligible",
-            fill="Ever deep-sequenced",
+            y="Estimated number of individuals with\nunsuppressed HIV in the population",
+            fill=NULL,
             pattern='Age',
             color=NULL
         )
@@ -291,25 +287,19 @@ meta_data <- meta_data[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, HIV, ART)]
 # set 15.1 to be 15S
 meta_data[ROUND == 'R015.1', ROUND := 'R015S']
 
+# get unsuppressed
+supptests <- load.viralsuppression.test.results()
+
 #
 # Quest
 #
 
 quest <- fread(file.path.quest)
 
-# get unsuppressed
-supptests <- load.viralsuppression.test.results()
-
-# keep variable of interest
+# keep variable of interest, merge communities
 rin <- quest[, .(ageyrs, round, study_id, sex, comm_num, arvmed, cuarvmed)]
-
-# find  community
 rinc <- merge(rin, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
-
-# to upper
 colnames(rinc) <- toupper(colnames(rinc))
-
-# restrict age
 rinc <- rinc[AGEYRS > 14 & AGEYRS < 50]
 
 # get ART status
@@ -361,77 +351,27 @@ hivs <- hivs[AGEYRS %between% c(15, 49)]
 # load participation (% of census eligible population)
 participation <- fread(file.participation)
 
-# load non-suppressed proportion 
-treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants, file.treatment.cascade.prop.nonparticipants)
-
-# make a second version with no unsuppressed out-of-study for ease in later calculations
-nms <- grep('PROP_UNSUPPRESSED_NONPARTICIPANTS',names(treatment_cascade), value=TRUE)
-treatment_cascade_2 <- copy(treatment_cascade)
-treatment_cascade_2[, (nms) := lapply(.SD, function(x) rep(0, length(x))), .SDcols = nms]
-
-
-# get counts among census eligible
-tmp <- add_susceptible_infected(
-    eligible_count_smooth = fread(file.eligible.count),
-    proportion_prevalence = fread(file.prevalence.prop),
-    participation = participation,
-    nonparticipants.male.relative.infection = nonparticipants.male.relative.infection,
-    nonparticipants.female.relative.infection = nonparticipants.female.relative.infection 
-) 
-eligible_count_round <- add_infected_unsuppressed(
-    tmp,
-    treatment_cascade,
-    participation,
-    nonparticipants.treated.like.participants, 
-    nonparticipants.not.treated)
-
-# repeat the same process to get inf not suppressed amoang participants only
-cols <- setdiff(names(eligible_count_round), c('COMM', 'ROUND', 'SEX', 'AGEYRS'))
-new_cols <- paste0(cols, '_2')
-eligible_count_round_onlyparts <- add_infected_unsuppressed(
-    tmp,
-    treatment_cascade_2,
-    participation,
-    nonparticipants.treated.like.participants, 
-    nonparticipants.not.treated) |> 
-    setnames(cols, new_cols)
-
-
-if(0)   # check my understanding of the function above is correct 
-{
-    by_cols <- c('ROUND','COMM','SEX', 'AGEYRS')
-    part_tmp <- copy(participation) |> subset(COMM=='inland')
-    part_tmp[, ROUND := paste0('R0', ROUND)]
-    # part_tmp[, AGEGP := ageyrs2agegp(AGEYRS) ]
-
-    treat_tmp <- treatment_cascade[COMM=='inland']
-    # treat_tmp[, AGEGP := ageyrs2agegp(AGEYRS) ]
-
-    contrib_participants_unsuppression <- merge(part_tmp, treat_tmp)[, {
-        weights.parts <- PARTICIPATION * PROP_UNSUPPRESSED_PARTICIPANTS_M 
-        weights.nonparts <- (1-PARTICIPATION) * PROP_UNSUPPRESSED_NONPARTICIPANTS_M 
-        list(MULTIPLIER = weights.parts/(weights.parts + weights.nonparts))
-    }, by=by_cols]
-
-    tmp <- merge(eligible_count_round, contrib_participants_unsuppression, by=by_cols) |>
-        merge(
-            subset(eligible_count_round_onlyparts, select=c(by_cols, 'INFECTED_NON_SUPPRESSED_2')),
-            by = by_cols
-        )
-    # so yes, these are almost the same...
-    tmp[, INFECTED_NON_SUPPRESSED * (1-MULTIPLIER) - INFECTED_NON_SUPPRESSED_2]
-}
-
-# aggregate counts by age groups
-eligible_count_round[ , AGEGP := ageyrs2agegp(AGEYRS) ] 
-eligible_count_round <- eligible_count_round[, list(
-  INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED)),
-  by=c('COMM','AGEGP','SEX','ROUND')]
-
-eligible_count_round_onlyparts[ , AGEGP := ageyrs2agegp(AGEYRS) ] 
-eligible_count_round_onlyparts <- eligible_count_round_onlyparts[, list(
-  INFECTED_NON_SUPPRESSED_2 = sum(INFECTED_NON_SUPPRESSED_2)),
-  by=c('COMM','AGEGP','SEX','ROUND')]
+# extract posterior samples for prevalence of suppression
+ps <- c(M=0.5, CL=0.025, CU=0.975)
+by_cols <- c('SEX', 'COMM', 'ROUND')
+samples <- readRDS(file.treatment.cascade) |> 
+    subset(COMM == 'inland', select=c(by_cols, 'AGEYRS','iterations', 'PROP_SUPPRESSED_POSTERIOR_SAMPLE'))
+samples[, ROUND := gsub('R0', '', ROUND)]
+samples <- merge(
+    samples,
+    n_partsuscinf[, .SD, .SDcols=c(by_cols, 'AGEYRS','INFECTED')],
+    by=c(by_cols, 'AGEYRS'))
+samples[, N_UNSUPPRESSED := INFECTED * (1-PROP_SUPPRESSED_POSTERIOR_SAMPLE) ]
+samples[, AGEGP := ageyrs2agegp(AGEYRS)]
+samples <- samples[, .(
+    N_UNSUPPRESSED = sum(N_UNSUPPRESSED)),
+    by=c(by_cols, 'AGEGP','iterations')]
+samples <- samples[, {
+    z <- as.list(quantile(N_UNSUPPRESSED, probs = ps))
+    names(z) <- paste0('INFECTED_NON_SUPPRESSED_',names(ps))
+    z
+}, by=c(by_cols, 'AGEGP') ]
+samples[, ROUND := paste0('R0', ROUND)]
 
 
 ## get numerator (ever deep sequenced) ----
@@ -462,37 +402,33 @@ if(sequenced.at.round.or.later){
 }
 
 # exclude those that are unsuppressed at a given round 
-if(TRUE){
-    keys <- c('STUDY_ID', 'ROUND')
-    suppressed <- supptests |> 
-        subset(VLNS == 0) |>
-        setnames('round', 'ROUND') |> 
-        subset(select=keys) |> 
-        setkeyv(keys)
-    suppressed[, SUP := TRUE ]
-    setkeyv(semt, keys)
-    semt <- merge(semt, suppressed, by=keys, all.x=TRUE)
-    semt[is.na(SUP), SUP := FALSE ]
-}
+keys <- c('STUDY_ID', 'ROUND')
+suppressed <- supptests |> 
+    subset(VLNS == 0) |>
+    setnames('round', 'ROUND') |> 
+    subset(select=keys) |> 
+    setkeyv(keys)
+suppressed[, SUP := TRUE ]
+setkeyv(semt, keys)
+semt <- merge(semt, suppressed, by=keys, all.x=TRUE)
+semt[is.na(SUP), SUP := FALSE ]
 
 # make age groups
 semt[, AGEGP:= ageyrs2agegp(AGEYRS)]
 
+# get subset who were sequenced
 seqs <- semt[COMM=='inland', list(
     N_EVERSEQ_OLD = .N,
     N_EVERSEQ= sum(!SUP)
 ), by=c('COMM','ROUND','SEX','AGEGP')]
-seqs
 
 # merge together
 
-tmp  <- merge( eligible_count_round, seqs,  by=c('COMM','ROUND','SEX','AGEGP')) |> prettify_labs()
-tmp1 <- merge( eligible_count_round_onlyparts, seqs,  by=c('COMM','ROUND','SEX','AGEGP')) |> prettify_labs()
+by_cols <- c('COMM','ROUND','SEX','AGEGP')
+
+tmp  <- merge( samples, seqs, by=by_cols) |> prettify_labs()
 
 # save saveRDS(tmp,file=file.path(outdir,'prop_unsupp_eventuallydeepseq_byroundagesex.RDS'))
-
-# plot
-
 tab_seq_unsup <- copy(tmp)
 
 ################################
@@ -501,18 +437,15 @@ cat('\nDot-linearange plots \n')
 
 
 ylab1 <- fifelse(sequenced.at.round.or.later == TRUE,
-    yes = "Proportion of unsuppressed census eligible\neventually deep-sequenced",
-    no = "Proportion of unsuppressed census eligible\nwho were ever deep-sequenced"
+    yes = "Proportion of individuals with unsuppressed HIV in the population\nwho were eventually deep-sequenced",
+    no = "Proportion of individuals with unsuppressed HIV in the population\nwho were ever deep-sequenced",
 ) 
+
 p_everseq_givenunspp <- .make.plot.with.binconf(
     tab_seq_unsup, 
-    x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED, 
+    x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED_M, 
     .ylab = ylab1)
 
-# filename <- file.path(outdir, "prop_unsupp_eventuallydeepseq_byroundagesex.pdf") 
-# if(sequenced.at.round.or.later) 
-#     filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
-# ggsave_nature(filename=filename, p=p_everseq_givenunspp, w=12, h=10)
 
 ############################
 cat('\nFilled histogram \n')
@@ -521,14 +454,8 @@ cat('\nFilled histogram \n')
 # hard to show uncertainty pop sizes as we previous uncertainty is specified in one-year bands 
 dplot <- melt(tab_seq_unsup,
     id.vars=c('ROUND_LAB', 'SEX_LAB', 'AGEGP') ,
-    measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED')) |> suppressWarnings()
-p_hist <- plot.hist.numerators.denominators(dplot)
-
-# filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.pdf") 
-# filename <- file.path(outdir, "hist_unsupp_eventuallydeepseq_byroundagesex.png") 
-# if(sequenced.at.round.or.later) 
-#     filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
-# ggsave_nature(filename=filename, p=p_hist, w=13, h=11)
+    measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED_M' )) |> suppressWarnings()
+p_hist <- plot.hist.numerators.denominators(dplot, tab_seq_unsup)
 
 #####################
 cat('\nRatio plot\n')
@@ -542,23 +469,18 @@ daggregates <- tab_seq_unsup[, list(
     SEX="Both",
     SEX_LAB="Both",
     AGEGP='All',
-    INFECTED_NON_SUPPRESSED = sum(INFECTED_NON_SUPPRESSED), 
+    INFECTED_NON_SUPPRESSED_M = sum(INFECTED_NON_SUPPRESSED_M), 
+    INFECTED_NON_SUPPRESSED_CL = sum(INFECTED_NON_SUPPRESSED_CU), 
+    INFECTED_NON_SUPPRESSED_CU = sum(INFECTED_NON_SUPPRESSED_CL), 
     N_EVERSEQ = sum(N_EVERSEQ)
 ) , by='ROUND']
 
-dall <- rbind(daggregates, tab_seq_unsup[, -"N_EVERSEQ_OLD"])
 
-p_ratio <- dall |> .binconf.ratio.plot(
-    x=N_EVERSEQ, 
-    n=INFECTED_NON_SUPPRESSED, 
-    .ylab='Ratio of sequencing success relative to round-aggregates'
+p_ratio <- rbind(daggregates, tab_seq_unsup[, -c("N_EVERSEQ_OLD")]) |> 
+    .binconf.ratio.plot(
+        x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED_M, 
+        .ylab='Log ratio of sampling probabilities in each population strata\nrelative to entire population'
     )
-
-# filename <- file.path(outdir, "ratio_unsupp_eventuallydeepseq_byroundagesex.pdf") 
-# filename <- file.path(outdir, "ratio_unsupp_eventuallydeepseq_byroundagesex.png") 
-# if(sequenced.at.round.or.later) 
-#     filename <- gsub('_eventuallydeepseq_', '_eventuallydeepseq_nopast_', filename)
-# ggsave_nature(filename=filename, p=p_hist, w=13, h=11)
 
 ######################
 cat('\nFINAL PLOTS\n')
