@@ -76,11 +76,11 @@ if(!dir.exists(dirname(outfile.figures))) dir.create(dirname(outfile.figures))
 if(!dir.exists(dirname(outdir.table))) dir.create(dirname(outdir.table))
 
 # indicators -- fixed
-only.transmission.after.start.observational.period <- T
-only.transmission.before.stop.observational.period <- T
-use_number_susceptible_offset <- T
+only.transmission.after.start.observational.period <- TRUE
+only.transmission.before.stop.observational.period <- TRUE
+use_number_susceptible_offset <- TRUE
 only.one.community <- 'inland'
-use_contact_rates_prior <- T
+use_contact_rates_prior <- TRUE
 
 # indicators for sensitivity analyses: default values
 nonparticipants.treated.like.participants <- FALSE
