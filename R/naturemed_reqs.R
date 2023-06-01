@@ -87,3 +87,7 @@ ggsave_nature <- function(filename, p, w=18,h=24, add_reqs=TRUE)
     return(cmd)
 }
 
+rotate_x_axis <- function(angle){
+    theme( axis.text.x = element_text(angle=angle, hjust = 1, vjust = 1) )
+}
+
