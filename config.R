@@ -1,4 +1,5 @@
 # TODO: fill in path to zenodo dir and specify all the following files accordingly
+require(magrittr)
 
 config <- list(
     overwrite.existing.files  = FALSE
