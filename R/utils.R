@@ -1,5 +1,9 @@
 print_table <- function(table) print(knitr::kable(table))
 
+`%which.like%` <- function(x, rgx){
+    x[ data.table::`%like%`(x,rgx)]
+}
+
 .lu <- function(x){length(unique(x))}
 
 .read <- function(x){
