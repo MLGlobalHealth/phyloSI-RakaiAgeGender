@@ -121,6 +121,9 @@ participation <- fread(file.participation)
 # load proportion prevalence
 proportion_prevalence <- fread(file.prevalence.prop)
 
+# load proportion unsuppressed deep sequenced
+proportion_unsuppressed_deepsequenced <- as.data.table(readRDS(file.prop.unsuppressed.deepsequenced))
+
 # load non-suppressed proportion 
 if(viremic_viral_load_200ml){
   treatment_cascade <- read_treatment_cascade(file.treatment.cascade.prop.participants.vl200, 
@@ -244,8 +247,11 @@ if(!is.null(pairs_replicates.seed)){
 # Find probability of observing a transmissing event
 #
 
+# detection probability 
 proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures)
 
+# probability of sampling a source
+get_proportion_sampling_source(proportion_unsuppressed_deepsequenced)
 
 #
 # PREPARE MAPS
@@ -274,6 +280,7 @@ stan_data <- add_offset(stan_data, eligible_count_round, df_estimated_contact_ra
 stan_data <- add_offset_time(stan_data, eligible_count_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
+stan_data <- add_probability_sampling_source(stan_data, proportion_unsuppressed_deepsequenced)
 stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 10, n_knots_columns = 10,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
