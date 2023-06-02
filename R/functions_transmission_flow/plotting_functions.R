@@ -9,7 +9,7 @@ find_palette_round <- function()
 }
 
 
-plot_age_infection_source_recipient <- function(data, title, plotlab, cutoff_date, outdir = NULL)
+plot_age_infection_source_recipient <- function(data, title, plotlab, cutoff_date, outdir = NULL, nm_reqs = F)
 {
   
   plots = list()
@@ -1378,8 +1378,6 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
 
 plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 {
-    pairs <- copy(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE])
-    
   # extend round periods to the beginning of next one.
   df_round_extended <- copy(df_round)
   df_round_extended[, MAX_SAMPLE_DATE := fcoalesce( shift(MIN_SAMPLE_DATE, -1), MAX_SAMPLE_DATE )]
