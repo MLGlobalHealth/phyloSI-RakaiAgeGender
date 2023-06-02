@@ -250,9 +250,6 @@ if(!is.null(pairs_replicates.seed)){
 # detection probability 
 proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures)
 
-# probability of sampling a source
-get_proportion_sampling_source(proportion_unsuppressed_deepsequenced)
-
 #
 # PREPARE MAPS
 #
