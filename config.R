@@ -250,7 +250,7 @@ path.count.unsupp.vl200 <- file.path(dir.zenodo.survprim, "aggregated_participan
 file.spec.sens.art <- file.path(dir.zenodo.survprim, "sensitivity_specificity_art.csv")
 file.spec.sens.art.vl200 <- file.path(dir.zenodo.survprim, "sensitivity_specificity_art_vl200.csv")
 
-path.prop.unsuppressed.deepsequenced <- file.path(dir.zenodo.survprim, "aggregated_proportionunsuppressed_deepsequenced.rds")
+file.prop.unsuppressed.deepsequenced <- file.path(dir.zenodo.survprim, "aggregated_proportionunsuppressed_deepsequenced.rds")
 
 ############################################
 # OUTPUTS GENERATED IN confidential_data_src

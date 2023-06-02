@@ -421,7 +421,7 @@ tosave <- tab_seq_unsup |>
     subset(select=c(by_cols, "N_EVERSEQ", 'INFECTED_NON_SUPPRESSED_M'))
 tosave[, (new_cols) := binconf(x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED_M, return.df =TRUE) ]
 
-file.name <- path.prop.unsuppressed.deepsequenced
+file.name <- file.prop.unsuppressed.deepsequenced
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
   cat("Saving file:", file.name, '\n')
