@@ -40,7 +40,6 @@ file.exists(c(
   file.prevalence.prop,
   file.path.round.timeline,
   file.community.keys,
-  file.characteristics_sequenced_ind_R14_18,
   file.path.hiv,
   file.path.quest,
   file.path.metadata,
@@ -238,7 +237,34 @@ plot.hist.numerators.denominators <- function(DT, DRANGE)
 }
 
 
-# Get metadata and HIV+ ----
+## calculate denominators (number infected and unsuppressed) ----
+
+# extract posterior samples_suppression for prevalence of suppression
+participation <- fread(file.participation)
+
+ps <- c(M=0.5, CL=0.025, CU=0.975)
+by_cols <- c('SEX', 'COMM', 'ROUND')
+samples_suppression <- readRDS(file.treatment.cascade) |> 
+    subset(COMM == 'inland', select=c(by_cols, 'AGEYRS','iterations', 'PROP_SUPPRESSED_POSTERIOR_SAMPLE'))
+samples_suppression[, ROUND := gsub('R0', '', ROUND)]
+samples_suppression <- merge(
+    samples_suppression,
+    n_partsuscinf[, .SD, .SDcols=c(by_cols, 'AGEYRS','INFECTED')],
+    by=c(by_cols, 'AGEYRS'))
+samples_suppression[, N_UNSUPPRESSED := INFECTED * (1-PROP_SUPPRESSED_POSTERIOR_SAMPLE) ]
+samples_suppression[, AGEGP := ageyrs2agegp(AGEYRS)]
+samples_suppression <- samples_suppression[, .(
+    N_UNSUPPRESSED = sum(N_UNSUPPRESSED)),
+    by=c(by_cols, 'AGEGP','iterations')]
+samples_suppression <- samples_suppression[, {
+    z <- as.list(quantile(N_UNSUPPRESSED, probs = ps))
+    names(z) <- paste0('INFECTED_NON_SUPPRESSED_',names(ps))
+    z
+}, by=c(by_cols, 'AGEGP') ]
+samples_suppression[, ROUND := paste0('R0', ROUND)]
+
+## calculate numerators: # of HIV positive at round eventually deep sequenced 
+#   if no viral rebound, unsuppressed at sequencing time were unsuppressed test
 
 #
 # Meta data
@@ -330,46 +356,16 @@ hivs <- hivs[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 
 hivs <- hivs[AGEYRS %between% c(15, 49)]
 
 
-## calculate denominators (number infected and unsuppressed) ----
-
-
-# load participation (% of census eligible population)
-participation <- fread(file.participation)
-
-# extract posterior samples for prevalence of suppression
-ps <- c(M=0.5, CL=0.025, CU=0.975)
-by_cols <- c('SEX', 'COMM', 'ROUND')
-samples <- readRDS(file.treatment.cascade) |> 
-    subset(COMM == 'inland', select=c(by_cols, 'AGEYRS','iterations', 'PROP_SUPPRESSED_POSTERIOR_SAMPLE'))
-samples[, ROUND := gsub('R0', '', ROUND)]
-samples <- merge(
-    samples,
-    n_partsuscinf[, .SD, .SDcols=c(by_cols, 'AGEYRS','INFECTED')],
-    by=c(by_cols, 'AGEYRS'))
-samples[, N_UNSUPPRESSED := INFECTED * (1-PROP_SUPPRESSED_POSTERIOR_SAMPLE) ]
-samples[, AGEGP := ageyrs2agegp(AGEYRS)]
-samples <- samples[, .(
-    N_UNSUPPRESSED = sum(N_UNSUPPRESSED)),
-    by=c(by_cols, 'AGEGP','iterations')]
-samples <- samples[, {
-    z <- as.list(quantile(N_UNSUPPRESSED, probs = ps))
-    names(z) <- paste0('INFECTED_NON_SUPPRESSED_',names(ps))
-    z
-}, by=c(by_cols, 'AGEGP') ]
-samples[, ROUND := paste0('R0', ROUND)]
-
-
 ## get numerator (ever deep sequenced) ----
 
 # load seq count
 sequ <- as.data.table(readRDS(file.characteristics_sequenced_ind_R14_18)) |> 
-    subset(AGEYRS %between% c(15,49))
-sequ[, round:= as.integer(gsub('R0|S','',ROUND))]
-
+    subset(AGEYRS %between% c(15,49)) |> 
+    within(round <- as.integer(gsub('R0|S', '', ROUND)) )
 last_sequenced <- sequ[, list(N=length(ROUND),MAXROUND=max(round)),by=c('STUDY_ID')]
 sequ <- merge(sequ,last_sequenced,by=c('STUDY_ID'))
 
-# merge to meta_data
+# merge to hiv positives 
 semt <- merge(
     hivs[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, HIV)],
     unique(sequ[, .(STUDY_ID,MAXROUND)]),
@@ -380,11 +376,6 @@ stopifnot(semt[, uniqueN(STUDY_ID)] == sequ[, uniqueN(STUDY_ID)])
 semt <- semt[HIV == 'P']
 semt[, round:= as.integer(gsub('R0|S','',ROUND))]
 semt <- semt[round %between% c(10, 18)]
-
-if(sequenced.at.round.or.later){
-    # only count participants who were sequenced at current or future round
-    semt <- subset(semt,round<=MAXROUND)
-}
 
 # exclude those that are unsuppressed at a given round 
 keys <- c('STUDY_ID', 'ROUND')
@@ -409,7 +400,7 @@ seqs <- semt[COMM=='inland', list(
 
 # merge together
 by_cols <- c('COMM','ROUND','SEX','AGEGP')
-tab_seq_unsup <- merge( samples, seqs, by=by_cols) 
+tab_seq_unsup <- merge( samples_suppression, seqs, by=by_cols) 
 
 
 ######################
@@ -430,9 +421,15 @@ if(! file.exists(file.name) | config$overwrite.existing.files )
     cat("File:", file.name, "already exists...\n")
 }
 
-################################
+
+#############################
+cat('\n### MAKE PLOTS ###\n')
+#############################
+
+
+
 cat('\nDot-linearange plots \n')
-################################
+#________________________________
 
 
 ylab1 <- fifelse(sequenced.at.round.or.later == TRUE,
@@ -446,9 +443,8 @@ p_everseq_givenunspp <- .make.plot.with.binconf(
     .ylab = ylab1)
 
 
-############################
 cat('\nFilled histogram \n')
-############################
+# __________________________
 
 # hard to show uncertainty pop sizes as we previous uncertainty is specified in one-year bands 
 dplot <- melt(tab_seq_unsup,
@@ -456,9 +452,9 @@ dplot <- melt(tab_seq_unsup,
     measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED_M' )) |> suppressWarnings()
 p_hist <- plot.hist.numerators.denominators(dplot, tab_seq_unsup)
 
-#####################
 cat('\nRatio plot\n')
-#####################
+# ___________________
+
 # take aggregate stratifying over round only
 by_cols <- c('ROUND')
 daggregates <- tab_seq_unsup[, list(
@@ -480,19 +476,17 @@ p_ratio <- rbind(daggregates, tab_seq_unsup[, -c("N_EVERSEQ_OLD")]) |>
         .ylab='Log ratio of sampling probabilities in each population strata\nrelative to entire population'
     )
 
-######################
-cat('\nFINAL PLOTS\n')
-######################
+if(0)   # don't save intermediates anymore
+{
+    filenames <- paste0('unsupeverdeepseq_', c('hist', 'range', 'ratio' ), '.png')
+    filenames <- file.path(outdir, filenames)
+    ggsave_nature(filename = filenames[1], p=p_hist, w = 13, h = 11 )
+    ggsave_nature(filename = filenames[2], p=p_everseq_givenunspp, w = 13, h = 11 )
+    ggsave_nature(filename = filenames[3], p=p_ratio, w = 13, h = 11 )
+}
 
-filenames <- paste0('unsupeverdeepseq_', c('hist', 'range', 'ratio' ), '.png')
-filenames <- file.path(outdir, filenames)
-ggsave_nature(filename = filenames[1], p=p_hist, w = 13, h = 11 )
-ggsave_nature(filename = filenames[2], p=p_everseq_givenunspp, w = 13, h = 11 )
-ggsave_nature(filename = filenames[3], p=p_ratio, w = 13, h = 11 )
-
-#####################
 cat('\nxi_j plots\n')
-#####################
+# ___________________
 
 cat('\n  * get pairs * \n')
 
