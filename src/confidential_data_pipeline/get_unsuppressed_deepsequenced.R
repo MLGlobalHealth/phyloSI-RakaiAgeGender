@@ -424,9 +424,10 @@ tosave[, (new_cols) := binconf(x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED_M, return.
 file.name <- path.prop.unsuppressed.deepsequenced
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
-  cat("Saving file:", file.name, '\n')
+    cat("Saving file:", file.name, '\n')
+    saveRDS(object=tosave,file=file.name)
 }else{
-  cat("File:", file.name, "already exists...\n")
+    cat("File:", file.name, "already exists...\n")
 }
 
 ################################
