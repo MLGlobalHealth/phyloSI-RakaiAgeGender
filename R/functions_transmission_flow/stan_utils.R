@@ -389,6 +389,7 @@ add_probability_sampling <- function(stan_data, proportion_sampling){
   }
   
   stan_data[['log_prop_sampling']] = log_prop_sampling_array
+  stan_data[['log_prop_detection']] = log_prop_sampling_array
   stan_data[['n_sampling_index_y']] = n_sampling_index
   stan_data[['sampling_index_y']] = sampling_index
   stan_data[['N_OBS']] = sum(n_sampling_index)
@@ -396,6 +397,55 @@ add_probability_sampling <- function(stan_data, proportion_sampling){
   return(stan_data)
 }
 
+add_probability_sampling_source <- function(stan_data, proportion_unsuppressed_deepsequenced){
+  
+  # add the probability of sampling source
+  pud <- copy(proportion_unsuppressed_deepsequenced)
+  pud <- pud[, list(M = PROP_UNSUP_EVERDEEPSEQ, 
+                    AGE_TRANSMISSION.SOURCE = as.numeric(gsub('(.+)-.*', '\\1', AGEGP)):as.numeric(gsub('.*-(.+)', '\\1', AGEGP))), 
+             by = c('COMM', 'ROUND', 'SEX', 'AGEGP')]
+  setnames(pud, c('SEX'), c('SEX.SOURCE'))
+  
+  pud <- pud[order(SEX.SOURCE, COMM, ROUND)]
+  
+  log_prop_sampling_source_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_ROUND']], stan_data[['N_PER_GROUP']])))
+  
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(k in 1:stan_data[['N_ROUND']]){
+      
+      log_prop_sampling_source = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
+      
+      .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+      .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+      .ROUND <- df_round[INDEX_ROUND == k, ROUND]
+      
+      # add probability of sampling recipient 
+      tmp <- pud[SEX.SOURCE == .SEX.SOURCE & ROUND == .ROUND]
+      log_prop_sampling_source <- merge(log_prop_sampling_source, tmp[, .(AGE_TRANSMISSION.SOURCE, M)], 
+                                        by = c('AGE_TRANSMISSION.SOURCE'))
+      
+      # sanity check
+      stopifnot(nrow(log_prop_sampling_source[M == 0]) == 0)
+      
+      # take log
+      log_prop_sampling_source[, LOG_PROP_SAMPLING_SOURCE := log(M)]
+      
+      # check the order of ages is correct
+      log_prop_sampling_source <- log_prop_sampling_source[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
+      stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_prop_sampling_source[, AGE_INFECTION.RECIPIENT])
+      stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_prop_sampling_source[, AGE_TRANSMISSION.SOURCE])
+      
+      # prop sampling
+      log_prop_sampling_source_array[i, k,] = log_prop_sampling_source[, LOG_PROP_SAMPLING_SOURCE]
+      
+      
+    }
+  }
+  
+  stan_data[['log_prop_sampling_source']] = log_prop_sampling_source_array
+  
+  return(stan_data)
+}
 
 add_2D_splines_stan_data = function(stan_data, spline_degree = 3, n_knots_rows = 8, n_knots_columns = 8, X, Y)
 {
