@@ -56,7 +56,7 @@ get_hivids <- function( agerange=c(15,49))
     # add meta data from Kate
     tmp <- anti_join(meta_data[, .(STUDY_ID, ROUND)], rinc[, .(STUDY_ID, ROUND)], by = c('STUDY_ID', 'ROUND'))
     tmp <- merge(tmp, meta_data, by = c('STUDY_ID', 'ROUND'))
-    rinc <- merge(rinc, meta_data, by=c('STUDY_ID', 'ROUND', 'SEX', 'AGEYRS','ART'), all.x=TRUE)
+    # rinc <- merge(rinc, meta_data, by=c('STUDY_ID', 'ROUND', 'SEX', 'AGEYRS','ART'), all.x=TRUE)
 
     rinc <- rbind(
         rinc[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, ART)], 
@@ -191,16 +191,21 @@ prettify_labs <- function(DT){
     return(DT)
 }
 
-.make.plot.with.binconf <- function(DT, x, n, .ylab, ylims = c(0,1) )
+.make.plot.with.binconf <- function(DT, x, n, xvar=ROUND_LAB, .ylab, ylims = c(0,1) )
 {
+    .xvar <- enexpr(xvar)
     x <- enexpr(x)
     n <- enexpr(n)
 
     dplot <- copy(DT)
+    dplot <- prettify_labs(dplot)
     dplot[, (c('P', 'CL', 'CU')) := binconf(x=eval(x), n=eval(n), return.df=TRUE) ]
-    dplot[, ROUND_LAB := gsub('^R0','Round', ROUND_LAB)]
 
-    ggplot(dplot, aes(x=ROUND_LAB, color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=P )) + 
+    if(deparse(.xvar) == 'ROUND_LAB'){
+        dplot[, ROUND_LAB := gsub('^R0','Round', ROUND_LAB)]
+    }
+
+    ggplot(dplot, aes(x=eval(.xvar), color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=P )) + 
         geom_hline(yintercept = 1, linetype='dashed', color='grey50') +
         geom_point(position=position_dodge(width=.8) ) + 
         geom_linerange(aes(ymin=CL, ymax=CU), position=position_dodge(width =.8)) +
@@ -215,10 +220,11 @@ prettify_labs <- function(DT){
         ) +
         theme_bw() + 
         theme(legend.position = "bottom", strip.background = element_blank()) + 
+        rotate_x_axis(30) +
         reqs
 }
 
-.binconf.ratio.plot <- function(DT, x, n, .ylab, xaes=ROUND_LAB)
+.binconf.ratio.plot <- function(DT, x, n, .ylab, xaes=expr(ROUND_LAB))
 {
     x <- enexpr(x)
     n <- enexpr(n)
@@ -239,7 +245,7 @@ prettify_labs <- function(DT){
         )
     }, by=by_col]
 
-    dplot |> subset(SEX_LAB != 'Both') |> 
+    dplot |> subset(SEX_LAB != 'Both' & AGEGP != 'All') |> 
         ggplot(aes(x=!!xaes, color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=LOG_RATIO_P )) + 
         geom_hline(yintercept = 0, linetype='dashed', color='grey50') +
         geom_point(position=position_dodge(width=.8) ) + 
@@ -256,7 +262,7 @@ prettify_labs <- function(DT){
         ) +
         theme_bw() + 
         theme(legend.position = "bottom", strip.background = element_blank()) + 
-        rotate_x_axis(60) +
+        rotate_x_axis(30) +
         reqs
 }
 
@@ -275,7 +281,7 @@ plot.hist.numerators.denominators <- function(DT, DRANGE)
             data=dplot[variable == 'N_EVERSEQ'],
             aes(pattern=AGEGP),
             position=position_dodge(width=.9), color='black', width=.9,
-            pattern_fill = 'white', pattern_color='white', pattern_density = .2, pattern_spacing=.01) +
+            pattern_fill = 'white', pattern_color='white', pattern_density = .2, pattern_spacing=.008) +
         facet_grid(SEX_LAB~.) + 
         theme_bw() + 
         scale_y_continuous(expand = expansion(c(0,0.1)) ) +
@@ -295,6 +301,42 @@ plot.hist.numerators.denominators <- function(DT, DRANGE)
             fill=NULL,
             pattern='Age',
             color=NULL
-        )
+        ) +
+        rotate_x_axis(30)
 }
 
+
+plot.hist.numerators.denominators <- function(DT, DRANGE)
+{
+    # can show agegroups as different bar fills! How to do this? 
+    dplot <- copy(DT)
+    dplot[, variable_lab := fifelse(variable == 'N_EVERSEQ', 'Ever-sequenced', 'Never deep-sequenced') ]
+    lims <- dplot[ , levels(interaction(variable_lab, SEX_LAB))[c(1,3)]] 
+
+    ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=interaction(variable_lab, SEX_LAB) )) +
+        geom_col(data=dplot[variable == 'INFECTED_NON_SUPPRESSED_M'], position=position_dodge(width=.9), width=.9, color='black') + 
+        geom_linerange(data=DRANGE, position = position_dodge(width =.9),
+            aes(y=NULL, ymin=INFECTED_NON_SUPPRESSED_CL, ymax=INFECTED_NON_SUPPRESSED_CU, fill=NULL)) + 
+        geom_col( data=dplot[variable == 'N_EVERSEQ'],aes(alpha=AGEGP), position = position_dodge(width = .9)) +
+        facet_grid(SEX_LAB~.) + 
+        theme_bw() + 
+        scale_y_continuous(expand = expansion(c(0,0.1)) ) +
+        scale_alpha_manual(values = c('15-24' = .33, '25-34'= .66, '35-49' = 1 )) + 
+        guides(alpha = guide_legend(override.aes = list(fill = "#BDC5D0"))) +
+        guides(fill = guide_legend(override.aes = list(alpha = 1))) +
+        scale_fill_manual(
+            values=c("#85D4E3", "#F4B5BD",  'white', 'white'), 
+            labels=c('Men', 'Women', NA_character_, NA_character_),
+            limits = lims,
+            na.value = 'white'
+        ) +  
+        theme(legend.position = "bottom", strip.background = element_blank()) + 
+        labs(
+            x=NULL,
+            y="Estimated number of individuals with\nunsuppressed HIV in the population",
+            fill=NULL,
+            alpha='Age',
+            color=NULL
+        ) +
+        rotate_x_axis(30)
+}
