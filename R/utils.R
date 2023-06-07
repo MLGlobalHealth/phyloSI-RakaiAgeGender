@@ -76,7 +76,12 @@ print.which.NA <- function(dt,regex='', name='dt')
   lubridate::time_length(difftime(x, y),"months")
 }
 
-.f <- function(x){round(x, 1)}
+ageyrs2agegp = function(x){
+    out <- cut(x, breaks=c(15,25,35,50), include.lowest=T,right=F, labels=c('15-24','25-34','35-49')) 
+    out <- factor(out, levels=c('Total','15-24','25-34','35-49'),labels=c('Total','15-24','25-34','35-49'))
+    return(out)
+}
+
 
 print.which.NA <- function(dt,regex='SOURCE|RECIPIENT')
 {
