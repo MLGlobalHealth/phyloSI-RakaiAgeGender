@@ -258,11 +258,9 @@ add_offset <- function(stan_data, eligible_count, df_estimated_contact_rates,
   return(stan_data)
 }
 
-add_offset_time <- function(stan_data, eligible_count){
+add_offset_time <- function(stan_data, df_round){
   
   # add offset including the time in years of each rounds
-  
-  eligible_count_wide <- eligible_count_round[order(SEX, COMM, ROUND, AGEYRS)]
   
   log_offset_array = array(NA, c(c(stan_data[['N_DIRECTION']], max(stan_data[['N_ROUND']]), stan_data[['N_PER_GROUP']])))
   

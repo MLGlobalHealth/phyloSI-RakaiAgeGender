@@ -244,11 +244,11 @@ if(!is.null(pairs_replicates.seed)){
 }
 
 #
-# Find probability of observing a transmissing event
+# Find detection probability of observing a transmissing event
 #
 
-# detection probability 
-proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, outfile.figures)
+proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, incidence_cases_round, outfile.figures)
+
 
 #
 # PREPARE MAPS
@@ -274,7 +274,7 @@ stan_data <- add_incidence_rates(stan_data, incidence_cases_round)
 stan_data <- add_incidence_rates_lognormal_parameters(stan_data, incidence_cases_round)
 stan_data <- add_offset(stan_data, eligible_count_round, df_estimated_contact_rates,
                         use_number_susceptible_offset, use_contact_rates_prior)
-stan_data <- add_offset_time(stan_data, eligible_count_round)
+stan_data <- add_offset_time(stan_data, df_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
 stan_data <- add_probability_sampling_source(stan_data, proportion_unsuppressed_deepsequenced)

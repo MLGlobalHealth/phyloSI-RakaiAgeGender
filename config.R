@@ -318,6 +318,7 @@ file.prevalence.agegroup <- file.path(dir.zenodo.survproc, "RCCS_prevalence_age_
 # OUTPUTS GENERATE IN transmission/flows #
 ##########################################
 
+file.detection.probability.round <- file.path(dir.zenodo.transflow, 'detection_probabilities_by_round.rds')
 file.lambda.est <- file.path(dir.zenodo.transflow, "gp_221201d-central3-output-log_lambda_latentby_direction_round_age_transmission.source_age_infection.recipientstandardisedby_direction_round.rds")
 
 ##########################################

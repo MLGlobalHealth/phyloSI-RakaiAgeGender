@@ -1043,7 +1043,79 @@ print.statements.about.basefreq.files <- function(chain)
 inv_logit <- function(x) 1 / (1 + exp(-x))
 logit <- function(p) log(p / (1-p))
 
-get_proportion_sampling <- function(pairs, incidence_cases, outdir)
+get_proportion_sampling <- function(pairs, incidence_cases, incidence_cases_round, outdir, byperiod = T){
+  
+  # proportion sampling by round
+  proportion_sampling_round <- get_proportion_sampling_by_round(pairs, incidence_cases_round)
+  
+  # proportion sampling by period
+  proportion_sampling_period <- get_proportion_sampling_by_period(pairs, incidence_cases, outdir)
+  
+  if(byperiod){
+    return(proportion_sampling_period)
+  }else{
+    return(proportion_sampling_round)
+  }
+    
+}
+
+get_proportion_sampling_by_round <- function(pairs, incidence_cases_round)
+{
+  
+  # find number of pairs observed
+  dp <- copy(pairs)
+  
+  # we add pairs to the corresponding rounds (move their date of infection so that it falls within the observational period)
+  tmp <- df_round[, .(ROUND, MIN_SAMPLE_DATE, MAX_SAMPLE_DATE, COMM)]
+  tmp[, MIN_SAMPLE_DATE_NEXT_ROUND := c(MIN_SAMPLE_DATE[2:nrow(tmp)], MAX_SAMPLE_DATE[nrow(tmp)])]
+  stopifnot(tmp[, all(MAX_SAMPLE_DATE <= MIN_SAMPLE_DATE_NEXT_ROUND)])
+  
+  dp <- merge(dp, tmp,  by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian=TRUE)
+  dp <- dp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MIN_SAMPLE_DATE_NEXT_ROUND]
+  stopifnot(nrow(dp) == nrow(pairs))
+  set(dp, NULL, 'MIN_SAMPLE_DATE', NULL)
+  set(dp, NULL, 'MAX_SAMPLE_DATE', NULL)
+  set(dp, NULL, 'MIN_SAMPLE_DATE_NEXT_ROUND', NULL)
+  
+  setnames(dp, c('SEX.RECIPIENT', 'COMM.RECIPIENT', 'AGE_INFECTION.RECIPIENT'), 
+           c('SEX', 'COMM', 'AGEYRS'))
+  dp[, AGEYRS := floor(AGEYRS)]
+  dp <- dp[, list(count = .N), by = c('SEX', 'COMM', 'AGEYRS', 'ROUND')]
+  
+  # merge to incidence cases
+  di <- merge(incidence_cases_round, dp, by = c('SEX', 'COMM', 'AGEYRS', 'ROUND'), all.x = T)
+  di[is.na(count), count := 0]
+  
+  # find empiriral proportion sampling from a source of any age to a recipient aged j
+  di[, prop_sampling := count / INCIDENT_CASES]
+  setnames(di, c('SEX', 'AGEYRS'), c('SEX.RECIPIENT', 'AGEYRS.RECIPIENT'))
+  
+  # warnings
+  tmp <- di[prop_sampling > 1]
+  if(nrow(tmp) > 0){
+    cat('\n Some probabilities are greater than 1')
+    cat('\n In', tmp[, unique(COMM)], 'communities at round', tmp[, unique(ROUND)])
+  }
+  tmp <- di[prop_sampling < 0]
+  if(nrow(tmp) > 0){
+    cat('\n Some probabilities are smaller than 0')
+    cat('\n In', tmp[, unique(COMM)], 'communities at round', tmp[, unique(ROUND)])
+  }
+  
+  # save
+  file.name <- file.detection.probability.round
+  if(! file.exists(file.name) | config$overwrite.existing.files )
+  {
+    cat("Saving file:", file.name, '\n')
+    saveRDS(di, file = file.name)
+  }else{
+    cat("File:", file.name, "already exists...\n")
+  }
+  
+  return(di)
+}
+
+get_proportion_sampling_by_period <- function(pairs, incidence_cases, outdir)
 {
   
   # find number of pairs observed
