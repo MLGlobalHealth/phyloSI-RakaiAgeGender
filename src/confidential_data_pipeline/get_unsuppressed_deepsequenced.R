@@ -2,7 +2,6 @@
     library(data.table)
     library(dplyr)
     library(ggplot2)
-    # library(ggpattern)
     library(ggpubr)
     library(scales)
     library(lubridate)
@@ -59,8 +58,6 @@ df_round <- make.df.round(df_round_inland)
 
 # community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
-
- 
 
 
 ## calculate denominators (number infected and unsuppressed) ----
@@ -178,7 +175,6 @@ dplot <- melt( tab_seq_unsup,
     id.vars=c('ROUND_LAB', 'SEX_LAB', 'AGEGP') ,
     measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED_M' )) |> suppressWarnings()
 p_hist <- plot.hist.numerators.denominators(dplot, tab_seq_unsup)
-p_hist
 
 cat('\nRatio plot\n')
 # ___________________
@@ -207,95 +203,35 @@ p_ratio <- rbind(daggregates, tab_seq_unsup[, -c("N_EVERSEQ_OLD")]) |>
 cat('\nxi_j plots\n')
 # ___________________
 
-cat('\n  * get incidence * \n')
+detectionprob <- readRDS(file.detection.probability.round)
+names(detectionprob) <- gsub('.RECIPIENT', '' ,names(detectionprob)) 
+detectionprob <- subset(detectionprob, select=c('SEX', 'COMM', 'AGEYRS', 'ROUND','INCIDENT_CASES', 'count', 'prop_sampling'))
 
-# prepare round data.tables
-with(df_round_inland, {
-    start_first_period_inland   <<- min_sample_date[round == 'R010']    # [1] "2003-09-26"
-    stop_first_period_inland    <<- max_sample_date[round == 'R015']    # [1] "2013-07-05"
-    start_second_period_inland  <<- min_sample_date[round == 'R016']    # [1] "2013-07-08"
-    stop_second_period_inland   <<- max_sample_date[round == 'R018']    # [1] "2018-05-22"
-})
-stopifnot(start_first_period_inland < stop_first_period_inland)
-stopifnot(stop_first_period_inland < start_second_period_inland)
-stopifnot(start_second_period_inland < stop_second_period_inland)
-df_round <- make.df.round(df_round_inland)
-df_period <- make.df.period(
-    start_first_period_inland, 
-    stop_first_period_inland, 
-    start_second_period_inland, 
-    stop_second_period_inland, 
-    df_round)
+detectionprob[, `:=` (AGEGP = ageyrs2agegp(AGEYRS))]
+detectionprob <- detectionprob[, 
+    lapply(.SD, sum),
+    .SDcols = c('INCIDENT_CASES', 'count'),
+    by=c('ROUND','SEX', 'COMM', 'AGEGP')]
+prettify_labs(detectionprob)
 
-
-# get incidence
-treatment_cascade <- read_treatment_cascade(
-    file.treatment.cascade.prop.participants, 
-    file.treatment.cascade.prop.nonparticipants)
-eligible_count_round <- add_susceptible_infected(
-    eligible_count_smooth = fread(file.eligible.count),
-    proportion_prevalence = fread(file.prevalence.prop),
-    participation = fread(file.participation),
-    nonparticipants.male.relative.infection  =  1, 
-    nonparticipants.female.relative.infection  =  1
-) |> add_infected_unsuppressed(
-    treatment_cascade = treatment_cascade, 
-    participation = fread(file.participation), 
-    nonparticipants.treated.like.participants = FALSE, 
-    nonparticipants.not.treated = FALSE
-)
-
-incidence_cases <- get_incidence_cases_round(
-    incidence.inland = fread(file.incidence.inland),
-    eligible_count_round ) |> 
-    summarise_incidence_cases_period(df_period)
-
-cat('\n  * get pairs * \n')
-
-pairs <- read_pairs(file.pairs) |> 
-    select.pairs.for.analysis(
-    only.one.community='inland', 
-    use_30com_pairs=FALSE, 
-    only.transmission.after.start.observational.period=TRUE, 
-    only.transmission.before.stop.observational.period=TRUE, 
-    remove.pairs.from.rounds=NULL
-)
-
-# keep only pairs with source-recipient with a time of infection
-pairs <- pairs[!is.na(AGE_TRANSMISSION.SOURCE) & !is.na(AGE_INFECTION.RECIPIENT)]
-pairs[, DATE_INFECTION_BEFORE_CUTOFF.RECIPIENT := DATE_INFECTION.RECIPIENT < start_second_period_inland]
-
-
-# finally get proportions
-proportion_sampling <- get_proportion_sampling(pairs, incidence_cases, 'a_nonexisting_directory_name')
-
-# make plots
-
-detectionprob <- subset(proportion_sampling, 
-    select=c('COMM','SEX.RECIPIENT', 'AGEYRS.RECIPIENT', 'PERIOD', 'count', 'INCIDENT_CASES')
-) |> unique()
-names(detectionprob) <- gsub('.RECIPIENT','', names(detectionprob)) 
-detectionprob[, AGEGP := ageyrs2agegp(AGEYRS)]
-by_cols <- c('COMM', 'SEX', 'PERIOD', 'AGEGP')
-detectionprob <- detectionprob[, list(count=sum(count), INCIDENT_CASES=sum(INCIDENT_CASES)), by=by_cols]
 
 cat('\nDot-linearange plots \n')
 #________________________________
 
-p2b <- .make.plot.with.binconf(detectionprob, xvar=PERIOD,
-    x=count, n=INCIDENT_CASES, ylims = c(0, .35),
-    .ylab="Detection Probability")
-
+p2b <- .make.plot.with.binconf(detectionprob, xvar=ROUND_LAB,
+    x=count, n=INCIDENT_CASES,
+    .ylab="Proportion of estimated incident cases\nappearing as recipient")
 
 
 cat('\nFilled histogram \n')
 # __________________________
 
+by_cols <- c('ROUND', 'SEX', 'COMM', 'AGEGP')
 dplot <- melt( detectionprob, id.vars = by_cols, measure.vars = c('count', 'INCIDENT_CASES')) |> suppressWarnings()
 dplot <- prettify_labs(dplot)
 fill_lims <- with(dplot,levels(interaction(variable, SEX_LAB)))[c(1,3)]
 
-p_hist2 <- ggplot(dplot, aes(x=PERIOD, pch=AGEGP, y=value, fill=interaction(variable, SEX_LAB) )) +
+p_hist2 <- ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=interaction(variable, SEX_LAB) )) +
     geom_col(data=dplot[variable == 'INCIDENT_CASES'], position=position_dodge(width=.9), width=.9, color='black') + 
     geom_col(
         data=dplot[variable == 'count'],
@@ -317,7 +253,7 @@ p_hist2 <- ggplot(dplot, aes(x=PERIOD, pch=AGEGP, y=value, fill=interaction(vari
     theme(legend.position = "bottom", strip.background = element_blank()) + 
     labs(
         x=NULL,
-        y="Detection probability among incident cases",
+        y="Estimated number of incident cases\nappearing as recipient",
         fill=NULL,
         alpha='Age',
         NULL
@@ -333,14 +269,15 @@ daggregates2 <- detectionprob[, list(
     AGEGP='All',
     count = sum(count),
     INCIDENT_CASES = sum(INCIDENT_CASES)
-) , by='PERIOD']
+) , by='ROUND']
 
-p_ratio2 <- rbind(daggregates2, detectionprob) |> 
+p_ratio2 <- rbind(daggregates2, detectionprob[, -c("ROUND_LAB", "SEX_LAB")]) |> 
     prettify_labs() |>
     .binconf.ratio.plot(
         x=count, n=INCIDENT_CASES, 
         .ylab='Log ratio of detection probabilities in each strata\nrelative to estimated incident cases',
-        xaes = expr(PERIOD)
+        xaes = expr(ROUND_LAB),
+        .yrange = c(-5, 5)
     )
 
 
@@ -348,22 +285,42 @@ p_ratio2 <- rbind(daggregates2, detectionprob) |>
 cat('\n ALL TOGETHER: \n')
 ##########################
 
+# make the legend
+cowplot::get_legend(
+    ggplot(dplot, aes(x=value, y=value,  fill=SEX_LAB,  pch=AGEGP, linetype=AGEGP)) + 
+        geom_point(color='black') +
+        geom_ribbon(aes(ymin=value, ymax=value, alpha=AGEGP)) +
+        geom_linerange(aes(ymin=value, ymax=value)) +
+        scale_color_manual(values=c("black", "black" )) + 
+        scale_fill_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
+        scale_alpha_manual(values=c(`15-24`=.3, `25-34`=.6, `35-49`=.8)) +
+        guides(
+            # linetype = guide_legend(override.aes = list(color='black')),
+            # pch = guide_legend(override.aes = list(color='white')),
+        ) +
+        labs(fill = 'Gender', linetype=NULL, pch=NULL, group=NULL, alpha=NULL, color=NULL) +
+        theme(legend.position='bottom')  +
+    reqs
+) -> legend
+
+
 
 library(patchwork)
-t <- function(lab) labs(tag=lab)
-r2 <- reqs + theme(legend.position='none', plot.tag = element_text(face='bold'))
+r2 <- reqs + 
+    theme(legend.position='none', plot.tag = element_text(face='bold'))
 
-# get top row
-leg <- cowplot::get_legend(p_hist + reqs)
-combined <- (p_hist2 + labs(tag= 'a')  + p_hist + labs(tag = 'b')) & r2
-combined <- combined/leg + plot_layout(heights = c(20,1))
+t <- function(lab){ labs(tag=lab) + r2 }
 
-# get last two rows
-leg2 <- cowplot::get_legend(p2b + reqs)
-combined2 <- (p2b +t('c') + p_everseq_givenunspp + t('d') ) / (p_ratio2 + t('e') + p_ratio + t('f')) & r2
-combined2
 
-p_all2 <- ggarrange(combined, combined2, ncol=1, heights = c(1,2))
+p_all <- ggarrange( ncol=2, nrow=3,
+    p_hist2 + r2, p_hist + r2,
+    p2b +r2 , p_everseq_givenunspp + r2  ,
+    p_ratio2 + r2 , p_ratio + r2 ,
+    labels = 'auto', font.label = list(size=8) 
+    )
+
+
+p_all2 <- ggarrange( p_all, legend, ncol=1, heights = c(40,1))
 
 filename <- '~/Downloads/tmp_all.png'
-ggsave_nature(filename = filename, p=p_all2, w = 20, h = 28 )
+ggsave_nature(filename = filename, p=p_all2, w = 18, h = 24 )

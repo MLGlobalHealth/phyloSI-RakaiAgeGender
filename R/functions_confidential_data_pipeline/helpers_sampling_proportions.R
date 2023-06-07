@@ -224,7 +224,7 @@ prettify_labs <- function(DT){
         reqs
 }
 
-.binconf.ratio.plot <- function(DT, x, n, .ylab, xaes=expr(ROUND_LAB))
+.binconf.ratio.plot <- function(DT, x, n, .ylab, xaes=expr(ROUND_LAB), .yrange=NA)
 {
     x <- enexpr(x)
     n <- enexpr(n)
@@ -250,7 +250,7 @@ prettify_labs <- function(DT){
         geom_hline(yintercept = 0, linetype='dashed', color='grey50') +
         geom_point(position=position_dodge(width=.8) ) + 
         geom_linerange(aes(ymin=LOG_RATIO_CL, ymax=LOG_RATIO_CU), position=position_dodge(width =.8)) +
-        # scale_y_continuous(expand=c(0,0),labels=scales::percent) +
+        scale_y_continuous(limits = .yrange) +
         scale_color_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
         # coord_cartesian(ylim = ylims) +
         labs( 
