@@ -174,7 +174,7 @@ cat('\nFilled histogram \n')
 dplot <- melt( tab_seq_unsup,
     id.vars=c('ROUND_LAB', 'SEX_LAB', 'AGEGP') ,
     measure.vars = c('N_EVERSEQ', 'INFECTED_NON_SUPPRESSED_M' )) |> suppressWarnings()
-p_hist <- plot.hist.numerators.denominators(dplot, tab_seq_unsup)
+p_hist <- plot.hist.numerators.denominators(dplot, tab_seq_unsup, filltext="Ever deep sequenced")
 
 cat('\nRatio plot\n')
 # ___________________
@@ -196,6 +196,7 @@ daggregates <- tab_seq_unsup[, list(
 
 p_ratio <- rbind(daggregates, tab_seq_unsup[, -c("N_EVERSEQ_OLD")]) |> 
     .binconf.ratio.plot(
+        .yrange = c(-1,1),
         x=N_EVERSEQ, n=INFECTED_NON_SUPPRESSED_M, 
         .ylab='Log ratio of sampling probabilities in each strata\nrelative to entire population'
     )
@@ -220,45 +221,13 @@ cat('\nDot-linearange plots \n')
 
 p2b <- .make.plot.with.binconf(detectionprob, xvar=ROUND_LAB,
     x=count, n=INCIDENT_CASES,
-    .ylab="Proportion of estimated incident cases\nappearing as recipient")
+    .ylab="Proportion of estimated infection events\nappearing as recipient")
 
 
 cat('\nFilled histogram \n')
 # __________________________
 
-by_cols <- c('ROUND', 'SEX', 'COMM', 'AGEGP')
-dplot <- melt( detectionprob, id.vars = by_cols, measure.vars = c('count', 'INCIDENT_CASES')) |> suppressWarnings()
-dplot <- prettify_labs(dplot)
-fill_lims <- with(dplot,levels(interaction(variable, SEX_LAB)))[c(1,3)]
-
-p_hist2 <- ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=interaction(variable, SEX_LAB) )) +
-    geom_col(data=dplot[variable == 'INCIDENT_CASES'], position=position_dodge(width=.9), width=.9, color='black') + 
-    geom_col(
-        data=dplot[variable == 'count'],
-        aes(alpha=AGEGP),
-        position=position_dodge(width=.9), color='black', width=.9
-        )+
-    facet_grid(SEX_LAB~.) + 
-    theme_bw() + 
-    scale_y_continuous(expand = expansion(c(0,0.1)) ) +
-    scale_alpha_manual(values = c('15-24' = .33, '25-34'= .66, '35-49' = 1 )) + 
-    guides(alpha = guide_legend(override.aes = list(fill = "#BDC5D0"))) +
-    guides(fill = guide_legend(override.aes = list(alpha= 1))) +
-    scale_fill_manual(
-        values=c("#85D4E3", "#F4B5BD",  'white', 'white'), 
-        labels=c('Men', 'Women', NA_character_, NA_character_),
-        limits = fill_lims,
-        na.value = 'white'
-    ) +  
-    theme(legend.position = "bottom", strip.background = element_blank()) + 
-    labs(
-        x=NULL,
-        y="Estimated number of incident cases\nappearing as recipient",
-        fill=NULL,
-        alpha='Age',
-        NULL
-    ) +
-    rotate_x_axis(30)
+p_hist2 <- plot.hist.numerators.denominators.2(detectionprob, filltext = 'hello')
 
 cat('\nRatio plot\n')
 # ___________________
@@ -275,7 +244,7 @@ p_ratio2 <- rbind(daggregates2, detectionprob[, -c("ROUND_LAB", "SEX_LAB")]) |>
     prettify_labs() |>
     .binconf.ratio.plot(
         x=count, n=INCIDENT_CASES, 
-        .ylab='Log ratio of detection probabilities in each strata\nrelative to estimated incident cases',
+        .ylab='Log ratio of detection probabilities in each strata\nrelative to estimated infection events',
         xaes = expr(ROUND_LAB),
         .yrange = c(-5, 5)
     )
@@ -286,41 +255,53 @@ cat('\n ALL TOGETHER: \n')
 ##########################
 
 # make the legend
-cowplot::get_legend(
-    ggplot(dplot, aes(x=value, y=value,  fill=SEX_LAB,  pch=AGEGP, linetype=AGEGP)) + 
-        geom_point(color='black') +
-        geom_ribbon(aes(ymin=value, ymax=value, alpha=AGEGP)) +
-        geom_linerange(aes(ymin=value, ymax=value)) +
-        scale_color_manual(values=c("black", "black" )) + 
-        scale_fill_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
-        scale_alpha_manual(values=c(`15-24`=.3, `25-34`=.6, `35-49`=.8)) +
-        guides(
-            # linetype = guide_legend(override.aes = list(color='black')),
-            # pch = guide_legend(override.aes = list(color='white')),
-        ) +
-        labs(fill = 'Gender', linetype=NULL, pch=NULL, group=NULL, alpha=NULL, color=NULL) +
-        theme(legend.position='bottom')  +
-    reqs
-) -> legend
+set_new_color <- function(hex){
+    legend <<- cowplot::get_legend(
+        ggplot(dplot, 
+            aes(x=value, y=value,
+                fill=SEX_LAB,  
+                pch=AGEGP, linetype=AGEGP, 
+                size="Events or individuals for which\nthe virus was ever deepsequenced")) + 
+            geom_point(color='black') +
+            geom_ribbon(aes(ymin=value, ymax=value, alpha=AGEGP)) +
+            geom_linerange(aes(ymin=value, ymax=value)) +
+            scale_color_manual(values=c("black", "black" )) + 
+            scale_fill_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
+            scale_alpha_manual(values=c(`15-24`=.3, `25-34`=.6, `35-49`=.8)) +
+            guides(
+                size = guide_legend(override.aes = list(color=hex, fill = hex,alpha=1, pch=NULL, linetype=NULL)),
+                # pch = guide_legend(override.aes = list(color='white')),
+            ) +
+            labs(fill = 'Gender', linetype=NULL, pch=NULL, group=NULL, alpha=NULL, color=NULL, size="") +
+            theme(legend.position='bottom')  +
+        reqs
+    ) 
 
+    change_fill <<- scale_fill_manual(
+            values=c(hex, "white"),
+            na.value = 'white',
+        )  
+}
 
+# #f4b5bd, #e6b8db, #c4c2f1, #9ccdf4, #85d4e3);
+set_new_color("#c4c2f1")
 
 library(patchwork)
 r2 <- reqs + 
     theme(legend.position='none', plot.tag = element_text(face='bold'))
 
+
 t <- function(lab){ labs(tag=lab) + r2 }
 
 
 p_all <- ggarrange( ncol=2, nrow=3,
-    p_hist2 + r2, p_hist + r2,
+    p_hist2 + r2 + change_fill, p_hist + r2 + change_fill,
     p2b +r2 , p_everseq_givenunspp + r2  ,
     p_ratio2 + r2 , p_ratio + r2 ,
     labels = 'auto', font.label = list(size=8) 
     )
-
-
 p_all2 <- ggarrange( p_all, legend, ncol=1, heights = c(40,1))
+p_all2
 
-filename <- '~/Downloads/tmp_all.png'
+filename <- '~/Downloads/extended_data_figure_samplingproportions.png'
 ggsave_nature(filename = filename, p=p_all2, w = 18, h = 24 )
