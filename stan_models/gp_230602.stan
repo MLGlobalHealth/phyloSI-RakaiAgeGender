@@ -61,8 +61,8 @@ data {
   vector[N_PER_GROUP] log_offset[N_DIRECTION, N_ROUND]; // offset including prop susceptible, number of unsuppressed
   vector[N_PER_GROUP] log_offset_time[N_DIRECTION, N_ROUND];  // offset time
   vector[N_PER_GROUP] log_offset_susceptible[N_DIRECTION, N_ROUND];  // log number of susceptible
-  vector[N_PER_GROUP] log_prop_detection[N_DIRECTION, N_PERIOD];  // offset probability of detecting transmission
-  vector[N_PER_GROUP] log_prop_sampling_source[N_DIRECTION, N_ROUND];  // offset probability of sampling source
+  vector[N_AGE] log_prop_detection[N_DIRECTION, N_PERIOD];  // offset probability of detecting transmission towards recipient
+  vector[N_AGE] log_prop_sampling_source[N_DIRECTION, N_ROUND];  // offset probability of sampling source
   int sampling_index_y[N_PER_GROUP, N_DIRECTION, N_PERIOD]; 
   int n_sampling_index_y[N_DIRECTION, N_PERIOD];
   int map_age_source[N_PER_GROUP];
@@ -135,6 +135,8 @@ transformed parameters {
   vector[N_PER_GROUP] lambda_latent_normalized[N_DIRECTION, N_ROUND];
   vector[N_AGE] log_lambda_latent_normalized_recipient[N_DIRECTION, N_ROUND];
   vector[N_AGE] log_lambda_latent_normalized_prop_sampling_source_recipient[N_DIRECTION, N_ROUND];
+  vector[N_AGE] log_conditional_sampling_recipient_prob[N_DIRECTION, N_ROUND];
+  vector[N_PER_GROUP] log_thinning_prob[N_DIRECTION, N_ROUND];
   
   // start with baseline
   log_beta = rep_array(rep_vector(log_beta_baseline, N_PER_GROUP), N_DIRECTION, N_ROUND);
@@ -185,18 +187,24 @@ transformed parameters {
       lambda_latent[i,k] = exp(log_lambda_latent[i,k]);
       log_lambda_latent_recipient[i,k] = log(matrix_map_age_recipient * lambda_latent[i,k]);
   
-      // pi
+      // pi = lambda / sum lambda
       lambda_latent_normalized[i,k] = lambda_latent[i,k] / sum(lambda_latent[i,k]);
-      log_lambda_latent_normalized_recipient[i,k] = log(matrix_map_age_recipient * lambda_latent_normalized[i,k]) ;
-      log_lambda_latent_normalized_prop_sampling_source_recipient[i,k] = log(matrix_map_age_recipient * (exp(log_prop_sampling_source[i,k]) .* lambda_latent_normalized[i,k])) ;
-
-      // lambda aggregated by period and add sampling probability
-      lambda[i,map_round_period[k]] += exp(log_lambda_latent[i,k] 
-                                          + log_prop_detection[i,map_round_period[k]] 
-                                          + log_prop_sampling_source[i,k] 
-                                          + log_lambda_latent_normalized_recipient[i,map_round_period[k]][map_age_recipient]
-                                          - log_lambda_latent_normalized_prop_sampling_source_recipient[i,map_round_period[k]][map_age_recipient]);
       
+      // sum across recipient of pi, and of pi * probability of sampling source
+      log_lambda_latent_normalized_recipient[i,k] = log(matrix_map_age_recipient * lambda_latent_normalized[i,k]) ;
+      log_lambda_latent_normalized_prop_sampling_source_recipient[i,k] = log(matrix_map_age_recipient * (exp(log_prop_sampling_source[i,k][map_age_source]) .* lambda_latent_normalized[i,k])) ;
+
+      // conditional sampling of the recipient given that the source is sampled
+      log_conditional_sampling_recipient_prob[i,k] = log_prop_detection[i,map_round_period[k]] 
+                                                     + log_lambda_latent_normalized_recipient[i,k]
+                                                     - log_lambda_latent_normalized_prop_sampling_source_recipient[i,k];
+                              
+      // thinning prob 
+      log_thinning_prob[i,k] = log_conditional_sampling_recipient_prob[i,k][map_age_recipient]
+                               + log_prop_sampling_source[i,k][map_age_source] ;
+       
+      // lambda aggregated by period and add sampling probability
+      lambda[i,map_round_period[k]] += exp(log_lambda_latent[i,k] + log_thinning_prob[i,k]);
       
     }
   }
