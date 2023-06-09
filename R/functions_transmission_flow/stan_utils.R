@@ -387,10 +387,54 @@ add_probability_sampling <- function(stan_data, proportion_sampling){
   }
   
   stan_data[['log_prop_sampling']] = log_prop_sampling_array
-  stan_data[['log_prop_detection']] = log_prop_sampling_array
   stan_data[['n_sampling_index_y']] = n_sampling_index
   stan_data[['sampling_index_y']] = sampling_index
   stan_data[['N_OBS']] = sum(n_sampling_index)
+  
+  return(stan_data)
+}
+
+add_probability_detection <- function(stan_data, proportion_sampling){
+  
+  # add the probability of detecting a infection event
+  
+  pps <- unique(proportion_sampling[, .(SEX.RECIPIENT, COMM, BEFORE_CUTOFF, PERIOD, AGEYRS.RECIPIENT, prop_sampling)])
+  pps <- pps[order(SEX.RECIPIENT, COMM, BEFORE_CUTOFF, PERIOD)]
+  
+  log_prop_sampling_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_PERIOD']], stan_data[['N_AGE']])))
+
+  for(i in 1:stan_data[['N_DIRECTION']]){
+    for(k in 1:stan_data[['N_PERIOD']]){
+      
+      log_prop_sampling = unique(df_age[, .(AGE_INFECTION.RECIPIENT)])
+      
+      .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
+      .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
+      .BEFORE_CUTOFF <- df_period[k, BEFORE_CUTOFF]
+      
+      # add probability of sampling recipient 
+      tmp <- pps[SEX.RECIPIENT == .SEX.RECIPIENT & BEFORE_CUTOFF == .BEFORE_CUTOFF]
+      log_prop_sampling <- merge(log_prop_sampling, tmp[, .(AGEYRS.RECIPIENT, prop_sampling)], 
+                                 by.x = c('AGE_INFECTION.RECIPIENT'), 
+                                 by.y = c('AGEYRS.RECIPIENT'))
+      
+      # make log prob sampling
+      if(1){ # we will not use those entries in the likelihood anyway
+        log_prop_sampling[prop_sampling == 0, prop_sampling := 0.0001]
+      }
+      log_prop_sampling[, LOG_PROP_SAMPLING := log(prop_sampling)]
+      
+      # check the order of ages is correct
+      log_prop_sampling <- log_prop_sampling[order(AGE_INFECTION.RECIPIENT)]
+      stopifnot(unique(df_age[, AGE_INFECTION.RECIPIENT]) == log_prop_sampling[, AGE_INFECTION.RECIPIENT])
+
+      # prop sampling
+      log_prop_sampling_array[i, k,] = log_prop_sampling[, LOG_PROP_SAMPLING]
+
+    }
+  }
+  
+  stan_data[['log_prop_detection']] = log_prop_sampling_array
   
   return(stan_data)
 }
@@ -406,12 +450,12 @@ add_probability_sampling_source <- function(stan_data, proportion_unsuppressed_d
   
   pud <- pud[order(SEX.SOURCE, COMM, ROUND)]
   
-  log_prop_sampling_source_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_ROUND']], stan_data[['N_PER_GROUP']])))
+  log_prop_sampling_source_array =array(NA, c(c(stan_data[['N_DIRECTION']], stan_data[['N_ROUND']], stan_data[['N_AGE']])))
   
   for(i in 1:stan_data[['N_DIRECTION']]){
     for(k in 1:stan_data[['N_ROUND']]){
       
-      log_prop_sampling_source = df_age[, .(AGE_INFECTION.RECIPIENT, AGE_TRANSMISSION.SOURCE)]
+      log_prop_sampling_source = unique(df_age[, .(AGE_TRANSMISSION.SOURCE)])
       
       .SEX.SOURCE = substr(df_direction[i, LABEL_DIRECTION], 1, 1) 
       .SEX.RECIPIENT = substr(gsub('.*-> (.+)', '\\1', df_direction[i, LABEL_DIRECTION]), 1, 1) 
@@ -429,9 +473,8 @@ add_probability_sampling_source <- function(stan_data, proportion_unsuppressed_d
       log_prop_sampling_source[, LOG_PROP_SAMPLING_SOURCE := log(M)]
       
       # check the order of ages is correct
-      log_prop_sampling_source <- log_prop_sampling_source[order(AGE_TRANSMISSION.SOURCE, AGE_INFECTION.RECIPIENT)]
-      stopifnot(df_age[, AGE_INFECTION.RECIPIENT] == log_prop_sampling_source[, AGE_INFECTION.RECIPIENT])
-      stopifnot(df_age[, AGE_TRANSMISSION.SOURCE] == log_prop_sampling_source[, AGE_TRANSMISSION.SOURCE])
+      log_prop_sampling_source <- log_prop_sampling_source[order(AGE_TRANSMISSION.SOURCE)]
+      stopifnot(unique(df_age[, AGE_TRANSMISSION.SOURCE]) == log_prop_sampling_source[, AGE_TRANSMISSION.SOURCE])
       
       # prop sampling
       log_prop_sampling_source_array[i, k,] = log_prop_sampling_source[, LOG_PROP_SAMPLING_SOURCE]

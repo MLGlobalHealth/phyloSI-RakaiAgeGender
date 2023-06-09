@@ -16,8 +16,8 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   gitdir <- '~/git/phyloSI-RakaiAgeGender'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
-  jobname <- 'new_treatment_cascade'
-  stan_model <- 'gp_221201d'
+  jobname <- 'firstrun'
+  stan_model <- 'gp_230602'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
 }
@@ -277,13 +277,13 @@ stan_data <- add_offset(stan_data, eligible_count_round, df_estimated_contact_ra
 stan_data <- add_offset_time(stan_data, df_round)
 stan_data <- add_offset_susceptible(stan_data, eligible_count_round)
 stan_data <- add_probability_sampling(stan_data, proportion_sampling)
+stan_data <- add_probability_detection(stan_data, proportion_sampling)
 stan_data <- add_probability_sampling_source(stan_data, proportion_unsuppressed_deepsequenced)
 stan_data <- add_2D_splines_stan_data(stan_data, spline_degree = 3,
                                       n_knots_rows = 10, n_knots_columns = 10,
                                       X = unique(df_age$AGE_TRANSMISSION.SOURCE),
                                       Y = unique(df_age$AGE_INFECTION.RECIPIENT))
 stan_init <- add_init(stan_data)
-
 
 
 #
