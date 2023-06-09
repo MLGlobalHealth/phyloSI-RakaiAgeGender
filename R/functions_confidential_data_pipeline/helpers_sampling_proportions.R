@@ -224,7 +224,7 @@ prettify_labs <- function(DT){
         reqs
 }
 
-.binconf.ratio.plot <- function(DT, x, n, .ylab, xaes=expr(ROUND_LAB))
+.binconf.ratio.plot <- function(DT, x, n, .ylab, xaes=expr(ROUND_LAB), .yrange=NA)
 {
     x <- enexpr(x)
     n <- enexpr(n)
@@ -250,7 +250,7 @@ prettify_labs <- function(DT){
         geom_hline(yintercept = 0, linetype='dashed', color='grey50') +
         geom_point(position=position_dodge(width=.8) ) + 
         geom_linerange(aes(ymin=LOG_RATIO_CL, ymax=LOG_RATIO_CU), position=position_dodge(width =.8)) +
-        # scale_y_continuous(expand=c(0,0),labels=scales::percent) +
+        scale_y_continuous(limits = .yrange, expand=c(0,0)) +
         scale_color_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
         # coord_cartesian(ylim = ylims) +
         labs( 
@@ -266,54 +266,66 @@ prettify_labs <- function(DT){
         reqs
 }
 
-plot.hist.numerators.denominators <- function(DT, DRANGE)
+# plot.hist.numerators.denominators <- function(DT, DRANGE, filltext=NA_character_)
+# {
+#     # can show agegroups as different bar fills! How to do this? 
+#     dplot <- copy(DT)
+#     dplot[, variable_lab := fifelse(variable == 'N_EVERSEQ', 'Ever-sequenced', 'Never deep-sequenced') ]
+#     lims <- dplot[ , levels(interaction(variable_lab, SEX_LAB))[c(1,3)]] 
+# 
+#     ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=interaction(variable_lab, SEX_LAB) )) +
+#         geom_col(data=dplot[variable == 'INFECTED_NON_SUPPRESSED_M'], position=position_dodge(width=.9), width=.9, color='black') + 
+#         geom_linerange(data=DRANGE, position = position_dodge(width =.9),
+#             aes(y=NULL, ymin=INFECTED_NON_SUPPRESSED_CL, ymax=INFECTED_NON_SUPPRESSED_CU, fill=NULL)) + 
+#         # geom_col_pattern(
+#         #     data=dplot[variable == 'N_EVERSEQ'],
+#         #     aes(pattern=AGEGP),
+#         #     position=position_dodge(width=.9), color='black', width=.9,
+#         #     pattern_fill = 'white', pattern_color='white', pattern_density = .2, pattern_spacing=.008) +
+#         facet_grid(SEX_LAB~.) + 
+#         theme_bw() + 
+#         scale_y_continuous(expand = expansion(c(0,0.1)) ) +
+#         # scale_pattern_manual(values = c('15-24' = 'circle' , '25-34'= 'none', '35-49' = 'stripe' )) + 
+#         # guides(pattern = guide_legend(override.aes = list(fill = "#BDC5D0"), pattern_density = .1)) +
+#         guides(fill = guide_legend(override.aes = list(pattern = "none"))) +
+#         scale_fill_manual(
+#             values=fillpalette,
+#             labels=filllabels,
+#             limits = lims,
+#             na.value = 'white'
+#         ) +  
+#         theme(legend.position = "bottom", strip.background = element_blank()) + 
+#         labs(
+#             x=NULL,
+#             y="Estimated number of individuals with\nunsuppressed HIV in the population",
+#             fill=NULL,
+#             pattern='Age',
+#             color=NULL
+#         ) +
+#         rotate_x_axis(30)
+# }
+
+
+plot.hist.numerators.denominators <- function(DT, DRANGE, filltext=NA_character_)
 {
     # can show agegroups as different bar fills! How to do this? 
     dplot <- copy(DT)
     dplot[, variable_lab := fifelse(variable == 'N_EVERSEQ', 'Ever-sequenced', 'Never deep-sequenced') ]
-    lims <- dplot[ , levels(interaction(variable_lab, SEX_LAB))[c(1,3)]] 
 
-    ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=interaction(variable_lab, SEX_LAB) )) +
-        geom_col(data=dplot[variable == 'INFECTED_NON_SUPPRESSED_M'], position=position_dodge(width=.9), width=.9, color='black') + 
-        geom_linerange(data=DRANGE, position = position_dodge(width =.9),
-            aes(y=NULL, ymin=INFECTED_NON_SUPPRESSED_CL, ymax=INFECTED_NON_SUPPRESSED_CU, fill=NULL)) + 
-        geom_col_pattern(
-            data=dplot[variable == 'N_EVERSEQ'],
-            aes(pattern=AGEGP),
-            position=position_dodge(width=.9), color='black', width=.9,
-            pattern_fill = 'white', pattern_color='white', pattern_density = .2, pattern_spacing=.008) +
-        facet_grid(SEX_LAB~.) + 
-        theme_bw() + 
-        scale_y_continuous(expand = expansion(c(0,0.1)) ) +
-        scale_pattern_manual(values = c('15-24' = 'circle' , '25-34'= 'none', '35-49' = 'stripe' )) + 
-        guides(pattern = guide_legend(override.aes = list(fill = "#BDC5D0"), pattern_density = .1)) +
-        guides(fill = guide_legend(override.aes = list(pattern = "none"))) +
-        scale_fill_manual(
-            values=c("#85D4E3", "#F4B5BD",  'white', 'white'), 
-            labels=c('Men', 'Women', NA_character_, NA_character_),
-            limits = lims,
-            na.value = 'white'
-        ) +  
-        theme(legend.position = "bottom", strip.background = element_blank()) + 
-        labs(
-            x=NULL,
-            y="Estimated number of individuals with\nunsuppressed HIV in the population",
-            fill=NULL,
-            pattern='Age',
-            color=NULL
-        ) +
-        rotate_x_axis(30)
-}
+    if(is.na(filltext)){
+        fillvar = expr(interaction(variable_lab, SEX_LAB))
+        lims <- dplot[ , levels(interaction(variable_lab, SEX_LAB))[c(1,3)]] 
+        fillpalette <- c("#85D4E3", "#F4B5BD",  'white', 'white')
+        filllabels <- c('Men', 'Women', NA_character_, NA_character_)
+    }else{
+        fillvar = expr(variable_lab)
+        fillpalette <- c("#BDC5D0", "white") 
+        filllabels <- c(filltext,  NA_character_)
+        lims <- dplot[, unique(variable_lab) ][1]
+    }
+    
 
-
-plot.hist.numerators.denominators <- function(DT, DRANGE)
-{
-    # can show agegroups as different bar fills! How to do this? 
-    dplot <- copy(DT)
-    dplot[, variable_lab := fifelse(variable == 'N_EVERSEQ', 'Ever-sequenced', 'Never deep-sequenced') ]
-    lims <- dplot[ , levels(interaction(variable_lab, SEX_LAB))[c(1,3)]] 
-
-    ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=interaction(variable_lab, SEX_LAB) )) +
+    ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=eval(fillvar) )) +
         geom_col(data=dplot[variable == 'INFECTED_NON_SUPPRESSED_M'], position=position_dodge(width=.9), width=.9, color='black') + 
         geom_linerange(data=DRANGE, position = position_dodge(width =.9),
             aes(y=NULL, ymin=INFECTED_NON_SUPPRESSED_CL, ymax=INFECTED_NON_SUPPRESSED_CU, fill=NULL)) + 
@@ -325,10 +337,10 @@ plot.hist.numerators.denominators <- function(DT, DRANGE)
         guides(alpha = guide_legend(override.aes = list(fill = "#BDC5D0"))) +
         guides(fill = guide_legend(override.aes = list(alpha = 1))) +
         scale_fill_manual(
-            values=c("#85D4E3", "#F4B5BD",  'white', 'white'), 
-            labels=c('Men', 'Women', NA_character_, NA_character_),
+            values=fillpalette,
+            labels=filllabels,
             limits = lims,
-            na.value = 'white'
+            na.value = 'white',
         ) +  
         theme(legend.position = "bottom", strip.background = element_blank()) + 
         labs(
@@ -337,6 +349,55 @@ plot.hist.numerators.denominators <- function(DT, DRANGE)
             fill=NULL,
             alpha='Age',
             color=NULL
+        ) +
+        rotate_x_axis(30)
+}
+
+plot.hist.numerators.denominators.2 <- function(DT, filltext=NA_character_)
+{
+    by_cols <- c('ROUND', 'SEX', 'COMM', 'AGEGP')
+    dplot <- melt( DT, id.vars = by_cols, measure.vars = c('count', 'INCIDENT_CASES')) |> suppressWarnings()
+    dplot <- prettify_labs(dplot)
+    
+    if(is.na(filltext)){
+        fillvar = expr(interaction(variable, SEX_LAB))
+        lims <- dplot[ , levels(interaction(variable, SEX_LAB))[c(1,3)]] 
+        fillpalette <- c("#85D4E3", "#F4B5BD",  'white', 'white')
+        filllabels <- c('Men', 'Women', NA_character_, NA_character_)
+    }else{
+        fillvar = expr(variable)
+        fillpalette <- c("#BDC5D0", "white") 
+        filllabels <- c(filltext,  NA_character_)
+        lims <- dplot[, unique(variable) ][1]
+    }
+
+
+    ggplot(dplot, aes(x=ROUND_LAB, pch=AGEGP, y=value, fill=eval(fillvar) )) +
+        geom_col(data=dplot[variable == 'INCIDENT_CASES'], position=position_dodge(width=.9), width=.9, color='black') + 
+        geom_col(
+            data=dplot[variable == 'count'],
+            aes(alpha=AGEGP),
+            position=position_dodge(width=.9), color='black', width=.9
+            )+
+        facet_grid(SEX_LAB~.) + 
+        theme_bw() + 
+        scale_y_continuous(expand = expansion(c(0,0.1)) ) +
+        scale_alpha_manual(values = c('15-24' = .33, '25-34'= .66, '35-49' = 1 )) + 
+        guides(alpha = guide_legend(override.aes = list(fill = "#BDC5D0"))) +
+        guides(fill = guide_legend(override.aes = list(alpha= 1))) +
+        scale_fill_manual(
+            values=fillpalette,
+            labels=filllabels,
+            limits = lims,
+            na.value = 'white',
+        ) +  
+        theme(legend.position = "bottom", strip.background = element_blank()) + 
+        labs(
+            x=NULL,
+            y="Estimated number of\ninfection events",
+            fill=NULL,
+            alpha='Age',
+            NULL
         ) +
         rotate_x_axis(30)
 }
