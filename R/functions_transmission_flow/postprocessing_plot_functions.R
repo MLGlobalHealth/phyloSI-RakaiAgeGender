@@ -432,6 +432,73 @@ plot_observed_to_augmented <- function(predict_y, predict_z, outdir){
   
 }
 
+plot_cond_prob_sampling_recipient <- function(cond_prob_sampling_recipient, outdir){
+  
+  communities <- cond_prob_sampling_recipient[, unique(COMM)]
+  
+  for(i in seq_along(communities)){
+    tmp <- cond_prob_sampling_recipient[COMM == communities[i]]
+    
+    p <- ggplot(tmp, aes(x = AGE_INFECTION.RECIPIENT)) + 
+      geom_bar(aes(y = M, fill = LABEL_RECIPIENT), stat = 'identity', position = position_dodge()) + 
+      geom_errorbar(aes(ymin = CL, ymax = CU, group = LABEL_RECIPIENT), position = position_dodge()) + 
+      labs(x = 'Age of recipient', y = 'Conditional probability that a recipient is sampled given source is sampled', fill = '') + 
+      theme_bw() +
+      facet_grid(ROUND~LABEL_RECIPIENT, scale = 'free')+
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      ggsci::scale_fill_npg() +
+      scale_y_continuous(label = scales::percent)
+    
+    if(communities[i] == 'inland'){
+      ggsave(p, file = paste0(outdir, '-output-', 'cond_prob_sampling_recipient', communities[i], '.png'), w = 9, h = 14)
+    }else{
+      ggsave(p, file = paste0(outdir, '-output-', 'cond_prob_sampling_recipient', communities[i], '.png'), w = 9, h = 9)
+      
+    }
+    
+  }
+  
+}
+
+plot_prob_thinning <- function(prob_thinning, outdir){
+  
+  communities <- prob_thinning[, unique(COMM)]
+  for(i in seq_along(communities)){
+    
+    tmp <- prob_thinning[ COMM == communities[i]]
+    
+    p <- ggplot(tmp, aes(x = AGE_TRANSMISSION.SOURCE, y = AGE_INFECTION.RECIPIENT)) + 
+      geom_raster(aes(fill = M)) + 
+      geom_abline(intercept = 0, slope = 1, linetype = 'dashed', col = 'white') + 
+      theme_bw() + 
+      labs(y = 'Age at infection recipient', fill = 'Estimated median detection probability', 
+           x= 'Age at transmission source') +
+      # geom_contour(aes(z = M), col = 'red', alpha = 0.8, bins = 5) + 
+      facet_grid(LABEL_DIRECTION~LABEL_ROUND) + 
+      theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)),
+            legend.position = 'bottom') +
+      scale_fill_viridis_c() + 
+      scale_x_continuous(expand = c(0,0)) + 
+      scale_y_continuous(expand = c(0,0)) + 
+      guides(fill = guide_colorbar(order = 1), 
+             shape = guide_legend(order = 2)) + 
+      ggtitle(tmp[,unique(LABEL_COMMUNITY)])
+    
+    if(communities[i] == 'inland'){
+      # inland has more round and need a wider figure
+      ggsave(p, file = paste0(outdir, '-output-prob_thinning_by_round_',  communities[i], '.png'), w = 18, h = 7)
+      
+    }else{
+      ggsave(p, file = paste0(outdir, '-output-prob_thinning_by_round_',  communities[i], '.png'), w = 12, h = 7)
+      
+    }
+  }
+  
+} 
+
 plot_force_infection <- function(force_infection, outdir, lab = NULL){
   
   communities <- force_infection[, unique(COMM)]

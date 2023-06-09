@@ -97,6 +97,7 @@ prevalence_prop_sex<- prepare_infected_share(infected_share, 'SEX')
 reported_contact <- clean_reported_contact(df_reported_contact)
 df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age)
 
+
 #
 ## PPC
 #
@@ -134,6 +135,23 @@ save_statistics_PPC(predict_y_source_recipient, count_data, predict_incidence_ra
 
 # predicted observed transmission vs all transmission
 plot_observed_to_augmented(predict_y_source, predict_z_source, outfile.figures)
+
+
+#
+## Probability of detecting a transmission
+#
+
+cat("\nPlot probability of detecting a transmisison\n")
+
+if('log_thinning_prob' %in% names(samples)){
+  # estimated probability of sampling a recipient given that the source is sampled
+  cond_prob_sampling_recipient <- find_summary_output_by_round(samples, 'log_conditional_sampling_recipient_prob', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'), transform = 'exp')
+  plot_cond_prob_sampling_recipient(cond_prob_sampling_recipient, outfile.figures)
+  
+  # estimated probability of detecting a transmission event from source i to recipient j
+  prob_thinning <- find_summary_output_by_round(samples, 'log_thinning_prob', c('INDEX_DIRECTION', 'INDEX_ROUND', 'INDEX_AGE'), transform = 'exp')
+  plot_prob_thinning(prob_thinning, outfile.figures)
+}
 
 
 #
