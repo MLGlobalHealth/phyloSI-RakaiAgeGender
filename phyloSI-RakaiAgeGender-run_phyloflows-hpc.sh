@@ -1,7 +1,7 @@
 #!/bin/sh
 
-STAN_MODEL="gp_221201d"
-JOBNAME="firstrun"
+STAN_MODEL="gp_230602"
+JOBNAME="newdetectionproblessit2500"
 INDIR="/rds/general/user/mm3218/home/git/phyloSI-RakaiAgeGender"
 OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender"
 
@@ -10,7 +10,7 @@ mkdir $OUTDIR
 cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME.pbs <<EOF
   
 #!/bin/sh
-#PBS -l walltime=48:00:00
+#PBS -l walltime=72:00:00
 #PBS -l select=1:ncpus=10:ompthreads=1:mem=240gb
 #PBS -j oe
 module load anaconda3/personal
@@ -62,6 +62,9 @@ mkdir \$CWD/tables
 
 Rscript \$INDIR/src/transmission_flows/postprocessing_assess_mixing.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 Rscript \$INDIR/src/transmission_flows/postprocessing_figures.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+Rscript \$INDIR/src/transmission_flows/postprocessing_figure_time_trends_sources.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+Rscript \$INDIR/src/transmission_flows/postprocessing-figure_contribution_sexual_contact.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+Rscript \$INDIR/src/transmission_flows/postprocessing_figure_counterfactual.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 
 EOF
   
