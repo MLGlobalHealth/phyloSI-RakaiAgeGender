@@ -10,6 +10,7 @@ library(lognorm)
 library(ggExtra)
 library(Hmisc)
 library(patchwork)
+library(ggplotify)
 
 # laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
@@ -319,6 +320,7 @@ if(1){
   plot_CI_age_transmission(pairs, start_second_period_inland, outfile.figures)
   plot_pairs(pairs, outfile.figures)
   plot_pairs_all(pairs.all, outfile.figures)
+  plot_pairs_panel(pairs.all, outfile.figures)
   plot_transmission_events_over_time(pairs, outfile.figures)
   plot_date_collection_pairs(pairs, df_round_inland, outfile.figures)
   save_statistics_transmission_events(pairs, pairs.all, outdir.table)

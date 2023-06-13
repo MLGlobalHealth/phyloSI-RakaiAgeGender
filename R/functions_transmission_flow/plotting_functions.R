@@ -1479,6 +1479,29 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
   }
 }
 
+plot_pairs_panel <- function(pairs.all, outdir){
+  
+  p <- plot_pairs(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE], outfile.figures, nm_reqs = TRUE)
+  p1 <- plot_pairs_all(pairs.all[BOTH_PARTICIPATED==TRUE], outfile.figures, nm_reqs=TRUE)
+  p2 <- plot_transmission_events_over_time(pairs.all[BOTH_PARTICIPATED==TRUE], outdir = NULL, nm_reqs=TRUE)
+  
+  # extract legend
+  legend <- cowplot::get_legend(p2)
+  p2 <- p2 + theme(legend.position = 'none')
+  
+  top <- (p1 + p2 + plot_layout(widths = c(1.2,3))) / 
+    legend + 
+    plot_layout( heights = c(100,1)) + 
+    plot_annotation(tag_levels='a') & theme(plot.tag = element_text(size=8, face='bold', family='sans')) +
+    reqs
+  
+  p <- as.ggplot(p) 
+  all <- ggarrange(top + reqs, p  , heights=c(1.8,3), ncol=1)
+  
+  ggsave_nature(all, file = paste0(outdir, '-data-extended_data_figure_pairs.pdf'), w = 18, h = 19)
+  
+}
+
 plot_sources_histogram <- function(pairs, outdir)
 {
   # prepare counts
