@@ -23,14 +23,7 @@ if(length(args_line) > 0)
   outdir <- args_line[[4]]
   stan_model <- args_line[[6]]
   jobname <- args_line[[8]]
-}else if (usr == 'andrea'){
-
-    indir <- here::here() 
-    jobname <- 'central3'
-    stan_model <- 'gp221201d'
-    outdir <- '~/HPC/ab1820/home/projects/2022/phyloflows/results/'
 }
-
 
 outfile <- file.path(outdir, paste0(stan_model,'-', jobname))
 
@@ -56,6 +49,9 @@ source(file.path(gitdir.R.flow, 'postprocessing_statistics_functions.R'))
 # samples 
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
+
+# temporary
+unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
 
 
 #
@@ -91,11 +87,12 @@ if(use_contact_rates_prior)
 
 count_data <- prepare_count_data(stan_data)
 incidence_cases_recipient_round <- prepare_incidence_cases(incidence_cases_round)
-unsuppressed_share_sex <- prepare_unsuppressed_share(unsuppressed_share, c('SEX'))
-unsuppressed_share_sex_age <- prepare_unsuppressed_share(unsuppressed_share, c('SEX', 'AGEYRS'))
-prevalence_prop_sex<- prepare_infected_share(infected_share, 'SEX')
-reported_contact <- clean_reported_contact(df_reported_contact)
-df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age)
+unsuppressed_share_sex <- prepare_unsuppressed_share(unsuppressed_share, c('SEX'), outdir.table)
+unsuppressed_share_sex_age <- prepare_unsuppressed_share(unsuppressed_share, c('SEX', 'AGEYRS'), outdir.table)
+unsuppressed_share_sex_age_stand <- prepare_unsuppressed_share(unsuppressed_share, c('SEX', 'AGEYRS'), outdir.table, 'SEX')
+prevalence_prop_sex <- prepare_infected_share(infected_share, 'SEX', outdir.table)
+reported_contact <- clean_reported_contact(df_reported_contact, outdir.table)
+df_unsuppressed_median_age<-prepare_unsuppressed_median_age(unsuppressed_median_age, outdir.table)
 
 
 #
@@ -195,11 +192,13 @@ df_age_aggregated <- get.age.aggregated.map(c('15-19', '20-24', '25-29', '30-34'
 median_age_source_group <- find_summary_output_by_round(samples, 'log_lambda_latent', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                         transform = 'exp',
                                                         standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
-                                                        quantile_age_source = T)
+                                                        quantile_age_source = T, 
+                                                        lab = '5yrs_age_band')
 expected_contribution_age_group_source2 <- find_summary_output_by_round(samples, 'log_lambda_latent',
                                                                         c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                                         transform = 'exp',
-                                                                        standardised.vars = c('INDEX_ROUND'))
+                                                                        standardised.vars = c('INDEX_ROUND'), 
+                                                                        lab = '5yrs_age_band')
 plot_median_age_source_group(median_age_source_group, expected_contribution_age_group_source2, reported_contact, outfile.figures)
 plot_median_age_source_group_all_rounds(median_age_source_group, expected_contribution_age_group_source2, outfile.figures)
 
