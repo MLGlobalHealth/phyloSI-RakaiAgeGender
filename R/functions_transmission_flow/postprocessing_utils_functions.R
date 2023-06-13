@@ -151,7 +151,12 @@ prepare_unsuppressed_share <- function(unsuppressed_share, vars, outdir, standar
   tmp1[, type := 'Share in the HIV-positive unsuppressed census eligible individuals']
 
   # save
-  saveRDS(tmp1, paste0(outdir, '-data-unsuppressed_share_by_', tolower(paste0(vars, collapse = '_')), '.rds'))
+  file.name = paste0(outdir, '-data-unsuppressed_share_by_', tolower(paste0(vars, collapse = '_')))
+  if(!is.null(standardised.var)){
+    file.name <- paste0(file.name, '_standardized_by_', tolower(paste0(standardised.var, collapse = '_')))
+  }
+  file.name = paste0(file.name, '.rds')
+  saveRDS(tmp1, file.name)
   
   return(tmp1)
 }
