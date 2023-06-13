@@ -1882,9 +1882,11 @@ plot_counterfactual <- function(counterfactuals_p_f,
                                 incidence_factual,
                                 lab,
                                 outdir,
-                                nm_reqs=FALSE
+                                nm_reqs=FALSE, 
+                                Round = 'R018'
                                 )
 {
+  
   
 
   #
@@ -1896,7 +1898,8 @@ plot_counterfactual <- function(counterfactuals_p_f,
                                        counterfactuals_p_959595,
                                        counterfactuals_p_909090,
                                        incidence_factual,
-                                       lab = 'Unsuppressed', 
+                                       lab = lab, 
+                                       Round = Round,
                                        include_909090 = F)
   
   bc = copy(cct$budget.counterfactual)

@@ -1438,8 +1438,9 @@ combine_counterfactual_tables <- function(counterfactuals_p_f,
                                           counterfactuals_p_959595,
                                           counterfactuals_p_909090,
                                           incidence_factual,
-                                          lab = 'Unsuppressed', 
-                                          include_909090 = F)
+                                          lab, 
+                                          Round,
+                                          include_909090)
 {
   
   #
@@ -1623,7 +1624,6 @@ combine_counterfactual_tables <- function(counterfactuals_p_f,
   # restrict to one round and to male to female direction
   #
   
-  Round <- 'R018'
   budget.counterfactual <- budget.counterfactual[ROUND == Round & SEX == 'M']
   relative_incidence_counterfactual <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
   eligible_count_round.counterfactual <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
