@@ -577,3 +577,100 @@ save_counterfactual_results <- function(counterfactuals_p_f, counterfactuals_p_f
   saveRDS(table, file)
   return(table)
 }
+
+save_counterfactual_results_for_UNAIDS <- function(  counterfactuals_a_f,
+                                                     counterfactuals_a_f05,
+                                                     counterfactuals_a_959595,
+                                                     counterfactuals_a_909090,
+                                                     incidence_factual,
+                                                     lab, 
+                                                     outdir.table)
+{
+  Date <- Sys.Date()
+  
+  # labels
+  lab_table <- data.table(label = c('Diagnosed rate in men as in women\nART coverage in men as in women\nSuppression rate in men as in women', 
+                                    'Half-way to\nDiagnosed rate in men as in women\nART coverage in men as in women\nSuppression rate in men as in women',
+                                    '95% diagnosed\n95% receiving ART\n95% suppression rate'), 
+                          intervention = c('Closing the suppression gap in men relative to women', 
+                                           'Closing half the suppression gap in men relative to women', 
+                                           '95-95-95 in men'))
+  
+  var_table <- data.table(variable = c('INFECTED_NON_SUPPRESSED', 'INFECTED_ALREADY_SUPPRESSED', 'TREATED'), 
+                          category = c('Remaining virally unsuppressed', 'Already virally suppressed', 'Additional virally suppressed'))
+  
+  # combine tables
+  cct <- combine_counterfactual_tables(counterfactuals_a_f,
+                                       counterfactuals_a_f05,
+                                       counterfactuals_a_959595,
+                                       counterfactuals_a_909090,
+                                       incidence_factual,
+                                       lab = lab, 
+                                       Round = 'R018',
+                                       include_909090 = F)
+  
+  # subfigure a
+  ecf = copy(cct$eligible_count_round.counterfactual)
+  ecf <- merge(ecf, var_table, by = 'variable')
+  ecf <- merge(ecf, lab_table, by = 'label')
+  set(ecf, NULL, 'variable', NULL)
+  set(ecf, NULL, 'label', NULL)
+  set(ecf, NULL, 'ROUND', NULL)
+  set(ecf, NULL, 'SEX', NULL)
+  set(ecf, NULL, 'COMM', NULL)
+  ecf[, label := 'Number_Men_With_HIV']
+  write.csv(ecf, row.names = F, 
+            file.path(dirname(outdir.table),
+                      paste0('UNAIDSGlobalReport-Number_Men_With_HIV-Figure4a-Monodetal_', Date,'.csv')), 
+  )
+  
+  # subfigure b
+  bc = copy(cct$budget.counterfactual)
+  bc <- merge(bc, lab_table, by = 'label')
+  set(bc, NULL, 'label', NULL)
+  set(bc, NULL, 'ROUND', NULL)
+  set(bc, NULL, 'SEX', NULL)
+  set(bc, NULL, 'COMM', NULL)
+  setnames(bc, c('TREATED', 'TREATED_CL' , 'TREATED_CU'), c('M', 'CL', 'CU'))
+  bc[, label := 'Additional_Number_Men_With_Suppressed_Virus']
+  write.csv(bc, row.names = F, 
+            file.path(dirname(outdir.table),
+                      paste0('UNAIDSGlobalReport-Additional_Number_Men_With_Suppressed_Virus-Figure4b-Monodetal_', Date,'.csv')), 
+  )
+  
+  # subfigure c 
+  ric.all = copy(cct$relative_incidence_counterfactual_all)
+  ric.all <- merge(ric.all, lab_table, by = 'label')
+  ric.all <- ric.all[, .(M, CL, CU, intervention)]
+  ric.all[, label := '%_Reduction_In_Incidence_In_Women']
+  write.csv(ric.all, row.names = F, 
+            file.path(dirname(outdir.table),
+                      paste0('UNAIDSGlobalReport-Percent_Reduction_In_Incidence_In_Women-Figure4c-Monodetal_', Date,'.csv')), 
+  )
+  
+  # subfigure d - no intervention
+  icf = copy(cct$incidence_factual)
+  icf <- icf[, .(LABEL_GENDER_RECIPIENT, AGE_INFECTION.RECIPIENT, M, CL, CU)]
+  icf[, M := M * 100]
+  icf[, CL := CL * 100]
+  icf[, CU := CU * 100]
+  icf[, intervention := 'No intervention']
+  icf[, label := 'Incidence_Rate_per_100_person_year']
+  write.csv(icf, row.names = F, 
+            file.path(dirname(outdir.table),
+                      paste0('UNAIDSGlobalReport-Incidence_Rate_per_100_person_year-NoIntervention-Figure4d-Monodetal_', Date,'.csv')), 
+  )
+  
+  # subfigure d - intervention
+  ic = copy(cct$incidence_counterfactual)
+  ic <- merge(ic, lab_table, by = 'label')
+  ic <- ic[, .(intervention, AGE_INFECTION.RECIPIENT, M, CL, CU)]
+  ic[, M := M * 100]
+  ic[, CL := CL * 100]
+  ic[, CU := CU * 100]
+  ic[, label := 'Incidence_Rate_per_100_person_year']
+  write.csv(ic, row.names = F, 
+            file.path(dirname(outdir.table),
+                      paste0('UNAIDSGlobalReport-Incidence_Rate_per_100_person_year-WithIntervention-Figure4d-Monodetal_', Date,'.csv')), 
+  )
+}

@@ -9,6 +9,7 @@ library(gridExtra)
 library(lognorm)
 library(ggExtra)
 library(Hmisc)
+library(patchwork)
 
 # laptop
 if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
@@ -300,13 +301,12 @@ if(1){
   plot_data_by_period(incidence_cases, outfile.figures)
   
   # plot incident rates and cases over time
+  incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
   plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
-  if(file.exists(file.incidence.samples.inland)){
-    incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
-    plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
-  }
+  plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
   plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
-    
+  make_time_trends_HIV_incidence(eligible_count_round, incidence_cases_round, incidence_rates_round.samples,outfile.figures)
+
   # plot offset
   plot_offset(stan_data, outfile.figures)
   
