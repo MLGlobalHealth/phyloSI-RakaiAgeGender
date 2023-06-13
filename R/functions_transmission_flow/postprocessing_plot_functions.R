@@ -1808,10 +1808,12 @@ plot_median_age_source_group <- function(median_age_source_group,
                          breaks = c(seq(min(range_age_non_extended), max(range_age_non_extended), 5), 
                            max(range_age_non_extended))) + 
       guides(color = guide_legend(order = 1))
-    return(p)
+
     ggsave(p, file = paste0(outdir, '-output-MedianAgeSource_ByAgeGroupRecipient_', communities[i], '.pdf'), w = 6, h = 4.4)
     
   }
+  
+  return(p)
 }
 
 plot_median_age_source_group_all_rounds <- function(median_age_source_group, expected_contribution_age_group_source2, outdir){

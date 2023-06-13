@@ -111,7 +111,7 @@ prepare_incidence_cases <- function(incidence_cases){
   tmp
 }
 
-prepare_unsuppressed_share <- function(unsuppressed_share, vars, standardised.var = NULL){
+prepare_unsuppressed_share <- function(unsuppressed_share, vars, outdir, standardised.var = NULL){
 
   # reshape the share of unsuppressed count by sex
   # merge to the maps
@@ -150,10 +150,14 @@ prepare_unsuppressed_share <- function(unsuppressed_share, vars, standardised.va
   # type
   tmp1[, type := 'Share in the HIV-positive unsuppressed census eligible individuals']
 
+  # save
+  saveRDS(tmp1, paste0(outdir, '-data-unsuppressed_share_by_', tolower(paste0(vars, collapse = '_')), '.rds'))
+  
   return(tmp1)
 }
 
-prepare_unsuppressed_median_age <- function(unsuppressed_median_age){
+prepare_unsuppressed_median_age <- function(unsuppressed_median_age, outdir){
+  
   tmp1 <- copy(unsuppressed_median_age)
   tmp1[, IS_MF := as.numeric(SEX == 'M')]
   tmp1 <- merge(tmp1, df_direction, by = 'IS_MF')
@@ -164,10 +168,14 @@ prepare_unsuppressed_median_age <- function(unsuppressed_median_age){
 
   # merge to index round
   tmp1 <- merge(tmp1, df_round[, .(COMM, ROUND, INDEX_ROUND, LABEL_ROUND)],  by = c('COMM', 'ROUND'))
+  
+  # save
+  saveRDS(tmp1, paste0(outdir, '-data-median_age_unsuppressed.rds'))
+  
   return(tmp1)
 }
 
-prepare_infected_share <- function(infected_share, vars){
+prepare_infected_share <- function(infected_share, vars, outdir){
 
   # reshape the share of infected count by sex
   # merge to the maps
@@ -198,6 +206,9 @@ prepare_infected_share <- function(infected_share, vars){
   # type
   tmp1[, type := 'Share in the HIV-positive census eligible individuals']
 
+  # save
+  saveRDS(tmp1, paste0(outdir, '-data-share_prevalence_by_', tolower(paste0(vars, collapse = '_')), '.rds'))
+  
   return(tmp1)
 }
 
@@ -219,7 +230,7 @@ remove_first_round <- function(tmp){
   return(tmp)
 }
 
-clean_reported_contact <- function(df_reported_contact){
+clean_reported_contact <- function(df_reported_contact, outdir){
 
   reported_contact <- copy(df_reported_contact)
 
@@ -250,6 +261,9 @@ clean_reported_contact <- function(df_reported_contact){
   # find round label
   reported_contact <- merge(reported_contact , df_round, by = c('COMM', 'ROUND'))
 
+  # save
+  saveRDS(reported_contact, file = paste0(outdir, '-data-reported_contact.rds'))
+  
   return(reported_contact)
 }
 
