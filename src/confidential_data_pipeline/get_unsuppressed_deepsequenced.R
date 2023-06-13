@@ -278,9 +278,9 @@ set_new_color <- function(hex){
     ) 
 
     change_fill <<- scale_fill_manual(
-            values=c(hex, "white"),
-            na.value = 'white',
-        )  
+        values=c(hex, "white"),
+        na.value = 'white',
+    )
 }
 
 # #f4b5bd, #e6b8db, #c4c2f1, #9ccdf4, #85d4e3);
@@ -289,7 +289,6 @@ set_new_color("#c4c2f1")
 library(patchwork)
 r2 <- reqs + 
     theme(legend.position='none', plot.tag = element_text(face='bold'))
-
 
 t <- function(lab){ labs(tag=lab) + r2 }
 
@@ -301,7 +300,9 @@ p_all <- ggarrange( ncol=2, nrow=3,
     labels = 'auto', font.label = list(size=8) 
     )
 p_all2 <- ggarrange( p_all, legend, ncol=1, heights = c(40,1))
-p_all2
 
-filename <- '~/Downloads/extended_data_figure_samplingproportions.png'
+
+filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.pdf')
+ggsave_nature(filename = filename, p=p_all2, w = 18, h = 24 )
+filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.png')
 ggsave_nature(filename = filename, p=p_all2, w = 18, h = 24 )
