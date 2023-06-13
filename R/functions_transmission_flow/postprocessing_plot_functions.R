@@ -1,3 +1,5 @@
+source(file.path(gitdir.R, 'naturemed_reqs.R'))
+
 plot_2D_contrast <- function(tmp, outdir, lab = NULL, name = NULL){
   
   p <- ggplot(tmp, aes(y = AGE_TRANSMISSION.SOURCE, x = AGE_INFECTION.RECIPIENT)) + 
@@ -1884,202 +1886,30 @@ plot_counterfactual <- function(counterfactuals_p_f,
                                 )
 {
   
-  #
-  # labels
-  #
-  
-  # label in scenario where treated male take up art as much as female
-  label.f = 'ART coverage in men as in women\nSuppression rate in men as in women'
-  if(!grepl('Diagnosed', lab)){
-    label.f <- paste0('Diagnosed rate in men as in women\n', label.f)
-  }
-  
-  # label in scenario where treated male take up art half as much as female
-  label.f05 = paste0('Half-way to\n', label.f)
-  
-  # label in scenario where treated male are treated at 95%
-  label.959595 = '95% receiving ART\n95% suppression rate'
-  if(!grepl('Diagnosed', lab)){
-    label.959595 <- paste0('95% diagnosed\n', label.959595)
-  }
-  
-  # label in scenario where treated male are treated at half 90/90/90
-  label.909090 = '90% receiving ART\n90% suppression rate'
-  if(!grepl('Diagnosed', lab)){
-    label.909090 <- paste0('90% diagnosed\n', label.909090)
-  }
-  
-  
-  #
-  # unlist objects in scenario where male are diagnosed/treated/suppressed as much as female
-  #
-
-  # number of male treated regardless of age
-  budget.counterfactual <- counterfactuals_p_f$budget 
-  budget.counterfactual[, label := label.f]
-  
-  # number of male treated by age
-  eligible_count_round.counterfactual <- counterfactuals_p_f$eligible_count_round.counterfactual
-  eligible_count_round.counterfactual[, label := label.f]
-  
-  # relative incident cases counterfactual compared to factual by age
-  relative_incidence_counterfactual <- counterfactuals_p_f$relative_incidence_counterfactual 
-  relative_incidence_counterfactual[, label := label.f]
-  
-  # relative incident cases counterfactual compared to factual regardless of age
-  relative_incidence_counterfactual_all <- counterfactuals_p_f$relative_incidence_counterfactual_all 
-  relative_incidence_counterfactual_all[, label := label.f]
-  
-  # incident rate per py counterfactual 
-  incidence_counterfactual <- counterfactuals_p_f$incidence_counterfactual 
-  incidence_counterfactual[, label := label.f]
-  
 
   #
-  # unlist objects in scenario where male are diagnosed/treated/suppressed half as much as female
+  # Combine countefactuals tables
   #
   
-  # number of male treated regardless of age
-  budget.counterfactual.f05 <- counterfactuals_p_f05$budget 
-  budget.counterfactual.f05[, label := label.f05]
+  cct <- combine_counterfactual_tables(counterfactuals_p_f,
+                                       counterfactuals_p_f05,
+                                       counterfactuals_p_959595,
+                                       counterfactuals_p_909090,
+                                       incidence_factual,
+                                       lab = 'Unsuppressed', 
+                                       include_909090 = F)
   
-  # number of male treated by age
-  eligible_count_round.counterfactual.f05 <- counterfactuals_p_f05$eligible_count_round.counterfactual
-  eligible_count_round.counterfactual.f05[, label := label.f05]
-  
-  # relative incident cases counterfactual compared to factual by age
-  relative_incidence_counterfactual.f05 <- counterfactuals_p_f05$relative_incidence_counterfactual 
-  relative_incidence_counterfactual.f05[, label := label.f05]
-  
-  # relative incident cases counterfactual compared to factual regardless of age
-  relative_incidence_counterfactual_all.f05 <- counterfactuals_p_f05$relative_incidence_counterfactual_all 
-  relative_incidence_counterfactual_all.f05[, label := label.f05]
-  
-  # incident rate per py counterfactual 
-  incidence_counterfactual.f05 <- counterfactuals_p_f05$incidence_counterfactual 
-  incidence_counterfactual.f05[, label := label.f05]
-  
+  bc = copy(cct$budget.counterfactual)
+  ecf = copy(cct$eligible_count_round.counterfactual)
+  ric = copy(cct$relative_incidence_counterfactual)
+  ric.all = copy(cct$relative_incidence_counterfactual_all)
+  icf = copy(cct$incidence_factual)
+  ic = copy(cct$incidence_counterfactual)
   
   #
-  # unlist objects in scenario where treated male are treated at 95-95-95
+  # Make labels
   #
-  
-  # number of male treated regardless of age
-  budget.counterfactual.959595 <- counterfactuals_p_959595$budget 
-  budget.counterfactual.959595[, label := label.959595]
-  
-  # number of male treated regardless by age
-  eligible_count_round.counterfactual.959595 <- counterfactuals_p_959595$eligible_count_round.counterfactual
-  eligible_count_round.counterfactual.959595[, label := label.959595]
-  
-  # relative incident cases counterfactual compared to factual by age
-  relative_incidence_counterfactual.959595 <- counterfactuals_p_959595$relative_incidence_counterfactual 
-  relative_incidence_counterfactual.959595[, label := label.959595]
-  
-  # relative incident cases counterfactual compared to factual regardless of age
-  relative_incidence_counterfactual_all.959595 <- counterfactuals_p_959595$relative_incidence_counterfactual_all 
-  relative_incidence_counterfactual_all.959595[, label := label.959595]
-  
-  # incident rate per py counterfactual 
-  incidence_counterfactual.959595 <- counterfactuals_p_959595$incidence_counterfactual 
-  incidence_counterfactual.959595[, label := label.959595]
 
-
-  #
-  # unlist objects in scenario where treated male are treated 90 90 90
-  #
-  
-  # number of male treated regardless of age
-  budget.counterfactual.909090 <- counterfactuals_p_909090$budget 
-  budget.counterfactual.909090[, label := label.909090]
-
-  # number of male treated regardless by age
-  eligible_count_round.counterfactual.909090 <- counterfactuals_p_909090$eligible_count_round.counterfactual
-  eligible_count_round.counterfactual.909090[, label := label.909090]
-  
-  # relative incident cases counterfactual compared to factual by age
-  relative_incidence_counterfactual.909090 <- counterfactuals_p_909090$relative_incidence_counterfactual 
-  relative_incidence_counterfactual.909090[, label := label.909090]
-  
-  # relative incident cases counterfactual compared to factual regardless of age
-  relative_incidence_counterfactual_all.909090 <- counterfactuals_p_909090$relative_incidence_counterfactual_all 
-  relative_incidence_counterfactual_all.909090[, label := label.909090]
-  
-  # incident rate per py counterfactual 
-  incidence_counterfactual.909090 <- counterfactuals_p_909090$incidence_counterfactual 
-  incidence_counterfactual.909090[, label := label.909090]
-  
-  
-  #
-  # combine both scenarios
-  #
-  
-  budget.counterfactual <- do.call('rbind', list(budget.counterfactual, budget.counterfactual.f05, 
-                                                 budget.counterfactual.959595, budget.counterfactual.909090))
-  budget.counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
-  
-  eligible_count_round.counterfactual <-  do.call('rbind', list(eligible_count_round.counterfactual, eligible_count_round.counterfactual.f05,
-                                                                eligible_count_round.counterfactual.959595, eligible_count_round.counterfactual.909090))
-  eligible_count_round.counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
-  
-  relative_incidence_counterfactual <- do.call('rbind', list(relative_incidence_counterfactual, relative_incidence_counterfactual.f05,
-                                                             relative_incidence_counterfactual.959595, relative_incidence_counterfactual.909090))
-  relative_incidence_counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
-  
-  relative_incidence_counterfactual_all <- do.call('rbind', list(relative_incidence_counterfactual_all, relative_incidence_counterfactual_all.f05,
-                                                                 relative_incidence_counterfactual_all.959595, relative_incidence_counterfactual_all.909090))
-  relative_incidence_counterfactual_all[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
-  
-  incidence_counterfactual <- do.call('rbind', 
-        list(incidence_counterfactual,
-            incidence_counterfactual.f05,
-            incidence_counterfactual.959595,
-            incidence_counterfactual.909090))
-
-  incidence_counterfactual[, label := factor(label, levels = c(label.f05, label.909090, label.f, label.959595))]
-  
-
-  #
-  # restrict to one round and to male to female direction
-  #
-  
-  Round <- 'R018'
-  budget.counterfactual <- budget.counterfactual[ROUND == Round & SEX == 'M']
-  relative_incidence_counterfactual <- relative_incidence_counterfactual[ROUND == Round & IS_MF == T]
-  incidence_counterfactual <- incidence_counterfactual[ROUND == Round& IS_MF == T]
-  icf <- incidence_factual[ROUND == Round ]
-  ecf <- eligible_count_round.counterfactual[ROUND == Round & SEX == 'M']
-  relative_incidence_counterfactual_all <- relative_incidence_counterfactual_all[ROUND == Round & IS_MF == T]
-  
-  
-  #
-  # Clean and merge to target labels
-  #
-  
-  # merge incidence cases counterfactual by ageto target labels and find incidence rates
-  # ic <- merge(incidence_counterfactual, df_target, by = 'counterfactual_index')
-  tmp <-  unique(eligible_count_round.counterfactual[ROUND == Round, .(COMM, ROUND, SEX, AGEYRS, SUSCEPTIBLE)])
-  tmp[, LABEL_RECIPIENT := 'Female recipients']
-  tmp[SEX == 'F', LABEL_RECIPIENT := 'Male recipients']
-  setnames(tmp, 'AGEYRS', 'AGE_INFECTION.RECIPIENT')
-  ic <- merge(incidence_counterfactual,tmp, by = c( 'COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_INFECTION.RECIPIENT'))
-  # ic[, M := M / SUSCEPTIBLE]
-  # ic[, CL := CL / SUSCEPTIBLE]
-  # ic[, CU := CU / SUSCEPTIBLE]
-  
-  # same for incidence rate factual
-  icf  <- merge(icf,tmp, by = c('COMM', 'ROUND', 'LABEL_RECIPIENT', 'AGE_INFECTION.RECIPIENT'))
-  # icf[, M := M / SUSCEPTIBLE]
-  # icf[, CL := CL / SUSCEPTIBLE]
-  # icf[, CU := CU / SUSCEPTIBLE]
-  
-  # merge udget by by age to target labels
-  ecf[, INFECTED_SUPPRESSED := INFECTED - INFECTED_NON_SUPPRESSED]
-  ecf[, INFECTED_ALREADY_SUPPRESSED := INFECTED_SUPPRESSED - TREATED]
-  ecf <- ecf[, .(ROUND, SEX, AGEYRS, COMM, label, INFECTED_NON_SUPPRESSED, INFECTED_ALREADY_SUPPRESSED, TREATED)]
-  ecf <- melt.data.table(ecf, id.vars = c('ROUND', 'SEX', 'AGEYRS', 'COMM', 'label'))
-  ecf <- ecf[AGEYRS!=0] # ageyrs ==0 is the total
-  
   # make labels
   label.suppressed = 'Already virally suppressed in R18'; label.unsuppressed = 'Remaining virally unsuppressed in R18'; 
   label.new.suppressed = 'Additionally suppressed\nin intervention'
@@ -2094,11 +1924,7 @@ plot_counterfactual <- function(counterfactuals_p_f,
                                                               ecf[!VARIABLE_LABEL2 %in% c(label.suppressed, label.unsuppressed), as.character(unique(VARIABLE_LABEL2))], 
                                                               label.suppressed))]
   
-  # format budget regardless of age, merge to target labels and add total number of unsuppressed in factual
-  bc <- copy(budget.counterfactual)
-  # bc <- ecf[, .(value = sum(value)), by = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index', 'VARIABLE_LABEL', 'variable')]
-  # bc <- merge(bc, tmp, by = c('ROUND', 'SEX', 'COMM', 'label', 'counterfactual_index'), allow.cartesian = T)
-  # bc <- merge(bc, df_target, by = 'counterfactual_index')
+  # add label
   bc[, lab := lab]
   
   # add sex label
@@ -2106,13 +1932,7 @@ plot_counterfactual <- function(counterfactuals_p_f,
   icf[IS_MF == F, SEX_LABEL := 'In men']
   icf[, SEX_LABEL := factor(SEX_LABEL, levels = c('In women', 'In men'))]
   
-  # merge incidence cases counterfactual relative to factual to target labels
-  # ric <- merge(relative_incidence_counterfactual, df_target, by = 'counterfactual_index')
-  ric <- copy(relative_incidence_counterfactual)
-  # ric.all <- merge(relative_incidence_counterfactual_all, df_target, by = 'counterfactual_index')
-  ric.all <- copy(relative_incidence_counterfactual_all)
-  
-  
+
   #
   # Plot
   # 
@@ -2128,13 +1948,6 @@ plot_counterfactual <- function(counterfactuals_p_f,
     icf.c <- icf[COMM == communities[i]]
     ecf.c <- ecf[COMM == communities[i]]
     ric.all.c <- ric.all[COMM == communities[i]]
-    
-    # remove 90-90-90
-    bc.c <- bc.c[label != label.909090]
-    ic.c <- ic.c[label != label.909090]
-    ric.c <- ric.c[label != label.909090]
-    ecf.c <- ecf.c[label != label.909090]
-    ric.all.c <- ric.all.c[label != label.909090]
     
     # budget by age group
     p <- ggplot(ecf.c, aes(x = AGEYRS)) +

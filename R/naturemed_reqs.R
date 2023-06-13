@@ -91,3 +91,10 @@ rotate_x_axis <- function(angle){
     theme( axis.text.x = element_text(angle=angle, hjust = 1, vjust = 1) )
 }
 
+g_legend <- function(a.gplot){ 
+  tmp <- ggplot_gtable(ggplot_build(a.gplot)) 
+  leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box") 
+  legend <- tmp$grobs[[leg]] 
+  legend
+} 
+
