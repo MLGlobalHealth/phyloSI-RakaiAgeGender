@@ -16,7 +16,7 @@ usr <- Sys.info()[['user']]
 if(usr == 'melodiemonod'){# if on laptop
   indir <- here::here()
   stan_model <- 'gp_221201d'
-  jobname <- 'central'
+  jobname <- 'central3'
   outdir <- file.path('~/Box\ Sync/2021/phyloflows/', paste0(stan_model,'-', jobname))
 }
 
@@ -63,8 +63,8 @@ file.prevalence_prop_sex <- paste0(outdir.table, '-data-share_prevalence_by_sex.
 
 # name files with estimated quantities
 file.median_age_source <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_infection.recipient_quantilestandardisedby_direction_round_age_infection.recipient.rds')
-file.median_age_source_group <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_group_infection.recipient_quantilestandardisedby_direction_round_age_group_infection.recipient.rds')
-file.expected_contribution_age_group_source2 <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_group_infection.recipientstandardisedby_round.rds')
+file.median_age_source_group <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_group_infection.recipient_quantilestandardisedby_direction_round_age_group_infection.recipient_5yrs_age_band.rds')
+file.expected_contribution_age_group_source2 <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_group_infection.recipientstandardisedby_round_5yrs_age_band.rds')
 file.expected_contribution_sex_source <- paste0(outdir.table, '-output-log_lambda_latentby_direction_roundstandardisedby_round.rds')
 file.expected_contribution_age_source2 <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_transmission.sourcestandardisedby_round.rds')
 
