@@ -108,6 +108,37 @@ setnames(sing, qlab, paste0("UNSUPPRESSED_SHARE_SEX_", qlab))
 cat("===== Checkpoint 3 =====")
 sing <- merge(sing_age, sing, by = c("ROUND", "COMM", "SEX"))
 
+
+#####################################################
+
+# FIND SHARE OF INFECTED UNSUPPRESSED ACROSS AGE BY SEX
+
+#####################################################
+
+# find share of unsuppressed by sex across age
+df[, TOTAL_UNSUPPRESSED := sum(UNSUPPRESSED), by = c('ROUND', 'COMM', 'iterations', 'SEX')]
+df[, UNSUPPRESSED_SHARE := UNSUPPRESSED / TOTAL_UNSUPPRESSED]
+
+# summarise
+ps <- c(0.025,0.5,0.975)
+qlab <- c('CL','M','CU')
+sing.age = df[, list(q= quantile(UNSUPPRESSED_SHARE, prob=ps, na.rm = T), q_label=qlab), by=c('ROUND', 'COMM', 'SEX', 'AGEYRS')]
+sing.age = as.data.table(reshape2::dcast(sing.age, ... ~ q_label, value.var = "q"))
+
+# name
+setnames(sing.age, qlab, paste0('UNSUPPRESSED_SHARE_AGE_BY_SEX_', qlab))
+
+# merge
+sing <- merge(sing.age, sing, by=c('ROUND', 'COMM', 'SEX', 'AGEYRS'))
+
+# plot
+ggplot(sing.age[COMM == 'inland'], aes(x = AGEYRS)) + 
+  geom_line(aes(y = UNSUPPRESSED_SHARE_AGE_BY_SEX_M)) + 
+  geom_ribbon(aes(ymin = UNSUPPRESSED_SHARE_AGE_BY_SEX_CL, ymax = UNSUPPRESSED_SHARE_AGE_BY_SEX_CU), alpha = 0.5) + 
+  facet_grid(ROUND~COMM+SEX) + 
+  theme_bw()
+
+
 #########################################
 
 # SAVE
