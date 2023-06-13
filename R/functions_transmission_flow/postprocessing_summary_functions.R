@@ -226,7 +226,7 @@ find_summary_output_by_round <- function(samples, output, vars,
                                          transform = NULL, standardised.vars = NULL, names = NULL, operation = NULL, log_offset_round = NULL, 
                                          log_offset_formula = 'LOG_OFFSET', per_unsuppressed = F, per_susceptible = F, posterior_samples = F, relative_baseline = F, 
                                          invert = F, median_age_source = F, quantile_age_source = F, quantile_age_difference = F, sex_ratio = F, save_output = T, add_male_age_classification_nonsymmetric = F, 
-                                         df_age_aggregated_new = NULL){
+                                         df_age_aggregated_new = NULL, lab = NULL){
   
   # summarise outputs by round
   
@@ -453,6 +453,9 @@ find_summary_output_by_round <- function(samples, output, vars,
     }
     if(!is.null(standardised.vars)){
       file = paste0(file, 'standardisedby_', tolower(paste0(gsub('INDEX_', '', standardised.vars), collapse = '_')))
+    }
+    if(!is.null(lab)){
+      file = paste0(file, '_', lab)
     }
     file = paste0(file, '.rds')
     saveRDS(tmp1, file)
