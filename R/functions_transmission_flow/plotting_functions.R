@@ -2020,7 +2020,7 @@ make_time_trends_HIV_incidence <- function(eligible_count_round, incidence_cases
                                               list(
                                                 q = quantile(INCIDENCE_CONTRIBUTION, probs=ps),
                                                 q_label=names(ps)),
-                                              by=c('ROUND', 'COMM', 'SEX', 'AGEYRS')] |>
+                                              by=c('ROUND', 'COMM', 'SEX', 'AGEYRS')] %>%
     dcast( ROUND+COMM+SEX+AGEYRS~q_label, value.var='q')
   
   p_1d <- make_subplot(data_1d, M='M', IL='IL', IU='IU', y_lab = "Contribution to incidence rates")
@@ -2061,7 +2061,7 @@ make_time_trends_HIV_incidence <- function(eligible_count_round, incidence_cases
                                           list(
                                             q = quantile(INCIDENCE_CASES_CONTRIBUTION, probs=ps),
                                             q_label=names(ps)),
-                                          by=c('ROUND', 'COMM', 'SEX', 'AGEYRS')]|>
+                                          by=c('ROUND', 'COMM', 'SEX', 'AGEYRS')] %>%
     dcast( ROUND+COMM+SEX+AGEYRS~q_label, value.var='q')
   
   p_edf_contribution <- make_subplot(data_1d, M='M', IL='IL', IU='IU', y_lab = "Contribution to incident cases")
