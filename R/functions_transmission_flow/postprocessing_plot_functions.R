@@ -454,9 +454,9 @@ plot_cond_prob_sampling_recipient <- function(cond_prob_sampling_recipient, outd
       scale_y_continuous(label = scales::percent)
     
     if(communities[i] == 'inland'){
-      ggsave(p, file = paste0(outdir, '-output-', 'cond_prob_sampling_recipient', communities[i], '.png'), w = 9, h = 14)
+      ggsave(p, file = paste0(outdir, '-output-', 'prob_cond_sampling_recipient', communities[i], '.png'), w = 9, h = 14)
     }else{
-      ggsave(p, file = paste0(outdir, '-output-', 'cond_prob_sampling_recipient', communities[i], '.png'), w = 9, h = 9)
+      ggsave(p, file = paste0(outdir, '-output-', 'prob_cond_sampling_recipient', communities[i], '.png'), w = 9, h = 9)
       
     }
     
