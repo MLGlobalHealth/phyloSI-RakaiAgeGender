@@ -16,11 +16,11 @@ do
 done
 
 # default options
-STAN_MODEL = "${STAN_MODEL:-gp_230614a}"
-JOBNAME = "${JOBNAME:-firstrun}"
-INDIR = "${INDIR:-/rds/general/user/ab1820/home/git/phyloSI-RakaiAgeGender}"
-OUTDIR = "${OUTDIR:-/rds/general/user/ab1820/home/projects/2022/phyloflows}"
-ENVNAME = "${ENVNAME:-phyloflows}"
+STAN_MODEL = "${STAN_MODEL:=gp_230614a}"
+JOBNAME = "${JOBNAME:=firstrun}"
+INDIR = "${INDIR:=/rds/general/user/ab1820/home/git/phyloSI-RakaiAgeGender}"
+OUTDIR = "${OUTDIR:=/rds/general/user/ab1820/home/projects/2022/phyloflows}"
+ENVNAME = "${ENVNAME:=phyloflows}"
 
 echo "Selected options:"
 echo "STAN_MODEL = $STAN_MODEL"
