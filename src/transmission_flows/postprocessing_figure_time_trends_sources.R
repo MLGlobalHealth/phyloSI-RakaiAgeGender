@@ -1,4 +1,4 @@
-cat("Start of postprocessing_figure_time_trends_sources.R")
+cat("Start of postprocessing_figure_time_trends_sources.R\n")
 
 library(rstan)
 library(data.table)
@@ -15,8 +15,8 @@ usr <- Sys.info()[['user']]
 
 if(usr == 'melodiemonod'){# if on laptop
   indir <- here::here()
-  stan_model <- 'gp_221201d'
-  jobname <- 'central3'
+  stan_model <- 'gp_230602'
+  jobname <- 'newdetectionprob'
   outdir <- file.path('~/Box\ Sync/2021/phyloflows/', paste0(stan_model,'-', jobname))
 }
 
@@ -122,6 +122,9 @@ naturemed_reqs()
 # find color palette of rounds
 find_palette_round()
 
+# find range age
+range_age_non_extended <- range(median_age_source$AGE_INFECTION.RECIPIENT)
+
 p_b <- plot_median_age_source_group(median_age_source_group,
                                     expected_contribution_age_group_source2,
                                     reported_contact,
@@ -158,4 +161,6 @@ right_side <- ( (p_b + labs(subtitle = 'b')) / ( p_c  ) + plot_layout( heights =
 p_2 <- (p_a + labs(subtitle = 'a') |  right_side) + plot_layout( widths = c(2, 4)) 
 
 ggsave_nature(p_2, filename=paste0(outfile.figures, '-output-MainFigure2.pdf'))
+
+cat("End of postprocessing_figure_time_trends_sources.R\n")
 

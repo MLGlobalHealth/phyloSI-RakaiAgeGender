@@ -1150,8 +1150,9 @@ get_proportion_sampling_by_period <- function(pairs, incidence_cases, outdir)
     cat('\n Some probabilities are smaller than 0')
     cat('\n In', tmp[, unique(COMM)], 'communities at period', tmp[, unique(PERIOD)])
   }
+
   
-  if(dir.exists(outdir))
+  if(dir.exists(dirname( outdir)))
   { # plots
     
     tmp1 <- copy(df)
@@ -1192,7 +1193,7 @@ get_proportion_sampling_by_period <- function(pairs, incidence_cases, outdir)
       geom_raster(aes(fill = prop_sampling)) + 
       facet_grid(INDEX_TIME2~COMM+Direction)  +
       scale_fill_viridis_c(labels = scales::percent)  + 
-      geom_point(data = dp, col = 'red') + 
+      # geom_point(data = dp, col = 'red') + 
       labs(x = 'Age source', y = 'Age recipient', fill = 'Probability of observing\ntransmission event') +
       scale_y_continuous(expand= c(0,0))+
       scale_x_continuous(expand= c(0,0)) +

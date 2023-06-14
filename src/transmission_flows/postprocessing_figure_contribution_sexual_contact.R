@@ -1,4 +1,4 @@
-cat("Start of postprocessing_figure_contribution_sexual_contact.R")
+cat("Start of postprocessing_figure_contribution_sexual_contact.R\n")
 
 library(rstan)
 library(data.table)
@@ -291,4 +291,6 @@ pB <- ggpubr::ggarrange(p1b, p2b, ncol = 1, common.legend = T, legend = 'bottom'
 
 # combine two plots----
 p <- ggpubr::ggarrange(pA, pB, ncol = 1, heights  = c(1.35, 2.8), labels = c('a', 'b'), font.label = list(color = "black", size = 8))
-ggsave(file = paste0(outfile.figures, 'extended-data-fig_age-dist_EDF7.pdf'), p, width = 18, height = 20, units = 'cm', dpi = 310, limitsize = FALSE)
+ggsave(file = paste0(outfile.figures, '-output-extended-data-fig_age-dist_EDF7.pdf'), p, width = 18, height = 20, units = 'cm', dpi = 310, limitsize = FALSE)
+
+cat("End of postprocessing_figure_contribution_sexual_contact.R\n")
