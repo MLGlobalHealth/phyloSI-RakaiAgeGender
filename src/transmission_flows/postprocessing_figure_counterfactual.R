@@ -1,4 +1,4 @@
-cat("Start of postprocessing_figure_counterfactual.R")
+cat("Start of postprocessing_figure_counterfactual.R\n")
 
 library(rstan)
 library(data.table)
@@ -171,4 +171,4 @@ save_counterfactual_results_for_UNAIDS(  counterfactuals_a_f,
                                          "Unsuppressed", 
                                          outdir.table)
 
-
+cat("End of postprocessing_figure_counterfactual.R\n")
