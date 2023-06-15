@@ -30,7 +30,7 @@ echo "OUTDIR = $OUTDIR"
 echo "ENVNAME = $ENVNAME"
 
 # if ENVNAME is not-empty, need to add a line to both scripts below
-if [ -z "$ENVNAME" ]
+if [ ! -z "$ENVNAME" ]
 then
     ENVNAME="source activate $ENVNAME"
 fi
@@ -79,12 +79,12 @@ cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME-postprocessing.pbs <<EOF
 #PBS -l select=1:ncpus=10:ompthreads=1:mem=480gb
 #PBS -j oe
 module load anaconda3/personal
+$ENVNAME
 
 INDIR=$INDIR
 OUTDIR=$OUTDIR
 STAN_MODEL=$STAN_MODEL
 JOBNAME=$JOBNAME
-$ENVNAME
   
 # main directory
 CWD=\$OUTDIR/\$STAN_MODEL-\$JOBNAME
