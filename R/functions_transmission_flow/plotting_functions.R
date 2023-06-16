@@ -1389,7 +1389,7 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
         tmp <- data.table(
             ROUND='R000', 
             COMM='inland',
-            MIN_SAMPLE_DATE = as.Date(-Inf),
+            MIN_SAMPLE_DATE = as.Date('1900-01-01'),
             MAX_SAMPLE_DATE = min_round_date - 1,
             LABEL_ROUND = paste0('Before R10\n', 'Before ', format(min_round_date, '%b %Y'))
         )
@@ -1404,7 +1404,7 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
             ROUND='R111', 
             COMM='inland',
             MIN_SAMPLE_DATE = inf_date_range[2] + 1,
-            MAX_SAMPLE_DATE = as.Date(Inf),
+            MAX_SAMPLE_DATE = as.Date('2030-01-01'),
             LABEL_ROUND = paste0('After R18\n', 'After ', format(max_round_date, '%b %Y'))
         )
         df_round_extended <- rbind( df_round_extended, tmp, fill=TRUE)
