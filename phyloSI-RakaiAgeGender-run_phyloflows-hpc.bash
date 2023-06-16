@@ -1,9 +1,40 @@
-#!/bin/sh
+#!/bin/bash
 
-STAN_MODEL="gp_230602"
-JOBNAME="newdetectionproblessit2500"
-INDIR="/rds/general/user/mm3218/home/git/phyloSI-RakaiAgeGender"
-OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender"
+# use as:
+# phyloSI-RakaiAgeGende-run_phyloflows-hpc.bash JOBNAME="jobname"
+# where flags can be used to change the default arguments specified below
+
+for ARGUMENT in "$@"
+do
+   KEY=$(echo $ARGUMENT | cut -f1 -d=)
+
+   KEY_LENGTH=${#KEY}
+   VALUE="${ARGUMENT:$KEY_LENGTH+1}"
+
+   echo "export $KEY=$VALUE"
+   export "$KEY"="$VALUE"
+done
+
+# default options
+STAN_MODEL="${STAN_MODEL:-gp_230614a}"
+JOBNAME="${JOBNAME:-firstrun}"
+INDIR="${INDIR:-/rds/general/user/ab1820/home/git/phyloSI-RakaiAgeGender}"
+OUTDIR="${OUTDIR:-/rds/general/user/ab1820/home/projects/2022/phyloflows}"
+ENVNAME="${ENVNAME:-phyloflows}"
+
+echo "Selected options:"
+echo "STAN_MODEL = $STAN_MODEL"
+echo "JOBNAME = $JOBNAME"
+echo "INDIR = $INDIR"
+echo "OUTDIR = $OUTDIR"
+echo "ENVNAME = $ENVNAME"
+
+# if ENVNAME is not-empty, need to add a line to both scripts below
+if [ -z "$ENVNAME" ]
+then
+    ENVNAME="source activate $ENVNAME"
+fi
+# 
 
 mkdir $OUTDIR
 
@@ -14,6 +45,7 @@ cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME.pbs <<EOF
 #PBS -l select=1:ncpus=10:ompthreads=1:mem=240gb
 #PBS -j oe
 module load anaconda3/personal
+$ENVNAME
   
 JOB_TEMP=\${EPHEMERAL}/\${PBS_JOBID}
 mkdir -p \$JOB_TEMP
@@ -52,6 +84,7 @@ INDIR=$INDIR
 OUTDIR=$OUTDIR
 STAN_MODEL=$STAN_MODEL
 JOBNAME=$JOBNAME
+$ENVNAME
   
 # main directory
 CWD=\$OUTDIR/\$STAN_MODEL-\$JOBNAME
