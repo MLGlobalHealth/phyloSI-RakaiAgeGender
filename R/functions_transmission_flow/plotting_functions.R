@@ -1481,8 +1481,8 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 
 plot_pairs_panel <- function(pairs.all, outdir){
   
-  p <- plot_pairs(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE], outfile.figures, nm_reqs = TRUE)
-  p1 <- plot_pairs_all(pairs.all[BOTH_PARTICIPATED==TRUE], outfile.figures, nm_reqs=TRUE)
+  p <- plot_pairs(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE], outdir, nm_reqs = TRUE)
+  p1 <- plot_pairs_all(pairs.all[BOTH_PARTICIPATED==TRUE], outdir, nm_reqs=TRUE)
   p2 <- plot_transmission_events_over_time(pairs.all[BOTH_PARTICIPATED==TRUE], outdir = NULL, nm_reqs=TRUE)
   
   # extract legend
