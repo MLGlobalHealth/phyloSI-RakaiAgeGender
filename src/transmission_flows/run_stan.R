@@ -52,10 +52,10 @@ args_line <-  as.list(commandArgs(trailingOnly=TRUE))
 print(args_line)
 if(length(args_line) > 0)
 {
-  stopifnot(args_line[[1]]=='-indir')
-  stopifnot(args_line[[3]]=='-outdir')
-  stopifnot(args_line[[5]]=='-stan_model')
-  stopifnot(args_line[[7]]=='-jobname')
+  stopifnot("wrong args order"=args_line[[1]]=='-indir')
+  stopifnot("wrong args order"=args_line[[3]]=='-outdir')
+  stopifnot("wrong args order"=args_line[[5]]=='-stan_model')
+  stopifnot("wrong args order"=args_line[[7]]=='-jobname')
   gitdir <- args_line[[2]]
   outdir <- args_line[[4]]
   stan_model <- args_line[[6]]
@@ -176,9 +176,9 @@ with(df_round_inland, {
     start_second_period_inland  <<- min_sample_date[round == 'R016']    # [1] "2013-07-08"
     stop_second_period_inland   <<- max_sample_date[round == 'R018']    # [1] "2018-05-22"
 })
-stopifnot(start_first_period_inland < stop_first_period_inland)
-stopifnot(stop_first_period_inland < start_second_period_inland)
-stopifnot(start_second_period_inland < stop_second_period_inland)
+stopifnot("inconsistent period specification" = start_first_period_inland < stop_first_period_inland)
+stopifnot("inconsistent period specification" = stop_first_period_inland < start_second_period_inland)
+stopifnot("inconsistent period specification" = start_second_period_inland < stop_second_period_inland)
 
 df_round <- make.df.round(df_round_inland)
 

@@ -61,7 +61,7 @@ if (zenodo.exists) {
     ) %>%
         dir.exists() %>%
         all() %>%
-        stopifnot()
+        stopifnot("Not all directories exist in zenodo dir.")
 } else {
     stop("Please specify path to zenodo data in config.R")
 }
