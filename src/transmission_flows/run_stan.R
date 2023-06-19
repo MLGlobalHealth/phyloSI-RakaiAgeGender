@@ -25,7 +25,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
 }
 
 # hpc
-if(dir.exists('/rds/general/user/mm3218/'))
+if(Sys.info()[['user']] == 'mm3218')
 {
   gitdir <- '~/git/phyloSI-RakaiAgeGender'
   outdir <- '/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender'
