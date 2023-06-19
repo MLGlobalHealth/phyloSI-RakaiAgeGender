@@ -10,7 +10,8 @@ usr <- Sys.info()[["user"]]
 # set your user and path here:
 dir.zenodo <- data.table::fcase(
     usr == "andrea", "~/OneDrive/Imperial/shifting-dynamics-zenodo/",
-    usr == "ab1820", "/rds/general/user/ab1820/home/OneDrive/shifting-dynamics-zenodo/",
+    usr == "ab1820", "/rds/general/project/ratmann_deepseq_analyses/live/tmp4mm/shifting-dynamics-zenodo",
+    usr == "ablenkin", "/rds/general/project/ratmann_deepseq_analyses/live/tmp4mm/shifting-dynamics-zenodo",
     usr == "shozendan", "~/Imperial/phyloSI-RakaiAgeGender-data",
     usr == "melodiemonod", "/Users/melodiemonod/Box Sync/2023/shifting-dynamics-zenodo",
     usr == "mm3218", "/rds/general/user/mm3218/home/data/shifting-dynamics-zenodo/",
@@ -61,7 +62,7 @@ if (zenodo.exists) {
     ) %>%
         dir.exists() %>%
         all() %>%
-        stopifnot("Not all directories exist in zenodo dir.")
+        stopifnot()
 } else {
     stop("Please specify path to zenodo data in config.R")
 }
