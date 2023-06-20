@@ -2,7 +2,12 @@
 
 # use as:
 # phyloSI-RakaiAgeGende-run_phyloflows-hpc.bash JOBNAME="jobname"
-# where flags can be used to change the default arguments specified below
+# Flags:
+#    STAN_MODEL : stan model to be run
+#    JOBNAME : name of the job 
+#    INDIR : directory where github directory is located
+#    OUTDIR : directory where output will be saved
+#    ENVNAME : name of the conda environment to be used
 
 for ARGUMENT in "$@"
 do
@@ -18,9 +23,9 @@ done
 # default options
 STAN_MODEL="${STAN_MODEL:-gp_230614a}"
 JOBNAME="${JOBNAME:-firstrun}"
-INDIR="${INDIR:-/rds/general/user/ab1820/home/git/phyloSI-RakaiAgeGender}"
-OUTDIR="${OUTDIR:-/rds/general/user/ab1820/home/projects/2022/phyloflows}"
-ENVNAME="${ENVNAME:-phyloflows}"
+INDIR="${INDIR:-/home/andrea/git/phyloflows}"
+OUTDIR="${OUTDIR:-/home/andrea/git/phyloflows/output}"
+ENVNAME="${ENVNAME:-phylosi-RakaiAgeGender}"
 
 echo "Selected options:"
 echo "STAN_MODEL = $STAN_MODEL"
@@ -39,7 +44,6 @@ fi
 mkdir $OUTDIR
 
 cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME.pbs <<EOF
-  
 #!/bin/sh
 #PBS -l walltime=72:00:00
 #PBS -l select=1:ncpus=10:ompthreads=1:mem=240gb
@@ -73,7 +77,6 @@ qsub bash_$STAN_MODEL-$JOBNAME-postprocessing.pbs
 EOF
 
 cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME-postprocessing.pbs <<EOF
-  
 #!/bin/sh
 #PBS -l walltime=24:00:00
 #PBS -l select=1:ncpus=10:ompthreads=1:mem=480gb
