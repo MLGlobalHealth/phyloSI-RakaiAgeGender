@@ -296,4 +296,3 @@ filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.pdf')
 ggsave_nature(filename = filename, p=all_rows, w = 18, h = 24 )
 filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.png')
 ggsave_nature(filename = filename, p=all_rows, w = 18, h = 24 )
-

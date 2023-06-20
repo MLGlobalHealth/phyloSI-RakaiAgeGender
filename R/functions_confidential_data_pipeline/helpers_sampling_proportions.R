@@ -204,8 +204,9 @@ prettify_labs <- function(DT){
     if(deparse(.xvar) == 'ROUND_LAB'){
         dplot[, ROUND_LAB := gsub('^R0','Round', ROUND_LAB)]
     }
+    dplot[, AGEGP_LAB := paste(AGEGP, 'years')]
 
-    ggplot(dplot, aes(x=eval(.xvar), color=SEX_LAB, pch=AGEGP, linetype=AGEGP, y=P )) + 
+    ggplot(dplot, aes(x=eval(.xvar), color=SEX_LAB, pch=AGEGP_LAB, linetype=AGEGP_LAB, y=P )) + 
         geom_hline(yintercept = 1, linetype='dashed', color='grey50') +
         geom_point(position=position_dodge(width=.8) ) + 
         geom_linerange(aes(ymin=CL, ymax=CU), position=position_dodge(width =.8)) +
