@@ -7,6 +7,8 @@
     library(lubridate)
     library(rstan)
     library(haven)
+    library(ggpattern)
+    library(patchwork)
     # single imports
     binconf <- Hmisc::binconf
 } |> suppressPackageStartupMessages()
@@ -254,55 +256,40 @@ p_ratio2 <- rbind(daggregates2, detectionprob[, -c("ROUND_LAB", "SEX_LAB")]) |>
 cat('\n ALL TOGETHER: \n')
 ##########################
 
-# make the legend
-set_new_color <- function(hex){
-    legend <<- cowplot::get_legend(
-        ggplot(dplot, 
-            aes(x=value, y=value,
-                fill=SEX_LAB,  
-                pch=AGEGP, linetype=AGEGP, 
-                size="Events or individuals for which\nthe virus was ever deepsequenced")) + 
-            geom_point(color='black') +
-            geom_ribbon(aes(ymin=value, ymax=value, alpha=AGEGP)) +
-            geom_linerange(aes(ymin=value, ymax=value)) +
-            scale_color_manual(values=c("black", "black" )) + 
-            scale_fill_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
-            scale_alpha_manual(values=c(`15-24`=.3, `25-34`=.6, `35-49`=.8)) +
-            guides(
-                size = guide_legend(override.aes = list(color=hex, fill = hex,alpha=1, pch=NULL, linetype=NULL)),
-                # pch = guide_legend(override.aes = list(color='white')),
-            ) +
-            labs(fill = 'Gender', linetype=NULL, pch=NULL, group=NULL, alpha=NULL, color=NULL, size="") +
-            theme(legend.position='bottom')  +
-        reqs
-    ) 
+r2 <- reqs + theme(
+    legend.position='none',
+    plot.tag = element_text(face='bold'),
+    strip.background = element_blank(),
+    panel.grid.minor= element_blank(),
+    panel.grid.major= element_blank()
+)
+t <- function(lab){ labs(tag=lab, caption=lab) + r2 }
+naturemed_reqs()
+patchwork.way <- TRUE
+if(! patchwork.way ) # the ggarrange way
+{
+    top_row_2 <- ggarrange(p_hist2 + labs( tag='a'), p_hist + labs( tag='d'), common.legend = TRUE, legend = "bottom")
+    bottow_rows_2 <- ggarrange( ncol =2 , nrow=2,
+        p2b + labs( tag='b') , p_everseq_givenunspp + labs( tag='e')  ,
+        p_ratio2 + labs( tag='c') , p_ratio + labs( tag='f') ,
+        common.legend = TRUE, legend = "bottom")
+    all_rows_2 <- ggarrange( ncol =1 , nrow=2, heights = c(1,2),
+        top_row_2, bottow_rows_2,
+        common.legend = TRUE, legend = "bottom")
+    all_rows <- copy(all_rows_2)
 
-    change_fill <<- scale_fill_manual(
-        values=c(hex, "white"),
-        na.value = 'white',
-    )
+}else{
+
+    top_row_3 <-(p_hist2 + r2 + labs( tag='a')) + (p_hist + r2 + labs( tag='d')) + plot_layout(guides = 'collect') & theme(legend.position ='bottom', legend.box.margin = margin(r=-15, unit='pt'))
+    bottow_rows_3 <- (p2b + r2 + labs( tag='b')) + (p_everseq_givenunspp + r2 + labs( tag='e')) + (p_ratio2 + r2 + labs( tag='c')) + (p_ratio + r2 + labs( tag='f')) + plot_layout(guides = 'collect') & theme(legend.position ='bottom')
+    all_rows_3 <- top_row_3 / bottow_rows_3 + plot_layout(heights = c(.94,2))
+    all_rows_3 <- all_rows_3 & reqs 
+    all_rows <- copy(all_rows_3)
+    all_rows + plot_annotation(theme = theme(plot.margin = margin()))
 }
 
-# #f4b5bd, #e6b8db, #c4c2f1, #9ccdf4, #85d4e3);
-set_new_color("#c4c2f1")
-
-library(patchwork)
-r2 <- reqs + 
-    theme(legend.position='none', plot.tag = element_text(face='bold'))
-
-t <- function(lab){ labs(tag=lab) + r2 }
-
-
-p_all <- ggarrange( ncol=2, nrow=3,
-    p_hist2 + r2 + change_fill, p_hist + r2 + change_fill,
-    p2b +r2 , p_everseq_givenunspp + r2  ,
-    p_ratio2 + r2 , p_ratio + r2 ,
-    labels = 'auto', font.label = list(size=8) 
-    )
-p_all2 <- ggarrange( p_all, legend, ncol=1, heights = c(40,1))
-
-
 filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.pdf')
-ggsave_nature(filename = filename, p=p_all2, w = 18, h = 24 )
+ggsave_nature(filename = filename, p=all_rows_3, w = 18, h = 24 )
 filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.png')
-ggsave_nature(filename = filename, p=p_all2, w = 18, h = 24 )
+ggsave_nature(filename = filename, p=all_rows_3, w = 18, h = 24 )
+
