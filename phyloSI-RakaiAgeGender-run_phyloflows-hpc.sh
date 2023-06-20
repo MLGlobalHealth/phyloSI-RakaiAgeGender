@@ -1,7 +1,7 @@
 #!/bin/sh
 
-STAN_MODEL="gp_230602"
-JOBNAME="newdetectionproblessit2500"
+STAN_MODEL="bash_gp_230614b"
+JOBNAME="firstrun"
 INDIR="/rds/general/user/mm3218/home/git/phyloSI-RakaiAgeGender"
 OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender"
 
@@ -14,6 +14,7 @@ cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME.pbs <<EOF
 #PBS -l select=1:ncpus=10:ompthreads=1:mem=240gb
 #PBS -j oe
 module load anaconda3/personal
+source activate phyloSI-RakaiAgeGender
   
 JOB_TEMP=\${EPHEMERAL}/\${PBS_JOBID}
 mkdir -p \$JOB_TEMP
@@ -47,6 +48,7 @@ cat > $OUTDIR/bash_$STAN_MODEL-$JOBNAME-postprocessing.pbs <<EOF
 #PBS -l select=1:ncpus=10:ompthreads=1:mem=480gb
 #PBS -j oe
 module load anaconda3/personal
+source activate phyloSI-RakaiAgeGender
 
 INDIR=$INDIR
 OUTDIR=$OUTDIR
