@@ -25,7 +25,7 @@ STAN_MODEL="${STAN_MODEL:-gp_230614a}"
 JOBNAME="${JOBNAME:-firstrun}"
 INDIR="${INDIR:-/home/andrea/git/phyloflows}"
 OUTDIR="${OUTDIR:-/home/andrea/git/phyloflows/output}"
-ENVNAME="${ENVNAME:-phylosi-RakaiAgeGender}"
+ENVNAME="${ENVNAME:-phylowSI-RakaiAgeGender}"
 
 echo "Selected options:"
 echo "STAN_MODEL = $STAN_MODEL"
