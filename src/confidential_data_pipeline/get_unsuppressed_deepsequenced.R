@@ -280,16 +280,20 @@ if(! patchwork.way ) # the ggarrange way
 
 }else{
 
-    top_row_3 <-(p_hist2 + r2 + labs( tag='a')) + (p_hist + r2 + labs( tag='d')) + plot_layout(guides = 'collect') & theme(legend.position ='bottom', legend.box.margin = margin(r=-15, unit='pt'))
-    bottow_rows_3 <- (p2b + r2 + labs( tag='b')) + (p_everseq_givenunspp + r2 + labs( tag='e')) + (p_ratio2 + r2 + labs( tag='c')) + (p_ratio + r2 + labs( tag='f')) + plot_layout(guides = 'collect') & theme(legend.position ='bottom')
-    all_rows_3 <- top_row_3 / bottow_rows_3 + plot_layout(heights = c(.94,2))
-    all_rows_3 <- all_rows_3 & reqs 
-    all_rows <- copy(all_rows_3)
-    all_rows + plot_annotation(theme = theme(plot.margin = margin()))
+    # top_row_3 <-(p_hist2 + r2 + labs( tag='a')) + (p_hist + r2 + labs( tag='d')) + plot_layout(guides = 'collect') & theme(legend.position ='bottom', legend.box.margin = margin(r=-15, unit='pt'))
+    # bottow_rows_3 <- (p2b + r2 + labs( tag='b')) + (p_everseq_givenunspp + r2 + labs( tag='e')) + (p_ratio2 + r2 + labs( tag='c')) + (p_ratio + r2 + labs( tag='f')) + plot_layout(guides = 'collect') & theme(legend.position ='bottom')
+    # all_rows_3 <- top_row_3 / bottow_rows_3 + plot_layout(heights = c(.94,2))
+    # all_rows_3 <- all_rows_3 & reqs 
+    # all_rows <- copy(all_rows_3)
+
+    all_rows_3b <- (p_hist2 + labs(tag = 'a') + r2 | p_hist + labs(tag = 'd') + r2) / (p2b + labs(tag = 'b') + r2 | p_everseq_givenunspp + labs(tag = 'e') + r2) / (p_ratio2 + labs(tag = 'c') + r2 | p_ratio + labs(tag = 'f') + r2) + plot_layout(guides='collect') & theme(legend.position = 'bottom') + reqs
+
+    all_rows <- copy(all_rows_3b)
+
 }
 
 filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.pdf')
-ggsave_nature(filename = filename, p=all_rows_3, w = 18, h = 24 )
+ggsave_nature(filename = filename, p=all_rows, w = 18, h = 24 )
 filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.png')
-ggsave_nature(filename = filename, p=all_rows_3, w = 18, h = 24 )
+ggsave_nature(filename = filename, p=all_rows, w = 18, h = 24 )
 
