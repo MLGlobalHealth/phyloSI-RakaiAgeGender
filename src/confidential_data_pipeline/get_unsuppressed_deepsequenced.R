@@ -222,6 +222,7 @@ dcount <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','
 
 # find uncertainty around incident cases
 cat('\n\n (loading samples...) \n\n')
+
 dincsamples <- load_incidence_rates_samples(file.incidence.samples.inland)
 dincsamples <-  merge(dincsamples, dsusc, by=c("ROUND", 'SEX', 'AGEYRS', 'COMM'))
 dincsamples[, `:=` (YEAR_LENGTH = year.diff(MAX_SAMPLE_DATE, MIN_SAMPLE_DATE))]
