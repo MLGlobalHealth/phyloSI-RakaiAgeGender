@@ -359,12 +359,18 @@ plot.hist.numerators.denominators <- function(DT, DRANGE, filltext=NA_character_
         rotate_x_axis(30)
 }
 
-plot.hist.numerators.denominators.2 <- function(DT, filltext=NA_character_)
+plot.hist.numerators.denominators.2 <- function(DT, range=FALSE, filltext=NA_character_)
 {
     # DT <- copy(detectionprob)
     by_cols <- c('ROUND', 'SEX', 'COMM', 'AGEGP')
     dplot <- melt( DT, id.vars = by_cols, measure.vars = c('count', 'INCIDENT_CASES')) |> suppressWarnings()
     dplot <- prettify_labs(dplot)
+ 
+    if(range){
+        drange <- subset(DT, select=c('INCIDENT_CASES_LB', 'INCIDENT_CASES_UB', 'ROUND', 'AGEGP', 'SEX'))
+        drange <- prettify_labs(drange)
+        drange[, AGEGP_LAB := paste(AGEGP, "years")]
+    }
     
     # relabel
     dplot[, variable_lab := fifelse(variable == 'count', 'Yes', 'No') ]
@@ -386,11 +392,15 @@ plot.hist.numerators.denominators.2 <- function(DT, filltext=NA_character_)
             pattern_spacing = 0.025,
             pattern_key_scale_factor = 0.6,
             aes(pattern=variable_lab, group=AGEGP_LAB),
-            position=position_dodge(width=.8),  width=.8) +
+            position=position_dodge(width=.8),  width=.8) + {
+            if(range) 
+            geom_linerange(data=drange,position = position_dodge(width =.8), color='black', size=.5,
+                aes(ymin=INCIDENT_CASES_LB, ymax=INCIDENT_CASES_UB, y=NULL))
+        }  +
         facet_grid(SEX_LAB~.) +
         scale_pattern_manual(values = c(Yes = "stripe", No = "none"), breaks=c('Yes', 'No')) +
-        scale_fill_viridis_d() +
         scale_y_continuous(expand = expansion(c(0,0.1)) ) +
+        scale_fill_viridis_d() +
         guides(
             fill = guide_legend(override.aes = list(pattern="none")),
             pattern = guide_legend(override.aes = list(fill = "#BDC5D0", pattern_density = .001, pattern_spacing = .01))
