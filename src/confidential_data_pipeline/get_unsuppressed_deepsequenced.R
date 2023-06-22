@@ -45,7 +45,9 @@ file.exists(c(
   file.path.hiv,
   file.path.quest,
   file.path.metadata,
-  file.characteristics_sequenced_ind_R14_18))  |> all() |> stopifnot()
+  file.characteristics_sequenced_ind_R14_18))  |> 
+    all() |> 
+    stopifnot()
 
 # specify outdir
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
@@ -208,12 +210,11 @@ cat('\nxi_j plots\n')
 
 detectionprob <- readRDS(file.detection.probability.round)
 names(detectionprob) <- gsub('.RECIPIENT', '' ,names(detectionprob)) 
-detectionprob <- subset(detectionprob, select=c('SEX', 'COMM', 'AGEYRS', 'ROUND','INCIDENT_CASES', 'count', 'prop_sampling'))
-
 detectionprob[, `:=` (AGEGP = ageyrs2agegp(AGEYRS))]
+cols <- names(detectionprob) %which.like% 'INCIDENT|count'
 detectionprob <- detectionprob[, 
     lapply(.SD, sum),
-    .SDcols = c('INCIDENT_CASES', 'count'),
+    .SDcols = cols,
     by=c('ROUND','SEX', 'COMM', 'AGEGP')]
 prettify_labs(detectionprob)
 
@@ -229,7 +230,7 @@ p2b <- .make.plot.with.binconf(detectionprob, xvar=ROUND_LAB,
 cat('\nFilled histogram \n')
 # __________________________
 
-p_hist2 <- plot.hist.numerators.denominators.2(detectionprob, filltext = 'hello')
+p_hist2 <- plot.hist.numerators.denominators.2(detectionprob, range=TRUE, filltext = 'hello')
 
 cat('\nRatio plot\n')
 # ___________________
@@ -242,7 +243,8 @@ daggregates2 <- detectionprob[, list(
     INCIDENT_CASES = sum(INCIDENT_CASES)
 ) , by='ROUND']
 
-p_ratio2 <- rbind(daggregates2, detectionprob[, -c("ROUND_LAB", "SEX_LAB")]) |> 
+tmp <- subset(detectionprob, select=names(daggregates2))
+p_ratio2 <- rbind(daggregates2, tmp) |> 
     prettify_labs() |>
     .binconf.ratio.plot(
         x=count, n=INCIDENT_CASES, 
