@@ -243,6 +243,16 @@ get_incidence_cases_round <- function(incidence.inland, eligible_count_round)
     knitr::kable(tmp)
     
   }
+
+  # save
+  file.name <- file.incidence.cases.round
+  if(! file.exists(file.name) | config$overwrite.existing.files )
+  {
+    cat("Saving file:", file.name, '\n')
+    saveRDS(dir, file = file.name)
+  }else{
+    cat("File:", file.name, "already exists...\n")
+  }
   
   return(dir)
   
@@ -1320,7 +1330,7 @@ get.age.aggregated.map <- function(age_aggregated)
 
 load_incidence_rates_samples <- function(file.incidence.samples.inland){
   
-  incidence_rates_round.samples <- as.data.table(read.csv(file.incidence.samples.inland))
+  incidence_rates_round.samples <- fread(file.incidence.samples.inland)
   incidence_rates_round.samples[,COMM := 'inland']
   incidence_rates_round.samples[, SEX := substr(Sex,1,1)]
   if('ROUND' %in% names(incidence_rates_round.samples)){

@@ -5,8 +5,6 @@
     library(ggpubr)
     library(scales)
     library(lubridate)
-    library(rstan)
-    library(haven)
     library(ggpattern)
     library(patchwork)
     # single imports
@@ -208,14 +206,37 @@ p_ratio <- rbind(daggregates, tab_seq_unsup[, -c("N_EVERSEQ_OLD")]) |>
 cat('\nxi_j plots\n')
 # ___________________
 
+# load detection and subset out susceptibles
 detectionprob <- readRDS(file.detection.probability.round)
 names(detectionprob) <- gsub('.RECIPIENT', '' ,names(detectionprob)) 
 detectionprob[, `:=` (AGEGP = ageyrs2agegp(AGEYRS))]
-cols <- names(detectionprob) %which.like% 'INCIDENT|count'
-detectionprob <- detectionprob[, 
-    lapply(.SD, sum),
-    .SDcols = cols,
-    by=c('ROUND','SEX', 'COMM', 'AGEGP')]
+dsusc <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','SUSCEPTIBLE'))
+dcount <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','count'))
+
+# load incidence draws
+dincsamples <- fread(file.incidence.samples.inland)
+dincsamples$ROUND <- NULL
+names(dincsamples) <- toupper(names(dincsamples))
+setnames(dincsamples, "AGE", "AGEYRS")
+dincsamples[, `:=` (
+  ROUND = paste0("R0", ROUND_LABEL),
+  ROUND_LABEL = NULL,
+  SEX = fifelse( SEX %like% "^F", "F", "M" ),
+  MODEL = NULL
+) ]
+dincsamples <- merge(dincsamples, dsusc[COMM=='inland'], by=c("ROUND", "SEX",  "AGEYRS"))
+
+# aggregate incidence cases with uncertainty
+tmp <- dincsamples[, list(  DRAW = sum(INC * SUSCEPTIBLE)), by=c("ROUND", "SEX", "AGEGP", 'ITERATIONS_WITHIN', "ITERATIONS" ) ]
+tmp <- tmp[, list( 
+  Q = quantile(DRAW, probs = c(.025, .5, .975)),
+  Q_LEVEL = c("CL", "M", "CU")
+  ), by=c("ROUND", "SEX", "AGEGP" ) ] |> 
+  dcast(ROUND + SEX + AGEGP ~ Q_LEVEL, value.var='Q')
+setnames(tmp, c("M", "CL", "CU"), paste0('INCIDENT_CASES', c("", "_LB", "_UB")) )
+
+# rename detectionprob with correct aggregation
+detectionprob <- merge(dcount, tmp, by =c("ROUND", "SEX", "AGEGP" ) )
 prettify_labs(detectionprob)
 
 
@@ -289,7 +310,6 @@ if(! patchwork.way ) # the ggarrange way
     # all_rows <- copy(all_rows_3)
 
     all_rows_3b <- (p_hist2 + labs(tag = 'a') + r2 | p_hist + labs(tag = 'd') + r2) / (p2b + labs(tag = 'b') + r2 | p_everseq_givenunspp + labs(tag = 'e') + r2) / (p_ratio2 + labs(tag = 'c') + r2 | p_ratio + labs(tag = 'f') + r2) + plot_layout(guides='collect') & theme(legend.position = 'bottom') + reqs
-
     all_rows <- copy(all_rows_3b)
 
 }
