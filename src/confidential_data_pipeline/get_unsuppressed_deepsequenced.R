@@ -225,7 +225,7 @@ cat('\n\n (loading samples...) \n\n')
 
 dincsamples <- load_incidence_rates_samples(file.incidence.samples.inland)
 dincsamples <-  merge(dincsamples, dsusc, by=c("ROUND", 'SEX', 'AGEYRS', 'COMM'))
-dincsamples[, `:=` (YEAR_LENGTH = year.diff(MAX_SAMPLE_DATE, MIN_SAMPLE_DATE))]
+dincsamples[, `:=` (YEAR_LENGTH = .year.diff(MAX_SAMPLE_DATE, MIN_SAMPLE_DATE))]
 tmp <- dincsamples[, list(  DRAW = sum(INCIDENCE.DRAW * SUSCEPTIBLE *  YEAR_LENGTH)), by=c("ROUND", "SEX", "AGEGP", 'iterations' ) ]
 tmp <- tmp[, list( 
   Q = quantile(DRAW, probs = c(.025, .5, .975)),
