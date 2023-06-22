@@ -14,7 +14,14 @@
 
 usr <- Sys.info()[['user']]
 
-gitdir <- here::here()
+if(usr == 'ab1820'){
+    gitdir <- '/rds/general/user/ab1820/home/git/phyloflows'
+}else{
+    gitdir <- here::here()
+}
+
+
+
 source(file.path(gitdir, "config.R"))
 source(file.path(gitdir.R, 'utils.R'))
 source(file.path(gitdir.R.conf, 'helpers_sampling_proportions.R'))
@@ -213,21 +220,12 @@ detectionprob[, `:=` (AGEGP = ageyrs2agegp(AGEYRS))]
 dsusc <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','SUSCEPTIBLE'))
 dcount <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','count'))
 
-# load incidence draws
-dincsamples <- fread(file.incidence.samples.inland)
-dincsamples$ROUND <- NULL
-names(dincsamples) <- toupper(names(dincsamples))
-setnames(dincsamples, "AGE", "AGEYRS")
-dincsamples[, `:=` (
-  ROUND = paste0("R0", ROUND_LABEL),
-  ROUND_LABEL = NULL,
-  SEX = fifelse( SEX %like% "^F", "F", "M" ),
-  MODEL = NULL
-) ]
-dincsamples <- merge(dincsamples, dsusc[COMM=='inland'], by=c("ROUND", "SEX",  "AGEYRS"))
-
-# aggregate incidence cases with uncertainty
-tmp <- dincsamples[, list(  DRAW = sum(INC * SUSCEPTIBLE)), by=c("ROUND", "SEX", "AGEGP", 'ITERATIONS_WITHIN', "ITERATIONS" ) ]
+# find uncertainty around incident cases
+cat('\n\n (loading samples...) \n\n')
+dincsamples <- load_incidence_rates_samples(file.incidence.samples.inland)
+dincsamples <-  merge(dincsamples, dsusc, by=c("ROUND", 'SEX', 'AGEYRS', 'COMM'))
+dincsamples[, `:=` (YEAR_LENGTH = year.diff(MAX_SAMPLE_DATE, MIN_SAMPLE_DATE))]
+tmp <- dincsamples[, list(  DRAW = sum(INCIDENCE.DRAW * SUSCEPTIBLE *  YEAR_LENGTH)), by=c("ROUND", "SEX", "AGEGP", 'iterations' ) ]
 tmp <- tmp[, list( 
   Q = quantile(DRAW, probs = c(.025, .5, .975)),
   Q_LEVEL = c("CL", "M", "CU")
