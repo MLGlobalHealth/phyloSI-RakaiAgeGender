@@ -214,29 +214,42 @@ cat('\nxi_j plots\n')
 # ___________________
 
 # load detection and subset out susceptibles
-detectionprob <- readRDS(file.detection.probability.round)
-names(detectionprob) <- gsub('.RECIPIENT', '' ,names(detectionprob)) 
-detectionprob[, `:=` (AGEGP = ageyrs2agegp(AGEYRS))]
-dsusc <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','SUSCEPTIBLE'))
-dcount <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','count'))
 
-# find uncertainty around incident cases
-cat('\n\n (loading samples...) \n\n')
+file.name <- file.detection.probability.round.custom.agegroups
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
 
-dincsamples <- load_incidence_rates_samples(file.incidence.samples.inland)
-dincsamples <-  merge(dincsamples, dsusc, by=c("ROUND", 'SEX', 'AGEYRS', 'COMM'))
-dincsamples[, `:=` (YEAR_LENGTH = .year.diff(MAX_SAMPLE_DATE, MIN_SAMPLE_DATE))]
-tmp <- dincsamples[, list(  DRAW = sum(INCIDENCE.DRAW * SUSCEPTIBLE *  YEAR_LENGTH)), by=c("ROUND", "SEX", "AGEGP", 'iterations' ) ]
-tmp <- tmp[, list( 
-  Q = quantile(DRAW, probs = c(.025, .5, .975)),
-  Q_LEVEL = c("CL", "M", "CU")
-  ), by=c("ROUND", "SEX", "AGEGP" ) ] |> 
-  dcast(ROUND + SEX + AGEGP ~ Q_LEVEL, value.var='Q')
-setnames(tmp, c("M", "CL", "CU"), paste0('INCIDENT_CASES', c("", "_LB", "_UB")) )
+    detectionprob <- readRDS(file.detection.probability.round)
+    names(detectionprob) <- gsub('.RECIPIENT', '' ,names(detectionprob)) 
+    detectionprob[, `:=` (AGEGP = ageyrs2agegp(AGEYRS))]
+    dsusc <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','SUSCEPTIBLE'))
+    dcount <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','count'))
 
-# rename detectionprob with correct aggregation
-detectionprob <- merge(dcount, tmp, by =c("ROUND", "SEX", "AGEGP" ) )
-prettify_labs(detectionprob)
+    # find uncertainty around incident cases
+    cat('\n\n (loading samples...) \n\n')
+
+    dincsamples <- load_incidence_rates_samples(file.incidence.samples.inland)
+    dincsamples <-  merge(dincsamples, dsusc, by=c("ROUND", 'SEX', 'AGEYRS', 'COMM'))
+    dincsamples[, `:=` (YEAR_LENGTH = .year.diff(MAX_SAMPLE_DATE, MIN_SAMPLE_DATE))]
+    tmp <- dincsamples[, list(  DRAW = sum(INCIDENCE.DRAW * SUSCEPTIBLE *  YEAR_LENGTH)), by=c("ROUND", "SEX", "AGEGP", 'iterations' ) ]
+    tmp <- tmp[, list( 
+      Q = quantile(DRAW, probs = c(.025, .5, .975)),
+      Q_LEVEL = c("CL", "M", "CU")
+      ), by=c("ROUND", "SEX", "AGEGP" ) ] |> 
+      dcast(ROUND + SEX + AGEGP ~ Q_LEVEL, value.var='Q')
+    setnames(tmp, c("M", "CL", "CU"), paste0('INCIDENT_CASES', c("", "_LB", "_UB")) )
+
+    # rename detectionprob with correct aggregation
+    detectionprob <- merge(dcount, tmp, by =c("ROUND", "SEX", "AGEGP" ) )
+    prettify_labs(detectionprob)
+
+    cat("Saving file:", file.name, '\n')
+    saveRDS(object=detectionprob,file=file.name)
+}else{
+
+    cat("Loading previously obtained file:", file.name, '\n')
+    detectionprob <- readRDS(file.name)
+}
 
 
 cat('\nDot-linearange plots \n')

@@ -315,6 +315,7 @@ file.prevalence.agegroup <- file.path(dir.zenodo.survproc, "RCCS_prevalence_age_
 ##########################################
 
 file.detection.probability.round <- file.path(dir.zenodo.transflow, 'detection_probabilities_by_round.rds')
+file.detection.probability.round.custom.agegroups <- file.path(dir.zenodo.transflow, 'detection_probabilities_by_round_custom_agegroups.rds')
 
 ##########################################
 # PATH TO STAN MODELS #
