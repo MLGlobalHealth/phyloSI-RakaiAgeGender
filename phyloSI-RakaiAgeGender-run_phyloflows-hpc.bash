@@ -21,8 +21,8 @@ do
 done
 
 # default options
-STAN_MODEL="${STAN_MODEL:-gp_230614a}"
-JOBNAME="${JOBNAME:-firstrun}"
+STAN_MODEL="${STAN_MODEL:-gp_230602}"
+JOBNAME="${JOBNAME:-central}"
 INDIR="${INDIR:-/home/andrea/git/phyloflows}"
 OUTDIR="${OUTDIR:-/home/andrea/git/phyloflows/output}"
 ENVNAME="${ENVNAME:-phylowSI-RakaiAgeGender}"
