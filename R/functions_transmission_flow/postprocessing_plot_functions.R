@@ -286,8 +286,8 @@ plot_PPC_observed_recipient <- function(predict_y, count_data, outdir){
       geom_errorbar(aes(x=count_jitter, ymin=CL_jitter, ymax=CU_jitter),  color = 'grey50', width = 0, size = 0.5)+
       geom_point(aes(y=M_jitter, x=count_jitter, color=PERIOD), size = 1) + 
       theme_bw() + 
-      labs(x = 'Observed transmission events\nin RCCS participants',
-           y = 'Predicted transmission events\nin RCCS participants', 
+      labs(x = 'Number of phylogenetically observed\nsource-recipient pairs (by age band of the source)',
+           y = 'Predicted number of\nsource-recipient pairs (by age band of the source)',
            col ='', fill = '') +
         scale_color_viridis_d(option = 'A', end = 0.9, begin = 0.1) + 
       facet_wrap(AGE_GROUP_INFECTION.RECIPIENT~LABEL_RECIPIENT, scale = 'free', ncol = 3) + 
