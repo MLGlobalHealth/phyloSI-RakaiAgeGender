@@ -251,6 +251,13 @@ if(! file.exists(file.name) | config$overwrite.existing.files )
     detectionprob <- readRDS(file.name)
 }
 
+detectionprob <- detectionprob[, .(
+    INCIDENT_CASES = unique(INCIDENT_CASES),
+    INCIDENT_CASES_LB = unique(INCIDENT_CASES_LB),
+    INCIDENT_CASES_UB = unique(INCIDENT_CASES_UB),
+    count = sum(count)
+), by=c('ROUND', 'SEX', "AGEGP", "COMM", "ROUND_LAB", "SEX_LAB" )]
+
 
 cat('\nDot-linearange plots \n')
 #________________________________
@@ -258,7 +265,6 @@ cat('\nDot-linearange plots \n')
 p2b <- .make.plot.with.binconf(detectionprob, xvar=ROUND_LAB,
     x=count, n=INCIDENT_CASES,
     .ylab="Proportion of estimated infection events\nappearing as recipient")
-
 
 cat('\nFilled histogram \n')
 # __________________________
