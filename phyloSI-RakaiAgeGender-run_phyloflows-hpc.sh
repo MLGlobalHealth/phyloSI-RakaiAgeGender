@@ -1,7 +1,7 @@
 #!/bin/sh
 
 STAN_MODEL="gp_230602"
-JOBNAME="firstrun"
+JOBNAME="central"
 INDIR="/rds/general/user/mm3218/home/git/phyloSI-RakaiAgeGender"
 OUTDIR="/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender"
 
