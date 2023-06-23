@@ -1559,67 +1559,114 @@ get.sample.collection.dates.deprecated <- function(select_aid=NULL, get_first_vi
 
 set.sensitivity.indicators.from.jobname <- function(jobname)
 {
-
-    if(jobname == "incloess"){
-        cat("Modifying flag: use_loess_inc_estimates...\n"  )
-        use_loess_inc_estimates <<- TRUE
+  # map from analysis to jobname
+  
+  # central = central analysis
+  
+  # incloess = Using incidence rates estimated with LOESS regression
+  # 30com = Using incidence rates estimated on a data subset to 28 continuously surveyed communities
+  # tsinonrefined = Using non-refined infection time estimates
+ 
+  # woR18 = Without source-recipients pairs for which the source or recipient was sequenced after round 17
+  # woR1718 = Without source-recipients pairs for which the source or recipient was sequenced after round 16
+  # woR161718 = Without source-recipients pairs for which the source or recipient was sequenced after round 15
+  
+  # seed12 = Using a bootstrap sample of the source-recipient pairs (first draw)
+  # seed13 = Using a bootstrap sample of the source-recipient pairs (second draw)
+  # seed14 = Using a bootstrap sample of the source-recipient pairs (third draw)
+  
+  # nonparttreatedaspart = Assuming the same suppression rate in non-participants as in participants
+  # nonpartnottreated = Assuming that non-participants are not suppressed
+  # nonpartfemalemale125moreinfectious = Assuming that prevalence in non-participants is 25% higher than in participants
+  # nonpartmale125moreinfectious = Assuming that prevalence in men non-participants is 25% higher than in men participants
+  # nonpartfemale125moreinfectious = Assuming that prevalence in women non-participants is 25% higher than in women participants
+  
+  # vl200 = Defining viral suppression as a viral load measurement below 200 copies/mL plasma blood
+  
+  
+  token <- 0
+  
+  if(jobname == "incloess"){
+    cat("Modifying flag: use_loess_inc_estimates...\n"  )
+    use_loess_inc_estimates <<- TRUE
+    token <- token + 1
+  }
+  
+  if(jobname == "30com"){
+    cat("Modifying flags: use_30com_inc_estimates ...\n"  )
+    cat("Modifying flags: use_30com_pairs ...\n"  )
+    use_30com_inc_estimates <<- TRUE
+    use_30com_pairs <<- TRUE
+    token <- token + 1
+  }
+  
+  if(jobname == "tsinonrefined"){
+    cat("Modifying flag:  use_tsi_non_refined...\n"  )
+    use_tsi_non_refined <<- TRUE
+    token <- token + 1
+  }
+  
+  if(jobname %like% 'woR[0-9]+$') {
+    cat("Modifying flag: remove.pairs.from.rounds...\n")
+    rounds_to_remove <- gsub('woR([0-9]+)$', '\\1', jobname) %>% as.integer()
+    while(rounds_to_remove > 1){
+      tmp <- paste0('R0', rounds_to_remove %% 100)
+      rounds_to_remove <- rounds_to_remove %/% 100
+      remove.pairs.from.rounds <<- c(remove.pairs.from.rounds, tmp)
     }
+    token <- token + 1
+  }
+  
+  if(jobname %like% 'seed[0-9]+$') {
+    cat("Modifying flag: pairs_replicates.seed  ...\n")
+    pairs_replicates.seed <<- gsub('seed([0-9]+)$',"\\1",jobname) %>%  as.integer()
+    token <- token + 1
+  }
+  
+  if(jobname == "nonparttreatedaspart"){
+    cat("Modifying flag: nonparticipants.treated.like.participants  ...\n")
+    nonparticipants.treated.like.participants <<- TRUE
+    token <- token + 1
+  }
+  
+  if(jobname == "nonpartnottreated"){
+    cat("Modifying flag: nonparticipants.not.treated  ...\n")
+    nonparticipants.not.treated <<- TRUE
+    token <- token + 1
+  }
+  
+  if(jobname == "nonpartfemalemale125moreinfectious"){
+    cat("Modifying flag: nonparticipants.male.relative.infection  ...\n")
+    nonparticipants.male.relative.infection <<- 1.25
+    cat("Modifying flag: nonparticipants.female.relative.infection  ...\n")
+    nonparticipants.female.relative.infection <<- 1.25
+    token <- token + 1
+  }
+  
+  if(jobname == "nonpartmale125moreinfectious"){
+    cat("Modifying flag: nonparticipants.male.relative.infection  ...\n")
+    nonparticipants.male.relative.infection <<- 1.25
+    token <- token + 1
+  }
+  
+  if(jobname == "nonpartfemale125moreinfectious"){
+    cat("Modifying flag: nonparticipants.female.relative.infection  ...\n")
+    nonparticipants.female.relative.infection <<- 1.25
+    token <- token + 1
+  }
+  
+  if(jobname == "vl200"){
+    cat("Modifying flag: viremic_viral_load_200ml  ...\n")
+    viremic_viral_load_200ml <<- TRUE
+    token <- token + 1
+  }
+  
+  # sanity check
+  if(jobname == 'central'){
+    stopifnot(token == 0)
+  }else{
+    stopifnot(token == 1)
+  }
 
-    if(jobname == "30com"){
-        cat("Modifying flags: use_30com* ...\n"  )
-        use_30com_inc_estimates <<- TRUE
-        use_30com_pairs <<- TRUE
-    }
-
-    if(jobname == "tsinonrefined"){
-        cat("Modifying flag:  use_tsi_non_refined...\n"  )
-        use_tsi_non_refined <<- TRUE
-    }
-
-    if(jobname %like% 'woR[0-9]+$') {
-        cat("Modifying flag: remove.pairs.from.rounds...\n")
-        rounds_to_remove <- gsub('woR([0-9]+)$', '\\1', jobname) %>% as.integer()
-        while(rounds_to_remove > 1){
-            tmp <- paste0('R0', rounds_to_remove %% 100)
-            rounds_to_remove <- rounds_to_remove %/% 100
-            remove.pairs.from.rounds <<- c(remove.pairs.from.rounds, tmp)
-        }
-    }
-
-    if(jobname %like% 'seed[0-9]+$') {
-        cat("Modifying flag: pairs_replicates.seed  ...\n")
-        pairs_replicates.seed <<- gsub('seed([0-9]+)$',"\\1",jobname) %>%  as.integer()
-    }
-
-    if(jobname == "nonparttreatedaspart"){
-        cat("Modifying flag: nonparticipants.treated.like.participants  ...\n")
-        nonparticipants.treated.like.participants <<- TRUE
-    }
-
-    if(jobname == "nonpartnottreated"){
-        cat("Modifying flag: nonparticipants.not.treated  ...\n")
-        nonparticipants.not.treated <<- TRUE
-    }
-
-    if(jobname == "nonpartfemalemale125moreinfectious"){
-        cat("Modifying flag: nonparticipants.male.relative.infection  ...\n")
-        nonparticipants.male.relative.infection <<- 1.25
-        nonparticipants.female.relative.infection <<- 1.25
-    }
-
-    if(jobname == "nonpartmale125moreinfectious"){
-        cat("Modifying flag: nonparticipants.male.relative.infection  ...\n")
-        nonparticipants.male.relative.infection <<- 1.25
-    }
-
-    if(jobname == "nonpartfemale125moreinfectious"){
-        cat("Modifying flag: nonparticipants.female.relative.infection  ...\n")
-        nonparticipants.female.relative.infection <<- 1.25
-    }
-
-    if(jobname == "vl200"){
-        cat("Modifying flag: viremic_viral_load_200ml  ...\n")
-        viremic_viral_load_200ml <<- TRUE
-    }
-
+  
 }
