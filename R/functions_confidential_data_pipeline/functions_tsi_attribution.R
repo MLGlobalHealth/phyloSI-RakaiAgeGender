@@ -2143,7 +2143,13 @@ find_ff_pairs_for_Griffin <- function() { # study all FF pairs to be sent to Gri
     tmpUN <- merge(idx, tmp12, by.x = c("H1", "H2"), by.y = c("SOURCE", "RECIPIENT"), all.x = TRUE)[is.na(SEX.SOURCE), .(H1, H2)]
     tmpUN <- merge(tmpUN, tmp21, by.x = c("H1", "H2"), by.y = c("RECIPIENT", "SOURCE"), all.x = TRUE)[is.na(SEX.RECIPIENT), .(H1, H2)]
 
-    tmpUN[, `:=`(SOURCE = H1, RECIPIENT = H2, SEX.SOURCE = "F", SEX.RECIPIENT = "F", ROUND.M = NA_character_, DIRECTION = "phyloscanner_unclear")]
+    tmpUN[, `:=`(
+        SOURCE = H1,
+        RECIPIENT = H2, 
+        SEX.SOURCE = "F",
+        SEX.RECIPIENT = "F",
+        ROUND.M = NA_character_,
+        DIRECTION = "phyloscanner_unclear")]
     tmpUN[, `:=`(H1 = NULL, H2 = NULL)]
     stopifnot(nrow(tmpUN) + nrow(tmp12) + nrow(tmp21) == nrow(idx))
 

@@ -9,6 +9,8 @@ naturemed_reqs <- function()
     legend.text=element_text(size=6, family='sans'),
     legend.key.size = unit(10, 'pt'),
     strip.text = element_text(size = 5),
+    plot.tag = element_text(size=8, face='bold', color = "black"),
+    plot.tag.position = c(0, 1),
     NULL
   )
 }

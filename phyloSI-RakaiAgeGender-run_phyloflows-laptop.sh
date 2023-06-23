@@ -1,6 +1,6 @@
 #!/bin/bash
-STAN_MODEL="gp_221201d"
-JOBNAME="firstrun"
+STAN_MODEL="gp_230602"
+JOBNAME="central"
 INDIR="$PWD"
 
 # ========== Configure output directory ============

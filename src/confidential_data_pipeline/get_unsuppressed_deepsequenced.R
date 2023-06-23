@@ -5,8 +5,8 @@
     library(ggpubr)
     library(scales)
     library(lubridate)
-    library(rstan)
-    library(haven)
+    library(ggpattern)
+    library(patchwork)
     # single imports
     binconf <- Hmisc::binconf
 } |> suppressPackageStartupMessages()
@@ -14,7 +14,14 @@
 
 usr <- Sys.info()[['user']]
 
-gitdir <- here::here()
+if(usr == 'ab1820'){
+    gitdir <- '/rds/general/user/ab1820/home/git/phyloflows'
+}else{
+    gitdir <- here::here()
+}
+
+
+
 source(file.path(gitdir, "config.R"))
 source(file.path(gitdir.R, 'utils.R'))
 source(file.path(gitdir.R.conf, 'helpers_sampling_proportions.R'))
@@ -43,7 +50,9 @@ file.exists(c(
   file.path.hiv,
   file.path.quest,
   file.path.metadata,
-  file.characteristics_sequenced_ind_R14_18))  |> all() |> stopifnot()
+  file.characteristics_sequenced_ind_R14_18))  |> 
+    all() |> 
+    stopifnot()
 
 # specify outdir
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
@@ -204,16 +213,50 @@ p_ratio <- rbind(daggregates, tab_seq_unsup[, -c("N_EVERSEQ_OLD")]) |>
 cat('\nxi_j plots\n')
 # ___________________
 
-detectionprob <- readRDS(file.detection.probability.round)
-names(detectionprob) <- gsub('.RECIPIENT', '' ,names(detectionprob)) 
-detectionprob <- subset(detectionprob, select=c('SEX', 'COMM', 'AGEYRS', 'ROUND','INCIDENT_CASES', 'count', 'prop_sampling'))
+# load detection and subset out susceptibles
 
-detectionprob[, `:=` (AGEGP = ageyrs2agegp(AGEYRS))]
-detectionprob <- detectionprob[, 
-    lapply(.SD, sum),
-    .SDcols = c('INCIDENT_CASES', 'count'),
-    by=c('ROUND','SEX', 'COMM', 'AGEGP')]
-prettify_labs(detectionprob)
+file.name <- file.detection.probability.round.custom.agegroups
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+
+    detectionprob <- readRDS(file.detection.probability.round)
+    names(detectionprob) <- gsub('.RECIPIENT', '' ,names(detectionprob)) 
+    detectionprob[, `:=` (AGEGP = ageyrs2agegp(AGEYRS))]
+    dsusc <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','SUSCEPTIBLE'))
+    dcount <- subset(detectionprob, select=c('ROUND','SEX','COMM','AGEYRS','AGEGP','count'))
+
+    # find uncertainty around incident cases
+    cat('\n\n (loading samples...) \n\n')
+
+    dincsamples <- load_incidence_rates_samples(file.incidence.samples.inland)
+    dincsamples <-  merge(dincsamples, dsusc, by=c("ROUND", 'SEX', 'AGEYRS', 'COMM'))
+    dincsamples[, `:=` (YEAR_LENGTH = .year.diff(MAX_SAMPLE_DATE, MIN_SAMPLE_DATE))]
+    tmp <- dincsamples[, list(  DRAW = sum(INCIDENCE.DRAW * SUSCEPTIBLE *  YEAR_LENGTH)), by=c("ROUND", "SEX", "AGEGP", 'iterations' ) ]
+    tmp <- tmp[, list( 
+      Q = quantile(DRAW, probs = c(.025, .5, .975)),
+      Q_LEVEL = c("CL", "M", "CU")
+      ), by=c("ROUND", "SEX", "AGEGP" ) ] |> 
+      dcast(ROUND + SEX + AGEGP ~ Q_LEVEL, value.var='Q')
+    setnames(tmp, c("M", "CL", "CU"), paste0('INCIDENT_CASES', c("", "_LB", "_UB")) )
+
+    # rename detectionprob with correct aggregation
+    detectionprob <- merge(dcount, tmp, by =c("ROUND", "SEX", "AGEGP" ) )
+    prettify_labs(detectionprob)
+
+    cat("Saving file:", file.name, '\n')
+    saveRDS(object=detectionprob,file=file.name)
+}else{
+
+    cat("Loading previously obtained file:", file.name, '\n')
+    detectionprob <- readRDS(file.name)
+}
+
+detectionprob <- detectionprob[, .(
+    INCIDENT_CASES = unique(INCIDENT_CASES),
+    INCIDENT_CASES_LB = unique(INCIDENT_CASES_LB),
+    INCIDENT_CASES_UB = unique(INCIDENT_CASES_UB),
+    count = sum(count)
+), by=c('ROUND', 'SEX', "AGEGP", "COMM", "ROUND_LAB", "SEX_LAB" )]
 
 
 cat('\nDot-linearange plots \n')
@@ -223,11 +266,10 @@ p2b <- .make.plot.with.binconf(detectionprob, xvar=ROUND_LAB,
     x=count, n=INCIDENT_CASES,
     .ylab="Proportion of estimated infection events\nappearing as recipient")
 
-
 cat('\nFilled histogram \n')
 # __________________________
 
-p_hist2 <- plot.hist.numerators.denominators.2(detectionprob, filltext = 'hello')
+p_hist2 <- plot.hist.numerators.denominators.2(detectionprob, range=TRUE, filltext = 'hello')
 
 cat('\nRatio plot\n')
 # ___________________
@@ -240,7 +282,8 @@ daggregates2 <- detectionprob[, list(
     INCIDENT_CASES = sum(INCIDENT_CASES)
 ) , by='ROUND']
 
-p_ratio2 <- rbind(daggregates2, detectionprob[, -c("ROUND_LAB", "SEX_LAB")]) |> 
+tmp <- subset(detectionprob, select=names(daggregates2))
+p_ratio2 <- rbind(daggregates2, tmp) |> 
     prettify_labs() |>
     .binconf.ratio.plot(
         x=count, n=INCIDENT_CASES, 
@@ -254,55 +297,42 @@ p_ratio2 <- rbind(daggregates2, detectionprob[, -c("ROUND_LAB", "SEX_LAB")]) |>
 cat('\n ALL TOGETHER: \n')
 ##########################
 
-# make the legend
-set_new_color <- function(hex){
-    legend <<- cowplot::get_legend(
-        ggplot(dplot, 
-            aes(x=value, y=value,
-                fill=SEX_LAB,  
-                pch=AGEGP, linetype=AGEGP, 
-                size="Events or individuals for which\nthe virus was ever deepsequenced")) + 
-            geom_point(color='black') +
-            geom_ribbon(aes(ymin=value, ymax=value, alpha=AGEGP)) +
-            geom_linerange(aes(ymin=value, ymax=value)) +
-            scale_color_manual(values=c("black", "black" )) + 
-            scale_fill_manual(values=c(Women="#F4B5BD", Men="#85D4E3" )) + 
-            scale_alpha_manual(values=c(`15-24`=.3, `25-34`=.6, `35-49`=.8)) +
-            guides(
-                size = guide_legend(override.aes = list(color=hex, fill = hex,alpha=1, pch=NULL, linetype=NULL)),
-                # pch = guide_legend(override.aes = list(color='white')),
-            ) +
-            labs(fill = 'Gender', linetype=NULL, pch=NULL, group=NULL, alpha=NULL, color=NULL, size="") +
-            theme(legend.position='bottom')  +
-        reqs
-    ) 
+r2 <- reqs + theme(
+    legend.position='none',
+    plot.tag = element_text(face='bold'),
+    strip.background = element_blank(),
+    panel.grid.minor= element_blank(),
+    panel.grid.major= element_blank()
+)
+t <- function(lab){ labs(tag=lab, caption=lab) + r2 }
+naturemed_reqs()
+patchwork.way <- TRUE
+if(! patchwork.way ) # the ggarrange way
+{
+    top_row_2 <- ggarrange(p_hist2 + labs( tag='a'), p_hist + labs( tag='d'), common.legend = TRUE, legend = "bottom")
+    bottow_rows_2 <- ggarrange( ncol =2 , nrow=2,
+        p2b + labs( tag='b') , p_everseq_givenunspp + labs( tag='e')  ,
+        p_ratio2 + labs( tag='c') , p_ratio + labs( tag='f') ,
+        common.legend = TRUE, legend = "bottom")
+    all_rows_2 <- ggarrange( ncol =1 , nrow=2, heights = c(1,2),
+        top_row_2, bottow_rows_2,
+        common.legend = TRUE, legend = "bottom")
+    all_rows <- copy(all_rows_2)
 
-    change_fill <<- scale_fill_manual(
-        values=c(hex, "white"),
-        na.value = 'white',
-    )
+}else{
+
+    # top_row_3 <-(p_hist2 + r2 + labs( tag='a')) + (p_hist + r2 + labs( tag='d')) + plot_layout(guides = 'collect') & theme(legend.position ='bottom', legend.box.margin = margin(r=-15, unit='pt'))
+    # bottow_rows_3 <- (p2b + r2 + labs( tag='b')) + (p_everseq_givenunspp + r2 + labs( tag='e')) + (p_ratio2 + r2 + labs( tag='c')) + (p_ratio + r2 + labs( tag='f')) + plot_layout(guides = 'collect') & theme(legend.position ='bottom')
+    # all_rows_3 <- top_row_3 / bottow_rows_3 + plot_layout(heights = c(.94,2))
+    # all_rows_3 <- all_rows_3 & reqs 
+    # all_rows <- copy(all_rows_3)
+
+    all_rows_3b <- (p_hist2 + labs(tag = 'a') + r2 | p_hist + labs(tag = 'd') + r2) / (p2b + labs(tag = 'b') + r2 | p_everseq_givenunspp + labs(tag = 'e') + r2) / (p_ratio2 + labs(tag = 'c') + r2 | p_ratio + labs(tag = 'f') + r2) + plot_layout(guides='collect') & theme(legend.position = 'bottom') + reqs
+    all_rows <- copy(all_rows_3b)
+
 }
 
-# #f4b5bd, #e6b8db, #c4c2f1, #9ccdf4, #85d4e3);
-set_new_color("#c4c2f1")
-
-library(patchwork)
-r2 <- reqs + 
-    theme(legend.position='none', plot.tag = element_text(face='bold'))
-
-t <- function(lab){ labs(tag=lab) + r2 }
-
-
-p_all <- ggarrange( ncol=2, nrow=3,
-    p_hist2 + r2 + change_fill, p_hist + r2 + change_fill,
-    p2b +r2 , p_everseq_givenunspp + r2  ,
-    p_ratio2 + r2 , p_ratio + r2 ,
-    labels = 'auto', font.label = list(size=8) 
-    )
-p_all2 <- ggarrange( p_all, legend, ncol=1, heights = c(40,1))
-
-
 filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.pdf')
-ggsave_nature(filename = filename, p=p_all2, w = 18, h = 24 )
+ggsave_nature(filename = filename, p=all_rows, w = 18, h = 24 )
 filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.png')
-ggsave_nature(filename = filename, p=p_all2, w = 18, h = 24 )
+ggsave_nature(filename = filename, p=all_rows, w = 18, h = 24 )
