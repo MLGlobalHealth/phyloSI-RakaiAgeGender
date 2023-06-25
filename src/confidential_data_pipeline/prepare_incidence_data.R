@@ -13,6 +13,7 @@ library(remotes)
 library(metR)
 library(lubridate)
 library(ggpubr)
+library(here)
 
 # do you want to restrict the analysis to the 30 communities continuously surveyed?
 restrict_to_30_comms <- F
@@ -185,7 +186,7 @@ for (i in 1:N) {
   # generate random date of infection and find perosn year
   seroconverter_cohort <- find_seroconvert_cohort(status_df,
                                                   hivstatus_vlcopies_1_inc)
-
+  
   # add anonimized id
   seroconverter_cohort <- merge(seroconverter_cohort,
                                 anonimized_id,
@@ -220,7 +221,7 @@ if(! file.exists(file.name))
 }
 
 # statistics
-file.name <- file.path(outdir,"incidence_inland_statistics_cohort_for_paper_230527.rds")
+file.name <- file.path(outdir,"incidence_inland_statistics_cohort_for_paper_230625.rds")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
