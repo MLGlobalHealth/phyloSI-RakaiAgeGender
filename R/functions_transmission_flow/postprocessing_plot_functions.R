@@ -392,8 +392,8 @@ plot_PPC_incidence_rate_round <- function(predict_incidence_rate_round, incidenc
       geom_point(aes(y=M_jitter, x=INCIDENCE_jitter, 
                      color=LABEL_ROUND), size = 1) + 
       theme_bw() + 
-      labs(x = 'Prior mean incidence rates\nper 100 person-years',
-           y = 'Estimated incidence rates\nper 100 person-years', 
+      labs(x = 'Prior mean incidence rates\nper 100 person-years\nin the transmission model',
+           y = 'Estimated incidence rates\nper 100 person-years\nin the transmission model', 
            col ='', fill = '') +
       scale_color_manual(values = palette_round_inland) + 
       facet_grid(.~SEX_LABEL) + 
