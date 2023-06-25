@@ -42,6 +42,11 @@ read_hiv_data <- function(file.path.hiv.614, file.path.hiv.1518, file.path.hiv.1
   hivstatus_vlcopies_1 <- rbind(hivstatus_vlcopies_1, hivstatus_vlcopies_1.1519)
   hivstatus_vlcopies_1[, round := gsub(' ', '', round)] # remove space after string
   
+  # add last update on infected by Joseph
+  infected_id <- c("C117824", "C119303", "K067249")
+  hivstatus_vlcopies_1[study_id %in% infected_id, hiv := 'P']
+  hivstatus_vlcopies_1[study_id %in% infected_id, hivstatus := T]
+  
   return(hivstatus_vlcopies_1)
 }
 
@@ -653,15 +658,24 @@ save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df
   
   # number of followed-up participants by age group, sex and round
   part <- as.data.table(hivstatus_vlcopies_1_inc)
-  part[, age := floor(as.numeric(date-birthdate)/365)]
-  part <- part[age > 14 & age < 50]
-  part <- part[, list(age = min(age), sex = unique(sex)), by = c('research_id', 'round')]
-  part <- part[research_id %in% as.data.table(status_df)[research_id %in% RESEARCH_IDS, unique(research_id)]] # subset to followed-up
+  part[, age := floor(as.numeric(date-birthdate)/365.25)]
+  part[age < 15, age := 15]; part[age > 49, age := 49] # discrepancies in age
+  part <- unique(part[, list(age = min(age), sex = unique(sex), 
+                             hivstatus_imputed = min(hivstatus_imputed),
+                             missed_visit = is.na(visit_id)), by = c('research_id', 'round')])
+  df_ne <- unique(part[, .(research_id, hivstatus_imputed, round)])
+  df_ne[, index_round_after_sero := 0] # round after seroconversion
+  df_ne[hivstatus_imputed == 1, index_round_after_sero := 1:length(hivstatus_imputed), by = 'research_id']
+  df_ne[, index_round := 1:length(round), by = 'research_id'] # index round observed
+  df_ne[, seroconvert_at_first_round := any(index_round == 1 & hivstatus_imputed == 1), by = 'research_id']
+  part <- merge(part, df_ne, by = c('research_id', 'hivstatus_imputed', 'round'))
+  part1 <- part[seroconvert_at_first_round == F] # remove hivp at first round 
+  part2 <- part1[index_round_after_sero <= 1]   # keep rounds before and on seroconversion
   df_age_aggregated <- data.table(age = 15:49, age_group = c(rep('15-24', 10),  rep("25-34", 10), rep("35-49", 15)))
-  part <- merge(part, df_age_aggregated, by = 'age')
-  part_all <- part[, list(N = length(unique(research_id))), by = c('round', 'age_group', 'sex')]
-  part_s <- part[, list(N = length(unique(research_id))), by = c('round', 'sex')]
-  part_r <- part[, list(N = length(unique(research_id))), by = c('round')]
+  part2 <- merge(part2, df_age_aggregated, by = 'age')
+  part_all <- part2[, list(N = length(unique(research_id))), by = c('round', 'age_group', 'sex')]
+  part_s <- part2[, list(N = length(unique(research_id))), by = c('round', 'sex')]
+  part_r <- part2[, list(N = length(unique(research_id))), by = c('round')]
   
   part_s[, age_group := 'Total']
   part_r[, age_group := 'Total']
