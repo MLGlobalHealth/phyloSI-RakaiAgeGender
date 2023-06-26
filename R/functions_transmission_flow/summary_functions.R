@@ -243,16 +243,6 @@ get_incidence_cases_round <- function(incidence.inland, eligible_count_round)
     knitr::kable(tmp)
     
   }
-
-  # save
-  file.name <- file.incidence.cases.round
-  if(! file.exists(file.name) | config$overwrite.existing.files )
-  {
-    cat("Saving file:", file.name, '\n')
-    saveRDS(dir, file = file.name)
-  }else{
-    cat("File:", file.name, "already exists...\n")
-  }
   
   return(dir)
   
