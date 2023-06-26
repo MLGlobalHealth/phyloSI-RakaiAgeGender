@@ -4,12 +4,16 @@
 ################
 # DEPENDENCIES #
 ################
-library(data.table) |> suppressPackageStartupMessages()
-library(ggplot2) |> suppressPackageStartupMessages()
-library(lubridate) |> suppressPackageStartupMessages()
-library(xtable) |> suppressPackageStartupMessages()
-library(igraph) |> suppressPackageStartupMessages()
-library(here) |> suppressPackageStartupMessages()
+
+suppressPackageStartupMessages( {
+    library(data.table) 
+    library(ggplot2) 
+    library(lubridate) 
+    library(xtable) 
+    library(igraph) 
+    library(here) 
+    library(magrittr) 
+})
 
 ################
 #   OPTIONS    #
@@ -33,7 +37,7 @@ option_list <- list(
     optparse::make_option(
         "--confidential",
         type = "logical",
-        default = FALSE,
+        default = TRUE,
         help = "Flag on whether to use the confidential data (if access is granted) [Defaults to TRUE]",
         dest = "confidential"
     ),
@@ -66,7 +70,7 @@ option_list <- list(
     ),
     optparse::make_option("--sensitivity-no-refinement",
         type = "logical",
-        default = FALSE,
+        default = TRUE,
         help = "Relative Hazard of transmission during the acute versus chronic infection phase [Defaults to 5]",
         dest = "sensitivity.no.refinement"
     ),
@@ -130,22 +134,20 @@ path.chains.data <- fifelse(
     no = args$path.chains.data
 )
 
-# do I need this? or instead I can work with the aggegated
 path.tsiestimates <- fifelse(
     is.na(args$path.tsiestimates),
     path.tsiestimates,
     no = args$path.tsiestimates
 )
 
-file.exists(
+cnd <- file.exists(
     path.meta,
     file.path.sequence.dates,
     path.chains.data,
     file.path.round.timeline,
     path.tsiestimates
-) |>
-    all() |>
-    stopifnot()
+)
+stopifnot("Not all input files were found" = all(cnd))
 
 ################
 #    HELPERS   #
@@ -174,15 +176,15 @@ stopifnot(is.metadata.randomized == !args$confidential)
 overleaf_expr <- list()
 
 meta <- load.meta.data(path.meta)
-chain <- build.phylo.network.from.pairs(path.chains.data)
+chain <- build.phylo.network.from.pairs(path.chains=path.chains.data)
 aids_of_interest <- chain[, unique(c(SOURCE, RECIPIENT))]
 meta <- meta[aid %in% aids_of_interest]
 
-drange <- get.infection.range.from.testing() |>
+drange <- get.infection.range.from.testing() %>%
     check.range.consistency()
 
-double.merge(chain, meta[, .(AID = aid, SEX = sex)])[, table(SEX.RECIPIENT, SEX.SOURCE)] |>
-    knitr::kable(caption = "DOI algorithm is run for a total number of pairs equal to:") |>
+double.merge(chain, meta[, .(AID = aid, SEX = sex)])[, table(SEX.RECIPIENT, SEX.SOURCE)] %>%
+    knitr::kable(caption = "DOI algorithm is run for a total number of pairs equal to:") %>%
     print()
 
 dancestors <- get.ancestors.from.chain(chain)
@@ -198,13 +200,13 @@ drange_tsi <- shrink.intervals(drange_tsi)
 setnames(drange_tsi, c("MIN", "MAX"), c("TSI.MIN", "TSI.MAX"))
 
 if (args$confidential) # Count number of removed individuals/pairs
-    {
-        tmp <- double.merge(chain, dcomms[, .(AID, COMM, SEX)]) |>
-            subset(COMM.SOURCE %like% "inland" & COMM.RECIPIENT %like% "inland", select = c("SOURCE", "RECIPIENT"))
+{
+    tmp <- double.merge(chain, dcomms[, .(AID, COMM, SEX)]) |>
+        subset(COMM.SOURCE %like% "inland" & COMM.RECIPIENT %like% "inland", select = c("SOURCE", "RECIPIENT"))
 
-        noprobs <- drange_tsi$AID
-        overleaf_expr[["N_noTSI"]] <- tmp[!RECIPIENT %in% noprobs, .N]
-    }
+    noprobs <- drange_tsi$AID
+    overleaf_expr[["N_noTSI"]] <- tmp[!RECIPIENT %in% noprobs, .N]
+}
 
 # check no contradictions after shrinkning
 idx <- double.merge(chain, drange_tsi, by_col = "AID")[TSI.MAX.RECIPIENT - TSI.MIN.SOURCE < 0, unique(IDCLU)]
@@ -454,3 +456,4 @@ if (file.exists(filename) & !args$rerun == TRUE) {
         saveRDS(overleaf_expr, filename_overleaf)
     }
 }
+

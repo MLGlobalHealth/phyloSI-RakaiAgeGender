@@ -94,7 +94,7 @@ if(1)
     rec_preds <- unique(dresults[, .(RECIPIENT, CL, M, CU)])
 
     # get phyloTSI estimates (+range) for recipients 
-    drange_tsi2 <- get.infection.range.from.tsi(path.sequence.dates=path.collection.dates.confidential, exclude_mid=FALSE, chain_subset=FALSE) |> 
+    drange_tsi2 <- get.infection.range.from.tsi(path.tsiestimates, path.sequence.dates=path.collection.dates.confidential, exclude_mid=FALSE, chain_subset=FALSE) |> 
         setnames('AID', 'RECIPIENT') |> 
         set(i=NULL, 'RENAME_ID', NULL)
     # transform iDate to Date...

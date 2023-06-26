@@ -76,7 +76,6 @@ file.exists(path.meta.data) |> stopifnot()
 #
 # Helpers
 #
-
 catn <- function(x) cat('\n----', x ,'----\n')
 
 read.infiles <- function(DT)

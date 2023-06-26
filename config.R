@@ -253,7 +253,7 @@ file.prop.unsuppressed.deepsequenced <- file.path(dir.zenodo.survprim, "aggregat
 ############################################
 
 file.pairs <- file.path(dir.zenodo.phyloproc, "pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds")
-file.pairs.nonrefined <- file.path(dir.zenodo.phyloproc, "pairsdata_toshare_d1_w11_netfrompairs_seropairs_sensnoref.rds")
+file.pairs.nonrefined <- file.path(dir.zenodo.phyloproc, "pairsdata_toshare_d1_w11_netfrompairs_sensnoref_postponessrem.rds")
 
 ###########################################
 #  OUTPUTS GENERATED IN src/incidence_rate #

@@ -78,10 +78,10 @@ check.range.consistency <- function(drange)
     return(drange)
 }
 
-get.communities.where.participated <- function(path.meta=path.meta) {
+get.communities.where.participated <- function(path=path.meta) {
     # For each AID reports the community type(s) where each participant had participated
     meta_env <- new.env()
-    load(path.meta, envir = meta_env)
+    load(path, envir = meta_env)
     cols <- c("aid", "comm", "round", "sample_date", "sex")
     dcomms <- subset(meta_env$meta_data, select = cols)
     names(dcomms) <- toupper(names(dcomms))
@@ -438,22 +438,22 @@ double.merge <- function(DT1, DT2, by_col = "AID") {
     out
 }
 
-get.infection.range.from.testing <- function(meta=meta) 
+get.infection.range.from.testing <- function(DT=meta) 
 {
     # get maximum and minimum dates
 
     # for missing 1st pos, use date collection instead (also store contradicting first pos)
-    tmp <- meta[, get.sample.collection.dates(select_aid=aid, get_first_visit = TRUE)]
-    meta <- merge(tmp, meta)
+    tmp <- DT[, get.sample.collection.dates(select_aid=aid, get_first_visit = TRUE)]
+    DT <- merge(tmp, DT)
 
     # get 15th birthdate and check whether anyone was 100% infected previously
-    meta[, date15th := date_birth + as.integer(365.25 * 15)]
-    stopifnot(meta[date15th > date_first_positive, .N == 0])
+    DT[, date15th := date_birth + as.integer(365.25 * 15)]
+    stopifnot(DT[date15th > date_first_positive, .N == 0])
     # don't min date more than 15 years prior first positive
-    # meta[, mean(lowb15lastneg > date_last_negative), ]
+    # DT[, mean(lowb15lastneg > date_last_negative), ]
 
-    contradict_firstpos_datecoll <<- meta[date_collection < date_first_positive]
-    drange <- meta[, .(
+    contradict_firstpos_datecoll <<- DT[date_collection < date_first_positive]
+    drange <- DT[, .(
         AID = aid,
         MIN = pmax(date_last_negative, date15th, na.rm = TRUE),
         MAX = pmin(date_first_positive - 30, date_collection - 30, na.rm = TRUE)
@@ -464,8 +464,9 @@ get.infection.range.from.testing <- function(meta=meta)
     drange
 }
 
-get.infection.range.from.tsi <- function(path.sequence.dates, chain_subset = TRUE, exclude_mid=TRUE) 
+get.infection.range.from.tsi <- function(path.tsiestimates, path.sequence.dates, chain_subset = TRUE, exclude_mid=TRUE) 
 {
+    # path.sequence.dates = path.tsiestimates; chain_subset = TRUE; exclude_mid=TRUE;
     seqdates <- readRDS(path.sequence.dates)
     names(seqdates) <- toupper(names(seqdates)) 
 
@@ -475,15 +476,27 @@ get.infection.range.from.tsi <- function(path.sequence.dates, chain_subset = TRU
     }else if(path.tsiestimates %like% 'rds$'){
         dtsi <- readRDS(path.tsiestimates)
     }
-    dtsi <- merge(dtsi, seqdates, by=c('AID','RENAME_ID'))
 
-    drange_tsi <- dtsi[, .(
-        AID=AID,
-        RENAME_ID=RENAME_ID,
-        MIN=VISIT_DT - as.integer(365.25*RF_PRED_MAX_LINEAR),
-        MID=VISIT_DT - as.integer(365.25*RF_PRED_LINEAR),
-        MAX=VISIT_DT - as.integer(365.25*RF_PRED_MIN_LINEAR)
-    )]
+    by_cols <- intersect(names(dtsi), names(seqdates))
+    dtsi <- merge(dtsi, seqdates, by=by_cols)
+
+    if('VISIT_DT' %in% names(dtsi)){
+        drange_tsi <- dtsi[, .(
+            AID=AID,
+            RENAME_ID=RENAME_ID,
+            MIN=VISIT_DT - as.integer(365.25*RF_PRED_MAX_LINEAR),
+            MID=VISIT_DT - as.integer(365.25*RF_PRED_LINEAR),
+            MAX=VISIT_DT - as.integer(365.25*RF_PRED_MIN_LINEAR)
+        )]
+    }else{
+        drange_tsi <- dtsi[, .(
+            AID=AID,
+            RENAME_ID=RENAME_ID,
+            MIN=RF_PRED_MIN_LINEAR,
+            MID=RF_PRED_LINEAR,
+            MAX=RF_PRED_MAX_LINEAR
+        )]
+    }
 
     if (chain_subset) {
         idx <- chain[, unique(c(SOURCE, RECIPIENT))]
@@ -718,7 +731,7 @@ intersect.serohistory.and.predictions.withoutrefinement <- function(DRANGE, DRAN
     aid_to_predict <- chain[, unique(c(SOURCE, RECIPIENT))]
     tmp_tsi <- DRANGE_TSI[ AID %in% aid_to_predict]
     tmp_ser <- DRANGE[AID %in% aid_to_predict]
-    cat('In', sum(!aid_to_predict %in% tmp$AID), 'cases, incoherent predictions, using serohistory...\n')
+    cat('In', sum(!aid_to_predict %in% tmp_tsi$AID), 'cases, incoherent predictions, using serohistory...\n')
     rbind(
           tmp_tsi[, .(AID, MIN=as.Date(TSI.MIN), MAX=as.Date(TSI.MAX))],
           tmp_ser[ ! (AID %in% tmp_tsi$AID) ]
@@ -875,6 +888,7 @@ compare.to.uniform <- function() {
         geom_point() +
         theme_bw()
 }
+
 update.meta.pairs.after.doi.attribution <- function(path, outdir, overwrite = F) {
     if (!file.exists(path) | overwrite) {
         cat("\tRunning infection dates estimation...\n\n\n")
