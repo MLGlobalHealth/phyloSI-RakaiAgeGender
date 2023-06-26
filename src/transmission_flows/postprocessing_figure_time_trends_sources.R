@@ -62,7 +62,7 @@ file.df_unsuppressed_median_age <- paste0(outdir.table, '-data-median_age_unsupp
 file.prevalence_prop_sex <- paste0(outdir.table, '-data-share_prevalence_by_sex.rds')
 
 # name files with estimated quantities
-file.median_age_source <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_infection.recipient_quantilestandardisedby_direction_round_age_infection.recipient.rds')
+file.median_age_source <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_quantilestandardisedby_direction_round_median_age_source_total.rds')
 file.median_age_source_group <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_group_infection.recipient_quantilestandardisedby_direction_round_age_group_infection.recipient_5yrs_age_band.rds')
 file.expected_contribution_age_group_source2 <- paste0(outdir.table, '-output-log_lambda_latentby_direction_round_age_group_infection.recipientstandardisedby_round_5yrs_age_band.rds')
 file.expected_contribution_sex_source <- paste0(outdir.table, '-output-log_lambda_latentby_direction_roundstandardisedby_round.rds')
@@ -123,7 +123,7 @@ naturemed_reqs()
 find_palette_round()
 
 # find range age
-range_age_non_extended <- range(median_age_source$AGE_INFECTION.RECIPIENT)
+range_age_non_extended <- range(unsuppressed_share_sex_age$AGEYRS)
 
 p_b <- plot_median_age_source_group(median_age_source_group,
                                     expected_contribution_age_group_source2,

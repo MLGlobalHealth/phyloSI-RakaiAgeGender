@@ -815,9 +815,9 @@ plot_transmission_events_over_time <- function(pairs, outdir, nm_reqs=FALSE){
                          breaks = function(x) unique(floor(pretty(seq(0, (max(x) + 1) * 1.1))))) + 
       scale_x_date(limits = c(df_period[, min(MIN_PERIOD_DATE)], df_period[, max(MAX_PERIOD_DATE)]), expand = c(0,0))  
 
-    
-    ggsave(p3, file =  paste0(outdir, '-data-detected_transmission_events_', communities[i], '.pdf'), w = 5.2, h = 3.5)
-    
+    if(!is.null(outdir)){
+      ggsave(p3, file =  paste0(outdir, '-data-detected_transmission_events_', communities[i], '.pdf'), w = 5.2, h = 3.5)
+    }
   }
   
     if(nm_reqs){ p3 <- p3 + reqs }

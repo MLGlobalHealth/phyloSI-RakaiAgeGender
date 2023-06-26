@@ -5,6 +5,7 @@ library(scales)
 library(lubridate)
 library(rstan)
 library(haven)
+library(here)
 
 # directory of the repository
 gitdir <- here()

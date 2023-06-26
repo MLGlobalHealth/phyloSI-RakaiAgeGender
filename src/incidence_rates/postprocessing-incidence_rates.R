@@ -300,6 +300,7 @@ plot_comparison_loess_gam(
 #
 #
 
+# save estimates
 if(!restrict_to_30_comms){
   file.name	<- file.incidence.inland
 }else{
@@ -314,6 +315,7 @@ if(! file.exists(file.name))
   cat("File:", file.name, "already exists...\n")
 }
 
+# save samples
 if(!restrict_to_30_comms){
   file.name	<- file.incidence.samples.inland
 }else{
@@ -330,6 +332,7 @@ if(! file.exists(file.name))
 
 if(!restrict_to_30_comms){
   
+  # save loess estimates
   file.name	<- file.incidence.loess.inland
   tmp <- select(modelpreds.loess.age.1218, c('Sex', 'round_label', 'age', 'incidence', 'lb', 'ub'))
   if(! file.exists(file.name))
@@ -340,6 +343,7 @@ if(!restrict_to_30_comms){
     cat("File:", file.name, "already exists...\n")
   }
   
+  # save loess samples
   file.name	<- file.incidence.loess.samples.inland
   tmp <- modelpreds.loess.age.1218.all[, .(Sex, round_label, age, iterations, INC_CRUDE_SMOOTH)]
   setnames(tmp, 'INC_CRUDE_SMOOTH', 'inc')
@@ -351,6 +355,7 @@ if(!restrict_to_30_comms){
     cat("File:", file.name, "already exists...\n")
   }
   
+  # save
   file.name <- file.path(outdir, "Rakai_inc_model_fit_inland_221107.csv")
   if(! file.exists(file.name))
   {
@@ -360,7 +365,7 @@ if(!restrict_to_30_comms){
     cat("File:", file.name, "already exists...\n")
   }
   
-  # For paper
+  # For statistics on estimation for paper
   file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
   if(! file.exists(file.name))
   {
@@ -370,6 +375,7 @@ if(!restrict_to_30_comms){
     cat("File:", file.name, "already exists...\n")
   }
   
+  # For statistics on prediction for paper
   file.name <- file.path(outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
   if(! file.exists(file.name))
   {
@@ -379,6 +385,7 @@ if(!restrict_to_30_comms){
     cat("File:", file.name, "already exists...\n")
   }
   
+  # For statistics on prediction with loess for paper
   file.name <- file.path(outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
   if(! file.exists(file.name))
   {

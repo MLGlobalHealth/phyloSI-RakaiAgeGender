@@ -18,7 +18,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   gitdir <- '~/git/phyloSI-RakaiAgeGender'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
-  jobname <- 'firstrun'
+  jobname <- 'central'
   stan_model <- 'gp_230602'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)

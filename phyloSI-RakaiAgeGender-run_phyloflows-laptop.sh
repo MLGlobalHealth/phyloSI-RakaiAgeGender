@@ -1,6 +1,6 @@
 #!/bin/bash
-STAN_MODEL="gp_221201d"
-JOBNAME="firstrun"
+STAN_MODEL="gp_230602"
+JOBNAME="central"
 INDIR="$PWD"
 
 # ========== Configure output directory ============
@@ -15,7 +15,7 @@ mkdir -p "$OUTDIR/${STAN_MODEL}-${JOBNAME}/figures"
 # Create main script
 cat > "$OUTDIR/bash_${STAN_MODEL}-${JOBNAME}.sh" <<EOF
 #!/bin/bash
-Rscript "$INDIR/src/transmission_flows/run_stan.R" --indir "$INDIR" --outdir "$OUTDIR/${STAN_MODEL}-${JOBNAME}" --stan_model "$STAN_MODEL" --jobname "$JOBNAME"
+Rscript "$INDIR/src/transmission_flows/run_stan.R" -indir "$INDIR" -outdir "$OUTDIR/${STAN_MODEL}-${JOBNAME}" -stan_model "$STAN_MODEL" -jobname "$JOBNAME"
 EOF
 
 # Create post-processing script
@@ -23,6 +23,6 @@ cat > "$OUTDIR/bash_${STAN_MODEL}-${JOBNAME}-postprocessing.sh" <<EOF
 #!/bin/bash
 mkdir -p "$OUTDIR/${STAN_MODEL}-${JOBNAME}/figures"
 mkdir -p "$OUTDIR/${STAN_MODEL}-${JOBNAME}/tables"
-Rscript "$INDIR/src/transmission_flows/postprocessing_assess_mixing.R" --indir "$INDIR" --outdir "$OUTDIR/${STAN_MODEL}-${JOBNAME}" --stan_model "$STAN_MODEL" --jobname "$JOBNAME"
-Rscript "$INDIR/src/transmission_flows/postprocessing_figures.R" --indir "$INDIR" --outdir "$OUTDIR/${STAN_MODEL}-${JOBNAME}" --stan_model "$STAN_MODEL" --jobname "$JOBNAME"
+Rscript "$INDIR/src/transmission_flows/postprocessing_assess_mixing.R" -indir "$INDIR" -outdir "$OUTDIR/${STAN_MODEL}-${JOBNAME}" -stan_model "$STAN_MODEL" -jobname "$JOBNAME"
+Rscript "$INDIR/src/transmission_flows/postprocessing_figures.R" -indir "$INDIR" -outdir "$OUTDIR/${STAN_MODEL}-${JOBNAME}" -stan_model "$STAN_MODEL" -jobname "$JOBNAME"
 EOF

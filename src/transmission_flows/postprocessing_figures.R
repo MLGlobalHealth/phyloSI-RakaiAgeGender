@@ -214,7 +214,8 @@ median_age_source <- find_summary_output_by_round(samples, 'log_lambda_latent',
                                                   c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_TRANSMISSION.SOURCE', 'AGE_GROUP_INFECTION.RECIPIENT'),
                                                   transform = 'exp',
                                                   standardised.vars = c('INDEX_DIRECTION', 'INDEX_ROUND'),
-                                                  quantile_age_source = T)
+                                                  quantile_age_source = T, 
+                                                  lab = 'median_age_source_total')
 
 # save
 save_median_age_source(median_age_source_group, median_age_source_group2, median_age_source, outdir.table)
