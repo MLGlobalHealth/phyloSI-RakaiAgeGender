@@ -21,7 +21,7 @@ file.exists(c(
   file.path.round.timeline))  |> all() |> stopifnot()
 
 # load files
-unsuppressed_ratio <- as.data.table(read.csv(file.unsuppressed_rate_ratio))
+unsuppressed_ratio <- fread(file.unsuppressed_rate_ratio)
 load(file.path.round.timeline)
 
 # label sex and communities
