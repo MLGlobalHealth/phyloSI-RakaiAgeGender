@@ -2064,7 +2064,7 @@ make_time_trends_HIV_incidence <- function(eligible_count_round, incidence_cases
                                           by=c('ROUND', 'COMM', 'SEX', 'AGEYRS')] %>%
     dcast( ROUND+COMM+SEX+AGEYRS~q_label, value.var='q')
   
-  p_edf_contribution <- make_subplot(data_1d, M='M', IL='IL', IU='IU', y_lab = "Contribution to incident cases")
+  p_edf_contribution <- make_subplot(data_edf3, M='M', IL='IL', IU='IU', y_lab = "Contribution to incident cases")
   
   ggsave(paste0(outdir, '-data-incidence_cases_contribution.pdf'),p_edf_contribution+reqs2 , w=20, h=10, units='cm')
   ggsave(paste0(outdir, '-data-incidence_cases_contribution.png'),p_edf_contribution+reqs2 , w=20, h=10, units='cm')
