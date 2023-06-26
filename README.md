@@ -126,7 +126,7 @@ DATA_DIR_PHYLOSCANNER=$ZENODO/"deep_sequence_phylogenies_primary/data_for_time_s
 # get linkage and direction scores
 Rscript ./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER
 # refine time since infection estimates for source-recipient pairs
-Rscript ./scripts_for_confidential_data/get_infection_dates_for_phylopairs --confidential FALSE
+Rscript ./scripts_for_confidential_data/get_infection_dates_for_phylopairs.R --confidential FALSE
 ```
 
 The statistical models present in this repository are built on top of outputs from phylogenetic analyses.
