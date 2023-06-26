@@ -123,7 +123,7 @@ naturemed_reqs()
 find_palette_round()
 
 # find range age
-range_age_non_extended <- range(file.unsuppressed_share_sex_age$AGEYRS)
+range_age_non_extended <- range(unsuppressed_share_sex_age$AGEYRS)
 
 p_b <- plot_median_age_source_group(median_age_source_group,
                                     expected_contribution_age_group_source2,
