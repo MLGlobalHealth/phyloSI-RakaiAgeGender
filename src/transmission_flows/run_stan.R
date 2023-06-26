@@ -18,7 +18,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   gitdir <- '~/git/phyloSI-RakaiAgeGender'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
-  jobname <- 'central'
+  jobname <- 'firstrun'
   stan_model <- 'gp_230602'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
@@ -39,11 +39,11 @@ if(Sys.info()[['user']] == 'mm3218')
 # andrea
 if(dir.exists('/home/andrea'))
 {
-  gitdir <-'~/git/phyloSI-RakaiAgeGender'
-  outdir <- '~/Documents/Box/2021/phyloflows'
+  gitdir <-'~/git/phyloflows'
+  outdir <- '~/HPC/ab1820/home/projects/2022/phyloflows/'
 
-  jobname <- 'central'
-  stan_model <- 'gp_221201d'
+  jobname <- 'test'
+  stan_model <- 'gp_230614a'
   # outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   # dir.create(outdir)
 }
