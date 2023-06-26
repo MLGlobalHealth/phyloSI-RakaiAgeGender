@@ -1289,14 +1289,14 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   df_age_group[, index_age_group := 3]
   df_age_group[AGEYRS < 35, index_age_group := 2]
   df_age_group[AGEYRS < 25, index_age_group := 1]
-  df_age_group[, age_group := age_groups[index_age_group]]
-  df_age_group[, AGE_GROUP_LABEL := paste0('Age: ', age_group)]
+  df_age_group[, AGE_GROUP := age_groups[index_age_group]]
+  df_age_group[, AGE_GROUP_LABEL := paste0('Age: ', AGE_GROUP)]
   
   # Prepare incidence rates
   icr <- merge(incidence_cases_round, df_age_group, by = 'AGEYRS')
   icr <- icr[, list(INCIDENT_RATE_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE), 
                     INCIDENT_RATE_UB_SUSCEPTIBLE = sum(INCIDENT_CASES_UB)  / sum(SUSCEPTIBLE),
-                    INCIDENT_RATE_LB_SUSCEPTIBLE = sum(INCIDENT_CASES_LB) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'age_group')] 
+                    INCIDENT_RATE_LB_SUSCEPTIBLE = sum(INCIDENT_CASES_LB) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'AGE_GROUP')] 
   
   # merge labels
   icr <- merge(icr, df_timeline, by = c('ROUND', 'COMM'))
@@ -1310,18 +1310,19 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   # icr <- icr[!(COMM == 'inland' & ROUND %in% c('R010', 'R011'))]
   
   # find incident cases ratio
-  icr <- dcast(icr, ROUND + INDEX_ROUND + COMM + age_group ~ SEX, value.var = 'INCIDENT_RATE_REF')
+  icr <- dcast(icr, ROUND + INDEX_ROUND + COMM + AGE_GROUP ~ SEX, value.var = 'INCIDENT_RATE_REF')
   setnames(icr, c("M", 'F'), c('INCIDENT_RATE_REF_M', 'INCIDENT_RATE_REF_F'))
   icr[, INCIDENT_RATE_RATIO_REF := INCIDENT_RATE_REF_F / INCIDENT_RATE_REF_M]
 
 
   #
   # merge to unsuppressed rate ratio
-  # urr <- unique(unsuppressed_rate_ratio[, .(ROUND, COMM, UNSUPPRESSION_RATE_RATIO_BY_AGE_M, UNSUPPRESSION_RATE_RATIO_BY_AGE_CL, UNSUPPRESSION_RATE_RATIO_BY_AGE_CU, AGE_GROUP)])
-  urr <- unique(unsuppressed_rate_ratio[, .(ROUND, COMM, UNSUPPRESSION_RATE_RATIO_RATIO_M, UNSUPPRESSION_RATE_RATIO_RATIO_CL, UNSUPPRESSION_RATE_RATIO_RATIO_CU)])
+  urr <- unique(unsuppressed_rate_ratio[, .(ROUND, COMM, U_M=UNSUPPRESSION_RATE_RATIO_BY_AGE_M, U_CL=UNSUPPRESSION_RATE_RATIO_BY_AGE_CL, U_CU=UNSUPPRESSION_RATE_RATIO_BY_AGE_CU, AGE_GROUP)])
+  # urr <- unique(unsuppressed_rate_ratio[, .(ROUND, COMM, U_M=UNSUPPRESSION_RATE_RATIO_RATIO_M, U_CL=UNSUPPRESSION_RATE_RATIO_RATIO_CL, U_CU=UNSUPPRESSION_RATE_RATIO_RATIO_CU)])
   
   urr[, ROUND := paste0('R0', ROUND)]
-  ic <- merge(icr, urr, by = c('ROUND', 'COMM'), allow.cartesian=TRUE)
+  by_cols <- intersect(c('ROUND', 'COMM', "AGE_GROUP"), names(urr))
+  ic <- merge(icr, urr, by = by_cols, allow.cartesian=TRUE)
   ic[, ROUND_LABEL := paste0('Round ', gsub('R0(.+)', '\\1',  ROUND))]
   
   #
@@ -1345,7 +1346,7 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       # geom_hline(yintercept = 1, linetype = 'dashed', alpha = 0.5) + 
       # geom_vline(xintercept = 1, linetype = 'dashed', alpha = 0.5) + 
       # geom_point(aes(col = ROUND_LABEL, shape = AGE_GROUP, x = UNSUPPRESSION_RATE_RATIO_BY_AGE_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
-      geom_point(aes(col = ROUND_LABEL, shape = age_group, x = UNSUPPRESSION_RATE_RATIO_RATIO_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
+      geom_point(aes(col = ROUND_LABEL, shape = AGE_GROUP, x = U_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_y_continuous(limits = c(NA,2)) + 
       scale_color_manual(values = colors) + 
       labs(
