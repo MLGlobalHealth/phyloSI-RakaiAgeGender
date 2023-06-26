@@ -228,8 +228,8 @@ plot_PPC_observed_source <- function(predict_y, count_data, outdir){
       geom_point(aes(y=M_jitter, x=count_jitter, color=PERIOD), size = 1) + 
       theme_bw() + 
       facet_grid(.~LABEL_DIRECTION2) +
-      labs(x = 'Number of phylogenetically observed\nsource-recipient pairs (by age band of the source)',
-           y = 'Predicted number of\nsource-recipient pairs (by age band of the source)',
+      labs(x = 'Number of phylogenetically observed\nsource-recipient pairs\n(by age band of the source)',
+           y = 'Predicted number of\nsource-recipient pairs\n(by age band of the source)',
            col ='', fill = '') +
       scale_color_viridis_d(option = 'A', end = 0.9, begin = 0.1) + 
       theme(strip.background = element_rect(colour="white", fill="white"),
