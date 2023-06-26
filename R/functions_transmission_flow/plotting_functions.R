@@ -930,8 +930,8 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   
   #
   # median age at infection
-  ps <- c(0.5, 0.025, 0.975)
-  p_labs <- c('M','CL','CU')
+  ps <- c(M=0.5, CL=0.025, CU=0.975)
+  # p_labs <- c('M','CL','CU')
   icr <- copy(incidence_rates_round.samples)
   rm(incidence_rates_round.samples)
   icr[COMM == 'fishing', REF.ROUND := 'R015']
@@ -941,7 +941,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   medage[, INCIDENT_CASES := SUSCEPTIBLE * INCIDENCE.DRAW]
   medage[, WEIGHTED_INCIDENCE := INCIDENT_CASES / sum(INCIDENT_CASES), by = c('COMM', 'ROUND', 'SEX', 'iterations')]
   medage <- medage[, list(value = matrixStats::weightedMedian(AGEYRS, WEIGHTED_INCIDENCE )), by = c('iterations', 'COMM', 'ROUND', 'SEX')]
-  medage = medage[, list(q= quantile(value, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND', 'SEX')]	
+  medage = medage[, list(q= quantile(value, prob=ps, na.rm = T), q_label=names(ps)), by=c('COMM', 'ROUND', 'SEX')]	
   medage = dcast(medage, ... ~ q_label, value.var = "q")
   
   
@@ -1048,7 +1048,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   fmr <- fmr[, list(INCIDENT_RATE_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'iterations')] 
   fmr <- dcast.data.table(fmr, COMM + ROUND + iterations ~ SEX, value.var = 'INCIDENT_RATE_SUSCEPTIBLE')
   fmr[, INCIDENCE_RATIO := `F` / `M`]
-  fmr = fmr[, list(q= quantile(INCIDENCE_RATIO, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND')]	
+  fmr = fmr[, list(q= quantile(INCIDENCE_RATIO, prob=ps, na.rm = T), q_label=names(ps)), by=c('COMM', 'ROUND')]	
   fmr = dcast(fmr, ... ~ q_label, value.var = "q")
   fmr <- merge(fmr, df_community, by = 'COMM')
   fmr <- merge(fmr, df_round, by = c('COMM', 'ROUND'))
@@ -1058,7 +1058,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   # incidence rate relative to first round per person per round by 1-year age group
 
   icr[, INCIDENCE_REL := INCIDENCE.DRAW / INCIDENCE.DRAW[ROUND == REF.ROUND], by = c('COMM', 'AGEYRS', 'SEX', 'iterations')]
-  tmp1 = icr[, list(q= quantile(INCIDENCE_REL, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND', 'AGEYRS', 'SEX')]	
+  tmp1 = icr[, list(q= quantile(INCIDENCE_REL, prob=ps, na.rm = T), q_label=names(ps)), by=c('COMM', 'ROUND', 'AGEYRS', 'SEX')]	
   tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
   tmp1 <- merge(tmp1, df_round, by = c('COMM', 'ROUND'))
@@ -1070,10 +1070,6 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     geom_hline(yintercept = 1, alpha = 0.2) + 
     geom_line(aes(y = M, col = SEX_LABEL)) +
     geom_ribbon(aes(ymin =CL, ymax = CU, fill = SEX_LABEL),  alpha = 0.3) +
-    # geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'& SEX_LABEL=='Male'], -'LABEL_ROUND'), aes(y = 0.12, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
-    # geom_point(data = select(tmp1[COMM == 'inland' & ROUND == 'R012'& SEX_LABEL=='Female'], -'LABEL_ROUND'), aes(y = 0.06, x = MEDIAN_AGEYRS, col = SEX_LABEL), shape = 25, fill = 'grey50',  size =3) + 
-    # geom_point(data = tmp1[COMM == 'inland' & SEX_LABEL=='Male'], aes(y = 0.12, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
-    # geom_point(data = tmp1[COMM == 'inland' & SEX_LABEL=='Female'], aes(y = 0.06, x = MEDIAN_AGEYRS, fill = SEX_LABEL, col = SEX_LABEL), shape = 25, size =3) +
     labs(y = 'Incidence rate relative to round 10', x = 'Age') +
     facet_grid(.~LABEL_ROUND, scale = 'free_y') +
     theme_bw() +
@@ -1085,7 +1081,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     coord_cartesian(ylim= c(0, 2.1))
-  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex.pdf'), w = 7.5, h = 4)
+  ggsave(filename=paste0(outdir, '-data-incidence_rate_relative_round_sex.pdf'), w = 7.5, h = 4)
   
   ggplot(tmp1[COMM == 'inland' & round %in% c(12, 14,16,18)], aes(x = AGEYRS)) +
     geom_hline(yintercept = 1, alpha = 0.2) + 
@@ -1102,8 +1098,8 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_x_continuous(expand = c(0,0), breaks = c(seq(15, 49, 5))) + 
     scale_y_continuous(limits = c(0, NA), expand = expansion(mult = c(0, .05))) + 
     guides(fill = 'none')
-  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex2.png'), w = 5, h = 5)
-  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_sex2.pdf'), w = 3.5, h = 4.5)
+  ggsave(filename=paste0(outdir, '-data-incidence_rate_relative_round_sex2.png'), w = 5, h = 5)
+  ggsave(filename=paste0(outdir, '-data-incidence_rate_relative_round_sex2.pdf'), w = 3.5, h = 4.5)
   
   #
   # incidence rate relative to first round by 3 age groups
@@ -1122,7 +1118,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   icrg <- merge(icrg, df_age_group, by = 'AGEYRS')
   icrg <- icrg[, list(INCIDENT_RATE_SUSCEPTIBLE = sum(INCIDENT_CASES) / sum(SUSCEPTIBLE)), by = c('SEX', 'ROUND', 'COMM', 'age_group', 'REF.ROUND', 'iterations')] 
   icrg[, INCIDENCE_REL := INCIDENT_RATE_SUSCEPTIBLE / INCIDENT_RATE_SUSCEPTIBLE[ROUND == REF.ROUND], by = c('COMM', 'age_group', 'SEX', 'iterations')]
-  tmp1 = icrg[, list(q= quantile(INCIDENCE_REL, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND', 'age_group', 'SEX')]	
+  tmp1 = icrg[, list(q= quantile(INCIDENCE_REL, prob=ps, na.rm = T), q_label=names(ps)), by=c('COMM', 'ROUND', 'age_group', 'SEX')]	
   tmp1 = dcast(tmp1, ... ~ q_label, value.var = "q")
   tmp1 <- merge(tmp1, df_community, by = 'COMM')
   tmp1 <- merge(tmp1, df_round, by = c('COMM', 'ROUND'))
@@ -1131,7 +1127,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   tmp1[SEX== 'M', SEX_LABEL := 'Men']  
   tmp1[, MIDPOINT_DATE := MIN_SAMPLE_DATE + (MAX_SAMPLE_DATE - MIN_SAMPLE_DATE)/2]
 
-  ggplot(tmp1[COMM == 'inland'], aes(x = MIDPOINT_DATE, group = interaction(age_group, SEX_LABEL))) + 
+  p_edf10a <- ggplot(tmp1[COMM == 'inland'], aes(x = MIDPOINT_DATE, group = interaction(age_group, SEX_LABEL))) + 
     geom_hline(yintercept = 1, linetype = 'dashed', alpha= 0.5) + 
     geom_line(aes(y = M, linetype = SEX_LABEL, group = interaction(SEX_LABEL, age_group)),position=position_dodge(width = 300), col = 'grey50') + 
     geom_errorbar(aes(ymin = CL, ymax = CU, group = interaction(SEX_LABEL, age_group)), width = 300, position=position_dodge(width = 300), col = 'grey30') + 
@@ -1153,7 +1149,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     labs(y = 'Incidence rate relative to round 10', col= 'Age', shape= 'Gender', 
          x = 'Date (midpoint of survey interval)', linetype = 'Gender') + 
     scale_y_log10()
-  ggsave(paste0(outdir, '-data-incidence_rate_relative_round_age_group_sex.pdf'), w = 4.2,h = 5.1)
+  ggsave(plot=p_edf10a, filename=paste0(outdir, '-data-incidence_rate_relative_round_age_group_sex.pdf'), w = 4.2,h = 5.1)
   
   
   #
@@ -1176,14 +1172,14 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   icrr[, INCIDENCE_REL := INCIDENT_RATE_SUSCEPTIBLE / INCIDENT_RATE_SUSCEPTIBLE[ROUND == REF.ROUND], by = c('COMM', 'age_group', 'SEX', 'iterations')]
   icrrs <- dcast.data.table(icrr, COMM + ROUND + age_group + iterations ~ SEX, value.var = 'INCIDENCE_REL')
   icrrs[, INCIDENCE_REL_RATIO := `F` / `M`]
-  icrrs = icrrs[, list(q= quantile(INCIDENCE_REL_RATIO, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND', 'age_group')]	
+  icrrs = icrrs[, list(q= quantile(INCIDENCE_REL_RATIO, prob=ps, na.rm = T), q_label=names(ps)), by=c('COMM', 'ROUND', 'age_group')]	
   icrrs = dcast(icrrs, ... ~ q_label, value.var = "q")
   icrrs <- merge(icrrs, df_community, by = 'COMM')
   icrrs <- merge(icrrs, df_round, by = c('COMM', 'ROUND'))
   icrrs[, MIDPOINT_DATE := MIN_SAMPLE_DATE + (MAX_SAMPLE_DATE - MIN_SAMPLE_DATE)/2]
   # icrrs <- icrrs[!ROUND %in% c('R010', 'R011')]
   
-  ggplot(icrrs[COMM == 'inland'], aes(x = MIDPOINT_DATE, group = age_group)) + 
+  p_edf10b <- ggplot(icrrs[COMM == 'inland'], aes(x = MIDPOINT_DATE, group = age_group)) + 
     geom_hline(yintercept = 1, linetype = 'dashed', alpha= 0.5) + 
     geom_line(aes(y = M),position=position_dodge(width = 300), col = 'grey50') + 
     geom_errorbar(aes(ymin = CL, ymax = CU), width = 300, position=position_dodge(width = 300), col = 'grey30') + 
@@ -1202,7 +1198,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
     scale_y_continuous( limits = c(NA,  3), expand = expansion(mult = c(0.02, 0.02))) + 
     labs(y = 'Female-male ratio of the incidence\nrate relative to round 10', col= 'Age', shape= 'Age', 
          x = 'Date (midpoint of survey interval)') 
-  ggsave(paste0(outdir, '-data-incidence_rate_ratio_relative_round_sex.pdf'), w = 4.2,h = 4.2)
+  ggsave(plot=p_edf10b, filename=paste0(outdir, '-data-incidence_rate_ratio_relative_round_sex.pdf'), w = 4.2,h = 4.2)
   
   #
   # incidence rate relative to first round female to male ratio total
@@ -1214,7 +1210,7 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   icrrt[, INCIDENCE_REL := INCIDENT_RATE_SUSCEPTIBLE / INCIDENT_RATE_SUSCEPTIBLE[ROUND == REF.ROUND], by = c('COMM', 'SEX', 'iterations')]
   icrrt <- dcast.data.table(icrrt, COMM + ROUND  + iterations ~ SEX, value.var = 'INCIDENCE_REL')
   icrrt[, INCIDENCE_REL_RATIO := `F` / `M`]
-  icrrt = icrrt[, list(q= quantile(INCIDENCE_REL_RATIO, prob=ps, na.rm = T), q_label=p_labs), by=c('COMM', 'ROUND')]	
+  icrrt = icrrt[, list(q= quantile(INCIDENCE_REL_RATIO, prob=ps, na.rm = T), q_label=names(ps)), by=c('COMM', 'ROUND')]	
   icrrt = dcast(icrrt, ... ~ q_label, value.var = "q")
   icrrt <- merge(icrrt, df_community, by = 'COMM')
   icrrt <- merge(icrrt, df_round, by = c('COMM', 'ROUND'))
@@ -1224,8 +1220,60 @@ plot_incident_rates_over_time <- function(incidence_cases_round,
   # save statistics
   
   save_statistics_incidence_rate_trends(icrr, icr, icrrs, icrrt, medage, fmr)
+
+  return(list(a=p_edf10a, b=p_edf10b))
     
 }
+
+plot_unsuppressed_rate_ratio_vs_baseline <- function(DT=unsuppressed_rate_ratio){
+
+    urr <- unique(DT[, .(ROUND, AGE_GROUP, COMM, M=UNSUPPRESSION_RATE_RATIO_BY_AGE_M, CL=UNSUPPRESSION_RATE_RATIO_BY_AGE_CL, CU=UNSUPPRESSION_RATE_RATIO_BY_AGE_CU)])
+    urr <- subset(urr, COMM == 'inland') 
+    urr[, ROUND := paste0('R0', ROUND)]
+
+    urr <- merge(urr, df_community, by = 'COMM')
+    urr <- merge(urr, df_round, by = c('COMM','ROUND'))
+    urr[, MIDPOINT_DATE := MIN_SAMPLE_DATE + (MAX_SAMPLE_DATE - MIN_SAMPLE_DATE)/2]
+
+      
+    p_edf10c <- ggplot(urr, aes(x=MIDPOINT_DATE, group=AGE_GROUP) ) + 
+        geom_hline(yintercept = 1, linetype = 'dashed', alpha= 0.5) + 
+        geom_line(aes(y = M),position=position_dodge(width = 300), col = 'grey50') + 
+        geom_errorbar(aes(ymin = CL, ymax = CU), width = 300, position=position_dodge(width = 300), col = 'grey30') + 
+        geom_point(aes(y = M, col = AGE_GROUP, shape = AGE_GROUP),  size = 2, position=position_dodge(width = 300)) + 
+        scale_color_viridis_d(option = 'D') + 
+        theme_bw() + 
+        theme(strip.background = element_rect(colour="white", fill="white"),
+            strip.text = element_text(size = rel(1)), 
+            # axis.title.x = element_blank(), 
+            # axis.text.x = element_text(angle = 30, hjust = 1), 
+            axis.text.x = element_text(angle = 30, hjust = 1),
+            plot.title = element_text(hjust = 0.5), 
+            panel.grid.major.x = element_blank(), 
+            panel.grid.minor.x = element_blank(), 
+            legend.position = 'bottom') + 
+        scale_y_continuous( limits = c(NA,  NA), expand = expansion(mult = c(0.02, 0.02))) + 
+        labs(y = 'Male-male ratio of the changes in proportion of\npeople with HIV with unsuppressed virus relative to round 10', col= 'Age', shape= 'Age', 
+            x = 'Date (midpoint of survey interval)') 
+
+    ggsave(plot=p_edf10c, filename=paste0(outdir, '-data-unsuppressed_rateratio_relative_round.png'), w = 7.5, h = 4)
+
+    return(list(c = p_edf10c))
+}
+
+save_edf10 <- function(edf_ab, edf_c, edf_d, outdir){
+
+    # PLACEHOLDER are necessary to keep x-, y- axes aligned...
+    p <- ggarrange_nature( 
+        edf_ab[['a']] + theme(legend.position = c(.25, .1), legend.box="horizontal"), 
+        edf_ab[['b']] + theme(legend.position = c(.1, .8), legend.box="horizontal"),
+        edf_c[['c']] + theme(legend.position = c(.1, .8), legend.box="horizontal"),
+        edf_d[['d']] + labs(x='PLACEHOLDER', y='PLACEHOLDER') + theme(legend.position = c(.3, .9), legend.box="horizontal"),
+        ncol=2, nrow=2
+    )
+    ggsave_nature(filename=paste0(outdir, "-data-edf10_230626.pdf"), p, h = 18)
+}
+
 
 
 plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round, unsuppressed_rate_ratio , outdir, outdir.table){
@@ -1292,7 +1340,7 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       colors <- palette_round_fishing[-1]
     }
     
-    p<-ggplot(tmp[INDEX_ROUND != min(INDEX_ROUND)]) + 
+    p <-ggplot(tmp[INDEX_ROUND != min(INDEX_ROUND)]) + 
       geom_abline(intercept = 0, slope = 1, linetype = 'dashed', alpha = 0.5) + 
       # geom_hline(yintercept = 1, linetype = 'dashed', alpha = 0.5) + 
       # geom_vline(xintercept = 1, linetype = 'dashed', alpha = 0.5) + 
@@ -1300,8 +1348,11 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
       geom_point(aes(col = ROUND_LABEL, shape = age_group, x = UNSUPPRESSION_RATE_RATIO_RATIO_M, y = INCIDENT_RATE_RATIO_REF), size = 2) + 
       scale_y_continuous(limits = c(NA,2)) + 
       scale_color_manual(values = colors) + 
-      labs(x = paste0('Male-female ratio of the proportion of individuals\nwith HIV who have unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
-           y = paste0('Female-male ratio of the\nincidence rate relative\nto round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))])) + 
+      labs(
+            x = paste0('Male-female ratio of the proportion of individuals\nwith HIV who have unsuppressed virus\nrelative to round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
+            y = paste0('Female-male ratio of the\nincidence rate relative\nto round ', tmp[INDEX_ROUND== min(INDEX_ROUND), gsub('R0(.+)', '\\1',unique(ROUND))]),
+            col = "", shape = "Age"
+        ) + 
       theme_bw()  +
       theme(legend.position = 'none', 
             legend.title = element_blank(), 
@@ -1310,9 +1361,16 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
                                 keywidth = unit(0.01, 'pt'), keyheight = unit(0.001, 'pt')), 
              color = guide_legend(byrow = T, nrow = 4,override.aes = list(size = 1), 
                                                 keywidth = unit(0.01, 'pt'), keyheight = unit(0.001, 'pt'))) 
+
+    if(communities[i] == 'inland'){
+            p_edf10d <- force(p)
+    }
+    
     
       # scale_y_log10()
     ggsave(p, file =  paste0(outdir, '-data-incidence_cases_rate_ratio_unsuppressed_', communities[i], '.pdf'), w = 3.7, h = 2.4)
+
+    return(list(d=p_edf10d))
     
   }
   

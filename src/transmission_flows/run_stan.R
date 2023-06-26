@@ -30,7 +30,7 @@ if(Sys.info()[['user']] == 'mm3218')
   gitdir <- '~/git/phyloSI-RakaiAgeGender'
   outdir <- '/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender'
   
-  jobname <- 'test'
+  jobname <- 'central'
   stan_model <- 'gp_221201d'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
@@ -42,7 +42,7 @@ if(dir.exists('/home/andrea'))
   gitdir <-'~/git/phyloflows'
   outdir <- '~/HPC/ab1820/home/projects/2022/phyloflows/'
 
-  jobname <- 'test'
+  jobname <- 'central'
   stan_model <- 'gp_230614a'
   # outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   # dir.create(outdir)
@@ -304,8 +304,12 @@ if(1){
   # plot incident rates and cases over time
   incidence_rates_round.samples <- load_incidence_rates_samples(file.incidence.samples.inland)# need to load incidence rates sample to compute statistics such as ratio
   plot_incident_cases_over_time(incidence_cases_round, participation, outfile.figures)
-  plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
-  plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
+  edf_ab <- plot_incident_rates_over_time(incidence_cases_round, incidence_rates_round.samples, eligible_count_round, outfile.figures, outdir.table)
+  edf_d <- plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
+  edf_c <- plot_unsuppressed_rate_ratio_vs_baseline(unsuppressed_rate_ratio)
+  save_edf10(edf_ab, edf_c, edf_d, outdir = outfile.figures)
+
+
   make_time_trends_HIV_incidence(eligible_count_round, incidence_cases_round, incidence_rates_round.samples,outfile.figures)
 
   # plot offset
