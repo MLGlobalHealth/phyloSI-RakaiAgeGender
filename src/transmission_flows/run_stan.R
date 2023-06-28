@@ -176,9 +176,11 @@ with(df_round_inland, {
     start_second_period_inland  <<- min_sample_date[round == 'R016']    # [1] "2013-07-08"
     stop_second_period_inland   <<- max_sample_date[round == 'R018']    # [1] "2018-05-22"
 })
-stopifnot("inconsistent period specification" = start_first_period_inland < stop_first_period_inland)
-stopifnot("inconsistent period specification" = stop_first_period_inland < start_second_period_inland)
-stopifnot("inconsistent period specification" = start_second_period_inland < stop_second_period_inland)
+stopifnot(
+    "inconsistent period specification" = start_first_period_inland < stop_first_period_inland,
+    "inconsistent period specification" = stop_first_period_inland < start_second_period_inland,
+    "inconsistent period specification" = start_second_period_inland < stop_second_period_inland
+)
 
 df_round <- make.df.round(df_round_inland)
 
