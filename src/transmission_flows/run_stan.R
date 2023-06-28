@@ -3,7 +3,7 @@ library(dplyr)
 library(ggplot2)
 library(ggpubr)
 library(knitr)
-require(lubridate)
+library(lubridate)
 library(rstan)
 library(gridExtra)
 library(lognorm)
@@ -296,7 +296,8 @@ stan_init <- add_init(stan_data)
 #
 
 if(1){
-  
+  # load nature med plot requiremens (reqs)
+  naturemed_reqs()
   # find color palette of rounds
   find_palette_round()
   
