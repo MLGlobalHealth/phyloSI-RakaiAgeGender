@@ -1380,7 +1380,7 @@ plot_incident_cases_to_unsuppressed_rate_ratio <- function(incidence_cases_round
   save_statistics_incidence_rate_ratio_trends(ic, outdir.table)
 }
 
-plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
+plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE, only_heterosexual=F){
   
   tmp <- pairs.all[BOTH_PARTICIPATED == TRUE ]
   tmp[, {cat(sum(SEX.RECIPIENT != SEX.SOURCE)); cat(.N); table(SEX.RECIPIENT, SEX.SOURCE)/.N}]
@@ -1390,10 +1390,19 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
   tmp[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'M', DIRECTION := 'Female to Male' ]
   tmp[SEX.SOURCE == 'F' & SEX.RECIPIENT == 'F', DIRECTION := 'Female to Female' ]
   tmp[SEX.SOURCE == 'M' & SEX.RECIPIENT == 'M', DIRECTION := 'Male to Male' ]
-  tmp[, DIRECTION := factor(DIRECTION, levels = c('Male to Male', 
-                                                  'Female to Female', 
-                                                  'Female to Male', 
-                                                  'Male to Female'))]
+  factor.levels <- c('Male to Male', 
+                     'Female to Female', 
+                     'Female to Male', 
+                     'Male to Female')
+  
+  if(only_heterosexual){
+    tmp <- tmp[!(SEX.RECIPIENT == 'M' & SEX.SOURCE == 'M')]
+    tmp <- tmp[!(SEX.RECIPIENT == 'F' & SEX.SOURCE == 'F')]
+    factor.levels <- c('Female to Male', 
+                       'Male to Female')
+  }
+  
+  tmp[, DIRECTION := factor(DIRECTION, levels = factor.levels)]
   
   # find count and percentage
   tmp <- tmp[, list(COUNT = .N), by = c('DIRECTION')]
@@ -1429,10 +1438,11 @@ plot_pairs_all <- function(pairs.all, outdir, nm_reqs=FALSE){
     scale_fill_manual(values = c('Male to Female'=male_to_female_color,'Female to Male'=female_to_male_color, 
                                  'Female to Female'=female_to_female_color,'Male to Male'=male_to_male_color)) 
     if(nm_reqs){ p <- p + reqs }
-    return(p)
-
   ggsave(p, file = paste0(outdir, '-data-PairsAll.pdf'), w = 3.3, h = 2.5)
   
+    return(p)
+
+
 }
 
 plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
@@ -1541,7 +1551,7 @@ plot_pairs <- function(pairs, outdir, nm_reqs=FALSE)
 plot_pairs_panel <- function(pairs.all, outdir){
   
   p <- plot_pairs(pairs.all[BOTH_PARTICIPATED == TRUE & SEX.RECIPIENT != SEX.SOURCE], outdir, nm_reqs = TRUE)
-  p1 <- plot_pairs_all(pairs.all[BOTH_PARTICIPATED==TRUE], outdir, nm_reqs=TRUE)
+  p1 <- plot_pairs_all(pairs.all[BOTH_PARTICIPATED==TRUE], outdir, nm_reqs=TRUE, only_heterosexual = T)
   p2 <- plot_transmission_events_over_time(pairs.all[BOTH_PARTICIPATED==TRUE], outdir = NULL, nm_reqs=TRUE)
   
   # extract legend

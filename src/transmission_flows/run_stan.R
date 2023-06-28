@@ -18,7 +18,7 @@ if(dir.exists('~/Box\ Sync/2021/ratmann_deepseq_analyses/'))
   gitdir <- '~/git/phyloSI-RakaiAgeGender'
   outdir <- '~/Box\ Sync/2021/phyloflows/'
 
-  jobname <- 'firstrun'
+  jobname <- 'central'
   stan_model <- 'gp_230602'
   outdir <- file.path(outdir, paste0(stan_model, '-', jobname))
   dir.create(outdir)
@@ -219,6 +219,7 @@ incidence_cases[, table(PERIOD, COMM)]
 
 #
 # Find phylo pairs 
+#
 
 pairs <- copy(pairs.all)
 pairs <- select.pairs.for.analysis(pairs.all, 
@@ -310,8 +311,6 @@ if(1){
   edf_d <- plot_incident_cases_to_unsuppressed_rate_ratio(incidence_cases_round, unsuppressed_rate_ratio, outfile.figures, outdir.table)
   edf_c <- plot_unsuppressed_rate_ratio_vs_baseline(unsuppressed_rate_ratio)
   save_edf10(edf_ab, edf_c, edf_d, outdir = outfile.figures)
-
-
   make_time_trends_HIV_incidence(eligible_count_round, incidence_cases_round, incidence_rates_round.samples,outfile.figures)
 
   # plot offset
