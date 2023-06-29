@@ -119,10 +119,6 @@ The deep-sequence phylogenetic time since infection estimates were refined using
 
 To reproduce our analyses in part, we share randomized versions of the data that are suffixed by `randomized`. Use these as shown below in combination with the deep-sequence phylogenetic data from the Zenodo repository:
 ```shell
-ZENODO="~/OneDrive/shifting-dynamics-zenodo/" # path to your zenodo directory
-DATA_DIR_TSI=$ZENODO/"deep_sequence_phylogenies_primary/data_for_likely_transmission_pairs/phyloscanner-results"
-DATA_DIR_PHYLOSCANNER=$ZENODO/"deep_sequence_phylogenies_primary/data_for_time_since_infection/phyloscanner-results"
-
 # get linkage and direction scores
 Rscript ./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER
 # refine time since infection estimates for source-recipient pairs
