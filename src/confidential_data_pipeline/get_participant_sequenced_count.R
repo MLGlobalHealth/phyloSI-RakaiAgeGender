@@ -2,7 +2,7 @@ library(data.table)
 library(seqinr)
 library(dplyr)
 
-gitdir <- here()
+gitdir <- here::here()
 source(file.path(gitdir, "config.R"))
 
 c(  infile.sequence,
