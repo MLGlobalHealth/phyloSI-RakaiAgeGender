@@ -65,7 +65,7 @@ mkdir \$CWD/tables
 Rscript \$INDIR/src/transmission_flows/postprocessing_assess_mixing.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 Rscript \$INDIR/src/transmission_flows/postprocessing_figures.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 Rscript \$INDIR/src/transmission_flows/postprocessing_figure_time_trends_sources.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
-Rscript \$INDIR/src/transmission_flows/postprocessing-figure_contribution_sexual_contact.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
+Rscript \$INDIR/src/transmission_flows/postprocessing_figure_contribution_sexual_contact.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 Rscript \$INDIR/src/transmission_flows/postprocessing_figure_counterfactual.R -indir \$INDIR -outdir \$CWD -stan_model \$STAN_MODEL -jobname \$JOBNAME 
 
 EOF
