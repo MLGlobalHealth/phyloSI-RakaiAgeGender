@@ -16,8 +16,8 @@ usr <- Sys.info()[['user']]
 if(usr == 'melodiemonod'){# if on laptop
   indir <- here::here()
   outdir <- '~/Box\ Sync/2021/phyloflows/'
-  stan_model <- 'gp_221201d'
-  jobname <- 'central3'
+  stan_model <- 'gp_230602'
+  jobname <- 'usedep'
 }
 
 args_line <-  as.list(commandArgs(trailingOnly=TRUE))
@@ -101,7 +101,7 @@ fig4_list <- plot_counterfactual(
 )
 
 # remember to add labels
-p_a <-fig4_list[['a']]
+p_a <-fig4_list[['a']] + reqs + theme(strip.text = element_blank())
 p_b <-fig4_list[['b']] 
 p_c <-fig4_list[['c']]
 p_d <-fig4_list[['d']]
@@ -145,7 +145,8 @@ p_a_with_legend <- ggarrange_nature(
     p_a , legends,
     ncol = 1,
     heights = c(4, 2),
-    labels = c('a', '')
+    labels = c('a', ''), 
+    add_reqs = F
 )
 
 p_abcd <- ggarrange_nature(
