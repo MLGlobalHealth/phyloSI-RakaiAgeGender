@@ -1,0 +1,26 @@
+  
+#!/bin/sh
+#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=10:ompthreads=1:mem=480gb
+#PBS -j oe
+module load anaconda3/personal
+source activate phyloflows
+
+INDIR=/home/andrea/git/phyloflows
+OUTDIR=/home/andrea/git/phyloflows/output
+STAN_MODEL=gp_230614a
+JOBNAME=hello
+  
+# main directory
+CWD=$OUTDIR/$STAN_MODEL-$JOBNAME
+
+# directories for figure and table
+mkdir $CWD/figures
+mkdir $CWD/tables
+
+Rscript $INDIR/src/transmission_flows/postprocessing_assess_mixing.R -indir $INDIR -outdir $CWD -stan_model $STAN_MODEL -jobname $JOBNAME 
+Rscript $INDIR/src/transmission_flows/postprocessing_figures.R -indir $INDIR -outdir $CWD -stan_model $STAN_MODEL -jobname $JOBNAME 
+Rscript $INDIR/src/transmission_flows/postprocessing_figure_time_trends_sources.R -indir $INDIR -outdir $CWD -stan_model $STAN_MODEL -jobname $JOBNAME 
+Rscript $INDIR/src/transmission_flows/postprocessing_figure_contribution_sexual_contact.R -indir $INDIR -outdir $CWD -stan_model $STAN_MODEL -jobname $JOBNAME 
+Rscript $INDIR/src/transmission_flows/postprocessing_figure_counterfactual.R -indir $INDIR -outdir $CWD -stan_model $STAN_MODEL -jobname $JOBNAME 
+
