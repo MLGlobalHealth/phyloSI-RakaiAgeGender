@@ -172,9 +172,12 @@ if( ! indir.deepsequencedata == "" ){
   infile.seq.criteria <- file.path(indir.deepsequencedata,"PANGEA2_RCCS/221117_dct.rda")
   
   # characteristics sequenced participants 
-  file.characteristics_sequenced_ind_R14_18 <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_sequenced_ind_R14_18_221206.rds")
-  file.characteristics_ever_sequenced <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_ever_sequenced.rds")
-  file.characteristics_sequenced_R14_18 <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_sequenced_R14_18.rds")
+  # file.characteristics_sequenced_ind_R14_18 <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_sequenced_ind_R14_18_221206.rds")
+  # file.characteristics_ever_sequenced <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_ever_sequenced.rds")
+  # file.characteristics_sequenced_R14_18 <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_sequenced_R14_18.rds")
+  file.characteristics_sequenced_ind_R14_18 <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_sequenced_ind_R14_18_230703.rds")
+  file.characteristics_ever_sequenced <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_ever_sequenced_230703.rds")
+  file.characteristics_sequenced_R14_18 <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age", "characteristics_sequenced_R14_18_230703.rds")
   
   # metadata: Latest data from Rakai"s CCS (Kate"s data from 2022-03-08)
   file.path.metadata <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "Rakai_Pangea2_RCCS_Metadata__12Nov2019.csv")

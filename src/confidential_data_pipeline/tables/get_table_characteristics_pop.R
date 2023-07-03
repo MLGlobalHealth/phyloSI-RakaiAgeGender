@@ -72,6 +72,9 @@ meta_data[, HIV := ifelse(is.na(firstposvd), 'N', 'P')]
 # find art use
 meta_data[, ART := artslfuse == 'yes']
 
+# subset round 14 to 30 continuously surveyed communities
+meta_data <- meta_data[!(round=='14' & !COMM %in% c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754))]
+
 # keep variable of interest
 meta_data[, round := paste0('R0', round)]
 colnames(meta_data) <- toupper(colnames(meta_data))
@@ -404,7 +407,7 @@ tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 
 # save
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
-file.name <- file.path(outdir, 'characteristics_study_population.rds')
+file.name <- file.path(outdir, 'characteristics_study_population_230703.rds')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
   cat("Saving file:", file.name, '\n')
@@ -412,6 +415,7 @@ if(! file.exists(file.name) | config$overwrite.existing.files )
 }else{
   cat("File:", file.name, "already exists...\n")
 }
+
 
 
 
