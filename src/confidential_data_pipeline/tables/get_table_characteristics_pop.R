@@ -14,7 +14,7 @@ gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
 # outputs tables and figures
-if(usr == 'melodiemonod'||usr == 'alex'){
+if(usr == 'melodiemonod'||usr == 'alexb'){
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 }else{
   outdir #<- #TODO
@@ -407,7 +407,7 @@ tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 
 # save
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
-file.name <- file.path(outdir, 'characteristics_study_population_230703.rds')
+file.name <- file.path(outdir, 'characteristics_study_population_230710.rds')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
   cat("Saving file:", file.name, '\n')

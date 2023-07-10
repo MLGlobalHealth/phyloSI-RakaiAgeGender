@@ -164,13 +164,16 @@ dct[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
 dm <- merge(dm,dct,by='PANGEA_ID',all.x=T)
 dm <- subset(dm,V1=='TRUE')
 
+# keep age within 15-49
+dm <- dm[AGEYRS > 14 & AGEYRS < 50]
+
 # keep meta info closer to sample date
 dm[, VISIT_DT := as.Date(VISIT_DT)]
 dm[, SAMPLE_DATE := as.Date(SAMPLE_DATE)]
 dm[, DIFF_DATE := abs(VISIT_DT - SAMPLE_DATE), by = 'PANGEA_ID']
-dm[, IS_MIN := DIFF_DATE == min(na.omit(DIFF_DATE)), by = 'PANGEA_ID']
+dm[ROUND!='R019', IS_MIN := DIFF_DATE == min(na.omit(DIFF_DATE)), by = 'PANGEA_ID']
 dcount <- dm[IS_MIN == 1]
-stopifnot(nrow(dcount) == dm[, length(unique(PANGEA_ID))])
+stopifnot(nrow(dcount) == dm[, length(unique(PANGEA_ID[ROUND!='R019']))])
 dcount[, table(ROUND, COMM)]
 
 dcount[HIV == 'N'] ## negative but sequenceD?
