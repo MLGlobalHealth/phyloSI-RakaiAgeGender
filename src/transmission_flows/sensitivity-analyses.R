@@ -2,56 +2,58 @@ library(data.table)
 library(ggplot2)
 library(gridExtra)
 
-outdir.all <- "/rds/general/user/mm3218/home/projects/2021/phyloflows/"
+outdir.all <- "/rds/general/user/mm3218/home/projects/2021/phyloSI-RakaiAgeGender/"
 # outdir.all <- "~/Box\ Sync/2021/phyloflows/"
 
 # jobames
-jobname <- c('central',  # central analysis
+jobname <- c('usedep',  # central analysis
              'incloess', # incidence rate estimated with loess regression
              '30com', # incidence rate estimated in 30 communities
              'tsinonrefined', # non refined TSI
              'woR18', # remove pairs after round 17
-             'woR1817', # remove pairs after round 16
-             'woR181716', # remove pairs after round 15
+             'woR1718', # remove pairs after round 16
+             'woR161718', # remove pairs after round 15
              'seed12', # bootstrap sample of the pairs 1
              'seed13', # bootstrap sample of the pairs 2
              'seed14', # bootstrap sample of the pairs 3
-             'central', # alternative form transmission rate 1
-             'central', # alternative form transmission rate 2
-             'central', # alternative form transmission rate 3
-             'central', # alternative form transmission rate 4
-             'central', # alternative form transmission rate 5
-             'central', # alternative form transmission rate 6
+             'usedep', # alternative form transmission rate 1
+             'usedep', # alternative form transmission rate 2
+             'firstrun', # alternative form transmission rate 3
+             'firstrun', # alternative form transmission rate 4
+             'firstrun', # alternative form transmission rate 5
+             'firstrun', # alternative form transmission rate 6
              'nonparttreatedaspart', # non participants treated liked participants
              'nonpartnottreated', # non participants all unsupressed
              'nonpartfemalemale125moreinfectious', # non participants 25% higher prevalence
              'nonpartmale125moreinfectious',  # non participants men 25% higher prevalence
              'nonpartfemale125moreinfectious', # non participants women 25% higher prevalence
-             'vl200' # viral load threshold 200ml
+             'vl200', # viral load threshold 200ml
+             'central' # not adjusting for sampling probability of source
              )
 
 # stan models
-stan_model <- c('gp_221201d', 
-                'gp_221201d', 
-                'gp_221201d',
-                'gp_221201d', 
-                'gp_221201d',
-                'gp_221201d',
-                'gp_221201d',
-                'gp_221201d',
-                'gp_221201d',
-                'gp_221201d',
-                'gp_221208a',
-                'gp_221208b',
-                'gp_221208c',
-                'gp_221208d',
-                'gp_221208e',
-                'gp_221208f',
-                'gp_221201d',
-                'gp_221201d',
-                'gp_221201d',
-                'gp_221201d',
-                'gp_221201d',
+stan_model <- c('gp_230602', 
+                'gp_230602', 
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230614c',
+                'gp_230614d',
+                'gp_230614e',
+                'gp_230614f',
+                'gp_230614a',
+                'gp_230614b',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
+                'gp_230602',
                 'gp_221201d'
                 )
 
@@ -77,7 +79,8 @@ label_models <- c('Central model',
                   'Alternative model: 25% higher prevalence in non-participants',
                   'Alternative model: 25% higher prevalence in men non-participants',
                   'Alternative model: 25% higher prevalence in women non-participants',
-                  'Alternative model: viral load threshold of 200ml'
+                  'Alternative model: viral load threshold of 200ml',
+                  'Alternative model: without adjustments for potentially unequal sampling of sources'
                   )
 
 
@@ -157,7 +160,7 @@ results_sensitivity[['contribution_male']] <- tmp1
 #
 
 paths <- file.path(outdir.here, 'tables',
-                   paste0(stan_model, '-', jobname, '-output-log_lambda_latentby_direction_round_quantilestandardisedby_direction_round.rds'))
+                   paste0(stan_model, '-', jobname, '-output-log_lambda_latentby_direction_round_quantilestandardisedby_direction_round_median_age_source_total.rds'))
 output <- vector(mode = 'list', length = N)
 for(i in 1:N){
   output[[i]] <- as.data.table(readRDS(paths[i]))
@@ -260,7 +263,7 @@ ggplot(output) +
   scale_color_manual(values = cols_res) +
   scale_fill_manual(values = cols_res)
 ggsave(file = file.path(outdir.here[1], 'figures', paste0(stan_model[1], '-', jobname[1], '-sensitivity-MedianAgeSourceBy1yearAgeRecipient.png')), 
-       w = 7, h = 10)
+       w = 8, h = 10)
     
 
 
