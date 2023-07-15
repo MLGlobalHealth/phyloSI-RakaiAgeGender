@@ -185,7 +185,21 @@ census <- merge(census, df_round, by = c('COMM', 'ROUND'))
 
 #################################
 
-# find participant
+# find participant across rounds
+part <- rincp[ROUND %in% df_round$ROUND , list(PARTICIPANT = length(unique(STUDY_ID))), by = c('COMM')]
+
+# save
+file.name <- file.path(outdir, 'total_participants_230714.rds')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  saveRDS(part, file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+
+# find participant by round
+
 part <- rincp[, list(PARTICIPANT = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')]
 part <- rbind(part, rincp[SEX == 'F', list(PARTICIPANT = .N,  TYPE = 'Female'), by = c('COMM', 'ROUND')])
 part <- rbind(part, rincp[SEX == 'M', list(PARTICIPANT = .N,  TYPE = 'Male'), by = c('COMM', 'ROUND')])
