@@ -356,7 +356,7 @@ if(!restrict_to_30_comms){
   }
   
   # save
-  file.name <- file.path(outdir, "Rakai_inc_model_fit_inland_221107.csv")
+  file.name <- file.path(outdir, "Rakai_inc_model_fit_inland_230703.csv")
   if(! file.exists(file.name))
   {
     cat("Saving file:", file.name, '\n')
@@ -366,7 +366,7 @@ if(!restrict_to_30_comms){
   }
   
   # For statistics on estimation for paper
-  file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_221129.RDS')
+  file.name <- file.path(outdir, 'incidence_inland_estimates_for_paper_230703.RDS')
   if(! file.exists(file.name))
   {
     cat("Saving file:", file.name, '\n')
@@ -376,7 +376,7 @@ if(!restrict_to_30_comms){
   }
   
   # For statistics on prediction for paper
-  file.name <- file.path(outdir, 'incidence_inland_prediction_for_paper_221107.RDS')
+  file.name <- file.path(outdir, 'incidence_inland_prediction_for_paper_230703.RDS')
   if(! file.exists(file.name))
   {
     cat("Saving file:", file.name, '\n')
@@ -386,7 +386,7 @@ if(!restrict_to_30_comms){
   }
   
   # For statistics on prediction with loess for paper
-  file.name <- file.path(outdir, 'incidence_inland_prediction_loess_for_paper_221116.RDS')
+  file.name <- file.path(outdir, 'incidence_inland_prediction_loess_for_paper_230703.RDS')
   if(! file.exists(file.name))
   {
     cat("Saving file:", file.name, '\n')
