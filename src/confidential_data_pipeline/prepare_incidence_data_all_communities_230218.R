@@ -13,6 +13,7 @@ library(remotes)
 library(metR)
 library(lubridate)
 library(ggpubr)
+library(here)
 
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
@@ -145,6 +146,15 @@ rm(verif_el)
 ###############################
 
 status_df <- find_seroconvert_status(hivstatus_vlcopies_1_inc)
+
+
+################
+
+# FIND STATISTICS COHORT
+
+################
+
+stats <- save_statistics_incidence_cohort(hivstatus_vlcopies_1_inc, status_df)
 
 
 ###############################
