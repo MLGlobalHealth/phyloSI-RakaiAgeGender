@@ -50,6 +50,48 @@ read_hiv_data <- function(file.path.hiv.614, file.path.hiv.1518, file.path.hiv.1
   return(hivstatus_vlcopies_1)
 }
 
+read_hiv_data_230703 <- function(file.path.hiv.614, file.path.hiv.914, file.path.hiv.1518, file.path.hiv.19){
+  
+  # round 6 to 13
+  hivstatus_vlcopies_1 <- as.data.table(read_dta(file.path.hiv.614))
+  
+  # round 14
+  hivstatus_vlcopies_1.14 <- as.data.table(read.csv(file.path.hiv.914))
+  
+  # round 15 to 18
+  hivstatus_vlcopies_1.1518<-as.data.table(read.csv(file.path.hiv.1518))
+  
+  # round 19
+  hivstatus_vlcopies_1.19<-as.data.table(read.csv(file.path.hiv.19))
+  
+  # clean round 6 to 13
+  setnames(hivstatus_vlcopies_1,  'intdate','hivdate')
+  hivstatus_vlcopies_1[, hivdate := as.character(hivdate)]
+  hivstatus_vlcopies_1 <- hivstatus_vlcopies_1[!round %in% rounds_group_2 & round != 'R014']
+  hivstatus_vlcopies_1 <- select(hivstatus_vlcopies_1, c('study_id', 'round', 'hivdate', 'hiv'))
+  
+  # clean round  14 and combine to round 6 to 13
+  hivstatus_vlcopies_1.14[, hivdate := as.character(hivdate)]
+  hivstatus_vlcopies_1.14 <- hivstatus_vlcopies_1.14[round == 'R014']
+  hivstatus_vlcopies_1.14 <- select(hivstatus_vlcopies_1.14, c('study_id', 'round', 'hivdate', 'hiv'))
+  hivstatus_vlcopies_1 <- rbind(hivstatus_vlcopies_1, hivstatus_vlcopies_1.14)
+  
+  # combine round 15 to 19
+  hivstatus_vlcopies_1.1519 <- rbind(hivstatus_vlcopies_1.1518, hivstatus_vlcopies_1.19)
+  hivstatus_vlcopies_1.1519 <- select(hivstatus_vlcopies_1.1519, c('study_id', 'round', 'hivdate', 'hiv'))
+  
+  # combine all
+  hivstatus_vlcopies_1 <- rbind(hivstatus_vlcopies_1, hivstatus_vlcopies_1.1519)
+  hivstatus_vlcopies_1[, round := gsub(' ', '', round)] # remove space after string
+  
+  # add last update on infected by Joseph
+  infected_id <- c("C117824", "C119303", "K067249")
+  hivstatus_vlcopies_1[study_id %in% infected_id, hiv := 'P']
+  hivstatus_vlcopies_1[study_id %in% infected_id, hivstatus := T]
+  
+  return(hivstatus_vlcopies_1)
+}
+
 read_hiv_data_230218 <- function(file.path.hiv.68, file.path.hiv.914, file.path.hiv.1518, file.path.hiv.19){
   
   # round 6 to 8
@@ -116,6 +158,55 @@ read_flow_data <- function(file.path.flow.614, file.path.flow.1518, file.path.fl
   verif_1.1519 <- select(verif_1.1519, c('study_id', 'round', 'loc_date', 'locdate1', 'birthdat', 'sex', 
                                          'comm_num', 'ageyrs', 'resident'))
 
+  # combine all
+  verif_1 <- rbind(verif_1, verif_1.1519)
+  
+  return(verif_1)
+}
+
+read_flow_data_230703 <- function(file.path.flow.614, file.path.flow.914, file.path.flow.1518, file.path.flow.19){
+  
+  # round 6 to 13
+  verif_1<-as.data.table(read_dta(file.path.flow.614))
+  
+  # round 14
+  verif_1.14<-as.data.table(read.csv(file.path.flow.914))
+  
+  # round 15 to 18
+  verif_1.1518<-as.data.table(read.csv(file.path.flow.1518))
+  
+  # round 19
+  verif_1.19<-as.data.table(read.csv(file.path.flow.19))
+  
+  # clean round 6 to 13
+  verif_1[, locdate := as.character(locdate)]
+  verif_1[, birthdat := as.character(birthdat)]
+  verif_1 <- verif_1[!round %in% rounds_group_2 & round != 'R014']
+  setnames(verif_1, 'locdate', 'loc_date')
+  verif_1 <- select(verif_1, c('study_id', 'round', 'loc_date', 'locdate1', 'birthdat', 'sex', 
+                               'comm_num', 'ageyrs', 'resident'))
+  
+  # clean round 9 to 14
+  verif_1.14[, locdate := as.character(locdate)]
+  verif_1.14[, birthdat := NA_character_]
+  setnames(verif_1.14, 'comm', 'comm_num')
+  verif_1.14 <- verif_1.14[round == 'R014']
+  setnames(verif_1.14, 'locdate', 'loc_date')
+  verif_1.14 <- select(verif_1.14, c('study_id', 'round', 'loc_date', 'locdate1', 'birthdat', 'sex', 
+                                       'comm_num', 'ageyrs', 'resident'))
+  # combine round 6 to 14
+  verif_1 <- rbind(verif_1, verif_1.14)
+  
+  # clean round 15 to 18
+  verif_1.1518 <- select(verif_1.1518,-'X_merge')
+  
+  # combine  and clean round 15 to 19
+  verif_1.1519 <- rbind(verif_1.1518, verif_1.19)
+  verif_1.1519[, loc_date := as.character(loc_date)]
+  verif_1.1519[, birthdat := as.character(birthdat)]
+  verif_1.1519 <- select(verif_1.1519, c('study_id', 'round', 'loc_date', 'locdate1', 'birthdat', 'sex', 
+                                         'comm_num', 'ageyrs', 'resident'))
+  
   # combine all
   verif_1 <- rbind(verif_1, verif_1.1519)
   
@@ -655,22 +746,25 @@ save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df
   stats$TABLE_STATUS_SEROCONVERTED_PROP <- round(stats$TABLE_STATUS_SEROCONVERTED / sum(stats$TABLE_STATUS_SEROCONVERTED) * 100, 1)
   stats$TABLE_STATUS_SEROCONVERTED <- comma_thousands(stats$TABLE_STATUS_SEROCONVERTED)
   
-  
-  # number of followed-up participants by age group, sex and round
+  # subset serially negative or seroconvert 
   part <- as.data.table(hivstatus_vlcopies_1_inc)
   part[, age := floor(as.numeric(date-birthdate)/365.25)]
   part[age < 15, age := 15]; part[age > 49, age := 49] # discrepancies in age
   part <- unique(part[, list(age = min(age), sex = unique(sex), 
                              hivstatus_imputed = min(hivstatus_imputed),
                              missed_visit = is.na(visit_id)), by = c('research_id', 'round')])
+  .research_id <- as.data.table(status_df)[(cohortclass=="Serially negative" | cohortclass== "Seroconversion"), research_id]
+  part <- part[research_id %in% .research_id] # keep only serially negative or seroconvert
+
+  # keep rounds before and on seroconversion
   df_ne <- unique(part[, .(research_id, hivstatus_imputed, round)])
   df_ne[, index_round_after_sero := 0] # round after seroconversion
   df_ne[hivstatus_imputed == 1, index_round_after_sero := 1:length(hivstatus_imputed), by = 'research_id']
   df_ne[, index_round := 1:length(round), by = 'research_id'] # index round observed
-  df_ne[, seroconvert_at_first_round := any(index_round == 1 & hivstatus_imputed == 1), by = 'research_id']
   part <- merge(part, df_ne, by = c('research_id', 'hivstatus_imputed', 'round'))
-  part1 <- part[seroconvert_at_first_round == F] # remove hivp at first round 
-  part2 <- part1[index_round_after_sero <= 1]   # keep rounds before and on seroconversion
+  part2 <- part[index_round_after_sero <= 1]    # keep rounds before and on seroconversion
+  
+  # number of followed-up participants by age group, sex and round
   df_age_aggregated <- data.table(age = 15:49, age_group = c(rep('15-24', 10),  rep("25-34", 10), rep("35-49", 15)))
   part2 <- merge(part2, df_age_aggregated, by = 'age')
   part_all <- part2[, list(N = length(unique(research_id))), by = c('round', 'age_group', 'sex')]
