@@ -186,7 +186,9 @@ census <- merge(census, df_round, by = c('COMM', 'ROUND'))
 #################################
 
 # find participant across rounds
-part <- rincp[ROUND %in% df_round$ROUND , list(PARTICIPANT = length(unique(STUDY_ID))), by = c('COMM')]
+tmp <- merge(rincp, df_round, by = c('COMM', 'ROUND'))
+part <- tmp[ , list(PARTICIPANT = length(unique(STUDY_ID))), by = c('COMM')]
+part <- part[COMM == 'inland']
 
 # save
 file.name <- file.path(outdir, 'total_participants_230714.rds')
