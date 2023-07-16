@@ -221,7 +221,7 @@ if(! file.exists(file.name))
 }
 
 # statistics
-file.name <- file.path(outdir,"incidence_inland_statistics_cohort_for_paper_230625.rds")
+file.name <- file.path(outdir,"incidence_inland_statistics_cohort_for_paper_230715.rds")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
