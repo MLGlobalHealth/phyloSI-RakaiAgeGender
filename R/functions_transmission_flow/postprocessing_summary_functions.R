@@ -470,13 +470,17 @@ find_relative_incidence_counterfactual <- function(samples, output, vars, log_of
   p_labs <- c('M','CL','CU')
   
   # incidence rate under original scenario
-  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, posterior_samples = T, df_age_aggregated_new = df_age_aggregated_new)
+  tmp1 <- find_summary_output_by_round(samples, output, vars, transform = transform, 
+                                       log_offset_round = log_offset_round, log_offset_formula = log_offset_formula, 
+                                       posterior_samples = T, df_age_aggregated_new = df_age_aggregated_new)
   
   # incidence rate under countefactual scenario
-  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, posterior_samples = T, df_age_aggregated_new = df_age_aggregated_new)
+  tmp <- find_summary_output_by_round(samples, output, vars, transform = transform, 
+                                      log_offset_round = log_offset_round.counterfactual, log_offset_formula = log_offset_formula, 
+                                      posterior_samples = T, df_age_aggregated_new = df_age_aggregated_new)
   setnames(tmp, 'value', 'value_counterfactual')
   
-  # find relative incidence
+  # find percentage reduction incidence
   tmp1 <- merge(tmp, tmp1, by = c(vars, 'iterations'))
   tmp1[, value := (value - value_counterfactual) / value]
   
@@ -1117,7 +1121,7 @@ make_counterfactual <- function(samples, log_offset_round, stan_data,
   # find relative difference incidence  by age of the recipient
   relative_incidence_counterfactual <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_INFECTION.RECIPIENT'),
                                                                                    log_offset_round, log_offset_round.counterfactual,
-                                                                                   transform = 'exp')
+                                                                              transform = 'exp')
   # find relative difference incidence  by age group recipient
   df_age_aggregated <- get.age.aggregated.map(c('15-24', '25-34', '35-49'))
   relative_incidence_counterfactual_group1 <- find_relative_incidence_counterfactual(samples, 'log_beta', c('INDEX_DIRECTION', 'INDEX_ROUND', 'AGE_GROUP_INFECTION.RECIPIENT'),
