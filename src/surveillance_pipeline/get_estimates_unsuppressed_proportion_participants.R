@@ -121,7 +121,7 @@ for (round in 15:18) {
     chains = 1,
     control = list(max_treedepth = 15, adapt_delta = 0.999)
   )
-  filename <- paste0("220729f_notsuppAmongInfected_gp_stan_round",
+  filename <- paste0("230703_notsuppAmongInfected_gp_stan_round",
                      round,
                      "_vl_1000.rds")
   filename <- file.path(outdir, filename)
@@ -150,7 +150,7 @@ for (i in seq_along(rounds)) {
   x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL) + 1], 0.5)
 
   # load samples
-  filename <- paste0("220729f_notsuppAmongInfected_gp_stan_round",
+  filename <- paste0("230703_notsuppAmongInfected_gp_stan_round",
                      round,
                      "_vl_1000.rds")
   fit <- readRDS(file.path(outdir, filename))
@@ -343,7 +343,7 @@ if (!file.exists(file.name) || config$overwrite.existing.files) {
 }
 
 
-file.name <- file.path(outdir, "RCCS_nonsuppressed_proportion_model_fit_221101.RDS")
+file.name <- file.path(outdir, "RCCS_nonsuppressed_proportion_model_fit_230703.RDS")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")

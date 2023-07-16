@@ -173,7 +173,6 @@ stopifnot(nrow(ns[COMM == 'fishing']) == ns[, length(unique(AGEYRS))] * ns[, len
 
 ####################################
 
-# file.name <- file.path(gitdir.fit, paste0('RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds')) 
 file.name <- file.treatment.cascade.prop.participants.vl200.samples 
 if(! file.exists(file.name) | config$overwrite.existing.files)
 {
@@ -183,7 +182,6 @@ if(! file.exists(file.name) | config$overwrite.existing.files)
     cat("File:", file.name, "already exists...\n")
 }
 
-# file.name <- file.path(gitdir.fit,'RCCS_treatment_cascade_participants_estimates_vl200_221208.csv')
 file.name <- file.treatment.cascade.prop.participants.vl200 
 if(! file.exists(file.name) | config$overwrite.existing.files)
 {

@@ -8,19 +8,6 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-# TODO: shozen: do you think this would be helpful? 
-# library(optparse)
-# option_list <- list(
-#     make_option(
-#         "--outdir",
-#         type = "",
-#         default = ,
-#         help = "",
-#         dest= ""
-#     ),
-# )
-# args <- parse_args(OptionParser(option_list = option_list))
-
 file.exists(c(
   file.eligible.count ,
   file.prevalence))  |> all() |> stopifnot()

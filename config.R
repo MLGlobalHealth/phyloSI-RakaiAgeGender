@@ -14,7 +14,7 @@ dir.zenodo <- data.table::fcase(
     usr == "ablenkin", "/rds/general/project/ratmann_deepseq_analyses/live/tmp4mm/shifting-dynamics-zenodo",
     usr == "shozendan", "~/Imperial/phyloSI-RakaiAgeGender-data",
     usr == "melodiemonod", "/Users/melodiemonod/Box Sync/2023/shifting-dynamics-zenodo",
-    usr == "mm3218", "/rds/general/user/mm3218/home/data/shifting-dynamics-zenodo/",
+    usr == "mm3218", "/rds/general/user/mm3218/home/data/shifting-dynamics-zenodo-addcommR14/",
     usr == "Yu", "C:/Users/Yu/OneDrive - Imperial College London/shifting-dynamics-zenodo/",
     usr == "alexb", "/Users/alexb/Library/CloudStorage/OneDrive-ImperialCollegeLondon/shifting-dynamics-zenodo",
     usr == "your-user", "your-path-to-zenodo-dir",
@@ -117,8 +117,10 @@ if( ! indir.deepsequencedata == "" ){
   output.dir.incidence.estimation.30comms <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'incidence_rate_inland_30comms')
   
   # community keys
-  file.community.keys <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS1519_UVRI", "community_names.csv")
-  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,"PANGEA2_RCCS1519_UVRI", "community_id_index.csv")
+  file.community.keys.incomplete <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS1519_UVRI", "community_names.csv")
+  file.community.keys <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS1519_UVRI", "community_names_complete.csv")
+  file.community.keys.aggregated.incomplete <- file.path(indir.deepsequence_analyses,"PANGEA2_RCCS1519_UVRI", "community_id_index.csv")
+  file.community.keys.aggregated <- file.path(indir.deepsequence_analyses,"PANGEA2_RCCS1519_UVRI", "community_id_index_complete.csv")
   
   # geography
   file.Rakai_community_geography <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "Rakai_community_geography_R15.rda")
@@ -132,10 +134,11 @@ if( ! indir.deepsequencedata == "" ){
   file.path.hiv.614 <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "hivincidence_1.dta")
   # hiv dataset round 9-14: all communities (created in create_hiv_dataset_from_quest_all_communities.R)
   file.hiv_R09_R14 = file.path(indir.deepsequencedata, "RCCS_R9_R14/HIV_R09_R14.csv")
-  # hiv dataset combination of all rounds obtained in clean_quest_hiv
-  file.path.hiv <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "HIV_R6_R18_221129.csv")
   # hiv dataset round 19
   file.path.hiv_19 <- file.path(indir.deepsequencedata,"R019_VoIs","HIV_R019_VOIs_220607.csv")
+  # hiv dataset combination of all rounds obtained in clean_quest_hiv
+  # file.path.hiv <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "HIV_R6_R18_221129.csv")
+  file.path.hiv <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "HIV_R6_R18_230703.csv")
   
   # quest dataset round 15 to 18 without 16
   file.path.quest.1518 <- file.path(indir.deepsequencedata.r151r18, "quest_R15_R18_VoIs_220129.csv")
@@ -146,7 +149,8 @@ if( ! indir.deepsequencedata == "" ){
   # quest dataset round 9-14: all communities
   file.quest_R09_R14 = file.path(indir.deepsequencedata, "RCCS_R9_R14/quest_R09_R14.csv")
   # quest dataset combination of all rounds obtained in clean_quest_hiv 
-  file.path.quest <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "Quest_R6_R18_221208.csv")
+  # file.path.quest <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "Quest_R6_R18_221208.csv")
+  file.path.quest <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "Quest_R6_R18_230703.csv")
   
   # flow dataset round <14: 30 continuously surveyed communities
   file.path.flow.614 <- file.path(indir.deepsequencedata, "RCCS_data_estimate_incidence_inland_R6_R18/220903", "verif_1.dta")
@@ -187,7 +191,8 @@ if( ! indir.deepsequencedata == "" ){
   path.meta.confidential <- file.path(indir.deepsequencedata, "RCCS_R15_R18", "Rakai_Pangea2_RCCS_Metadata_20221128.RData")
   
   # seroconvert individuals restrained to 30 continuously surveyed communities in round < 14 but not afterwards
-  file.anonymised.id <- file.path(indir.deepsequencedata,"RCCS_data_estimate_incidence_inland_R6_R18","220903","anonymized_id_for_incidence_estimate_221129.csv")
+  # file.anonymised.id <- file.path(indir.deepsequencedata,"RCCS_data_estimate_incidence_inland_R6_R18","220903","anonymized_id_for_incidence_estimate_221129.csv")
+  file.anonymised.id <- file.path(indir.deepsequencedata,"RCCS_data_estimate_incidence_inland_R6_R18","220903","anonymized_id_for_incidence_estimate_230703.csv")
   
   # seroconvert individuals not restrained to 30 continuously surveyed communities in round < 14
   file.anonymised.id.all_comm <- file.path(indir.deepsequencedata, "RCCS_R9_R14","RCCS_data_estimate_incidence_inland_R6_R18_230218","anonimized_id_for_incidence_estimate.csv")
@@ -218,8 +223,9 @@ path.chains.data <- file.path(dir.zenodo.phyloproc, "Rakai_phscnetworks_ruleo_se
 path.tsiestimates <- file.path(dir.zenodo.phyloproc, "aggregated_TSI.rds")
 
 # used in src/incidence_rate
-file.path.seroconverter_cohort <- file.path(dir.zenodo.dataincrate , "seroconverter_cohort_R6R19.rds")
+# file.path.seroconverter_cohort <- file.path(dir.zenodo.dataincrate , "seroconverter_cohort_R6R19.rds")
 file.path.seroconverter_cohort.30 <- file.path(dir.zenodo.dataincrate, "seroconverter_cohort_30comm_R6R19.rds")
+file.path.seroconverter_cohort <- file.path(dir.zenodo.dataincrate , "seroconverter_cohort_R6R19_230703.rds")
 
 # obtained in another repository sexual partnerships  rates
 file.number.sexual.partnerships <- file.path(dir.zenodo.ressexpart, "age-age-group-est-cntcts-r15.rds")
@@ -231,23 +237,35 @@ file.age_dist_ma_cntct_area <- file.path(dir.zenodo.ressexpart, "inland-R015_age
 #  OUTPUTS GENERATED IN scripts_for_confidential_data #
 ###################################################
 
-file.eligible.count <- file.path(dir.zenodo.survprim, "RCCS_census_eligible_individuals_221116.csv")
-file.participation <- file.path(dir.zenodo.survprim, "RCCS_participation_221208.csv")
+# file.eligible.count <- file.path(dir.zenodo.survprim, "RCCS_census_eligible_individuals_221116.csv")
+file.eligible.count <- file.path(dir.zenodo.survprim, "RCCS_census_eligible_individuals_230703.csv")
+# file.participation <- file.path(dir.zenodo.survprim, "RCCS_participation_221208.csv")
+file.participation <- file.path(dir.zenodo.survprim, "RCCS_participation_230703.csv")
 
-path.count.hivpositive <- file.path(dir.zenodo.survprim, "aggregated_count_hiv_positive.csv")
+# path.count.hivpositive <- file.path(dir.zenodo.survprim, "aggregated_count_hiv_positive.csv")
+path.count.hivpositive <- file.path(dir.zenodo.survprim, "aggregated_count_hiv_positive_230703.csv")
 
-path.newly.registered.art <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_art_coverage.csv")
-path.newly.registered.art.vl200 <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_art_coverage_vl200.csv")
-path.participant.art <- file.path(dir.zenodo.survprim, "aggregated_participants_count_art_coverage.csv")
-path.participant.art.vl200 <- file.path(dir.zenodo.survprim, "aggregated_participants_count_art_coverage_vl200.csv")
+# path.newly.registered.art <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_art_coverage.csv")
+# path.newly.registered.art.vl200 <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_art_coverage_vl200.csv")
+# path.participant.art <- file.path(dir.zenodo.survprim, "aggregated_participants_count_art_coverage.csv")
+# path.participant.art.vl200 <- file.path(dir.zenodo.survprim, "aggregated_participants_count_art_coverage_vl200.csv")
 
-path.count.newly.unsupp <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_unsuppressed.csv")
-path.count.newly.unsupp.vl200 <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_unsuppressed_vl200.csv")
+path.newly.registered.art <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_art_coverage_230703.csv")
+path.newly.registered.art.vl200 <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_art_coverage_vl200_230703.csv")
+path.participant.art <- file.path(dir.zenodo.survprim, "aggregated_participants_count_art_coverage_230703.csv")
+path.participant.art.vl200 <- file.path(dir.zenodo.survprim, "aggregated_participants_count_art_coverage_vl200_230703.csv")
+
+# path.count.newly.unsupp <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_unsuppressed.csv")
+# path.count.newly.unsupp.vl200 <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_unsuppressed_vl200.csv")
 path.count.unsupp <- file.path(dir.zenodo.survprim, "aggregated_participants_count_unsuppressed.csv")
 path.count.unsupp.vl200 <- file.path(dir.zenodo.survprim, "aggregated_participants_count_unsuppressed_vl200.csv")
+path.count.newly.unsupp <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_unsuppressed_230703.csv")
+path.count.newly.unsupp.vl200 <- file.path(dir.zenodo.survprim, "aggregated_newlyregistered_count_unsuppressed_vl200_230703.csv")
 
-file.spec.sens.art <- file.path(dir.zenodo.survprim, "sensitivity_specificity_art.csv")
-file.spec.sens.art.vl200 <- file.path(dir.zenodo.survprim, "sensitivity_specificity_art_vl200.csv")
+# file.spec.sens.art <- file.path(dir.zenodo.survprim, "sensitivity_specificity_art.csv")
+# file.spec.sens.art.vl200 <- file.path(dir.zenodo.survprim, "sensitivity_specificity_art_vl200.csv")
+file.spec.sens.art <- file.path(dir.zenodo.survprim, "sensitivity_specificity_art_230703.csv")
+file.spec.sens.art.vl200 <- file.path(dir.zenodo.survprim, "sensitivity_specificity_art_vl200_230703.csv")
 
 file.prop.unsuppressed.deepsequenced <- file.path(dir.zenodo.survprim, "aggregated_proportionunsuppressed_deepsequenced.rds")
 
@@ -262,56 +280,99 @@ file.pairs.nonrefined <- file.path(dir.zenodo.phyloproc, "pairsdata_toshare_d1_w
 #  OUTPUTS GENERATED IN src/incidence_rate #
 ###########################################
 
-file.incidence.fits <- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221109.RData")
+# file.incidence.fits <- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221109.RData")
 file.incidence.30com.fits <- file.path(dir.zenodo.resincrate, "fit_incidence_rates_221119.RData")
-
-file.incidence.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_inland_221107.csv")
-file.incidence.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_samples_inland_221107.csv")
-
-file.incidence.loess.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_loess_inland_221116.csv")
-file.incidence.loess.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_loess_samples_inland_221116.csv")
-
+# 
+# file.incidence.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_inland_221107.csv")
+# file.incidence.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_samples_inland_221107.csv")
+# 
+# file.incidence.loess.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_loess_inland_221116.csv")
+# file.incidence.loess.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_loess_samples_inland_221116.csv")
+# 
 file.incidence.30com.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_inland_221119.csv")
 file.incidence.30com.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_samples_inland_221119.csv")
+
+file.incidence.fits <- file.path(dir.zenodo.resincrate, "fit_incidence_rates_230703.RData")
+
+file.incidence.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_inland_230703.csv")
+file.incidence.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_samples_inland_230703.csv")
+
+file.incidence.loess.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_loess_inland_230703.csv")
+file.incidence.loess.samples.inland <- file.path(dir.zenodo.resincrate, "Rakai_incpredictions_loess_samples_inland_230703.csv")
 
 ##########################################
 # OUTPUTS GENERATE IN src/surveillance_pipeline #
 ##########################################
 
-file.prevalence.prop <- file.path(dir.zenodo.survfin, "RCCS_prevalence_estimates_221116.csv")
-file.prevalence <- file.path(dir.zenodo.survfin, "RCCS_prevalence_posterior_sample_221116.rds")
+# file.prevalence.prop <- file.path(dir.zenodo.survfin, "RCCS_prevalence_estimates_221116.csv")
+# file.prevalence <- file.path(dir.zenodo.survfin, "RCCS_prevalence_posterior_sample_221116.rds")
 
-file.unsuppressedviralload <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds")
-file.unsuppressedviralload.newly <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds")
+# file.unsuppressedviralload <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_220818.rds")
+# file.unsuppressedviralload.newly <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_221101.rds")
+# 
+# file.unsuppressedviralload.vl200 <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds")
+# file.unsuppressedviralload.newly.vl200 <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_221121.rds")
+# 
+# file.selfreportedart <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_221208.rds")
+# file.selfreportedart.newly <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_newlyregistered_221208.rds")
+# 
+# file.selfreportedart.vl200 <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_vl200_221208.rds")
+# file.selfreportedart.newly.vl200 <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds")
 
-file.unsuppressedviralload.vl200 <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_200_221121.rds")
-file.unsuppressedviralload.newly.vl200 <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_221121.rds")
+# file.treatment.cascade.prop.participants <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_estimates_221208.csv")
+# file.treatment.cascade.prop.nonparticipants <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv")
+# file.treatment.cascade.prop.participants.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_posterior_samples_221208.rds")
+# file.treatment.cascade.prop.nonparticipants.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds")
+# 
+# file.treatment.cascade.prop.participants.vl200 <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_estimates_vl200_221208.csv")
+# file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv")
+# file.treatment.cascade.prop.participants.vl200.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds")
+# file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds")
+# 
+# file.treatment.cascade.population <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_population_estimates_221208.csv")
+# file.treatment.cascade <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_population_posterior_samples_221208.rds")
 
-file.selfreportedart <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_221208.rds")
-file.selfreportedart.newly <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_newlyregistered_221208.rds")
+file.prevalence.prop <- file.path(dir.zenodo.survfin, "RCCS_prevalence_estimates_230703.csv")
+file.prevalence <- file.path(dir.zenodo.survfin, "RCCS_prevalence_posterior_sample_230703.rds")
 
-file.selfreportedart.vl200 <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_vl200_221208.rds")
-file.selfreportedart.newly.vl200 <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_newlyregistered_vl200_221208.rds")
+file.unsuppressedviralload <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_230703.rds")
+file.unsuppressedviralload.newly <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_1000_newlyregistered_230703.rds")
 
-file.treatment.cascade.prop.participants <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_estimates_221208.csv")
-file.treatment.cascade.prop.nonparticipants <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_estimates_221208.csv")
-file.treatment.cascade.prop.participants.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_posterior_samples_221208.rds")
-file.treatment.cascade.prop.nonparticipants.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_posterior_samples_221208.rds")
+file.unsuppressedviralload.vl200 <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_200_230703.rds")
+file.unsuppressedviralload.newly.vl200 <- file.path(dir.zenodo.survfin, "RCCS_nonsuppressed_proportion_posterior_samples_vl_200_newlyregistered_230703.rds")
 
-file.treatment.cascade.prop.participants.vl200 <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_estimates_vl200_221208.csv")
-file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_estimates_vl200_221208.csv")
-file.treatment.cascade.prop.participants.vl200.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_posterior_samples_vl200_221208.rds")
-file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_221208.rds")
+file.selfreportedart <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_230703.rds")
+file.selfreportedart.newly <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_newlyregistered_230703.rds")
 
-file.treatment.cascade.population <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_population_estimates_221208.csv")
-file.treatment.cascade <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_population_posterior_samples_221208.rds")
+file.selfreportedart.vl200 <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_vl200_230703.rds")
+file.selfreportedart.newly.vl200 <- file.path(dir.zenodo.survfin, "RCCS_art_posterior_samples_newlyregistered_vl200_230703.rds")
 
-file.unsuppressed.share <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_share_sex_221208.csv")
-file.unsuppressed_rate_ratio <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_ratio_sex_221208.csv")
-file.prevalence.share <- file.path(dir.zenodo.survproc, "RCCS_prevalence_share_sex_221116.csv")
-file.unsuppressed_median_age <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_median_age_221208.csv")
-file.unsuppressed.agegroup <- file.path(dir.zenodo.survproc, "RCCS_propunsuppressed_age_group_221208.csv")
-file.prevalence.agegroup <- file.path(dir.zenodo.survproc, "RCCS_prevalence_age_group_221116.csv")
+file.treatment.cascade.prop.participants <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_estimates_230703.csv")
+file.treatment.cascade.prop.nonparticipants <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_estimates_230703.csv")
+file.treatment.cascade.prop.participants.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_posterior_samples_230703.rds")
+file.treatment.cascade.prop.nonparticipants.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_posterior_samples_230703.rds")
+
+file.treatment.cascade.prop.participants.vl200 <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_estimates_vl200_230703.csv")
+file.treatment.cascade.prop.nonparticipants.vl200 <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_estimates_vl200_230703.csv")
+file.treatment.cascade.prop.participants.vl200.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_participants_posterior_samples_vl200_230703.rds")
+file.treatment.cascade.prop.nonparticipants.vl200.samples <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_nonparticipants_posterior_samples_vl200_230703.rds")
+
+file.treatment.cascade.population <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_population_estimates_230703.csv")
+file.treatment.cascade <- file.path(dir.zenodo.survfin, "RCCS_treatment_cascade_population_posterior_samples_230703.rds")
+
+# file.unsuppressed.share <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_share_sex_221208.csv")
+# file.unsuppressed_rate_ratio <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_ratio_sex_221208.csv")
+# file.prevalence.share <- file.path(dir.zenodo.survproc, "RCCS_prevalence_share_sex_221116.csv")
+# file.unsuppressed_median_age <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_median_age_221208.csv")
+# file.unsuppressed.agegroup <- file.path(dir.zenodo.survproc, "RCCS_propunsuppressed_age_group_221208.csv")
+# file.prevalence.agegroup <- file.path(dir.zenodo.survproc, "RCCS_prevalence_age_group_221116.csv")
+
+file.unsuppressed.share <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_share_sex_230703.csv")
+file.unsuppressed_rate_ratio <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_ratio_sex_230703.csv")
+file.prevalence.share <- file.path(dir.zenodo.survproc, "RCCS_prevalence_share_sex_230703.csv")
+file.unsuppressed_median_age <- file.path(dir.zenodo.survproc, "RCCS_unsuppressed_median_age_230703.csv")
+file.unsuppressed.agegroup <- file.path(dir.zenodo.survproc, "RCCS_propunsuppressed_age_group_230703.csv")
+file.prevalence.agegroup <- file.path(dir.zenodo.survproc, "RCCS_prevalence_age_group_230703.csv")
 
 ##########################################
 # OUTPUTS GENERATE IN transmission/flows #

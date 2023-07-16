@@ -64,7 +64,7 @@ if(1){
     scale_x_continuous(expand = c(0,0))+ 
     scale_fill_manual(values = c('#90B77D', '#425F57'), 
                       labels = c('Reported ART use', 'Did not report ART use')) 
-  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_221208_vl200.pdf')), w=7, h=9)
+  ggsave(p, file=file.path(outdir, paste0('count_selfreportedart_by_gender_loc_age_230703_vl200.pdf')), w=7, h=9)
   
 }
 
@@ -139,7 +139,7 @@ for(round in c("R015", 'R016', 'R017', 'R018')){
   
   # run and save model
   fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_vl200_221208.rds')
+  filename <- paste0('art_gp_stanfit_round',gsub('R0', '', round),'_vl200_230703.rds')
   if( ! file.exists(filename) | config$overwrite.existing.files )
   {
     saveRDS(fit, file=file.path(outdir,filename))
@@ -314,7 +314,7 @@ if(! file.exists(file.name) | config$overwrite.existing.files )
 }
 
 # stats
-file.name <- file.path(outdir, 'RCCS_art_model_fit_vl200_221208.RDS')
+file.name <- file.path(outdir, 'RCCS_art_model_fit_vl200_230703.RDS')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
     cat("Saving file:", file.name, '\n')

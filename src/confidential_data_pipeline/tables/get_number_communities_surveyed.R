@@ -17,30 +17,35 @@ if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
 file.exists(c(
   file.community.keys ,
   file.community.keys.aggregated,
-  file.path.quest ))  |> all() |> stopifnot()
+  file.path.quest,
+  file.path.metadata))  |> all() |> stopifnot()
 
 # load files
 community.keys <- fread(file.community.keys)
 quest <- fread(file.path.quest)
 community.aggregated <- fread(file.community.keys.aggregated)
+meta_data <- fread(file.path.metadata)
 
 # find community location
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 quest <- merge(quest, community.keys, by.x = 'comm_num', by.y = 'COMM_NUM_RAW')
+meta_data <- merge(meta_data[round == 14] , community.keys, by.x = 'community_number', by.y = 'COMM_NUM_RAW')
+
+# combine
+setnames(meta_data, 'community_number', 'comm_num')
+meta_data[, round := paste0('R0', round)]
 
 # subset to inland
-inlcom <- quest[comm == 'inland']
+tmp <- rbind(quest[, .(comm_num, comm, round)], meta_data[, .(comm_num, comm, round)])
+inlcom <- tmp[comm == 'inland']
 
 # find communities by round
 inlcom <- inlcom[, list(COMM_NUM = sort(unique(comm_num))), by= 'round']
 inlcom <- inlcom[round != 'R015S']
 
 # find communities new id
-community.aggregated[grepl('i-', comm_id)][, table(comm_id)]
-community.aggregated[comm_id=='i-20']
 inlcom <- merge(inlcom, community.aggregated, by.x = 'COMM_NUM', by.y = 'comm_num')
 community.aggregated[!comm_num %in% inlcom[, COMM_NUM]]
-community.aggregated
 
 inlcom[, list(N_COMM = uniqueN(COMM_NUM))]
 

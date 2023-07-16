@@ -74,7 +74,7 @@ if (1) {
 
   save_path <- file.path(
      outdir,
-    "count_selfreportedart_by_gender_loc_age_newlyregistered_221208.pdf"
+    "count_selfreportedart_by_gender_loc_age_newlyregistered_230703.pdf"
   )
   ggsave(p, file = save_path, w = 7, h = 9)
 }
@@ -173,7 +173,7 @@ for (r in rounds) {
   )
   filename <- paste0("art_gp_stanfit_round",
                      gsub("R0", "", r),
-                     "_newlyregistered_221208.rds")
+                     "_newlyregistered_230703.rds")
   saveRDS(fit, file = file.path(outdir, filename))
 }
 
@@ -213,7 +213,7 @@ for (i in seq_along(rounds)) {
   filename <- paste0(
     "art_gp_stanfit_round",
     round,
-    "_newlyregistered_221208.rds"
+    "_newlyregistered_230703.rds"
   )
 
   fit <- readRDS(file.path(outdir, filename))
@@ -399,7 +399,7 @@ if (!file.exists(file.name) || config$overwrite.existing.files) {
 }
 
 # stats
-file.name <- file.path(outdir, "RCCS_art_model_fit_newlyregistered_221208.RDS")
+file.name <- file.path(outdir, "RCCS_art_model_fit_newlyregistered_230703.RDS")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")

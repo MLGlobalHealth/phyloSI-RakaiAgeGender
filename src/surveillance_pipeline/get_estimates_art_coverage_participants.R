@@ -74,7 +74,7 @@ if (1) {
                       labels = c("Reported ART use", "Did not report ART use"))
   ggsave(p,
          file = file.path(outdir,
-                          "count_selfreportedart_by_gender_loc_age_221208.pdf"),
+                          "count_selfreportedart_by_gender_loc_age_230703.pdf"),
          w = 7, h = 9)
 }
 
@@ -171,7 +171,7 @@ for (r in rounds) {
 
   filename <- paste0("art_gp_stanfit_round",
                      gsub("R0", "", r),
-                     "_221208.rds")
+                     "_230703.rds")
   filename <- file.path(outdir, filename)
 
   if (! file.exists(filename) || config$overwrite.existing.files) {
@@ -219,7 +219,7 @@ for (i in seq_along(rounds)) {
   x_predict <- seq(rart[, min(AGE_LABEL)], rart[, max(AGE_LABEL) + 1], 0.5)
 
   # load samples
-  filename <- paste0("art_gp_stanfit_round", r, "_221208.rds")
+  filename <- paste0("art_gp_stanfit_round", r, "_230703.rds")
   fit <- readRDS(file.path(outdir, filename))
   re <- rstan::extract(fit)
 
@@ -414,7 +414,7 @@ if (!file.exists(file.name) || config$overwrite.existing.files) {
 }
 
 # stats
-file.name <- file.path(outdir, paste0("RCCS_art_model_fit_221208.RDS"))
+file.name <- file.path(outdir, paste0("RCCS_art_model_fit_230703.RDS"))
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")

@@ -9,14 +9,16 @@ library(here)
 gitdir <- here()
 source(file.path(gitdir, "config.R"))
 
-c(  file.community.keys,
-    file.path.flow.614,
-    file.path.flow) |> file.exists() |> all() |> stopifnot()
+c(  file.path.flow.614,
+    file.path.flow_914,
+    file.path.flow, 
+    file.community.keys) |> file.exists() |> all() |> stopifnot()
 
 # load files
-flow <- fread(file.path.flow)
-flow.14<-as.data.table(read_dta(file.path.flow.614))
-community.keys <- fread(file.community.keys)
+flow <- fread(file.path.flow) # round >= 15
+flow.14 <- as.data.table(read.csv(file.path.flow_914)) # round 14
+flow.13<-as.data.table(read_dta(file.path.flow.614)) # round < 14
+community.keys <- as.data.table(read.csv(file.community.keys))
 
 # path to save intermediary results that are not saved on Zenodo 
 outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligible_count_by_gender_loc_age')
@@ -26,9 +28,16 @@ outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'census_eligibl
 # combine flow across rounds
 # 
 
-# up until round 14
+# up until round 13
+flow.13 <- select(flow.13, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', 'sex', 'round', 'curr_id'))
+flow.13 <- flow.13[!round %in% paste0('R0', 15:18) & round != 'R014']
+flow.13[, curr_id := format(curr_id, scientific=F)]
+
+# round 14
+setnames(flow.14, 'comm', 'comm_num')
+setnames(flow.14, 'currid', 'curr_id')
+flow.14 <- flow.14[round == 'R014']
 flow.14 <- select(flow.14, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', 'sex', 'round', 'curr_id'))
-flow.14 <- flow.14[!round %in% paste0('R0', 15:18)]
 flow.14[, curr_id := format(curr_id, scientific=F)]
 
 # round 15 to 18
@@ -36,6 +45,7 @@ flow <- select(flow, c('comm_num', 'locate1', 'locate2', 'resident', 'ageyrs', '
 flow[, curr_id := format(curr_id, scientific=F)]
 
 # merge
+flow.14 <- rbind(flow.13, flow.14)
 flow <- rbind(flow, flow.14)
 
 #
@@ -175,7 +185,7 @@ if( !file.exists(file.name))
   cat('\n Careful: This data should already exist exist in ', file.name  )
   cat('\n check that your Zenodo path is correctly specified in config.R ' )
   cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
-  #  write.csv(ncen, file , row.names = F)
+  #  write.csv(ncen, file.name , row.names = F)
 }else{
   cat('\n Output file', file.name,'already exists.\n')
 }

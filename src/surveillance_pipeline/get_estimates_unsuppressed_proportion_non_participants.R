@@ -146,14 +146,14 @@ for (r in 15:18) {
   fit <- sampling(
     stan_model,
     data = stan_data,
-    iter = 10e3,
+    iter = 60e3,
     warmup = 5e2,
     chains = 1,
     control = list(max_treedepth = 15, adapt_delta = 0.999)
   )
 
   filename <- paste0(
-    "220729f_notsuppAmongInfected_gp_stan_round",
+    "230703_notsuppAmongInfected_gp_stan_round",
     r,
     "_vl_1000_newlyregistered.rds"
   )
@@ -181,7 +181,7 @@ for (i in seq_along(rounds)) {
 
   # load samples
   filename <- paste0(
-    "220729f_notsuppAmongInfected_gp_stan_round",
+    "230703_notsuppAmongInfected_gp_stan_round",
     round,
     "_vl_1000_newlyregistered.rds"
   )
@@ -364,7 +364,7 @@ if (!file.exists(file.name) || config$overwrite.existing.files) {
 }
 
 # stats
-file.name <- file.path(outdir, "RCCS_nonsuppressed_proportion_model_fit_newlyregistered_221101.rds")
+file.name <- file.path(outdir, "RCCS_nonsuppressed_proportion_model_fit_newlyregistered_230703.rds")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")

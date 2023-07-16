@@ -171,7 +171,7 @@ for (round in rounds) {
 
   file.name <- paste0("hivprevalence_gp_stanfit_round",
                      gsub("R0", "", round),
-                     "_221116.rds")
+                     "_230703.rds")
   file.name <- file.path(outdir, file.name)
   saveRDS(fit, file = file.name)
 }
@@ -190,7 +190,7 @@ for (i in seq_along(rounds)) {
   x_predict <- seq(rprev[, min(AGE_LABEL)], rprev[, max(AGE_LABEL) + 1], 0.5)
 
   # load samples
-  filename <- paste0("hivprevalence_gp_stanfit_round", round, "_221116.rds")
+  filename <- paste0("hivprevalence_gp_stanfit_round", round, "_230703.rds")
   fit <- readRDS(file.path(outdir, filename))
   re <- rstan::extract(fit)
 
@@ -376,7 +376,7 @@ ggplot(tmp[COMM == "inland"], aes(x = AGEYRS)) +
          color = guide_legend(order = 3), fill = guide_legend(order = 3))
 
 ggsave(
-  file = file.path(outdir, "smooth_predicted_prevalence_221116.png"),
+  file = file.path(outdir, "smooth_predicted_prevalence_230703.png"),
   w = 5,
   h = 10
 )
@@ -417,7 +417,7 @@ ggplot(tmp[COMM == "inland"], aes(x = AGEYRS)) +
          color = guide_legend(order = 3), fill = guide_legend(order = 3)) + reqs
 
 ggsave(
-  file = file.path(outdir, "smooth_estimated_prevalence_221116.pdf"),
+  file = file.path(outdir, "smooth_estimated_prevalence_230703.pdf"),
   w = 7,
   h = 7
 )
@@ -466,7 +466,7 @@ if (!file.exists(file.name) || config$overwrite.existing.files) {
 }
 
 # stats
-file.name <- file.path(outdir,"RCCS_prevalence_model_fit_convergence_221116.RDS")
+file.name <- file.path(outdir,"RCCS_prevalence_model_fit_convergence_230703.RDS")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")

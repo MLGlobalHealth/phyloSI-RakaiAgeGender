@@ -152,7 +152,7 @@ if( !file.exists(file.name))
   cat('\n Careful: This data should already exist exist in ', file.name  )
   cat('\n check that your Zenodo path is correctly specified in config.R ' )
   cat('\nIf you wish to proceed, and save this file anyway run the commented line below')
-  #  write.csv(vla, , row.names = F)
+  #  write.csv(vla, file.name, row.names = F)
 }else{
   cat('\n Output file', file.name,'already exists.\n')
 }

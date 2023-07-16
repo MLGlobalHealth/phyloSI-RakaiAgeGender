@@ -114,8 +114,8 @@ for(round in 15:18){
   stan.model <- stan_model(path_stan_binomialgp, model_name='gp_all')	
   
   # run and save model
-  fit <- sampling(stan.model, data=stan.data, iter=10e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_200_newlyregistered.rds')
+  fit <- sampling(stan.model, data=stan.data, iter=25e3, warmup=5e2, chains=1, control = list(max_treedepth= 15, adapt_delta= 0.999))
+  filename <- paste0( '230703_notsuppAmongInfected_gp_stan_round',round,'_vl_200_newlyregistered.rds')
   filename <- file.path(outdir, filename)
   if( ! file.exists(filename) | config$overwrite.existing.files )
   {
@@ -144,7 +144,7 @@ for(i in seq_along(rounds)){
   x_predict <- seq(vla[, min(AGE_LABEL)], vla[, max(AGE_LABEL)+1], 0.5)
   
   # load samples
-  filename <- paste0( '220729f_notsuppAmongInfected_gp_stan_round',round,'_vl_200_newlyregistered.rds')
+  filename <- paste0( '230703_notsuppAmongInfected_gp_stan_round',round,'_vl_200_newlyregistered.rds')
   fit <- readRDS(file.path(outdir,filename))
   re <- rstan::extract(fit)
   
@@ -285,7 +285,7 @@ if(! file.exists(file.name) | config$overwrite.existing.files)
 }
 
 # stats
-file.name <- file.path(outdir, 'RCCS_nonsuppressed_proportion_model_fit_newlyregistered_vl200_221121.RDS')
+file.name <- file.path(outdir, 'RCCS_nonsuppressed_proportion_model_fit_newlyregistered_vl200_230703.RDS')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
     cat("Saving file:", file.name, '\n')

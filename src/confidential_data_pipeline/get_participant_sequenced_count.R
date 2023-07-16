@@ -53,10 +53,6 @@ meta_data[, HIV := ifelse(is.na(firstposvd), 'N', 'P')]
 # set sample date to hiv test if missing
 meta_data[is.na(sample_date) & !is.na(round), sample_date := firstposvd]
 
-# subset round 14 to 30 continuously surveyed communities
-idr14not30comm <- meta_data[(round=='14' & !COMM %in% c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754)), unique(study_id)]
-meta_data <- meta_data[!(round=='14' & !COMM %in% c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754))]
-
 # keep variable of interest
 meta_data[, round := paste0('R0', round)]
 colnames(meta_data) <- toupper(colnames(meta_data))
@@ -155,8 +151,7 @@ dinfo <- dinfo[!pt_id %in% neuro.metadata[, paste0('RK-', studyid)]]
 hivs[, pt_id := paste0('RK-', STUDY_ID)]
 dm <- merge(dinfo, hivs, by = c('pt_id'))
 colnames(dm) <- toupper(colnames(dm))
-# stopifnot(dm[, length(unique(pt_id))] == dinfo[, length(unique(pt_id))])
-stopifnot(all(dinfo[!pt_id %in% dm[, unique(PT_ID)], pt_id] %in% paste0('RK-',idr14not30comm)))
+stopifnot(dm[, length(unique(pt_id))] == dinfo[, length(unique(pt_id))])
 
 # keep sequences which meet minimum criteria
 load(infile.seq.criteria)

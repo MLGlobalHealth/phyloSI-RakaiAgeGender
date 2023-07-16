@@ -12,16 +12,12 @@ source(file.path(gitdir, "config.R"))
 
 # make sure all files exist
 file.exists(c(
-    file.community.keys ,
     file.path.hiv.1518 ,
     file.path.quest.1518 ,
     file.path.quest.16 ,
     file.path.hiv.614 ,
     file.path.quest.614 ,
     file.path.update.first.positive))  |> all() |> stopifnot()
-
-# load community keys files
-community.keys <- fread(file.community.keys)
 
 
 ################################
@@ -60,14 +56,24 @@ quest[, range(ageyrs)]
 # remove unecessary column
 set(quest, NULL, c('birthdat2', 'birthdat'), NULL)
 
-# load datasets round 10-14 
-quest.14<-as.data.table(read_dta(file.path.quest.614))
+# load datasets round 10-13
+quest.13<-as.data.table(read_dta(file.path.quest.614))
+quest.13 <- quest.13[, .(round, study_id, ageyrs, sex, comm_num, intdate, arvmed, cuarvmed)]
+quest.13 <- quest.13[!round %in% paste0('R0', 15:18) & round != 'R014']
+quest.13[, intdate := as.Date(intdate)]
+
+# load round 14
+quest.14<-as.data.table(read.csv(file.quest_R09_R14))
+quest.14 <- quest.14[round == 'R014']
+quest.14[, intdate := as.Date(int_date, '%d/%m/%Y')]
+quest.14[, cuarvmed := arvmed] # for now
 quest.14 <- quest.14[, .(round, study_id, ageyrs, sex, comm_num, intdate, arvmed, cuarvmed)]
-quest.14 <- quest.14[!round %in% paste0('R0', 15:18)]
-quest.14[, intdate := as.Date(intdate)]
+quest.14[study_id == 'D060688', ageyrs := 40]# fix mistake in round 14 about the age of one participant -- note that this mistake is not in file.path.quest.614
 
 # merge to 10-14 
+quest.14 <- rbind(quest.14, quest.13)
 quest <- rbind(quest.14, quest)
+quest[, table(round)]
 
 # `save
 file.name <- file.path.quest
@@ -87,19 +93,29 @@ cat("\n Done \n")
 
 ################################
 
-# load datasets round 10-14 
-hiv.14<-as.data.table(read_dta(file.path.hiv.614))
-hiv.14 <- hiv.14[, .(study_id, round, hiv, intdate)]
-setnames(hiv.14, 'intdate', 'hivdate')
-hiv.14 <- hiv.14[!round %in% paste0('R0', 15:18)]
+# load datasets round 10-13
+hiv.13<-as.data.table(read_dta(file.path.hiv.614))
+hiv.13 <- hiv.13[, .(study_id, round, hiv, intdate)]
+setnames(hiv.13, 'intdate', 'hivdate')
+hiv.13 <- hiv.13[!round %in% paste0('R0', 15:18) & round != 'R014']
+hiv.13[, hivdate := as.Date(hivdate)]
+
+# load datasets round 14
+hiv.14<-as.data.table(read.csv(file.hiv_R09_R14))
+hiv.14 <- hiv.14[, .(study_id, round, hiv, hivdate)]
+hiv.14 <- hiv.14[round == 'R014']
 hiv.14[, hivdate := as.Date(hivdate)]
 
 # load datasets ROUND 15 TO 18
 hiv <- as.data.table(read.csv(file.path.hiv.1518))
 hiv <- hiv[, .(study_id, round, hiv, hivdate)]
 hiv[, hivdate := as.Date(hivdate, format = '%d-%B-%y')]
+
+# combine
+hiv.14 <- rbind(hiv.13, hiv.14)
 hiv <- rbind(hiv.14, hiv)
 hiv[, round := gsub(' ', '', round)] # remove space in string
+hiv[, table(round)]
 
 # add last update on infected by joseph
 hiv.update <- as.data.table(read.csv(file.path.update.first.positive))
