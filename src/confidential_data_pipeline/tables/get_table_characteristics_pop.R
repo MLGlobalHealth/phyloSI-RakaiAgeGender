@@ -40,6 +40,8 @@ df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 10:18)),
 # community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 
+# format number
+comma_thousands <- function(x) format(x, big.mark=",")
 
 ###############################################
 
@@ -187,7 +189,7 @@ census <- merge(census, df_round, by = c('COMM', 'ROUND'))
 
 # find participant across rounds
 tmp <- merge(rincp, df_round, by = c('COMM', 'ROUND'))
-part <- tmp[ , list(PARTICIPANT = length(unique(STUDY_ID))), by = c('COMM')]
+part <- tmp[ , list(PARTICIPANT = comma_thousands(length(unique(STUDY_ID)))), by = c('COMM')]
 part <- part[COMM == 'inland']
 
 # save
@@ -412,7 +414,6 @@ stopifnot(nrow(tab[HIV  < as.numeric(SEQUENCE) & COMM == 'inland']) == 0)
 stopifnot(nrow(tab[HIV  < as.numeric(INFECTED_TESTED) ]) == 0)
 
 # add comma thousands separator
-comma_thousands <- function(x) format(x, big.mark=",")
 tab[, ELIGIBLE := comma_thousands(ELIGIBLE)]
 tab[, PARTICIPANT := comma_thousands(PARTICIPANT)]
 tab[, HIV := comma_thousands(HIV)]
