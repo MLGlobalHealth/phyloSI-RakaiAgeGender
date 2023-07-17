@@ -639,13 +639,14 @@ save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df
   comma_thousands <- function(x) format(x, big.mark=",")
   
   # number of participants
-  # RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)[round %in% 5:13]$research_id)
   RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)$research_id)
   stats$N = comma_thousands(length(RESEARCH_IDS))
   
-  # number of participants followed up
-  stats$N_FOLLOWUP <- comma_thousands(as.data.table(status_df)[research_id %in% RESEARCH_IDS & (cohortclass=="Serially negative" | cohortclass== "Seroconversion"), length(unique(research_id))])
-  
+  # number of participants followed up in round 10 to 18
+  verified_ids_r1018 <- unique(gsub('(.+)\\:.*', '\\1', verified_visit_ids_r1018))
+  RESEARCH_IDS1018 <- RESEARCH_IDS[RESEARCH_IDS %in% verified_ids_r1018]
+  stats$N_FOLLOWUP <- comma_thousands(as.data.table(status_df)[research_id %in% RESEARCH_IDS1018 & (cohortclass=="Serially negative" | cohortclass== "Seroconversion"), length(unique(research_id))])
+
   # proportion of seroconvert participants with missed visits
   df_missed_visits <- unique(select(hivstatus_vlcopies_1_inc, c('research_id', 'number_missing_visits')))
   tmp <- merge(status_df, df_missed_visits, by = 'research_id')
