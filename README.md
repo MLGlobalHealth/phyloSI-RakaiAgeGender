@@ -114,18 +114,18 @@ Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
 
 # Phylogenetic linkage and direction scores
 # Note: using pre-generated deep-sequence phylogenies 
-Rscript ./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER
+Rscript "./phylo_pipeline_src/find_chains_from_phylogenetics.R" --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER
 
 # Refine time since infection estimates for source-recipient pairs
 # Note: using randomized data
-Rscript ./scripts_for_confidential_data/get_infection_dates_for_phylopairs.R --confidential FALSE
+Rscript "./scripts_for_confidential_data/get_infection_dates_for_phylopairs.R" --confidential FALSE
 ```
 
 #### Main analysis 
 To run the age-specific HIV incidence rates analysis, run: 
 ```shell
 cd phyloSI-RakaiAgeGender
-$ Rscript scripts/run_incidence_rates_estimation.R
+Rscript "./scripts/run_incidence_rates_estimation.R"
 ```
 
 For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. Set the **absolute path** to the output directory where the results should be stored in **line 7** of `phyloSI-RakaiAgeGender-run_phyloflows-laptop.sh`: 
@@ -140,7 +140,8 @@ $ bash phyloSI-RakaiAgeGender-run_phyloflows-laptop.sh
 
 This script will create two shell scripts, which you will need to execute one after the other:
 ```bash
-$ source activate phyloSI-RakaiAgeGender
-$ cd $OUTDIR
-$ bash bash_gp_220108-cutoff_2014.sh
-$ bash bash_gp_220108-cutoff_2014-postprocessing.sh
+source activate phyloSI-RakaiAgeGender
+cd $OUTDIR
+bash bash_gp_220108-cutoff_2014.sh
+bash bash_gp_220108-cutoff_2014-postprocessing.sh
+```
