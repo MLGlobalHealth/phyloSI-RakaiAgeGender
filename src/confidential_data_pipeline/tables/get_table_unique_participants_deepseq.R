@@ -5,6 +5,7 @@ library(scales)
 library(lubridate)
 library(rstan)
 library(haven)
+library(here)
 
 # directory of the repository
 gitdir <- here()
@@ -13,7 +14,7 @@ gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
 # outdir for figs
-if(usr == 'alex' || usr == 'melodiemonod'){
+if(usr == 'alexb' || usr == 'melodiemonod'){
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 }
 
@@ -63,6 +64,9 @@ meta_data[LakeVictoria_FishingCommunity == 'yes', COMM := 'fishing']
 
 # find hiv status
 meta_data[, HIV := ifelse(is.na(firstposvd), 'N', 'P')]
+
+# subset round 14 to 30 continuously surveyed communities
+meta_data <- meta_data[!(round=='14' & !COMM %in% c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754))]
 
 # find art use
 meta_data[, ART := artslfuse == 'yes']

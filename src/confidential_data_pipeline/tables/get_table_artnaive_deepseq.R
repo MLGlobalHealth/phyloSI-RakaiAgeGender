@@ -70,6 +70,9 @@ meta_data[LakeVictoria_FishingCommunity == 'yes', COMM := 'fishing']
 # find hiv status
 meta_data[, HIV := ifelse(is.na(firstposvd), 'N', 'P')]
 
+# subset round 14 to 30 continuously surveyed communities
+meta_data <- meta_data[!(round=='14' & !COMM %in% c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754))]
+
 # find art use
 meta_data[, ART := artslfuse == 'yes']
 
@@ -357,10 +360,6 @@ if(! file.exists(file.name) | config$overwrite.existing.files )
 }
 
 
-print(tab_latex, 
-    include.rownames=FALSE,
-    comment=FALSE)
-
 # if we want to split them
 file.name <- file.path(outdir, 'table_proportionART_eventuallysequenced_part1.tex')
 if(! file.exists(file.name) | config$overwrite.existing.files )
@@ -375,7 +374,7 @@ file.name <- file.path(outdir, 'table_proportionART_eventuallysequenced_part2.te
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
   cat("Saving file:", file.name, '\n')
-  write.to.tex(tab2[((.N/2)+1):.N],filename2)
+  write.to.tex(tab2[((.N/2)+1):.N],file.name)
 }else{
   cat("File:", file.name, "already exists...\n")
 }

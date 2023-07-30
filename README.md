@@ -67,93 +67,81 @@ for UNIX, please use
 ```shell
 bash phyloSI-RakaiAgeGender-install.sh
 ```
-for MacOS Apple M1 chip, please use
-```Shell
-bash phyloSI-RakaiAgeGender-install-macosM1.sh
-```
 If not activated, activate the environment for use:
 ```shell
 source activate phyloSI-RakaiAgeGender
 ```
 
 ### Reproducing our Analyses
-We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout.
+We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout. Please download the data from TODO-ZENODO.
 
-Our main analyses depend on estimates of population sizes, HIV prevalence, and HIV suppression, as well as outputs from two phylogenetic analyses: one to estimate the 'time since infection', and the other to detect source-recipient pairs.
+To perform all data pre-processing and analysis, navigate to the root directory of the repository and enter the data directory (downloaded from Zenodo) in line 20 in `config.R`. The script `config.R` is sourced internally by other scripts so that all file locations are as required.
 
-To perform the data pre-processing and analysis, navigate to the root directory of the repository and follow the instructions in the next sections.
+#### Pre-processing steps
+
+Our main analyses depend on estimates of population sizes, HIV prevalence, and HIV suppression, as well as outputs from phylogenetic reconstructions of source-recipient pairs and estimates of the 'time since infection'.
+
+Several of the pre-processing code for the surveillance requires the running of computationally demanding Stan models which may take more than 24 hours to finish on a standard laptop computer. We provide summarized outputs in the Zenodo directory for all pre-processing steps and users may skip directly to the main analysis.
 
 > **Note** Some scripts will generate figures and other output that is saved in a separate directory outside the repository under `phyloSI-RakaiAgeGender-outputs`. Detailed flowcharts of how data read and written by each R script can be found in `docs/README.md`.
 
-#### RCCS Surveillance Analyses
-> **Warning** **(Please read)** Several of the pre-processing code for the surveillance requires the running of computationally demanding Stan models which may take more than 24 hours to finish on a standard laptop computer. We provide summarized outputs for all Stan models and recommend users to skip Stage 1 and proceed directly to Stage 2. To run the full data pre-processing step, execute both Stage 1 and Stage 2.
+> **Note** Runtime arguments for Stan models may be configured by editing the contents of `./stan_models/binomial_gp_config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
 
 > **Note** Runtime arguments for Stan models may be configured by editing the contents of `./stan_models/binomial_gp_config.yml`. If your computer has suffcient RAM, we recommend running 4 chains with 4 cores with sampling iterations of 2000 for each chain to reduce Stan runtime.
 
-##### Estimate HIV status and prevalence
-```shell
-Rscript "./surveillance_pipeline_src/get_estimates_prevalence.R"
-```
+> **Note** Deep-sequence phylogenetic trees are time consuming to generate, and provided as part of the data directory. These were generated using an in-house pipeline.  
 
-##### Estimate ART use
+> **Note** Phylogenetic time since infection estimates were obtained using the [HIV-phylo-TSI algorithm](https://github.com/BDI-pathogens/HIV-phyloTSI). Phylo-TSI estimates were refined using exact patient meta-data that are only available upon reasonable request to RHSP. We provide the outputs in the `data` directory. We share randomized versions of the data that are suffixed by `randomized`. Note using these randomised versions of the data will not exactly reproduce our analyses.
+
+To run the full data pre-processing steps:
+
 ```shell
+# Estimate HIV status and prevalence
+Rscript "./surveillance_pipeline_src/get_estimates_prevalence.R"
+
+# Estimate ART use
 Rscript "./surveillance_pipeline_src/get_estimates_art_coverage_participants.R"
 Rscript "./surveillance_pipeline_src/get_estimates_art_coverage_non_participants.R"
-```
 
-##### Estimate viral suppresion
-```shell
+# Estimate viral suppresion
 Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_participants.R"
 Rscript "./surveillance_pipeline_src/get_estimates_unsuppressed_proportion_non_participants.R"
-```
 
-##### Estimate treatment cascade
-```shell
+# Estimate treatment cascade
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_participants.R"
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_non_participants.R"
 Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
+
+# Phylogenetic linkage and direction scores
+# Note: using pre-generated deep-sequence phylogenies 
+Rscript "./phylo_pipeline_src/find_chains_from_phylogenetics.R" --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER
+
+# Refine time since infection estimates for source-recipient pairs
+# Note: using randomized data
+Rscript "./scripts_for_confidential_data/get_infection_dates_for_phylopairs.R" --confidential FALSE
 ```
 
-#### Phylogenetic Analyses
-The deep-sequence phylogenetic time since infection estimates were refined using exact patient meta-data that we do not share, and instead we provide the outputs in the `data` directory.  
-
-To reproduce our analyses in part, we share randomized versions of the data that are suffixed by `randomized`. Use these as shown below in combination with the deep-sequence phylogenetic data from the Zenodo repository:
-```shell
-# get linkage and direction scores
-Rscript ./phylo_pipeline_src/find_chains_from_phylogenetics.R --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER
-# refine time since infection estimates for source-recipient pairs
-Rscript ./scripts_for_confidential_data/get_infection_dates_for_phylopairs.R --confidential FALSE
-```
-
-The statistical models present in this repository are built on top of outputs from phylogenetic analyses.
-In particular, the same phylogenies as in [Xi et al.](https://doi.org/10.1111/rssc.12544) are used to obtain potential source-recipient pairs, and these can be found in our Zenodo data repository.
-Separate phylogenetic analyses were also performed to obtain individual-level estimates of time since infection using the [HIV-phylo-TSI algorithm](https://github.com/BDI-pathogens/HIV-phyloTSI) described in [Golubchik et al.](https://doi.org/10.1101/2022.05.15.22275117). The scripts to perform this analysis can be found in the subdirectory `phylo_pipeline_src`
-After the analyses were over, we were able to date transmission events as per the script `confidential_data_src/get_infection_dates_for_phylopairs.R`.
-
-#### Age-specific HIV incidence rates
+#### Main analysis 
 To run the age-specific HIV incidence rates analysis, run: 
 ```shell
 cd phyloSI-RakaiAgeGender
-$ Rscript scripts/run_incidence_rates_estimation.R
+Rscript "./scripts/run_incidence_rates_estimation.R"
 ```
 
-#### Transmission flows analysis
-For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. 
-
-Set the **absolute path** to the output directory where the results should be stored in **line 7** of `phyloSI-RakaiAgeGender-run_phyloflows-laptop.sh`: 
+For the transmission flows analysis, we provide a bash shell script that can be run on a laptop. Set the **absolute path** to the output directory where the results should be stored in **line 7** of `phyloSI-RakaiAgeGender-run_phyloflows-laptop.sh`: 
 ```bash
 OUTDIR="absolute/path/to/output/directory"
 ```
 
 Open up command line tools, cd into the repository, and run:
 ```bash
-$ source activate phyloSI-RakaiAgeGender
 $ bash phyloSI-RakaiAgeGender-run_phyloflows-laptop.sh
 ```
 
-This script will create two shell scripts, `bash_gp_220108-cutoff_2014.sh` and `bash_gp_220108-cutoff_2014-postprocessing.sh`, in the directory specified by `OUTDIR`. The first script, `bash_gp_220108-cutoff_2014.sh`, fits the age- and gender-specific phyloSI model to the Rakai data with Stan. The second script, `bash_gp_220108-cutoff_2014-postprocessing.sh`, performs diagnostic checks on the fitted model, creates posterior summaries, and generates figures. You will need to execute both scripts one after the other:
+This script will create two shell scripts, which you will need to execute one after the other:
 ```bash
-$ source activate phyloSI-RakaiAgeGender
-$ cd $OUTDIR
-$ bash bash_gp_220108-cutoff_2014.sh
-$ bash bash_gp_220108-cutoff_2014-postprocessing.sh
+source activate phyloSI-RakaiAgeGender
+cd $OUTDIR
+bash bash_gp_220108-cutoff_2014.sh
+bash bash_gp_220108-cutoff_2014-postprocessing.sh
+```

@@ -14,7 +14,7 @@ gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
 # outputs tables and figures
-if(usr == 'melodiemonod'||usr == 'alex'){
+if(usr == 'melodiemonod'||usr == 'alexb'){
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 }else{
   outdir #<- #TODO
@@ -40,6 +40,8 @@ df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 10:18)),
 # community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 
+# format number
+comma_thousands <- function(x) format(x, big.mark=",")
 
 ###############################################
 
@@ -71,6 +73,9 @@ meta_data[, HIV := ifelse(is.na(firstposvd), 'N', 'P')]
 
 # find art use
 meta_data[, ART := artslfuse == 'yes']
+
+# subset round 14 to 30 continuously surveyed communities
+meta_data <- meta_data[!(round=='14' & !COMM %in% c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754))]
 
 # keep variable of interest
 meta_data[, round := paste0('R0', round)]
@@ -182,7 +187,23 @@ census <- merge(census, df_round, by = c('COMM', 'ROUND'))
 
 #################################
 
-# find participant
+# find participant across rounds
+tmp <- merge(rincp, df_round, by = c('COMM', 'ROUND'))
+part <- tmp[ , list(PARTICIPANT = comma_thousands(length(unique(STUDY_ID)))), by = c('COMM')]
+part <- part[COMM == 'inland']
+
+# save
+file.name <- file.path(outdir, 'total_participants_230714.rds')
+if(! file.exists(file.name) | config$overwrite.existing.files )
+{
+  cat("Saving file:", file.name, '\n')
+  saveRDS(part, file.name)
+}else{
+  cat("File:", file.name, "already exists...\n")
+}
+
+# find participant by round
+
 part <- rincp[, list(PARTICIPANT = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')]
 part <- rbind(part, rincp[SEX == 'F', list(PARTICIPANT = .N,  TYPE = 'Female'), by = c('COMM', 'ROUND')])
 part <- rbind(part, rincp[SEX == 'M', list(PARTICIPANT = .N,  TYPE = 'Male'), by = c('COMM', 'ROUND')])
@@ -393,7 +414,6 @@ stopifnot(nrow(tab[HIV  < as.numeric(SEQUENCE) & COMM == 'inland']) == 0)
 stopifnot(nrow(tab[HIV  < as.numeric(INFECTED_TESTED) ]) == 0)
 
 # add comma thousands separator
-comma_thousands <- function(x) format(x, big.mark=",")
 tab[, ELIGIBLE := comma_thousands(ELIGIBLE)]
 tab[, PARTICIPANT := comma_thousands(PARTICIPANT)]
 tab[, HIV := comma_thousands(HIV)]
@@ -404,7 +424,7 @@ tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 
 # save
 tab <- tab[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
-file.name <- file.path(outdir, 'characteristics_study_population.rds')
+file.name <- file.path(outdir, 'characteristics_study_population_230710.rds')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
   cat("Saving file:", file.name, '\n')
@@ -412,6 +432,7 @@ if(! file.exists(file.name) | config$overwrite.existing.files )
 }else{
   cat("File:", file.name, "already exists...\n")
 }
+
 
 
 

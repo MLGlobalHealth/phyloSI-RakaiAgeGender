@@ -639,13 +639,14 @@ save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df
   comma_thousands <- function(x) format(x, big.mark=",")
   
   # number of participants
-  # RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)[round %in% 5:13]$research_id)
   RESEARCH_IDS <- unique(as.data.table(hivstatus_vlcopies_1_inc)$research_id)
   stats$N = comma_thousands(length(RESEARCH_IDS))
   
-  # number of participants followed up
-  stats$N_FOLLOWUP <- comma_thousands(as.data.table(status_df)[research_id %in% RESEARCH_IDS & (cohortclass=="Serially negative" | cohortclass== "Seroconversion"), length(unique(research_id))])
-  
+  # number of participants followed up in round 10 to 18
+  verified_ids_r1018 <- unique(gsub('(.+)\\:.*', '\\1', verified_visit_ids_r1018))
+  RESEARCH_IDS1018 <- RESEARCH_IDS[RESEARCH_IDS %in% verified_ids_r1018]
+  stats$N_FOLLOWUP <- comma_thousands(as.data.table(status_df)[research_id %in% RESEARCH_IDS1018 & (cohortclass=="Serially negative" | cohortclass== "Seroconversion"), length(unique(research_id))])
+
   # proportion of seroconvert participants with missed visits
   df_missed_visits <- unique(select(hivstatus_vlcopies_1_inc, c('research_id', 'number_missing_visits')))
   tmp <- merge(status_df, df_missed_visits, by = 'research_id')
@@ -655,22 +656,25 @@ save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df
   stats$TABLE_STATUS_SEROCONVERTED_PROP <- round(stats$TABLE_STATUS_SEROCONVERTED / sum(stats$TABLE_STATUS_SEROCONVERTED) * 100, 1)
   stats$TABLE_STATUS_SEROCONVERTED <- comma_thousands(stats$TABLE_STATUS_SEROCONVERTED)
   
-  
-  # number of followed-up participants by age group, sex and round
+  # subset serially negative or seroconvert 
   part <- as.data.table(hivstatus_vlcopies_1_inc)
   part[, age := floor(as.numeric(date-birthdate)/365.25)]
   part[age < 15, age := 15]; part[age > 49, age := 49] # discrepancies in age
   part <- unique(part[, list(age = min(age), sex = unique(sex), 
                              hivstatus_imputed = min(hivstatus_imputed),
                              missed_visit = is.na(visit_id)), by = c('research_id', 'round')])
+  .research_id <- as.data.table(status_df)[(cohortclass=="Serially negative" | cohortclass== "Seroconversion"), research_id]
+  part <- part[research_id %in% .research_id] # keep only serially negative or seroconvert
+  
+  # keep rounds before and on seroconversion
   df_ne <- unique(part[, .(research_id, hivstatus_imputed, round)])
   df_ne[, index_round_after_sero := 0] # round after seroconversion
   df_ne[hivstatus_imputed == 1, index_round_after_sero := 1:length(hivstatus_imputed), by = 'research_id']
   df_ne[, index_round := 1:length(round), by = 'research_id'] # index round observed
-  df_ne[, seroconvert_at_first_round := any(index_round == 1 & hivstatus_imputed == 1), by = 'research_id']
   part <- merge(part, df_ne, by = c('research_id', 'hivstatus_imputed', 'round'))
-  part1 <- part[seroconvert_at_first_round == F] # remove hivp at first round 
-  part2 <- part1[index_round_after_sero <= 1]   # keep rounds before and on seroconversion
+  part2 <- part[index_round_after_sero <= 1]    # keep rounds before and on seroconversion
+  
+  # number of followed-up participants by age group, sex and round
   df_age_aggregated <- data.table(age = 15:49, age_group = c(rep('15-24', 10),  rep("25-34", 10), rep("35-49", 15)))
   part2 <- merge(part2, df_age_aggregated, by = 'age')
   part_all <- part2[, list(N = length(unique(research_id))), by = c('round', 'age_group', 'sex')]
@@ -690,7 +694,7 @@ save_statistics_incidence_cohort <- function(hivstatus_vlcopies_1_inc, status_df
   tab[, sex := factor(sex, levels = c('Total', 'F', 'M'))]
   tab <- tab[order(round, sex, age_group)]
   tab <- tab[round %in%  df_round[visit >= 'R010' & visit <= 'R018', round_numeric]]
-
+  
   stats[['table']] <- tab
   
   return(stats)

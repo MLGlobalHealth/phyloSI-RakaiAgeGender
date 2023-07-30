@@ -50,9 +50,6 @@ source(file.path(gitdir.R.flow, 'postprocessing_statistics_functions.R'))
 fit <- readRDS(path.to.stan.output)
 samples <- rstan::extract(fit)
 
-# temporary
-unsuppressed_share <- fread(file.unsuppressed.share) # share of unsuppressed count by sex
-
 
 #
 # offset
