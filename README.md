@@ -114,7 +114,7 @@ Rscript "./surveillance_pipeline_src/get_treatment_cascade_population.R"
 
 # Phylogenetic linkage and direction scores
 # Note: using pre-generated deep-sequence phylogenies 
-Rscript "./phylo_pipeline_src/find_chains_from_phylogenetics.R" --confidential FALSE --phylo-pairs-dir $DATA_DIR_PHYLOSCANNER
+Rscript "./phylo_pipeline_src/find_chains_from_phylogenetics.R" --confidential FALSE
 
 # Refine time since infection estimates for source-recipient pairs
 # Note: using randomized data
