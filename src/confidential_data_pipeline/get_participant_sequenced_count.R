@@ -21,7 +21,7 @@ community.keys <- fread(file.community.keys)
 community.keys[, comm := fifelse(COMM_NUM_A %like% 'f', 'fishing', 'inland')]
 
 # rounds of interest
-df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 14:18)),
+df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 10:18)),
                   data.table(COMM = 'fishing', ROUND = paste0('R0', c(14, 15, '15S', 16:18))))
 
 
