@@ -215,7 +215,7 @@ file.name <- file.anonymised.id
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
-  write.csv(anonimized_id, file = file, row.names = FALSE)
+  write.csv(anonimized_id, file = file.name, row.names = FALSE)
 }else{
   cat("\n Output file", file.name, "already exists\n")
 }
