@@ -14,7 +14,7 @@ gitdir <- here()
 source(file.path(gitdir, 'config.R'))
 
 # outputs tables and figures
-if(usr == 'melodiemonod'||usr == 'alex'){
+if(usr == 'melodiemonod'||usr == 'alexb'){
   outdir <- file.path(indir.deepsequence_analyses, 'PANGEA2_RCCS', 'participants_count_by_gender_loc_age')
 }else{
   outdir #<- #TODO
@@ -40,6 +40,8 @@ df_round <- rbind(data.table(COMM = 'inland', ROUND = paste0('R0', 10:18)),
 # community
 community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] == 'f', 'fishing', 'inland'), by = 'COMM_NUM_A']
 
+# format number
+comma_thousands <- function(x) format(x, big.mark=",")
 
 ###############################################
 
@@ -168,7 +170,7 @@ eligible_count[, ROUND := paste0('R0', ROUND)]
 eligible_count <- merge(eligible_count, df_round, by = c('COMM', 'ROUND'))
 
 # find census eligible
-census <- eligible_count[, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH), ROUND = 'Total', TYPE = 'Total'), by = c('COMM')]
+census <- eligible_count[, list(ELIGIBLE = NA_integer_, ROUND = 'Total', TYPE = 'Total'), by = c('COMM')]
 census <- rbind(census, eligible_count[, list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Total'), by = c('COMM', 'ROUND')])
 census <- rbind(census, eligible_count[SEX == 'F', list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Female'), by = c('COMM', 'ROUND')])
 census <- rbind(census, eligible_count[SEX == 'M', list(ELIGIBLE = sum(ELIGIBLE_NOT_SMOOTH),  TYPE = 'Male'), by = c('COMM', 'ROUND')])
@@ -190,7 +192,7 @@ census <- rbind(census, eligible_count[SEX == 'M' & AGEYRS > 34, list(ELIGIBLE =
 rincp <- merge(rincp, df_round, by = c('COMM', 'ROUND'))
 
 # find participant
-part <- rincp[, list(PARTICIPANT = .N,  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
+part <- rincp[, list(PARTICIPANT = length(unique(STUDY_ID)),  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
 part <- rbind(part, rincp[, list(PARTICIPANT = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')])
 part <- rbind(part, rincp[SEX == 'F', list(PARTICIPANT = .N,  TYPE = 'Female'), by = c('COMM', 'ROUND')])
 part <- rbind(part, rincp[SEX == 'M', list(PARTICIPANT = .N,  TYPE = 'Male'), by = c('COMM', 'ROUND')])
@@ -210,14 +212,14 @@ part <- rbind(part, rincp[SEX == 'M' & AGEYRS > 34, list(PARTICIPANT = .N,  TYPE
 
 ########################################
 
-# keep only positive
-rprev <- hivs[, list(COUNT = sum(HIV == 'P')), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
-
 # keep round of interest
-rprev <- merge(rprev, df_round, by = c('COMM', 'ROUND'))
+hivss <- merge(hivs, df_round, by = c('COMM', 'ROUND'))
+
+# keep only positive
+rprev <- hivss[, list(COUNT = sum(HIV == 'P')), by = c('ROUND', 'SEX', 'COMM', 'AGEYRS')]
 
 # get hiv table
-hivp <- rprev[, list(HIV = sum(COUNT),  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
+hivp <- hivss[HIV == 'P', list(HIV = length(unique(STUDY_ID)),  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
 hivp <- rbind(hivp, rprev[, list(HIV = sum(COUNT),  TYPE = 'Total'), by = c('COMM', 'ROUND')])
 hivp <- rbind(hivp, rprev[SEX == 'F', list(HIV = sum(COUNT),  TYPE = 'Female'), by = c('COMM', 'ROUND')])
 hivp <- rbind(hivp, rprev[SEX == 'M', list(HIV = sum(COUNT),  TYPE = 'Male'), by = c('COMM', 'ROUND')])
@@ -243,7 +245,7 @@ sart <- hivs[HIV == 'P']
 sart <- merge(sart, df_round, by = c('COMM', 'ROUND'))
 
 # find participant
-sartp <- sart[ROUND != 'R010', list(SELF_REPORTED_ART = sum(ART == F),  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
+sartp <- sart[ROUND != 'R010' & ART == F, list(SELF_REPORTED_ART = length(unique(STUDY_ID)),  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
 sartp <- rbind(sartp, sart[, list(SELF_REPORTED_ART = sum(ART == F),  TYPE = 'Total'), by = c('COMM', 'ROUND')])
 sartp <- rbind(sartp, sart[SEX == 'F', list(SELF_REPORTED_ART = sum(ART== F),  TYPE = 'Female'), by = c('COMM', 'ROUND')])
 sartp <- rbind(sartp, sart[SEX == 'M', list(SELF_REPORTED_ART = sum(ART== F),  TYPE = 'Male'), by = c('COMM', 'ROUND')])
@@ -334,8 +336,22 @@ setnames(vla, 'FC', "COMM")
 # format round
 vla[, ROUND := paste0('R0', ROUND)]
 
+# get count across categoires
+vla_a <- as.data.table(expand.grid(FC=c('fishing','inland')))
+
+vla_a <- vla_a[, {		
+  z <- which( DT$FC==FC )	
+  list(N          = length(unique(DT[z, STUDY_ID])), # number of participants
+       HIV_N      = length(unique(DT[z,][HIV_STATUS==1, STUDY_ID])), # number of HIV+
+       VLNS_N     = length(unique(DT[z,][VLNS==1, STUDY_ID])), # number of unsuppressed from viral load
+       ARV_N      = length(unique(DT[z,][ARVMED==0 & HIV_STATUS == 1 & !is.na(ARVMED), STUDY_ID])) # number of unsuppressed from self-reporting
+  )				
+}, by=names(vla_a)]
+setnames(vla_a, 'FC', "COMM")
+
+
 # get unsuppressed table
-uns <- vla[, list(UNSUPPRESSED = sum(VLNS_N), INFECTED_TESTED = sum(HIV_N),  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
+uns <- vla_a[, list(UNSUPPRESSED = sum(VLNS_N), INFECTED_TESTED = sum(HIV_N),  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
 uns <- rbind(uns, vla[, list(UNSUPPRESSED = sum(VLNS_N), INFECTED_TESTED = sum(HIV_N),  TYPE = 'Total'), by = c('COMM', 'ROUND')])
 uns <- rbind(uns, vla[SEX == 'F', list(UNSUPPRESSED = sum(VLNS_N), INFECTED_TESTED = sum(HIV_N),  TYPE = 'Female'), by = c('COMM', 'ROUND')])
 uns <- rbind(uns, vla[SEX == 'M', list(UNSUPPRESSED = sum(VLNS_N), INFECTED_TESTED = sum(HIV_N),  TYPE = 'Male'), by = c('COMM', 'ROUND')])
@@ -370,7 +386,7 @@ semt <- semt[HIV == 'P']
 semt <- merge(semt, df_round, by = c('COMM', 'ROUND'))
 
 # get sequenced table
-seqs <- semt[, list(SEQUENCE = .N,  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
+seqs <- semt[, list(SEQUENCE = length(unique(STUDY_ID)),  TYPE = 'Total', ROUND = 'Total'), by = c('COMM')]
 seqs <- rbind(seqs, semt[, list(SEQUENCE = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')])
 seqs <- rbind(seqs, semt[SEX == 'F', list(SEQUENCE = .N,  TYPE = 'Female'), by = c('COMM', 'ROUND')])
 seqs <- rbind(seqs, semt[SEX == 'M', list(SEQUENCE = .N,  TYPE = 'Male'), by = c('COMM', 'ROUND')])
@@ -395,7 +411,6 @@ tab <- merge(tab, hivp, by = c('TYPE', 'COMM', 'ROUND'))
 tab <- merge(tab, sartp, by = c('TYPE', 'COMM', 'ROUND'))
 tab <- merge(tab, uns, by = c('TYPE', 'COMM', 'ROUND'), all.x = T)
 tab <- merge(tab, seqs, by = c('TYPE', 'COMM', 'ROUND'), all.x = T)
-tab[is.na(tab)] = '--'
 
 # make factor for population categories
 tab[, unique(TYPE)]
@@ -411,7 +426,6 @@ stopifnot(nrow(tab[HIV  < as.numeric(SEQUENCE) & COMM == 'inland']) == 0)
 stopifnot(nrow(tab[HIV  < as.numeric(INFECTED_TESTED) ]) == 0)
 
 # add comma thousands separator
-comma_thousands <- function(x) format(x, big.mark=",")
 tab[, ELIGIBLE := comma_thousands(ELIGIBLE)]
 tab[, PARTICIPANT := comma_thousands(PARTICIPANT)]
 tab[, HIV := comma_thousands(HIV)]
@@ -420,10 +434,13 @@ tab[, SELF_REPORTED_ART := comma_thousands(SELF_REPORTED_ART)]
 tab[, UNSUPPRESSED := comma_thousands(UNSUPPRESSED)]
 tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 
+# replace NA with bar
+tab[is.na(tab)] = '--'
+
 # save table S1
 tabS1 <- tab[ROUND != 'Total']
 tabS1 <- tabS1[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
-file.name <- file.path(outdir, 'characteristics_study_population_230703.rds')
+file.name <- file.path(outdir, 'characteristics_study_population_230710.rds')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
   cat("Saving file:", file.name, '\n')

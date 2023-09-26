@@ -7,6 +7,7 @@
     library(lubridate)
     library(ggpattern)
     library(patchwork)
+    library(here)
     # single imports
     binconf <- Hmisc::binconf
 } |> suppressPackageStartupMessages()
@@ -82,7 +83,13 @@ quest <- fread(file.path.quest)
 # get known unsuppressed in r > 15
 supptests <- load.viralsuppression.test.results(QUEST=quest)
 
+exclude.extra.round.14 <- TRUE
 
+# where should I remove them from? sequencing success numerator and denominators
+
+########
+# MAIN #
+########
 
 ## calculate numerators: # of HIV positive at round eventually deep sequenced 
 #   if no viral rebound, unsuppressed at sequencing time were unsuppressed test
@@ -122,6 +129,13 @@ suppressed[, SUP := TRUE ]
 setkeyv(semt, keys)
 semt <- merge(semt, suppressed, by=keys, all.x=TRUE)
 semt[is.na(SUP), SUP := FALSE ]
+
+# exclude those that appear only in R14, not in incidence cohort
+if(exclude.extra.round.14){
+    file.seqround14.not.incidence.cohort <- file.path(gitdir, "studyid_round14_notinincidencecohort.rds")
+    seq2exclude <- readRDS(file.seqround14.not.incidence.cohort)
+    semt <- subset(semt,! (ROUND %like%  14 & STUDY_ID %in% seq2exclude))
+}
 
 # make age groups
 semt[, AGEGP:= ageyrs2agegp(AGEYRS)]
@@ -332,7 +346,7 @@ if(! patchwork.way ) # the ggarrange way
 
 }
 
-filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.pdf')
+filename <- file.path(outdir, 'extendeddatafigure_samplingproportions2.pdf')
 ggsave_nature(filename = filename, p=all_rows, w = 18, h = 24 )
-filename <- file.path(outdir, 'extendeddatafigure_samplingproportions.png')
+filename <- file.path(outdir, 'extendeddatafigure_samplingproportions2.png')
 ggsave_nature(filename = filename, p=all_rows, w = 18, h = 24 )

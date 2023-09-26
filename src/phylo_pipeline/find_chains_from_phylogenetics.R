@@ -1,19 +1,22 @@
 # The phyloscanner run - find transmission networks 
 cat("\n===== find_chains_from_phylogenetics.R =====\n")
 
-# Preamble This script aims to find transmission networks and the most likely transmission chains using the phyloscanner outputs.
+# Preamble: 
+# This script aims to find transmission networks and the the most likely transmission chains using phyloscanner outputs.
 
 # Load the required packages
-library(data.table) |> suppressPackageStartupMessages()
-library(tidyverse) |> suppressPackageStartupMessages()
-library(dplyr) |> suppressPackageStartupMessages()
-library(glue) |> suppressPackageStartupMessages()
-library(igraph) |> suppressPackageStartupMessages()
-library(RBGL) |> suppressPackageStartupMessages()
-library(phyloscannerR) |> suppressPackageStartupMessages()
-library(here) |> suppressPackageStartupMessages()
-
+suppressPackageStartupMessages({
+    library(data.table) 
+    library(tidyverse) 
+    library(dplyr) 
+    library(glue) 
+    library(igraph)
+    library(RBGL)
+    library(phyloscannerR)
+    library(here) 
+})
 #
+
 # Define input arguments that can be changed by users
 #
 option_list <- list(
@@ -27,7 +30,6 @@ optparse::make_option(
   optparse::make_option(
     "--phylo-pairs-dir",
     type = "character",
-    # default = "/home/andrea/HPC/project/ratmann_xiaoyue_jrssc2022_analyses/live/deep_sequence_phylogenies_primary/data_for_likely_transmission_pairs/phyloscanner-results",
     default = NA_character_,
     help = "Absolute file path to base directory where the phyloscanner outputs are stored [default]",
     dest = 'phylo.pairs.dir'
@@ -70,8 +72,10 @@ if(is.na(args$phylo.pairs.dir))
     args$phylo.pairs.dir <- dir.zenodo.pairs.phsc
 }
 
-dir.exists(args$phylo.pairs.dir) |> stopifnot()
-file.exists(path.meta.data) |> stopifnot()
+stopifnot( 
+    "Misspecified path to phylo.pairs.dir"=dir.exists(args$phylo.pairs.dir),
+    "Misspecified path to path.meta.data"=file.exists(path.meta.data) 
+)
 
 #
 # Helpers

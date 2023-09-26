@@ -138,6 +138,7 @@ rm(verif_1)
 
 # only include HIV data as determined
 verified_visit_ids <- unique(verif_el[, visit_id])
+verified_visit_ids_r1018 <- unique(verif_el[visit %in% paste0('R0', 10:18), visit_id])
 hivstatus_vlcopies_1 <- hivstatus_vlcopies_1[visit_id %in% verified_visit_ids, ]
 table(hivstatus_vlcopies_1$round)
 
@@ -221,7 +222,7 @@ if(! file.exists(file.name))
 }
 
 # statistics
-file.name <- file.path(outdir,"incidence_inland_statistics_cohort_for_paper_230625.rds")
+file.name <- file.path(outdir,"incidence_inland_statistics_cohort_for_paper_230715.rds")
 if(! file.exists(file.name))
 {
   cat("\n Saving output file", file.name, "\n")
