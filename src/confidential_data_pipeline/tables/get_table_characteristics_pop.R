@@ -435,12 +435,12 @@ tab[, UNSUPPRESSED := comma_thousands(UNSUPPRESSED)]
 tab[, SEQUENCE := comma_thousands(SEQUENCE)]
 
 # replace NA with bar
-tab[is.na(tab)] = '--'
+tab[tab == "   NA"] = '--'
 
 # save table S1
 tabS1 <- tab[ROUND != 'Total']
 tabS1 <- tabS1[, .(COMM, TYPE, ROUND, ELIGIBLE, PARTICIPANT, HIV, INFECTED_TESTED, SELF_REPORTED_ART, UNSUPPRESSED, SEQUENCE)]
-file.name <- file.path(outdir, 'characteristics_study_population_230710.rds')
+file.name <- file.path(outdir, 'characteristics_study_population_230926.rds')
 if(! file.exists(file.name) | config$overwrite.existing.files )
 {
   cat("Saving file:", file.name, '\n')
@@ -451,9 +451,6 @@ if(! file.exists(file.name) | config$overwrite.existing.files )
 
 # save statistics for figures
 stats <- tab[ROUND == 'Total' & COMM == 'inland']
-stats[, SELF_REPORTED_ART := comma_thousands(as.numeric(SELF_REPORTED_ART))]
-stats[, UNSUPPRESSED := comma_thousands(as.numeric(UNSUPPRESSED))]
-stats[, INFECTED_TESTED := comma_thousands(as.numeric(INFECTED_TESTED))]
 
 file.name <- file.path(outdir, 'characteristics_study_population_across_round_230926.rds')
 if(! file.exists(file.name) | config$overwrite.existing.files )
