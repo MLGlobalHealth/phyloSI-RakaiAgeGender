@@ -20,7 +20,7 @@
     - [Transmission flows analysis](#transmission-flows-analysis)
 
 ## License
-The code and data in this repository are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
+The code in this repository is licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
 
 ## Warranty
 
