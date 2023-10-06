@@ -368,12 +368,12 @@ if (file.exists(filename) & !args$rerun == TRUE) {
     dresults[, table(DIRECTION, useNA = "ifany")]
 
     # add homosexual pairs to results
-    dhomosexualpairs[, DIRECTION := "phyloscanner"]
-    dhomosexualpairs[, `:=`(SCORE = NULL, SCORE_DIR = NULL, SEX.SOURCE = NULL, SEX.RECIPIENT = NULL)]
-    dhomosexualpairs <- double.merge(dhomosexualpairs, meta[, .(AID = aid, SEX = sex)])
+    dffpairs[, DIRECTION := "phyloscanner"]
+    dffpairs[, `:=`(SCORE = NULL, SCORE_DIR = NULL, SEX.SOURCE = NULL, SEX.RECIPIENT = NULL)]
+    dffpairs <- double.merge(dffpairs, meta[, .(AID = aid, SEX = sex)])
     rbind(
         dresults,
-        dhomosexualpairs,
+        dffpairs,
         fill = TRUE
     ) -> dresults
     dresults <- get.community.type.at.infection.date(dresults, comm_number = FALSE)
