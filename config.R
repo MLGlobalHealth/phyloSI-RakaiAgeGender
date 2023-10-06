@@ -198,12 +198,16 @@ if( ! indir.deepsequencedata == "" ){
 
   # phyloscanner samples
   path.selected.samples <- file.path(indir.deepanalyses.xiaoyue,"210120_RCCSUVRI_phscinput_samples.rds" )
+
+  path.phsc.relationships <- file.path(indir.deepanalyses.xiaoyue,"211220_phsc_phscrelationships_02_05_30_min_read_100_max_read_posthoccount_im_mrca_fixpd" )
   
   # pangea_db
   path.sdates.rccs <- file.path(indir.deepsequencedata, "PANGEA2_RCCS", "200316_pangea_db_sharing_extract_rakai.csv")
   path.sdates.mrc <- file.path(indir.deepsequencedata, "PANGEA2_MRC","200319_pangea_db_sharing_extract_mrc.csv")
-}
+  file.pairs.hpc <- file.path( indir.deepsequencedata, "PANGEA2_RCCS/pairs", "pairsdata_toshare_d1_w11_netfrompairs_postponessrem.rds")
+  file.pairs.nonrefined.hpc <- file.path(indir.deepsequencedata, "PANGEA2_RCCS/pairs", "pairsdata_toshare_d1_w11_netfrompairs_sensnoref_postponessrem.rds")
 
+}
 
 
 ################################
