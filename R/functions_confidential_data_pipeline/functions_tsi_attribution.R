@@ -111,6 +111,15 @@ build.phylo.network.from.pairs <- function(path.chains = path.chains.data) {
 
     chains_env <- new.env()
     load(path.chains, envir = chains_env)
+    # possible bug with Zenodo data
+    if( ls(chains_env) == "tmp_env"){
+        chains_env$dc <- chains_env$tmp_env$dc 
+        chains_env$dchain <- chains_env$tmp_env$dchain 
+        chains_env$dnet <- chains_env$tmp_env$dnet 
+        chains_env$dpl <- chains_env$tmp_env$dpl 
+        chains_env$dw <- chains_env$tmp_env$dw 
+        rm("tmp_env", envir=tmp_env)
+    }
     dpl <- setDT(chains_env$dpl)
     dc <- setDT(chains_env$dc)
     serohistory_impact <- summarise_serohistory_impact_on_pairs(dc)
@@ -199,19 +208,19 @@ build.phylo.network.from.pairs <- function(path.chains = path.chains.data) {
         idx <- merge(dnewpairs, dsex[, .(SOURCE = aid, SEX.SOURCE = sex)], all.x = T, by = "SOURCE")
         idx <- merge(idx, dsex[, .(RECIPIENT = aid, SEX.RECIPIENT = sex)], all.x = T, by = "RECIPIENT")
         # idx[, table(SEX.SOURCE,SEX.RECIPIENT, useNA = 'ifany'),]
-        dhomosexualpairs <- idx[(SEX.SOURCE == SEX.RECIPIENT), ]
-        dhomosexualpairs[, IDCLU := NULL]
+        dffpairs <- idx[(SEX.SOURCE == SEX.RECIPIENT), ]
+        dffpairs[, IDCLU := NULL]
         idx <- idx[!(SEX.SOURCE == SEX.RECIPIENT), .(SOURCE, RECIPIENT)]
 
         tmp <- nrow(dnewpairs) - nrow(idx)
-        cat("Excluding", tmp, "of", nrow(dnewpairs), "pairs of homosexual or unknown sex\n")
+        cat("Excluding", tmp, "of", nrow(dnewpairs), "pairs of ss or unknown sex\n")
         setkey(dnewpairs, SOURCE, RECIPIENT)
         setkey(idx, SOURCE, RECIPIENT)
         dnewpairs <- dnewpairs[idx]
         cat(nrow(dnewpairs), "pairs remaining\n")
     }
 
-    # Solve multiple sources by assigning recipient with strongest linkage support (same for homosexual pairs)
+    # Solve multiple sources by assigning recipient with strongest linkage support (same for ss pairs)
     dnewpairs <- dnewpairs[,
         {
             z <- which.max(SCORE)
@@ -230,10 +239,10 @@ build.phylo.network.from.pairs <- function(path.chains = path.chains.data) {
         overleaf_expr[["N_unique_rec_participants_dirs"]] <- tmp
     }
 
-    # remove homosexual pairs
+    # remove ss pairs
     if (!postpone.samesex.removal) {
         # solve multiple sources for same-sex too
-        dhomosexualpairs <- dnewpairs[!RECIPIENT %in% dnewpairs$RECIPIENT,
+        dffpairs <- dnewpairs[!RECIPIENT %in% dnewpairs$RECIPIENT,
             {
                 z <- which.max(SCORE)
                 list(SOURCE = SOURCE[z], SCORE = SCORE[z], SCORE_DIR = SCORE_DIR[z])
@@ -246,12 +255,12 @@ build.phylo.network.from.pairs <- function(path.chains = path.chains.data) {
         idx <- merge(dnewpairs, dsex[, .(SOURCE = aid, SEX.SOURCE = sex)], all.x = T, by = "SOURCE")
         idx <- merge(idx, dsex[, .(RECIPIENT = aid, SEX.RECIPIENT = sex)], all.x = T, by = "RECIPIENT")
         # idx[, table(SEX.SOURCE,SEX.RECIPIENT, useNA = 'ifany'),]
-        dhomosexualpairs <- idx[(SEX.SOURCE == SEX.RECIPIENT), ]
-        dhomosexualpairs[, IDCLU := NULL]
-        idx <- idx[!(SEX.SOURCE == SEX.RECIPIENT), .(SOURCE, RECIPIENT)]
+        dffpairs <- idx[(SEX.SOURCE == SEX.RECIPIENT), ]
+        dffpairs[, IDCLU := NULL]
+        idx <- idx[SEX.SOURCE != SEX.RECIPIENT, .(SOURCE, RECIPIENT)]
 
         tmp <- nrow(dnewpairs) - nrow(idx)
-        cat("Excluding", tmp, "of", nrow(dnewpairs), "pairs of homosexual or unknown sex\n")
+        cat("Excluding", tmp, "of", nrow(dnewpairs), " ss pairs or unknown sex\n")
         setkey(dnewpairs, SOURCE, RECIPIENT)
         setkey(idx, SOURCE, RECIPIENT)
         dnewpairs <- dnewpairs[idx]
@@ -262,7 +271,9 @@ build.phylo.network.from.pairs <- function(path.chains = path.chains.data) {
     if (get.sero.extra.pairs) 
         sero_extra_pairs <<- sero_extra_pairs
     
-    dhomosexualpairs <<- dhomosexualpairs
+    # remove all MM pairs for ethical reasons
+    dffpairs <- subset(dffpairs, SEX.SOURCE == "F")
+    dffpairs <<- dffpairs
 
     if (exists("overleaf_expr"))
         overleaf_expr <<- overleaf_expr
