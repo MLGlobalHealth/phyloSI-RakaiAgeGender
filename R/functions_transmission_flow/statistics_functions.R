@@ -112,3 +112,28 @@ save_statistics_incidence_rate_trends <- function(icrr, icr, icrrs, icrrt, medag
   saveRDS(stats, paste0(outdir.table, '-data-incidence_rate_trends.rds'))
   
 }
+
+save_number_pairs_round16_18 <- function(pars, df_round, outdir){
+  
+  # find number of pairs observed
+  dp <- copy(pairs)
+  
+  # we add pairs to the corresponding rounds (move their date of infection so that it falls within the observational period)
+  tmp <- df_round[, .(ROUND, MIN_SAMPLE_DATE, MAX_SAMPLE_DATE, COMM)]
+  tmp[, MIN_SAMPLE_DATE_NEXT_ROUND := c(MIN_SAMPLE_DATE[2:nrow(tmp)], MAX_SAMPLE_DATE[nrow(tmp)])]
+  stopifnot(tmp[, all(MAX_SAMPLE_DATE <= MIN_SAMPLE_DATE_NEXT_ROUND)])
+  
+  dp <- merge(dp, tmp,  by.x = 'COMM.RECIPIENT', by.y = 'COMM', allow.cartesian=TRUE)
+  dp <- dp[DATE_INFECTION.RECIPIENT >= MIN_SAMPLE_DATE & DATE_INFECTION.RECIPIENT <= MIN_SAMPLE_DATE_NEXT_ROUND]
+  stopifnot(nrow(dp) == nrow(pairs))
+  set(dp, NULL, 'MIN_SAMPLE_DATE', NULL)
+  set(dp, NULL, 'MAX_SAMPLE_DATE', NULL)
+  set(dp, NULL, 'MIN_SAMPLE_DATE_NEXT_ROUND', NULL)
+  
+  # number pairs inround 16 to 18
+  n <- nrow(dp[ROUND %in% c('R016', 'R017', 'R018')])
+  
+  # save
+  saveRDS(n, paste0(outdir, '-data-number_pairs_rounds_16-18.rds'))
+}
+

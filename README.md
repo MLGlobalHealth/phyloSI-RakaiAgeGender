@@ -20,7 +20,7 @@
     - [Transmission flows analysis](#transmission-flows-analysis)
 
 ## License
-The code and data in this repository are licensed under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/) by Imperial College London. Copyright Imperial College London 2022. 
+The code in this repository is licensed under [GPLv3](https://www.gnu.org/licenses/gpl-3.0.en.html) by Imperial College London.
 
 ## Warranty
 
@@ -46,7 +46,6 @@ This study was supported by the following organizations:
 - Division of Intramural Research of the [National Institute for Allergy and Infectious Diseases](https://www.niaid.nih.gov/) (K01AA024068)
 - [National Heart, Lung, and Blood Institute](https://www.nhlbi.nih.gov/) (R01HL152813)
 - [Fogarty International Center](https://www.fic.nih.gov/) (D43TW009578, D43TW010557)
-- World Bank
 - [Doris Duke Charitable Foundation](https://www.ddcf.org/)
 - [Johns Hopkins University Center for AIDS Research](https://hopkinscfar.org/) (P30AI094189)
 - [President’s Emergency Plan for AIDS Relief](https://www.state.gov/pepfar/) through the Centers for Disease Control and Prevention (NU2GGH000817)
@@ -73,13 +72,22 @@ source activate phyloSI-RakaiAgeGender
 ```
 
 ### Reproducing our Analyses
-We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout. Please download the data from TODO-ZENODO.
+We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout. Please download the data from our Zenodo data repository, TODO-ZENODO. Note that for ethical considerations a small subset of the data are not shared.
 
-To perform all data pre-processing and analysis, navigate to the root directory of the repository and enter the data directory (downloaded from Zenodo) in line 20 in `config.R`. The script `config.R` is sourced internally by other scripts so that all file locations are as required.
+To perform all data pre-processing and analysis, **the user must update `config.R`** which is located within the root directory of the repository. Locate the following code around line 20 of `config.R` and change `"your-user"` to your system username and `"your-path-to-zenodo-dir"` to the absolute path to the Zenodo directory you have downloaded.
+```r
+# 1) Change "your-user" to your system user name
+# 2) Change "your-path-to-zenodo-dir" to the ABSOLUTE PATH to the Zenodo directory
+dir.zenodo <- data.table::fcase(
+  # ...
+  user == "your-user", "your-path-to-zenodo-dir"
+  # ...
+)
+```
 
 #### Pre-processing steps
 
-Our main analyses depend on estimates of population sizes, HIV prevalence, and HIV suppression, as well as outputs from phylogenetic reconstructions of source-recipient pairs and estimates of the 'time since infection'.
+Our main analyses depend on estimates of population sizes, HIV prevalence, and HIV suppression, as well as outputs from phylogenetic reconstructions of source-recipient pairs and estimates of the time since infection from when the phylogenetically likely recipient was infected until their sequences were sampled. 
 
 Several of the pre-processing code for the surveillance requires the running of computationally demanding Stan models which may take more than 24 hours to finish on a standard laptop computer. We provide summarized outputs in the Zenodo directory for all pre-processing steps and users may skip directly to the main analysis.
 

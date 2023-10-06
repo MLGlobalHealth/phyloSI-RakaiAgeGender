@@ -35,20 +35,16 @@ community.keys[, comm := ifelse(strsplit(as.character(COMM_NUM_A), '')[[1]][1] =
 dt <- fread(file.eligible.count)
 
 dt <- subset(dt,COMM=='inland')
-dt <- dt[, list(N_census = sum(ELIGIBLE_NOT_SMOOTH + ALREADY_SEEN + DEAD + NOT_WITHIN_ELIGIBLE_AGE_RANGE + OUT_MIGRATED + NOT_RESIDENT),
-                N_census_eligible = sum(round(ELIGIBLE_NOT_SMOOTH + OUT_MIGRATED)),
-                N_eligible = sum(round(ELIGIBLE_NOT_SMOOTH + (OUT_MIGRATED/2) )),
-                N_ineligible = sum(ALREADY_SEEN + DEAD + NOT_WITHIN_ELIGIBLE_AGE_RANGE + OUT_MIGRATED + NOT_RESIDENT),
-                N_ineligible_age = sum(NOT_WITHIN_ELIGIBLE_AGE_RANGE),
-                N_ineligible_not_res = sum(NOT_RESIDENT),
-                N_ineligible_outmig = sum(round(OUT_MIGRATED/2))), by=c('ROUND')]
 
-# NOTE: ELIGIBLE_NOT_SMOOTH already has half the out-migrated added!
+# NOTE: ELIGIBLE_NOT_SMOOTH already has half the out-migrated added so only add half to get census eligible
 dt <- dt[, list(N_census_eligible = round(sum(ELIGIBLE_NOT_SMOOTH + OUT_MIGRATED/2)),
                 N_ineligible_outmig = round(sum(OUT_MIGRATED/2)),
                 N_eligible = round(sum(ELIGIBLE_NOT_SMOOTH))),
            by=c('ROUND')]
 dt[, Tot_census:= N_eligible + N_ineligible_outmig]
+
+# census eligible population
+dt
 
 ####
 ## get testing data ----
@@ -74,6 +70,9 @@ meta_data[is.na(AGEYRS)]
 # restrict age
 meta_data <- meta_data[AGEYRS > 14 & AGEYRS < 50]
 
+# save community IDs
+comm_ids_r <- subset(meta_data,select=c('study_id','round','community_number'))
+
 # find community
 meta_data[, COMM := 'inland']
 meta_data[LakeVictoria_FishingCommunity == 'yes', COMM := 'fishing']
@@ -83,6 +82,10 @@ meta_data[, HIV := ifelse(is.na(firstposvd), 'N', 'P')]
 
 # find art use
 meta_data[, ART := artslfuse == 'yes']
+
+# subset round 14 to 30 continuously surveyed communities
+idr14not30comm <- meta_data[(round=='14' & !COMM %in% c(1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754)), unique(study_id)]
+meta_data <- meta_data[!(round=='14' & !community_number %in% c(0, 1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754))]
 
 # keep variable of interest
 meta_data[, round := paste0('R0', round)]
@@ -225,104 +228,72 @@ DT <- subset(DT, AGEYRS > 14 & AGEYRS < 50)
 # keep infected
 DT <- DT[HIV_STATUS ==1]
 
-# get number always suppressed R15-18 by round
-supp <- DT[, list(N_always_supp=length(unique(STUDY_ID[always_supp==1]))),by='ROUND']
+## count sequenced #################################
 
+# patient-level data on positive participants
+hpos <- subset(hivs,COMM=='inland')
+hpos[, list(PARTICIPANT = length(unique(STUDY_ID[HIV=='P']))), by = c('COMM', 'ROUND')]
+# NB ART naive comes from metadata
 
-# get transmission cohort (sequenced) ----
-# from get_participant_sequenced_count.R
-###############################################
+# merge in VL data
+DT[, ROUND:=paste0('R0',ROUND)]
+dat <- merge(subset(hpos,HIV=='P'),subset(DT,select=c('STUDY_ID','ROUND','ARVMED','VLC','VLU','VLD','VLNS','HIV_AND_VLD')),
+             by=c('STUDY_ID','ROUND'),all=T)
+# find those who were suppressed at every round
+tmp <- dat[!is.na(VLC), list(rounds_unsupp=sum(VLNS,na.rm=T)),by=c('STUDY_ID')]
+tmp[, always_supp:= ifelse(rounds_unsupp==0,1,0)] # 1==individual was never unsuppressed
 
-# GET SEQUENCES DATA
+dat <- merge(dat,subset(tmp,select=c('STUDY_ID','always_supp')),by=c('STUDY_ID'),all=T)
 
-###############################################
+# count number with (no VL and not ART naive) at R15 or later
+#tmp <- dat[, list(N_VL=length(ROUND[!is.na(VLC)]),
+#                  ART_R15_onw=(sum(ARVMED,na.rm=T))),by=c('STUDY_ID')]
+#tmp[ART_R15_onw>0, ART_R15_onw:= 1]
+#dat <- merge(dat,tmp,by=c('STUDY_ID'),all=T)
+#dat[, HIV_AND_NOVL_AND_ART := ifelse( HIV == 'P' & is.na(VLC) & ART_R15_onw==1 & always_supp!=1, 1, 0)]
+# generate variable for no VL measurement and not ART naive for EVERY round
+# generate a flag if this is 1 at any round 15-18 PER study ID
+#dat[, HIVP_NOVL_AND_ART:= ifelse( HIV == 'P' & N_VL==0 & ARVMED==1, 1, 0)]
+tmp <- dat[ROUND %in% c('R015','R016','R017','R018'),
+           list(N_VL_AND_NOART=sum(is.na(VLC) & ART==T),
+                PART_R15_ONW=1),
+           by=c('STUDY_ID')]
+dat <- merge(dat,tmp,by=c('STUDY_ID'),all.x=T)
+dat[N_VL_AND_NOART>0, N_VL_AND_NOART:=1]
+dat[N_VL_AND_NOART==1 & always_supp==1, always_supp:=0]
 
-alignment <- read.fasta(file = infile.sequence)
-unique(do.call(c, lapply(alignment, unique)))
-nsequence <- length(alignment)
-npos <- unique(lengths(alignment))
+########################################################################
 
-# map alignments to studyid
-dinfo <- data.table(pangea_id=names(alignment))
-id.dt <- fread(path.sdates.rccs)
-id.dt <- subset(id.dt,select = c("pt_id","pangea_id", 'cd4_count', 'visit_dt'))
-id.dt[,pangea_id:=paste0('RCCS_',pangea_id)]
-tmp <- fread(path.sdates.mrc)
-tmp <- subset(tmp,select = c("pt_id","pangea_id", 'cd4_count', 'visit_dt'))
-tmp[,pangea_id:=paste0('MRCUVRI_',pangea_id)]
-id.dt <- rbind(id.dt,tmp)
-id.dt <- unique(id.dt)
-dinfo <- merge(dinfo, id.dt, by="pangea_id", all.x=T)
-tmp <- dinfo[is.na(pt_id)]
-dinfo <- dinfo[!is.na(pt_id)]
-cat('No personal information found for ',nrow(dinfo[is.na(pt_id)]), ' sequences \n')
+# GET PARTICIPANTS CONSIDERED FOR TRANSMISSION NETWORK RECONSTRUCTION
 
-# remove mrc cohort
-dinfo <- dinfo[!grepl('MRCUVRI', pangea_id)]
+########################################################################
 
-# remove neuro data
-neuro.metadata <- as.data.table(read.csv(file.path.neuro.metadata))
-dinfo <- dinfo[!pt_id %in% neuro.metadata[, paste0('RK-', studyid)]]
+# load seq count
+sequ <- as.data.table(readRDS(file.characteristics_sequenced_ind_R14_18))
 
-# find meta data
-hivs[, pt_id := paste0('RK-', STUDY_ID)]
-dm <- merge(dinfo, hivs, by = c('pt_id'))
-colnames(dm) <- toupper(colnames(dm))
-stopifnot(dm[, length(unique(PT_ID))] == dinfo[, length(unique(pt_id))])
+# keep age within 15-49
+sequ <- sequ[AGEYRS > 14 & AGEYRS < 50]
 
-# keep sequences which meet minimum criteria
-load(infile.seq.criteria)
-dct[,PANGEA_ID:=paste0('RCCS_',PANGEA_ID)]
-dm <- merge(dm,dct,by='PANGEA_ID',all.x=T)
+# merge to meta_data
+semt <- merge(hivs[, .(STUDY_ID, SEX, ROUND, COMM, AGEYRS, HIV)], unique(sequ[, .(STUDY_ID)]), by = 'STUDY_ID')
+stopifnot(semt[, length(unique(STUDY_ID))] == sequ[, length(unique(STUDY_ID))])
 
-# AB - just keep inland
-dm <- subset(dm,COMM=='inland')
+# keep only positive participants
+semt <- semt[HIV == 'P']
+semt <- subset(semt,COMM=='inland')
+semt[, trsm_cohort:= 1]
 
-saveRDS(dm,file='sequenced_met_criteria.RDS')
+dt <- merge(dat,subset(semt,select=c('STUDY_ID','ROUND','trsm_cohort')),by=c('STUDY_ID','ROUND'),all.x=T)
+dt[is.na(trsm_cohort), trsm_cohort:=0]
+dt <- merge(dt, df_round, by = c('COMM', 'ROUND'))
 
-# AB: tabulate seqs not meeting criteria
-tmp <- dm[V1=='FALSE', list(N=length(unique(STUDY_ID))),by=c('ROUND','V1')]
-
-# just keep those meeting min criteria
-dm <- subset(dm,V1=='TRUE')
-
-
-# keep meta info closer to sample date
-dm[, VISIT_DT := as.Date(VISIT_DT)]
-dm[, SAMPLE_DATE := as.Date(SAMPLE_DATE)]
-dm[, DIFF_DATE := abs(VISIT_DT - SAMPLE_DATE), by = 'PANGEA_ID']
-dm[, IS_MIN := DIFF_DATE == min(na.omit(DIFF_DATE)), by = 'PANGEA_ID']
-dcount <- dm[IS_MIN == 1]
-stopifnot(nrow(dcount) == dm[, length(unique(PANGEA_ID))])
-dcount[, table(ROUND, COMM)]
-
-dcount[HIV == 'N'] ## negative but sequenceD?
-
-# set round to 15 if inland 15S
-dcount[, PARTICIPATED_TO_ROUND_RO15 := any(ROUND == 'R015'), by= 'pt_id']
-dcount[ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == F, ROUND := 'R015']
-dcount <- dcount[!(ROUND == 'R015S' & COMM == 'inland' & PARTICIPATED_TO_ROUND_RO15 == T)]
-set(dcount, NULL, 'PARTICIPATED_TO_ROUND_RO15', NULL)
-
-# keep round of interest
-dcount <- merge(dcount, df_round, by = c('COMM', 'ROUND'))
-
-# create age groups
-dcount[, AGEGP:= cut(AGEYRS,breaks=c(15,25,35,49),include.lowest=T,right=F,
-                     labels=c('15-24','25-34','35-49'))]
-
-# keep necessary variable
-dcount <- dcount[, .(COMM, ROUND, PANGEA_ID, PT_ID, STUDY_ID, SEX, AGEYRS, AGEGP, DIFF_DATE)]
-
-# save sequenced id
-file.name <- file.characteristics_sequenced_ind_R14_18
-if(! file.exists(file.name))
-{
-  cat("\n Saving output file", file.name, "\n")
-  saveRDS(dcount, file.name)
-}else{
-  cat("\n Output file", file.name, "already exists\n")
-}
+# summarise transmission cohort and exclusions
+dt[, list(POSITIVE = length(na.omit(unique(STUDY_ID))),
+          N_not_seen_since_R15 = length(na.omit(unique(STUDY_ID[is.na(PART_R15_ONW) & trsm_cohort==0 & (always_supp!=1 | is.na(always_supp)) & (N_VL_AND_NOART!=1 | is.na(N_VL_AND_NOART))]))),
+          N_always_supp=length(na.omit(unique(STUDY_ID[always_supp==1 & trsm_cohort!=1]))),
+          N_noVL_and_not_ARTnaive=length(na.omit(unique(STUDY_ID[N_VL_AND_NOART==1 & trsm_cohort!=1]))),
+          N_not_met_criteria=length(na.omit(unique(STUDY_ID[trsm_cohort==0 & (always_supp!=1 | is.na(always_supp)) & N_VL_AND_NOART!=1]))),
+          N_in_trsm_cohort=length(na.omit(unique(STUDY_ID[trsm_cohort==1])))), by = c('COMM', 'ROUND')]
 
 ########################################################################
 
@@ -345,3 +316,72 @@ semt <- semt[HIV == 'P']
 
 # get sequenced table
 seqs <- semt[, list(SEQUENCE = .N,  TYPE = 'Total'), by = c('COMM', 'ROUND')]
+
+
+file.name <- file.path(dirname(file.characteristics_sequenced_ind_R14_18),'transm_cohort_230926.RDS')
+if(! file.exists(file.name))
+{
+  cat("\n Saving output file", file.name, "\n")
+  saveRDS(semt, file.name)
+}else{
+  cat("\n Output file", file.name, "already exists\n")
+}
+
+########################################################################
+
+# GET PARTICIPANTS IN TRANSMISSION NETWORKS AND INCIDENCE COHORT
+
+########################################################################
+
+file.name <- file.path(dirname(file.characteristics_sequenced_ind_R14_18),'transm_cohort_230926.RDS')
+
+semt <- readRDS(file.name)
+semt[, transm:=1]
+semt <- subset(semt,COMM=='inland')
+
+comm_ids_r[, ROUND:= paste0('R0',round)]
+setnames(comm_ids_r,'study_id','STUDY_ID')
+semt <- merge(semt,subset(comm_ids_r,ROUND=='R014'),by=c('STUDY_ID','ROUND'),all.x=T)
+
+# subset round 14 to 30 continuously surveyed communities
+semt <- semt[!(ROUND=='R014' & !is.na(community_number) & !community_number %in% c(0, 1, 2, 4, 5, 6, 7, 8, 16, 19, 22, 24, 29, 33, 34, 40, 56, 57, 58, 62, 74, 77, 89, 94, 106, 107, 108, 120, 391, 602, 754))]
+
+
+file.name <- file.path(dirname(file.characteristics_sequenced_ind_R14_18),'flow_chart_IDs_in_incidence_cohort_230926.csv')
+
+incid <- fread(file.name)
+setnames(incid,c('visit','ROUND','research_id'),c('ROUND','round_long','STUDY_ID'))
+
+dm <- merge(semt,
+              subset(incid,select=c('STUDY_ID','ROUND','ALL_HIV_INCLUDED_IN_INCIDENCE_ANALYSIS'),ALL_HIV_INCLUDED_IN_INCIDENCE_ANALYSIS==1),
+              by=c('STUDY_ID','ROUND'),all=T)
+dm[,incid_not_transm:= ALL_HIV_INCLUDED_IN_INCIDENCE_ANALYSIS==1 & is.na(transm)]
+dm[,transm_not_incid:= transm==1 & is.na(ALL_HIV_INCLUDED_IN_INCIDENCE_ANALYSIS)]
+dm[,transm_and_incid:= transm==1 & ALL_HIV_INCLUDED_IN_INCIDENCE_ANALYSIS==1]
+
+dm <- subset(dm, ROUND %in% c('R010','R011','R012','R013','R014','R015',
+                              'R016','R017','R018'))
+tmp <- dm[, list(incidence_cohort = length(na.omit(unique(STUDY_ID[ALL_HIV_INCLUDED_IN_INCIDENCE_ANALYSIS==1]))),
+                  transmission_cohort = length(na.omit(unique(STUDY_ID[transm==1]))),
+                  incid_not_transm = length(na.omit(unique(STUDY_ID[incid_not_transm==T]))),
+                  transm_not_incid = length(na.omit(unique(STUDY_ID[transm_not_incid==T]))),
+                  transm_and_incid = length(na.omit(unique(STUDY_ID[transm_and_incid==T])))), by = 'ROUND']
+
+tmp[, ROUND:= factor(ROUND,levels=c('R010','R011','R012','R013','R014','R015',
+                                    'R016','R017','R018'))]
+                       
+tmp <- tmp[order(ROUND),]
+
+file.name <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age","flow_charts_incidence_transm_cohort_round_250926.csv")
+write.csv(tmp,file=file.name)
+
+tmp2 <- dm[, list(incidence_cohort = length(na.omit(unique(STUDY_ID[ALL_HIV_INCLUDED_IN_INCIDENCE_ANALYSIS==1]))),
+                 transmission_cohort = length(na.omit(unique(STUDY_ID[transm==1]))),
+                 incid_not_transm = length(na.omit(unique(STUDY_ID[incid_not_transm==T]))),
+                 transm_not_incid = length(na.omit(unique(STUDY_ID[transm_not_incid==T]))),
+                  transm_and_incid = length(na.omit(unique(STUDY_ID[transm_and_incid==T]))))]
+
+file.name <- file.path(indir.deepsequence_analyses, "PANGEA2_RCCS", "participants_count_by_gender_loc_age","RCCS_incidence_transm_cohorts_unique_230926.csv")
+write.csv(tmp2,file=file.name)
+saveRDS(tmp2,file=gsub('.csv','.rds',file.name))
+
