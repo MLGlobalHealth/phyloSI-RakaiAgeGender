@@ -72,7 +72,7 @@ source activate phyloSI-RakaiAgeGender
 ```
 
 ### Reproducing our Analyses
-We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout. Please download the data from our Zenodo data repository, TODO-ZENODO. Note that for ethical considerations a small subset of the data are not shared.
+We provide all pathogen genomic and epidemiologic input data to reproduce our analyses in non-identifiable aggregate form, or have anonymised individual-level sample identifiers and have randomized individual-level data entries throughout. Please download the data from our [Zenodo data repository](https:/zenodo.org/record/8412741). Note that for ethical considerations a small subset of the data are not shared.
 
 To perform all data pre-processing and analysis, **the user must update `config.R`** which is located within the root directory of the repository. Locate the following code around line 20 of `config.R` and change `"your-user"` to your system username and `"your-path-to-zenodo-dir"` to the absolute path to the Zenodo directory you have downloaded.
 ```r
